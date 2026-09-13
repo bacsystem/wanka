@@ -69,9 +69,9 @@ describe("NumberInput resets and integer mode", () => {
   it("refreshes stale text of an unfocused field when the parent re-renders", () => {
     render(<Resettable />);
     const input = screen.getByRole("textbox", { name: "Cantidad" }) as HTMLInputElement;
-    // Not focused (programmatic change, e.g. a scanner filling the field): text and value drift apart…
+    // A change event on an unfocused field only happens programmatically; in the browser this is the
+    // parent resetting a line the user already left. The effect re-syncs the text without waiting for a blur.
     fireEvent.change(input, { target: { value: "abc" } });
-    // …and the effect brings the text back to the committed number without waiting for a blur.
     expect(input.value).toBe("0");
   });
   it("truncates decimals and uses the numeric keyboard in integer mode", () => {
