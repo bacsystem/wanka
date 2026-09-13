@@ -74,7 +74,7 @@ export function CashScreen({ movements }: { movements: CashMovement[] }) {
                 <span className="w-16 font-mono tabular-nums">{d.label}</span>
                 <span className="text-muted-foreground">×</span>
                 <NumberInput
-                  size="sm" value={counts[i]} aria-label={`Cantidad de ${d.label}`}
+                  integer size="sm" value={counts[i]} aria-label={`Cantidad de ${d.label}`}
                   onValueChange={(n) => setCounts((c) => c.map((v, j) => (j === i ? n : v)))}
                   className="w-16 text-right font-mono"
                 />
