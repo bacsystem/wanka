@@ -23,6 +23,7 @@
   --color-chart-3: var(--chart-3);
   --color-chart-2: var(--chart-2);
   --color-chart-1: var(--chart-1);
+  --color-brand-panel: var(--brand-panel);
   --color-success: var(--success);
   --color-success-foreground: var(--success-foreground);
   --color-warning: var(--warning);
@@ -54,6 +55,8 @@
 
 /* Tema v2 "Andes Teal" (design/stitch/screens/t01-sistema-diseno-v2.html): primario #0D9488, acento ámbar #F59E0B, canvas #F7F9FB, borde #E5E9F0, 8px radius. */
 :root {
+  /* Dark brand panel of the auth screens (login / seleccionar empresa). */
+  --brand-panel: #0b3d3a;
   --background: #f7f9fb;
   --foreground: #0f172a;
   --card: #ffffff;
@@ -158,6 +161,7 @@
 
 /* Consola de Administración (super-admin de la plataforma): tema "Platform Indigo", sidebar oscuro. */
 .theme-admin {
+  --brand-panel: #0f172a;
   --background: #f5f6fa;
   --primary: #4f46e5;
   --primary-foreground: #ffffff;

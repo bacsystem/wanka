@@ -9,6 +9,7 @@ import { RecentDocumentsTable } from "@/features/dashboard/components/recent-doc
 import { SalesChartCard } from "@/features/dashboard/components/sales-chart";
 import { Eye } from "lucide-react";
 import Link from "next/link";
+import { PageHeader } from "@/components/shared/page-header";
 import { StatChip } from "@/components/shared/stat-card";
 import { StockAlerts } from "@/features/dashboard/components/stock-alerts";
 import { SunatStatusCard } from "@/features/dashboard/components/sunat-status-card";
@@ -45,32 +46,18 @@ export default async function DashboardPage() {
   const tenantId = (await cookies()).get(TENANT_COOKIE)?.value;
   const industry = tenantOptions.find((t) => t.id === tenantId)?.industry ?? "odontologia";
   const header = (
-    <div className="flex flex-wrap items-end justify-between gap-2">
-      <div>
-        <p className="text-xs text-muted-foreground">Panel de operaciones</p>
-        <h1 className="text-xl font-semibold tracking-tight">Inicio</h1>
-      </div>
-      <span className="inline-flex items-center gap-1.5 rounded-md border bg-card px-2.5 py-1 text-xs text-muted-foreground">
-        <Calendar className="size-3.5" strokeWidth={1.5} aria-hidden />
-        Hoy, {formatDate(today)}
-      </span>
-    </div>
+    <PageHeader
+      eyebrow="Panel de operaciones"
+      title="Inicio"
+      actions={<span className="inline-flex items-center gap-1.5 rounded-md border bg-card px-2.5 py-1 text-xs text-muted-foreground"><Calendar className="size-3.5" strokeWidth={1.5} aria-hidden /> Hoy, {formatDate(today)}</span>}
+    />
   );
   if (industry === "restaurante") return <div className="flex min-w-0 flex-1 flex-col gap-4 p-4 md:gap-5 md:p-6">{header}<RestaurantDashboard data={data} /></div>;
   if (industry === "veterinaria") return <div className="flex min-w-0 flex-1 flex-col gap-4 p-4 md:gap-5 md:p-6">{header}<VeterinaryDashboard data={data} /></div>;
 
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-4 p-4 md:gap-5 md:p-6">
-      <div className="flex flex-wrap items-end justify-between gap-2">
-        <div>
-          <p className="text-xs text-muted-foreground">Panel de operaciones</p>
-          <h1 className="text-xl font-semibold tracking-tight">Inicio</h1>
-        </div>
-        <span className="inline-flex items-center gap-1.5 rounded-md border bg-card px-2.5 py-1 text-xs text-muted-foreground">
-          <Calendar className="size-3.5" strokeWidth={1.5} aria-hidden />
-          Hoy, {formatDate(today)}
-        </span>
-      </div>
+      {header}
 
       {/* KPIs: horizontal scroll on mobile, grid from sm up */}
       <section aria-label="Indicadores del día" className="-mx-4 overflow-x-auto px-4 md:mx-0 md:px-0">

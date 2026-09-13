@@ -42,6 +42,7 @@ export function PurchaseOrderEditor({ suppliers }: { suppliers: Supplier[] }) {
   const [editing, setEditing] = React.useState<string | null>(null);
   const [adding, setAdding] = React.useState(false);
   const [q, setQ] = React.useState("");
+  const searchRef = React.useRef<HTMLInputElement>(null);
   const [detraction, setDetraction] = React.useState(false);
   const base = r2(lines.reduce((s, l) => s + l.qty * l.cost * (1 - l.discount / 100), 0));
   const igv = r2(lines.filter((l) => l.taxable).reduce((s, l) => s + l.qty * l.cost * (1 - l.discount / 100) * 0.18, 0));
@@ -82,7 +83,7 @@ export function PurchaseOrderEditor({ suppliers }: { suppliers: Supplier[] }) {
           </SectionCard>
 
           <FilterBar>
-            <SearchInput value={q} onChange={(v) => { setQ(v); setAdding(true); }} placeholder="Escribe SKU o nombre: Ej. Filtek, Lidocaína, Guantes, Sutura, Brackets… [Presiona F2]" aria-label="Buscar ítem" className="flex-1 sm:max-w-none" />
+            <SearchInput ref={searchRef} value={q} onChange={(v) => { setQ(v); setAdding(true); }} placeholder="Escribe SKU o nombre: Ej. Filtek, Lidocaína, Guantes, Sutura, Brackets… [Presiona F2]" aria-label="Buscar ítem" className="flex-1 sm:max-w-none" />
             <Button className="font-semibold" onClick={() => { if (results[0]) { const i = results[0]; setLines((ls) => [...ls, { id: i.id, sku: i.sku, name: i.name, qty: 1, unit: i.unit, cost: i.avgCost, discount: 0, taxable: true }]); setQ(""); } else toast.info("Escribe un SKU o nombre"); }}><Plus data-icon="inline-start" /> Insertar</Button>
             <Button variant="outline" className="font-semibold"><SlidersHorizontal data-icon="inline-start" /> Filtros</Button>
             {q.trim() && results.length ? <ul className="w-full rounded-md border bg-popover shadow-sm">{results.map((i) => <li key={i.id}><button type="button" onClick={() => { setLines((ls) => [...ls, { id: i.id, sku: i.sku, name: i.name, qty: 1, unit: i.unit, cost: i.avgCost, discount: 0, taxable: true }]); setAdding(false); setQ(""); }} className="flex w-full justify-between px-3 py-2 text-left text-sm hover:bg-accent"><span>{i.name}</span><span className="font-mono text-xs text-muted-foreground">{i.sku} · {formatCurrency(i.avgCost)}</span></button></li>)}</ul> : null}
@@ -110,7 +111,7 @@ export function PurchaseOrderEditor({ suppliers }: { suppliers: Supplier[] }) {
               </Table>
             </div>
             <ul className="divide-y md:hidden">{lines.map((l) => <li key={l.id} className="flex items-center gap-3 px-4 py-3"><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{l.name}</p><p className="font-mono text-xs text-muted-foreground">{l.sku} · {formatCurrency(l.cost)} × </p></div><Input value={l.qty} onChange={(e) => update(l.id, { qty: Number(e.target.value) || 0 })} className="h-9 w-16 text-center font-mono" aria-label={`Cantidad ${l.sku}`} /><span className="w-20 text-right font-mono text-sm font-medium">{formatCurrency(r2(l.qty * l.cost * (1 - l.discount / 100)))}</span></li>)}</ul>
-            <div className="border-t p-3"><Button variant="outline" size="sm" onClick={() => { setAdding(true); document.querySelector<HTMLInputElement>("input[aria-label='Buscar ítem']")?.focus(); }}><Plus data-icon="inline-start" /> Agregar ítem del catálogo</Button>{adding && !q ? <span className="ml-2 text-xs text-muted-foreground">Escribe en el buscador superior.</span> : null}</div>
+            <div className="border-t p-3"><Button variant="outline" size="sm" onClick={() => { setAdding(true); searchRef.current?.focus(); }}><Plus data-icon="inline-start" /> Agregar ítem del catálogo</Button>{adding && !q ? <span className="ml-2 text-xs text-muted-foreground">Escribe en el buscador superior.</span> : null}</div>
           </SectionCard>
         </div>
 

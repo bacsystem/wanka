@@ -65,6 +65,7 @@ export function DataTable<T>({
   const isLocked = (c: Column<T>) => c.locked ?? ["select", "sel", "actions"].includes(c.key);
   const isVisible = (c: Column<T>) => isLocked(c) || (visible[c.key] ?? defaults[c.key] ?? true);
   const columns = allColumns.filter(isVisible);
+  const visibleDataColumns = columns.filter((c) => !isLocked(c)).length;
   const dirty = dense || Object.keys(visible).some((k) => visible[k] !== defaults[k]);
   const labelOf = (c: Column<T>) => c.label ?? (typeof c.header === "string" ? c.header : c.key);
   const reset = () => { setVisible({}); setDense(false); };
@@ -82,7 +83,7 @@ export function DataTable<T>({
               {allColumns.map((c) => isLocked(c) ? (
                 <DropdownMenuCheckboxItem key={c.key} checked disabled closeOnClick={false} className="justify-between">{labelOf(c) === c.key ? "Acciones" : labelOf(c)}<span className="ml-auto text-[10px] text-muted-foreground">Fijo</span></DropdownMenuCheckboxItem>
               ) : (
-                <DropdownMenuCheckboxItem key={c.key} checked={isVisible(c)} onCheckedChange={(v) => setVisible((s) => ({ ...s, [c.key]: Boolean(v) }))} closeOnClick={false}>{labelOf(c)}</DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem key={c.key} checked={isVisible(c)} disabled={isVisible(c) && visibleDataColumns === 1} onCheckedChange={(v) => setVisible((s) => ({ ...s, [c.key]: Boolean(v) }))} closeOnClick={false}>{labelOf(c)}</DropdownMenuCheckboxItem>
               ))}
             </DropdownMenuGroup>
             <DropdownMenuSeparator />

@@ -8,7 +8,7 @@ const features = [
 
 export function BrandPanel() {
   return (
-    <aside className="relative hidden flex-col justify-between overflow-hidden bg-[#0b3d3a] p-10 text-white lg:flex" aria-label="Acerca de Wanka">
+    <aside className="relative hidden flex-col justify-between overflow-hidden bg-brand-panel p-10 text-white lg:flex" aria-label="Acerca de Wanka">
       <div className="pointer-events-none absolute -top-24 -right-24 size-80 rounded-full bg-primary/30 blur-3xl" />
       <div>
         <div className="flex items-center gap-2">

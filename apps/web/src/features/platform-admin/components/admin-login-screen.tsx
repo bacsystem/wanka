@@ -17,7 +17,7 @@ export function AdminLoginScreen() {
   const [code, setCode] = React.useState("");
   return (
     <div className="theme-admin grid min-h-svh bg-background text-foreground lg:grid-cols-2">
-      <aside className="relative hidden flex-col justify-between overflow-hidden bg-[#0f172a] p-10 text-white lg:flex">
+      <aside className="relative hidden flex-col justify-between overflow-hidden bg-brand-panel p-10 text-white lg:flex">
         <div className="pointer-events-none absolute -top-24 -right-24 size-96 rounded-full bg-indigo-500/30 blur-3xl" />
         <div>
           <div className="flex items-center gap-3"><span className="flex size-11 items-center justify-center rounded-xl bg-indigo-500"><Layers className="size-5" /></span><div><p className="flex items-center gap-2 text-xl font-bold">Wanka <span className="rounded bg-white/15 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide">ADMIN</span></p><p className="text-xs text-white/70">Consola de administración de la plataforma</p></div></div>

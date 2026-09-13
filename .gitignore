@@ -20,3 +20,6 @@ blob-report/
 # env
 .env*
 !.env.example
+
+# design references: keep the Stitch HTML, not the rendered PNGs (re-render with Playwright)
+design/stitch/**/*.png
