@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 test("agenda: new appointment drawer validates and schedules; reschedule dialog", async ({ page }, testInfo) => {
   await page.goto("/agenda");
-  await page.waitForTimeout(300);
+  await page.waitForLoadState("networkidle");
   await page.getByRole("button", { name: /Agendar nueva cita/ }).click();
   const sheet = page.getByRole("dialog");
   await expect(sheet.getByText("María Castillo Quispe")).toBeVisible();

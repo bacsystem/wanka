@@ -1,7 +1,8 @@
 import { expect, test, type Page } from "@playwright/test";
 
+/** Wait for hydration before the first interaction (client handlers are not attached on first paint). */
 async function settle(page: Page) {
-  await page.waitForTimeout(350);
+  await page.waitForLoadState("networkidle");
 }
 
 test("comprobantes: search, type filter and bulk selection", async ({ page }) => {

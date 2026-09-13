@@ -15,7 +15,7 @@ import { SectionCard } from "@/components/shared/section-card";
 import { SearchInput } from "@/components/shared/toolbar";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { catalogMock } from "@/features/pos/mocks/catalog";
-import { formatCurrency, formatDate } from "@/lib/format";
+import { formatCurrency, formatDate, parseNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { quoteDetailMock } from "../mocks/quote-detail";
 import type { QuoteLine } from "../mocks/quote-detail";
@@ -98,10 +98,10 @@ export function QuoteDetail({ quote }: { quote: Quote }) {
                         <TableCell className="pl-4 font-mono text-xs">{String(i + 1).padStart(2, "0")}</TableCell>
                         <TableCell className="font-mono text-xs">{l.code}</TableCell>
                         <TableCell className="max-w-72"><p className="font-medium">{l.description}</p><p className="truncate text-xs text-muted-foreground">{l.detail}</p></TableCell>
-                        <TableCell className="text-right">{ed ? <Input value={l.qty} onChange={(e) => update(l.id, { qty: Number(e.target.value) || 0 })} className="h-7 w-16 text-right font-mono" aria-label="Cantidad" /> : <span className="font-mono tabular-nums">{l.qty}</span>}</TableCell>
+                        <TableCell className="text-right">{ed ? <Input size="sm" value={l.qty} onChange={(e) => update(l.id, { qty: parseNumber(e.target.value) })} className="w-16 text-right font-mono" aria-label="Cantidad" /> : <span className="font-mono tabular-nums">{l.qty}</span>}</TableCell>
                         <TableCell>{l.unit}</TableCell>
-                        <TableCell className="text-right">{ed ? <Input value={l.unitValue} onChange={(e) => update(l.id, { unitValue: Number(e.target.value) || 0 })} className="h-7 w-24 text-right font-mono" aria-label="Valor unitario" /> : <span className="font-mono tabular-nums">{l.unitValue.toFixed(2)}</span>}</TableCell>
-                        <TableCell className="text-right">{ed ? <Input value={l.discountPct} onChange={(e) => update(l.id, { discountPct: Number(e.target.value) || 0 })} className="h-7 w-14 text-right font-mono" aria-label="Descuento" /> : <span className="font-mono tabular-nums">{l.discountPct}%</span>}</TableCell>
+                        <TableCell className="text-right">{ed ? <Input size="sm" value={l.unitValue} onChange={(e) => update(l.id, { unitValue: parseNumber(e.target.value) })} className="w-24 text-right font-mono" aria-label="Valor unitario" /> : <span className="font-mono tabular-nums">{l.unitValue.toFixed(2)}</span>}</TableCell>
+                        <TableCell className="text-right">{ed ? <Input size="sm" value={l.discountPct} onChange={(e) => update(l.id, { discountPct: parseNumber(e.target.value) })} className="w-14 text-right font-mono" aria-label="Descuento" /> : <span className="font-mono tabular-nums">{l.discountPct}%</span>}</TableCell>
                         <TableCell><Badge variant="outline">{l.affectation === "10" ? "10 Gravado" : "20 Exonerado"}</Badge></TableCell>
                         <TableCell className="text-right font-mono font-medium tabular-nums">{lineTotal(l).toLocaleString("en-US", { minimumFractionDigits: 2 })}</TableCell>
                         <TableCell className="pr-3 text-right"><div className="flex justify-end gap-0.5"><Button variant="ghost" size="icon-sm" aria-label={ed ? "Guardar línea" : "Editar línea"} onClick={() => setEditing(ed ? null : l.id)}>{ed ? <Check /> : <Pencil />}</Button><Button variant="ghost" size="icon-sm" aria-label="Quitar línea" onClick={() => setLines((ls) => ls.filter((x) => x.id !== l.id))}><Trash2 /></Button></div></TableCell>

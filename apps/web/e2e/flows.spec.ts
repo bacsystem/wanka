@@ -96,7 +96,7 @@ test("reception: received quantity drives missing count; physical count drives t
 
 test("command palette searches and navigates; notifications open", async ({ page }, testInfo) => {
   await page.goto("/");
-  await page.waitForTimeout(400);
+  await page.waitForLoadState("networkidle");
   await page.keyboard.press("Control+k");
   const dialog = page.getByRole("dialog");
   await expect(dialog.getByRole("textbox", { name: "Buscar" })).toBeVisible();
@@ -112,7 +112,7 @@ test("command palette searches and navigates; notifications open", async ({ page
 test("agenda hands the patient and procedure to the POS", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop");
   await page.goto("/agenda");
-  await page.waitForTimeout(300);
+  await page.waitForLoadState("networkidle");
   await page.getByRole("button", { name: /08:30 Juan Carlos Pérez Huamán/ }).click();
   await page.locator('aside[aria-label="Detalle de cita"]').getByRole("button", { name: /Cobrar y emitir comprobante/ }).click();
   await expect(page).toHaveURL(/\/ventas\/nueva\?cliente=u1&items=c1$/);

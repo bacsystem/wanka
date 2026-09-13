@@ -12,10 +12,8 @@ for (const r of routes) {
     await page.addInitScript(() => localStorage.setItem("theme", "dark"));
     await page.goto(r);
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-    await page.waitForTimeout(350);
     await expect(page.locator("html")).toHaveClass(/dark/);
-    const overflow = await page.evaluate(() => Math.max(document.documentElement.scrollWidth - document.documentElement.clientWidth, window.innerWidth - window.visualViewport!.width));
-    expect(overflow, `horizontal overflow on ${r}`).toBeLessThanOrEqual(1);
+    await expect.poll(() => page.evaluate(() => Math.max(document.documentElement.scrollWidth - document.documentElement.clientWidth, window.innerWidth - window.visualViewport!.width)), { message: `horizontal overflow on ${r}`, timeout: 3000 }).toBeLessThanOrEqual(1);
     expect(errors).toEqual([]);
   });
 }

@@ -10,7 +10,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DataTable, TwoLine, type Column } from "@/components/shared/data-table";
 import { SectionCard } from "@/components/shared/section-card";
 import { StatusBadge, type BadgeTone } from "@/components/shared/status-badge";
-import { formatCurrency } from "@/lib/format";
+import { formatCurrency, parseNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { CashMovement } from "../mocks/cash";
 import { shift } from "../mocks/cash";
@@ -74,9 +74,9 @@ export function CashScreen({ movements }: { movements: CashMovement[] }) {
                 <span className="w-16 font-mono tabular-nums">{d.label}</span>
                 <span className="text-muted-foreground">×</span>
                 <Input
-                  type="number" min={0} value={counts[i]} aria-label={`Cantidad de ${d.label}`}
-                  onChange={(e) => setCounts((c) => c.map((v, j) => (j === i ? Math.max(0, Number(e.target.value) || 0) : v)))}
-                  className="h-7 w-16 text-right font-mono"
+                  size="sm" type="number" min={0} value={counts[i]} aria-label={`Cantidad de ${d.label}`}
+                  onChange={(e) => setCounts((c) => c.map((v, j) => (j === i ? parseNumber(e.target.value) : v)))}
+                  className="w-16 text-right font-mono"
                 />
                 <span className="ml-auto font-mono tabular-nums">{formatCurrency(d.value * counts[i])}</span>
               </li>

@@ -64,13 +64,15 @@ for (const s of screens) {
     page.on("pageerror", (e) => errors.push(e.message));
     await page.goto(s.path);
     await expect(page.getByRole("heading", { level: 1, name: s.heading })).toBeVisible();
-    await page.waitForTimeout(350); // sidebar auto-collapse transition on tablet
-    // No horizontal page overflow at any viewport.
+    // No horizontal page overflow at any viewport. Polled instead of a fixed wait: on tablet the sidebar
+    // auto-collapse transition is still running right after the heading appears.
     // On mobile emulation Chrome widens the layout viewport instead of scrolling, so compare against the visual viewport too.
-    const overflow = await page.evaluate(() =>
-      Math.max(document.documentElement.scrollWidth - document.documentElement.clientWidth, window.innerWidth - window.visualViewport!.width),
-    );
-    expect(overflow, "horizontal overflow").toBeLessThanOrEqual(0);
+    await expect
+      .poll(
+        () => page.evaluate(() => Math.max(document.documentElement.scrollWidth - document.documentElement.clientWidth, window.innerWidth - window.visualViewport!.width)),
+        { message: "horizontal overflow", timeout: 3000 },
+      )
+      .toBeLessThanOrEqual(0);
     expect(errors).toEqual([]);
   });
 }

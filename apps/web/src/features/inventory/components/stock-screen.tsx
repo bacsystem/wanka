@@ -182,7 +182,7 @@ function TransferSheet({ open, onOpenChange, warehouses }: { open: boolean; onOp
                 <li key={l.sku} className="flex items-center gap-3 px-3 py-2 text-sm">
                   <span className="font-mono text-xs text-muted-foreground">{l.sku}</span>
                   <span className="flex-1 truncate">{l.name}</span>
-                  <Input defaultValue={l.qty} className="h-7 w-16 text-right font-mono" aria-label={`Cantidad ${l.name}`} />
+                  <Input size="sm" defaultValue={l.qty} className="w-16 text-right font-mono" aria-label={`Cantidad ${l.name}`} />
                   <span className="w-8 text-xs text-muted-foreground">{l.unit}</span>
                   <Button variant="ghost" size="icon-xs" aria-label="Quitar"><Trash2 /></Button>
                 </li>

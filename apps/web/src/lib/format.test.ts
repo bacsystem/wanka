@@ -5,6 +5,7 @@ import {
   formatDocumentNumber,
   formatInteger,
   formatPercent,
+  parseNumber,
 } from "./format";
 
 describe("formatCurrency", () => {
@@ -45,5 +46,18 @@ describe("formatDate", () => {
 describe("formatDocumentNumber", () => {
   it("pads the correlative to 8 digits", () => {
     expect(formatDocumentNumber("F001", 1247)).toBe("F001-00001247");
+  });
+});
+
+describe("parseNumber", () => {
+  it("accepts dot and comma decimals", () => {
+    expect(parseNumber("1.5")).toBe(1.5);
+    expect(parseNumber("1,5")).toBe(1.5);
+    expect(parseNumber(" 12 ")).toBe(12);
+  });
+  it("maps empty, invalid and negative input to 0", () => {
+    expect(parseNumber("")).toBe(0);
+    expect(parseNumber("abc")).toBe(0);
+    expect(parseNumber("-3")).toBe(0);
   });
 });

@@ -34,3 +34,9 @@ export function formatDate(iso: string) {
 export function formatDocumentNumber(series: string, number: number) {
   return `${series}-${String(number).padStart(8, "0")}`;
 }
+
+/** Numeric value typed in a quantity/price field: accepts "1,5" or "1.5", never negative, empty → 0. */
+export function parseNumber(value: string) {
+  const n = Number(value.trim().replace(",", "."));
+  return Number.isFinite(n) && n > 0 ? n : 0;
+}

@@ -21,9 +21,7 @@ for (const s of screens) {
     page.on("pageerror", (e) => errors.push(e.message));
     await page.goto(s.path);
     await expect(page.getByRole("heading", { level: 1, name: s.heading })).toBeVisible();
-    await page.waitForTimeout(350);
-    const overflow = await page.evaluate(() => Math.max(document.documentElement.scrollWidth - document.documentElement.clientWidth, window.innerWidth - window.visualViewport!.width));
-    expect(overflow, `horizontal overflow on ${s.path}`).toBeLessThanOrEqual(1);
+    await expect.poll(() => page.evaluate(() => Math.max(document.documentElement.scrollWidth - document.documentElement.clientWidth, window.innerWidth - window.visualViewport!.width)), { message: `horizontal overflow on ${s.path}`, timeout: 3000 }).toBeLessThanOrEqual(1);
     expect(errors).toEqual([]);
   });
 }
