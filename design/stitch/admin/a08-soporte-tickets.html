@@ -1,0 +1,1251 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PerúSaaS Admin - Soporte y Mesa de Ayuda SLA</title>
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap&family=Geist+Mono:wght@400;500;600" rel="stylesheet">
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons Official Script -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Geist', 'sans-serif'],
+            mono: ['"Geist Mono"', 'monospace'],
+          },
+          colors: {
+            brand: {
+              sidebar: '#0F172A',
+              bg: '#F5F6FA',
+              primary: '#4F46E5',
+              'primary-hover': '#4338CA',
+              accent: '#7C3AED',
+              success: '#059669',
+              warning: '#D97706',
+              danger: '#DC2626',
+              text: '#111827',
+              muted: '#6B7280',
+              border: '#E5E7EB',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { font-family: 'Geist', sans-serif; font-size: 14px; color: #111827; background-color: #F5F6FA; }
+    /* Altura uniforme de 40px y radio 8px en todos los controles solicitados */
+    .ctrl-40 { height: 40px !important; min-height: 40px !important; max-height: 40px !important; border-radius: 8px !important; font-size: 14px !important; }
+    .badge-chip { height: 40px; border-radius: 8px; display: inline-flex; align-items: center; padding: 0 14px; font-size: 13px; font-weight: 500; }
+    
+    /* Micro-animaciones */
+    @keyframes spinSync { 100% { transform: rotate(360deg); } }
+    .animate-spin-slow { animation: spinSync 2s linear infinite; }
+    @keyframes pulseAlert { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(0.96); } }
+    .pulse-danger { animation: pulseAlert 1.5s ease-in-out infinite; }
+    
+    /* Scrollbars elegantes */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #f1f1f4; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+  </style>
+</head>
+<body class="h-full bg-[#F5F6FA] text-slate-900 flex overflow-hidden">
+
+  <!-- SIDEBAR OSCURO #0F172A (SuperAdmin PerúSaaS) -->
+  <aside class="w-64 bg-[#0F172A] text-slate-300 flex flex-col justify-between flex-shrink-0 z-30 transition-all duration-300 border-r border-slate-800 select-none">
+    <div class="flex flex-col h-full">
+      <!-- Logo & Brand Header -->
+      <div class="h-16 flex items-center justify-between px-5 border-b border-slate-800/80">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold shadow-md shadow-indigo-600/30">
+            <i data-lucide="layers" class="w-5 h-5 text-white"></i>
+          </div>
+          <div class="leading-tight">
+            <div class="flex items-center gap-1.5">
+              <span class="font-bold text-white tracking-tight text-base">PerúSaaS</span>
+              <span class="bg-indigo-500/20 text-indigo-400 text-[10px] font-semibold px-1.5 py-0.5 rounded uppercase tracking-wider">SUPER</span>
+            </div>
+            <span class="text-[11px] text-emerald-400 flex items-center gap-1 font-medium mt-0.5">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+              Cluster PE-Lima (Prod)
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Action: Nuevo Ticket Interno -->
+      <div class="px-4 pt-4 pb-2">
+        <button class="ctrl-40 w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium flex items-center justify-center gap-2 shadow-sm transition-colors cursor-pointer">
+          <i data-lucide="plus-circle" class="w-4 h-4"></i>
+          <span>Crear Incidente / Ticket</span>
+        </button>
+      </div>
+
+      <!-- Navigation Links -->
+      <div class="flex-1 overflow-y-auto px-3 py-2 space-y-6">
+        <div>
+          <p class="px-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Supervisión Global</p>
+          <nav class="space-y-1">
+            <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:bg-slate-800/70 hover:text-white transition-colors">
+              <i data-lucide="layout-dashboard" class="w-4 h-4 text-slate-400"></i>
+              <span>Dashboard Maestro</span>
+            </a>
+            <a href="#" class="flex items-center justify-between px-3 py-2.5 rounded-lg text-slate-300 hover:bg-slate-800/70 hover:text-white transition-colors">
+              <div class="flex items-center gap-3">
+                <i data-lucide="building-2" class="w-4 h-4 text-slate-400"></i>
+                <span>Tenants (Empresas)</span>
+              </div>
+              <span class="text-[11px] font-mono bg-slate-800 text-slate-300 px-2 py-0.5 rounded-md">1,482</span>
+            </a>
+            <a href="#" class="flex items-center justify-between px-3 py-2.5 rounded-lg text-slate-300 hover:bg-slate-800/70 hover:text-white transition-colors">
+              <div class="flex items-center gap-3">
+                <i data-lucide="activity" class="w-4 h-4 text-slate-400"></i>
+                <span>Salud OSE / SUNAT</span>
+              </div>
+              <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+            </a>
+          </nav>
+        </div>
+
+        <div>
+          <p class="px-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Soporte & Mesa de Ayuda</p>
+          <nav class="space-y-1">
+            <!-- Active Tab -->
+            <a href="#" class="flex items-center justify-between px-3 py-2.5 rounded-lg bg-indigo-600/20 text-indigo-300 font-medium border-l-4 border-indigo-500 shadow-inner">
+              <div class="flex items-center gap-3">
+                <i data-lucide="headset" class="w-4 h-4 text-indigo-400"></i>
+                <span>Tickets & SLA Global</span>
+              </div>
+              <span class="text-[11px] font-bold bg-indigo-500 text-white px-2 py-0.5 rounded-full">14 act.</span>
+            </a>
+            <a href="#" class="flex items-center justify-between px-3 py-2.5 rounded-lg text-slate-300 hover:bg-slate-800/70 hover:text-white transition-colors">
+              <div class="flex items-center gap-3">
+                <i data-lucide="life-buoy" class="w-4 h-4 text-slate-400"></i>
+                <span>Macros y Respuestas</span>
+              </div>
+            </a>
+            <a href="#" class="flex items-center justify-between px-3 py-2.5 rounded-lg text-slate-300 hover:bg-slate-800/70 hover:text-white transition-colors">
+              <div class="flex items-center gap-3">
+                <i data-lucide="shield-alert" class="w-4 h-4 text-amber-400"></i>
+                <span>Incidentes Críticos</span>
+              </div>
+              <span class="text-[11px] font-semibold bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded">3 P1</span>
+            </a>
+          </nav>
+        </div>
+
+        <div>
+          <p class="px-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Gobernanza & Core</p>
+          <nav class="space-y-1">
+            <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:bg-slate-800/70 hover:text-white transition-colors">
+              <i data-lucide="receipt-text" class="w-4 h-4 text-slate-400"></i>
+              <span>Comprobantes SaaS</span>
+            </a>
+            <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:bg-slate-800/70 hover:text-white transition-colors">
+              <i data-lucide="key-round" class="w-4 h-4 text-slate-400"></i>
+              <span>Bóveda Certificados PFX</span>
+            </a>
+            <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:bg-slate-800/70 hover:text-white transition-colors">
+              <i data-lucide="users" class="w-4 h-4 text-slate-400"></i>
+              <span>Staff & Roles Internos</span>
+            </a>
+            <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:bg-slate-800/70 hover:text-white transition-colors">
+              <i data-lucide="file-check-2" class="w-4 h-4 text-slate-400"></i>
+              <span>Auditoría SIEM & Logs</span>
+            </a>
+            <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:bg-slate-800/70 hover:text-white transition-colors">
+              <i data-lucide="sliders" class="w-4 h-4 text-slate-400"></i>
+              <span>Configuración Global</span>
+            </a>
+          </nav>
+        </div>
+      </div>
+
+      <!-- Footer User Admin -->
+      <div class="p-3 border-t border-slate-800 bg-slate-900/60 flex items-center justify-between">
+        <div class="flex items-center gap-3 min-w-0">
+          <div class="w-9 h-9 rounded-full bg-indigo-700/80 border border-indigo-400/30 flex items-center justify-center font-bold text-white text-xs flex-shrink-0">
+            CB
+          </div>
+          <div class="truncate leading-tight">
+            <p class="text-xs font-semibold text-white truncate">Carlos M. Benavides</p>
+            <p class="text-[11px] text-slate-400 truncate">SRE / SuperAdmin N3</p>
+          </div>
+        </div>
+        <button title="Cerrar sesión" class="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800">
+          <i data-lucide="log-out" class="w-4 h-4"></i>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- CONTENEDOR PRINCIPAL: TOPBAR + CONTENIDO FLUIDO -->
+  <div class="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
+    
+    <!-- TOPBAR BLANCA -->
+    <header class="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between flex-shrink-0 z-20 shadow-sm">
+      <!-- Breadcrumb & Status -->
+      <div class="flex items-center gap-3">
+        <nav class="flex items-center gap-2 text-xs text-slate-500">
+          <span>Plataforma</span>
+          <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-slate-400"></i>
+          <span>Soporte Técnico</span>
+          <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-slate-400"></i>
+          <span class="font-semibold text-slate-900 text-sm">Mesa de Tickets y SLA Multi-Tenant</span>
+        </nav>
+
+        <div class="hidden lg:flex items-center gap-2 ml-4 px-2.5 py-1 bg-emerald-50 border border-emerald-200 rounded-full">
+          <!-- Icono Dinámico Check / Alert -->
+          <i id="headerSlaIcon" data-lucide="check-circle" class="w-3.5 h-3.5 text-emerald-600"></i>
+          <span class="text-[11px] font-medium text-emerald-700">SLA Cumplido en 98.4% de 342 tickets este ciclo</span>
+        </div>
+      </div>
+
+      <!-- Quick Status Indicators & Global Controls -->
+      <div class="flex items-center gap-3">
+        <!-- OSE Conexión Dinámica (wifi / wifi-off) -->
+        <div id="oseConnStatus" class="ctrl-40 px-3 bg-slate-50 border border-slate-200 rounded-lg flex items-center gap-2 text-xs cursor-pointer hover:bg-slate-100 transition-colors" title="Estado de canal OSE SUNAT en tiempo real">
+          <i id="oseIcon" data-lucide="wifi" class="w-4 h-4 text-emerald-600"></i>
+          <span class="font-medium text-slate-700">OSE Bizlinks / Nube: <strong class="text-emerald-700 font-semibold">Online</strong></span>
+        </div>
+
+        <!-- Sincronizador con micro-animación -->
+        <button id="btnSync" onclick="triggerSync()" class="ctrl-40 px-3 bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-700 flex items-center gap-2 transition-colors cursor-pointer" title="Sincronizar bandeja con colas Redis">
+          <i id="syncIcon" data-lucide="refresh-cw" class="w-4 h-4 text-slate-600"></i>
+          <span class="text-xs font-medium">Último sync: <strong class="font-mono">15:44:12</strong></span>
+        </button>
+
+        <!-- Moneda y Zona Horaria Perú -->
+        <div class="ctrl-40 px-3 bg-indigo-50 border border-indigo-100 rounded-lg flex items-center gap-1.5 text-xs text-indigo-900 font-medium">
+          <span class="w-2 h-2 rounded-full bg-red-600"></span>
+          <span>Perú (S/ - PEN) · UTC-5</span>
+        </div>
+
+        <!-- Notificaciones -->
+        <button class="ctrl-40 w-10 relative bg-white border border-slate-200 rounded-lg flex items-center justify-center text-slate-600 hover:bg-slate-50 transition-colors">
+          <i data-lucide="bell" class="w-4 h-4"></i>
+          <span class="absolute top-2 right-2 w-2 h-2 rounded-full bg-amber-500 pulse-danger"></span>
+        </button>
+
+        <!-- Impersonar SuperAdmin -->
+        <button class="ctrl-40 px-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium flex items-center gap-2 shadow-sm transition-colors">
+          <i data-lucide="user-check" class="w-4 h-4"></i>
+          <span class="text-xs font-semibold">Consola SRE</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- ÁREA DE CONTENIDO (Layout con Scroll Independiente) -->
+    <main class="flex-1 overflow-y-auto p-6 space-y-6">
+      
+      <!-- ENCABEZADO DE SECCIÓN & METRICAS OPERATIVAS (KPIs SLA Y TIEMPOS DE RESPUESTA) -->
+      <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div>
+          <h1 class="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2.5">
+            Bandeja de Tickets y Monitor de SLA
+            <span class="text-xs font-mono font-medium px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-800 border border-indigo-200">B2B SaaS</span>
+          </h1>
+          <p class="text-sm text-slate-500 mt-0.5">
+            Gestión de incidentes tributarios SUNAT, integraciones OSE, pasarelas de pago y soporte operativo para 1,482 empresas clientes en Perú.
+          </p>
+        </div>
+
+        <!-- Botones de Acción Global -->
+        <div class="flex items-center gap-2.5 flex-wrap">
+          <button class="ctrl-40 px-3.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-medium flex items-center gap-2 shadow-sm transition-colors">
+            <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-600"></i>
+            <span>Exportar Métricas CSV</span>
+          </button>
+          <button class="ctrl-40 px-3.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-medium flex items-center gap-2 shadow-sm transition-colors">
+            <i data-lucide="sliders-horizontal" class="w-4 h-4 text-indigo-600"></i>
+            <span>Políticas de SLA OSE</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- GRID DE KPIS: TIEMPO DE RESPUESTA, SLA, BREACH Y CSAT -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        
+        <!-- KPI 1: Tiempo Primera Respuesta -->
+        <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm relative overflow-hidden">
+          <div class="flex items-center justify-between text-slate-500">
+            <span class="text-xs font-semibold uppercase tracking-wider">Tiempo 1ª Respuesta</span>
+            <div class="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+              <i data-lucide="timer" class="w-4 h-4"></i>
+            </div>
+          </div>
+          <div class="mt-2 flex items-baseline gap-2">
+            <span class="text-2xl font-bold font-mono text-slate-900">14 min</span>
+            <span class="text-xs font-semibold text-emerald-600 flex items-center gap-0.5">
+              <i data-lucide="trending-down" class="w-3.5 h-3.5"></i> -3.2m vs semana anterior
+            </span>
+          </div>
+          <div class="mt-2 text-xs text-slate-500 flex items-center justify-between">
+            <span>Objetivo SLA Plataforma: &lt; 20 min</span>
+            <span class="font-semibold text-emerald-600">96.8% cumplido</span>
+          </div>
+        </div>
+
+        <!-- KPI 2: Tiempo de Resolución Nivel 2/3 -->
+        <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm relative overflow-hidden">
+          <div class="flex items-center justify-between text-slate-500">
+            <span class="text-xs font-semibold uppercase tracking-wider">Resolución Promedio (MTTR)</span>
+            <div class="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center">
+              <i data-lucide="check-check" class="w-4 h-4"></i>
+            </div>
+          </div>
+          <div class="mt-2 flex items-baseline gap-2">
+            <span class="text-2xl font-bold font-mono text-slate-900">1h 48m</span>
+            <span class="text-xs font-semibold text-emerald-600 flex items-center gap-0.5">
+              <i data-lucide="trending-down" class="w-3.5 h-3.5"></i> -18m optimizado
+            </span>
+          </div>
+          <div class="mt-2 text-xs text-slate-500 flex items-center justify-between">
+            <span>Impacto en contingencia CDR</span>
+            <span class="font-semibold text-slate-700">Récord 42m</span>
+          </div>
+        </div>
+
+        <!-- KPI 3: SLA en Riesgo / Breached -->
+        <div class="bg-white rounded-xl border border-amber-200 p-4 shadow-sm bg-gradient-to-br from-white to-amber-50/40 relative overflow-hidden">
+          <div class="flex items-center justify-between text-slate-500">
+            <span class="text-xs font-semibold uppercase tracking-wider text-amber-900">Tickets en Riesgo SLA</span>
+            <div class="w-8 h-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center">
+              <i data-lucide="alert-triangle" class="w-4 h-4 pulse-danger"></i>
+            </div>
+          </div>
+          <div class="mt-2 flex items-baseline gap-2">
+            <span class="text-2xl font-bold font-mono text-amber-700">2</span>
+            <span class="text-xs font-semibold text-amber-800 bg-amber-100 px-2 py-0.5 rounded">
+              &lt; 30 min para breach
+            </span>
+          </div>
+          <div class="mt-2 text-xs text-slate-500 flex items-center justify-between">
+            <span>1 en SUNAT OSE · 1 en Niubiz</span>
+            <span class="font-semibold text-rose-600">0 vencidos hoy</span>
+          </div>
+        </div>
+
+        <!-- KPI 4: CSAT & Satisfacción Tenants -->
+        <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm relative overflow-hidden">
+          <div class="flex items-center justify-between text-slate-500">
+            <span class="text-xs font-semibold uppercase tracking-wider">CSAT Empresas Clientes</span>
+            <div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+              <i data-lucide="smile" class="w-4 h-4"></i>
+            </div>
+          </div>
+          <div class="mt-2 flex items-baseline gap-2">
+            <span class="text-2xl font-bold font-mono text-slate-900">4.92<span class="text-sm font-normal text-slate-400">/5</span></span>
+            <span class="text-xs font-semibold text-emerald-600 flex items-center gap-0.5">
+              <i data-lucide="trending-up" class="w-3.5 h-3.5"></i> 98.6% positivos
+            </span>
+          </div>
+          <div class="mt-2 text-xs text-slate-500 flex items-center justify-between">
+            <span>Encuestas respondidas: 218</span>
+            <span class="font-mono text-slate-600">Sello ISO 27001</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ALERTA DE INCIDENTE GENERAL EN CURSO (Dismissible / Actionable) -->
+      <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 shadow-xs">
+        <div class="flex items-start gap-3">
+          <div class="p-2 rounded-lg bg-amber-100 text-amber-700 mt-0.5 flex-shrink-0">
+            <i data-lucide="alert-octagon" class="w-5 h-5 pulse-danger"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <h4 class="font-semibold text-amber-950 text-sm">Alerta de Mesa SRE: Incidencia SUNAT Web Services Directo (Error 1033)</h4>
+              <span class="bg-amber-200 text-amber-900 text-[11px] font-mono font-bold px-2 py-0.5 rounded">INC-8421</span>
+              <span class="text-xs text-amber-800">· Afecta a 4 empresas con certificado directo en Huancayo y Trujillo</span>
+            </div>
+            <p class="text-xs text-amber-900/80 mt-1">
+              Las respuestas automáticas sugieren activar bypass a Bizlinks OSE para evitar rechazos en facturas de contingencia de cierre diario.
+            </p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 w-full md:w-auto justify-end flex-shrink-0">
+          <button class="ctrl-40 px-3.5 bg-amber-600 hover:bg-amber-700 text-white font-medium flex items-center gap-1.5 shadow-sm text-xs transition-colors">
+            <i data-lucide="zap" class="w-3.5 h-3.5"></i>
+            <span>Activar Macro de Mitigación</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- CONTENEDOR PRINCIPAL DIVIDIDO (SPLIT VIEW): TABLA DE TICKETS (IZQUIERDA) + PANEL DE DETALLE Y CONVERSACIÓN (DERECHA) -->
+      <div class="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
+        
+        <!-- COLUMNA IZQUIERDA: BANDEJA Y TABLA COMPLETA CON TOOLBAR COMPLETO (7 u 8 cols) -->
+        <div class="xl:col-span-7 bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col overflow-hidden">
+          
+          <!-- BARRA DE FILTROS SUPERIORES: ALTURA UNIFORME 40PX Y RADIO 8PX -->
+          <div class="p-4 border-b border-slate-200 space-y-3 bg-slate-50/50">
+            
+            <!-- Fila 1: Búsqueda y Filtros Rápidos -->
+            <div class="flex flex-col md:flex-row items-center gap-3">
+              <!-- Input Búsqueda con lupa (40px) -->
+              <div class="relative flex-1 w-full">
+                <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+                <input type="text" id="searchInput" placeholder="Buscar por ticket #, RUC, nombre de empresa, agente o asunto..." class="ctrl-40 w-full pl-10 pr-4 bg-white border border-slate-300 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm">
+              </div>
+
+              <!-- Select Prioridad (40px) -->
+              <div class="w-full md:w-44">
+                <select class="ctrl-40 w-full px-3 bg-white border border-slate-300 text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                  <option value="">Todas las Prioridades</option>
+                  <option value="P1">P1 - Crítica (SLA 30m)</option>
+                  <option value="P2">P2 - Alta (SLA 2h)</option>
+                  <option value="P3">P3 - Normal (SLA 8h)</option>
+                  <option value="P4">P4 - Baja (SLA 24h)</option>
+                </select>
+              </div>
+
+              <!-- Select Canal (40px) -->
+              <div class="w-full md:w-40">
+                <select class="ctrl-40 w-full px-3 bg-white border border-slate-300 text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                  <option value="">Canal: Todos</option>
+                  <option value="whatsapp">WhatsApp B2B</option>
+                  <option value="email">Correo Soporte</option>
+                  <option value="inapp">In-App Consola</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Fila 2: Chips de Estado y Botones de Tabla (Menú Columnas, Restablecer, Densidad) -->
+            <div class="flex flex-wrap items-center justify-between gap-3 pt-1">
+              
+              <!-- Chips de filtro con altura uniforme 40px -->
+              <div class="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0">
+                <button class="badge-chip bg-indigo-600 text-white font-semibold shadow-xs">
+                  Abiertos (14)
+                </button>
+                <button class="badge-chip bg-white border border-slate-300 text-slate-700 hover:bg-slate-100 transition-colors">
+                  <span class="w-2 h-2 rounded-full bg-amber-500 mr-2 pulse-danger"></span>
+                  En Riesgo SLA (2)
+                </button>
+                <button class="badge-chip bg-white border border-slate-300 text-slate-700 hover:bg-slate-100 transition-colors">
+                  En Espera Cliente (8)
+                </button>
+                <button class="badge-chip bg-white border border-slate-300 text-slate-700 hover:bg-slate-100 transition-colors">
+                  Resueltos Hoy (49)
+                </button>
+              </div>
+
+              <!-- Controles de Tabla: Columnas, Restablecer, Densidad -->
+              <div class="flex items-center gap-2 flex-shrink-0">
+                
+                <!-- Menú 'Columnas' (icono columns-3) con dropdown para mostrar/ocultar -->
+                <div class="relative inline-block text-left">
+                  <button id="btnToggleCols" onclick="toggleColumnMenu()" class="ctrl-40 px-3 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 flex items-center gap-2 text-sm font-medium shadow-xs">
+                    <i data-lucide="columns-3" class="w-4 h-4 text-slate-500"></i>
+                    <span>Columnas</span>
+                    <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400"></i>
+                  </button>
+
+                  <!-- Popover Dropdown de Columnas -->
+                  <div id="colMenuDropdown" class="hidden absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-slate-200 z-50 p-2 text-xs space-y-1">
+                    <p class="px-2 py-1 font-semibold text-slate-500 uppercase tracking-wider text-[10px]">Mostrar / Ocultar Columnas</p>
+                    <label class="flex items-center gap-2 px-2 py-1.5 hover:bg-slate-50 rounded cursor-pointer">
+                      <input type="checkbox" checked onchange="toggleTableCol('col-ticket')" class="rounded text-indigo-600">
+                      <span>Ticket & Prioridad</span>
+                    </label>
+                    <label class="flex items-center gap-2 px-2 py-1.5 hover:bg-slate-50 rounded cursor-pointer">
+                      <input type="checkbox" checked onchange="toggleTableCol('col-tenant')" class="rounded text-indigo-600">
+                      <span>Empresa Afectada (RUC)</span>
+                    </label>
+                    <label class="flex items-center gap-2 px-2 py-1.5 hover:bg-slate-50 rounded cursor-pointer">
+                      <input type="checkbox" checked onchange="toggleTableCol('col-subject')" class="rounded text-indigo-600">
+                      <span>Asunto</span>
+                    </label>
+                    <label class="flex items-center gap-2 px-2 py-1.5 hover:bg-slate-50 rounded cursor-pointer">
+                      <input type="checkbox" checked onchange="toggleTableCol('col-channel')" class="rounded text-indigo-600">
+                      <span>Canal</span>
+                    </label>
+                    <label class="flex items-center gap-2 px-2 py-1.5 hover:bg-slate-50 rounded cursor-pointer">
+                      <input type="checkbox" checked onchange="toggleTableCol('col-agent')" class="rounded text-indigo-600">
+                      <span>Agente Asignado</span>
+                    </label>
+                    <label class="flex items-center gap-2 px-2 py-1.5 hover:bg-slate-50 rounded cursor-pointer">
+                      <input type="checkbox" checked onchange="toggleTableCol('col-status')" class="rounded text-indigo-600">
+                      <span>Estado</span>
+                    </label>
+                    <label class="flex items-center gap-2 px-2 py-1.5 hover:bg-slate-50 rounded cursor-pointer">
+                      <input type="checkbox" checked onchange="toggleTableCol('col-sla')" class="rounded text-indigo-600">
+                      <span>Tiempo Restante SLA</span>
+                    </label>
+                  </div>
+                </div>
+
+                <!-- Botón 'Restablecer' vista por defecto (40px) -->
+                <button onclick="resetTableView()" class="ctrl-40 px-3 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 flex items-center gap-1.5 text-sm font-medium shadow-xs" title="Restablecer filtros, orden y columnas por defecto">
+                  <i data-lucide="rotate-ccw" class="w-4 h-4 text-slate-500"></i>
+                  <span class="hidden sm:inline">Restablecer</span>
+                </button>
+
+                <!-- Selector de Densidad (Compacta / Cómoda) (40px) -->
+                <div class="inline-flex rounded-lg border border-slate-300 bg-white p-0.5 ctrl-40 items-center">
+                  <button id="btnDensComoda" onclick="setTableDensity('comoda')" class="h-8 px-2.5 rounded-md text-xs font-medium bg-indigo-50 text-indigo-700 flex items-center gap-1">
+                    <i data-lucide="layout-list" class="w-3.5 h-3.5"></i>
+                    <span class="hidden sm:inline">Cómoda</span>
+                  </button>
+                  <button id="btnDensCompacta" onclick="setTableDensity('compacta')" class="h-8 px-2.5 rounded-md text-xs font-medium text-slate-600 hover:text-slate-900 flex items-center gap-1">
+                    <i data-lucide="align-justify" class="w-3.5 h-3.5"></i>
+                    <span class="hidden sm:inline">Compacta</span>
+                  </button>
+                </div>
+
+              </div>
+
+            </div>
+
+          </div>
+
+          <!-- TABLA PRINCIPAL RESPONSIVE (CON TR CÓMODO / COMPACTO) -->
+          <div class="overflow-x-auto min-h-[420px]">
+            <table id="ticketsTable" class="w-full text-left border-collapse">
+              <thead>
+                <tr class="bg-slate-100/75 border-b border-slate-200 text-xs font-semibold text-slate-600 uppercase tracking-wider select-none">
+                  <th class="py-3 px-3.5 w-8 text-center">
+                    <input type="checkbox" class="rounded text-indigo-600">
+                  </th>
+                  <th class="py-3 px-3.5 col-ticket cursor-pointer hover:bg-slate-200/60" onclick="sortTable('ticket')">
+                    <div class="flex items-center gap-1.5">
+                      <span>Ticket</span>
+                      <i data-lucide="arrow-up-down" class="w-3.5 h-3.5 text-slate-400"></i>
+                    </div>
+                  </th>
+                  <th class="py-3 px-3.5 col-tenant cursor-pointer hover:bg-slate-200/60" onclick="sortTable('tenant')">
+                    <div class="flex items-center gap-1.5">
+                      <span>Empresa Afectada</span>
+                      <i data-lucide="arrow-up-down" class="w-3.5 h-3.5 text-slate-400"></i>
+                    </div>
+                  </th>
+                  <th class="py-3 px-3.5 col-subject">Asunto</th>
+                  <th class="py-3 px-3.5 col-channel">Canal</th>
+                  <th class="py-3 px-3.5 col-agent">Agente</th>
+                  <th class="py-3 px-3.5 col-status">Estado</th>
+                  <th class="py-3 px-3.5 col-sla cursor-pointer hover:bg-slate-200/60 text-right" onclick="sortTable('sla')">
+                    <div class="flex items-center justify-end gap-1.5">
+                      <span>Tiempo SLA</span>
+                      <i data-lucide="arrow-up-down" class="w-3.5 h-3.5 text-slate-400"></i>
+                    </div>
+                  </th>
+                </tr>
+              </thead>
+              <tbody id="ticketsTbody" class="divide-y divide-slate-200 text-sm">
+                
+                <!-- FILA 1 (Seleccionada actualmente - OdontoSalud) -->
+                <tr onclick="selectTicket(1)" class="ticket-row bg-indigo-50/70 border-l-4 border-indigo-600 hover:bg-indigo-50 cursor-pointer transition-colors" data-id="1">
+                  <td class="py-3.5 px-3.5 text-center" onclick="event.stopPropagation()">
+                    <input type="checkbox" checked class="rounded text-indigo-600">
+                  </td>
+                  <td class="py-3.5 px-3.5 col-ticket font-mono font-bold text-indigo-700">
+                    <div class="flex items-center gap-2">
+                      <span class="w-2 h-2 rounded-full bg-rose-600 pulse-danger" title="Prioridad P1 Crítica"></span>
+                      <span>#TCK-9402</span>
+                    </div>
+                    <span class="text-[11px] font-normal text-slate-500">24/10/2024 15:38</span>
+                  </td>
+                  <td class="py-3.5 px-3.5 col-tenant">
+                    <div class="font-semibold text-slate-900">Clínica Dental OdontoSalud</div>
+                    <div class="text-xs text-slate-500 font-mono">RUC: 20601984211 · Plan Pro</div>
+                  </td>
+                  <td class="py-3.5 px-3.5 col-subject max-w-xs">
+                    <div class="font-medium text-slate-900 truncate">Rechazo en lote de boletas B001 - Error 1033 OSE Bizlinks</div>
+                    <div class="text-xs text-slate-500 truncate">No genera CDR automático en caja de recepción Miraflores</div>
+                  </td>
+                  <td class="py-3.5 px-3.5 col-channel">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      <i data-lucide="message-square" class="w-3.5 h-3.5 text-emerald-600"></i> WhatsApp
+                    </span>
+                  </td>
+                  <td class="py-3.5 px-3.5 col-agent">
+                    <div class="flex items-center gap-2">
+                      <div class="w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[10px] font-bold">CB</div>
+                      <span class="text-xs text-slate-700">Carlos B. (Tú)</span>
+                    </div>
+                  </td>
+                  <td class="py-3.5 px-3.5 col-status">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200">
+                      <i data-lucide="clock" class="w-3 h-3"></i> En Atención
+                    </span>
+                  </td>
+                  <td class="py-3.5 px-3.5 col-sla text-right font-mono">
+                    <div class="inline-flex flex-col items-end">
+                      <span class="text-xs font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded border border-rose-200 pulse-danger">
+                        18 min rest.
+                      </span>
+                      <span class="text-[10px] text-slate-400 mt-0.5">SLA P1: 30 min</span>
+                    </div>
+                  </td>
+                </tr>
+
+                <!-- FILA 2: PetMed Sur (Alta P2) -->
+                <tr onclick="selectTicket(2)" class="ticket-row hover:bg-slate-50 cursor-pointer transition-colors" data-id="2">
+                  <td class="py-3.5 px-3.5 text-center" onclick="event.stopPropagation()">
+                    <input type="checkbox" class="rounded text-indigo-600">
+                  </td>
+                  <td class="py-3.5 px-3.5 col-ticket font-mono font-bold text-slate-700">
+                    <div class="flex items-center gap-2">
+                      <span class="w-2 h-2 rounded-full bg-amber-500" title="Prioridad P2 Alta"></span>
+                      <span>#TCK-9401</span>
+                    </div>
+                    <span class="text-[11px] font-normal text-slate-500">24/10/2024 15:10</span>
+                  </td>
+                  <td class="py-3.5 px-3.5 col-tenant">
+                    <div class="font-semibold text-slate-900">Hospital Veterinario PetMed</div>
+                    <div class="text-xs text-slate-500 font-mono">RUC: 20554819230 · Arequipa</div>
+                  </td>
+                  <td class="py-3.5 px-3.5 col-subject max-w-xs">
+                    <div class="font-medium text-slate-900 truncate">Alerta de cuota CPE al 94.2% antes de fin de mes</div>
+                    <div class="text-xs text-slate-500 truncate">Solicita ampliación inmediata de paquete +5,000 CPE</div>
+                  </td>
+                  <td class="py-3.5 px-3.5 col-channel">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                      <i data-lucide="mail" class="w-3.5 h-3.5 text-blue-600"></i> Correo
+                    </span>
+                  </td>
+                  <td class="py-3.5 px-3.5 col-agent">
+                    <div class="flex items-center gap-2">
+                      <div class="w-6 h-6 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-[10px] font-bold">LP</div>
+                      <span class="text-xs text-slate-700">Lucía P.</span>
+                    </div>
+                  </td>
+                  <td class="py-3.5 px-3.5 col-status">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                      <i data-lucide="arrow-right-circle" class="w-3 h-3"></i> Abierto
+                    </span>
+                  </td>
+                  <td class="py-3.5 px-3.5 col-sla text-right font-mono">
+                    <div class="inline-flex flex-col items-end">
+                      <span class="text-xs font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                        1h 12m rest.
+                      </span>
+                      <span class="text-[10px] text-slate-400 mt-0.5">SLA P2: 2h</span>
+                    </div>
+                  </td>
+                </tr>
+
+                <!-- FILA 3: Textil Gamarra (P3 - Morosidad/Bloqueo) -->
+                <tr onclick="selectTicket(3)" class="ticket-row hover:bg-slate-50 cursor-pointer transition-colors" data-id="3">
+                  <td class="py-3.5 px-3.5 text-center" onclick="event.stopPropagation()">
+                    <input type="checkbox" class="rounded text-indigo-600">
+                  </td>
+                  <td class="py-3.5 px-3.5 col-ticket font-mono font-bold text-slate-700">
+                    <div class="flex items-center gap-2">
+                      <span class="w-2 h-2 rounded-full bg-slate-400" title="Prioridad P3 Normal"></span>
+                      <span>#TCK-9398</span>
+                    </div>
+                    <span class="text-[11px] font-normal text-slate-500">24/10/2024 14:22</span>
+                  </td>
+                  <td class="py-3.5 px-3.5 col-tenant">
+                    <div class="font-semibold text-slate-900">Comercializadora Textil Gamarra</div>
+                    <div class="text-xs text-slate-500 font-mono">RUC: 20114092812 · Retail Lima</div>
+                  </td>
+                  <td class="py-3.5 px-3.5 col-subject max-w-xs">
+                    <div class="font-medium text-slate-900 truncate">Cuenta suspendida por tarjeta caducada en pasarela</div>
+                    <div class="text-xs text-slate-500 truncate">Adjunta constancia de transferencia BCP para desbloqueo</div>
+                  </td>
+                  <td class="py-3.5 px-3.5 col-channel">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-purple-50 text-purple-700 border border-purple-200">
+                      <i data-lucide="app-window" class="w-3.5 h-3.5 text-purple-600"></i> In-App
+                    </span>
+                  </td>
+                  <td class="py-3.5 px-3.5 col-agent">
+                    <div class="flex items-center gap-2">
+                      <div class="w-6 h-6 rounded-full bg-purple-100 text-purple-800 flex items-center justify-center text-[10px] font-bold">FA</div>
+                      <span class="text-xs text-slate-700">Finanzas N2</span>
+                    </div>
+                  </td>
+                  <td class="py-3.5 px-3.5 col-status">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200">
+                      <i data-lucide="help-circle" class="w-3 h-3"></i> En Espera
+                    </span>
+                  </td>
+                  <td class="py-3.5 px-3.5 col-sla text-right font-mono">
+                    <div class="inline-flex flex-col items-end">
+                      <span class="text-xs font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                        5h 38m rest.
+                      </span>
+                      <span class="text-[10px] text-slate-400 mt-0.5">SLA P3: 8h</span>
+                    </div>
+                  </td>
+                </tr>
+
+                <!-- FILA 4: Cevicherías La Mar (P2 - Certificado PFX) -->
+                <tr onclick="selectTicket(4)" class="ticket-row hover:bg-slate-50 cursor-pointer transition-colors" data-id="4">
+                  <td class="py-3.5 px-3.5 text-center" onclick="event.stopPropagation()">
+                    <input type="checkbox" class="rounded text-indigo-600">
+                  </td>
+                  <td class="py-3.5 px-3.5 col-ticket font-mono font-bold text-slate-700">
+                    <div class="flex items-center gap-2">
+                      <span class="w-2 h-2 rounded-full bg-amber-500" title="Prioridad P2 Alta"></span>
+                      <span>#TCK-9395</span>
+                    </div>
+                    <span class="text-[11px] font-normal text-slate-500">24/10/2024 13:05</span>
+                  </td>
+                  <td class="py-3.5 px-3.5 col-tenant">
+                    <div class="font-semibold text-slate-900">Grupo Cevicheras La Mar</div>
+                    <div class="text-xs text-slate-500 font-mono">RUC: 20498112349 · Plan Enterprise</div>
+                  </td>
+                  <td class="py-3.5 px-3.5 col-subject max-w-xs">
+                    <div class="font-medium text-slate-900 truncate">Renovación de Certificado Digital Tributario (.PFX)</div>
+                    <div class="text-xs text-slate-500 truncate">Cargaron nueva clave privada en bóveda segura</div>
+                  </td>
+                  <td class="py-3.5 px-3.5 col-channel">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      <i data-lucide="message-square" class="w-3.5 h-3.5 text-emerald-600"></i> WhatsApp
+                    </span>
+                  </td>
+                  <td class="py-3.5 px-3.5 col-agent">
+                    <div class="flex items-center gap-2">
+                      <div class="w-6 h-6 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-[10px] font-bold">MS</div>
+                      <span class="text-xs text-slate-700">Marcos S.</span>
+                    </div>
+                  </td>
+                  <td class="py-3.5 px-3.5 col-status">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      <i data-lucide="check-circle-2" class="w-3 h-3"></i> Resuelto
+                    </span>
+                  </td>
+                  <td class="py-3.5 px-3.5 col-sla text-right font-mono">
+                    <div class="inline-flex flex-col items-end">
+                      <span class="text-xs font-semibold text-emerald-700">Cumplido en 34m</span>
+                      <span class="text-[10px] text-slate-400">Objetivo: 2h</span>
+                    </div>
+                  </td>
+                </tr>
+
+                <!-- FILA 5: Veterinaria Cusco (P4 - Consulta de Reporte SIRE) -->
+                <tr onclick="selectTicket(5)" class="ticket-row hover:bg-slate-50 cursor-pointer transition-colors" data-id="5">
+                  <td class="py-3.5 px-3.5 text-center" onclick="event.stopPropagation()">
+                    <input type="checkbox" class="rounded text-indigo-600">
+                  </td>
+                  <td class="py-3.5 px-3.5 col-ticket font-mono font-bold text-slate-700">
+                    <div class="flex items-center gap-2">
+                      <span class="w-2 h-2 rounded-full bg-slate-300" title="Prioridad P4 Baja"></span>
+                      <span>#TCK-9390</span>
+                    </div>
+                    <span class="text-[11px] font-normal text-slate-500">24/10/2024 11:40</span>
+                  </td>
+                  <td class="py-3.5 px-3.5 col-tenant">
+                    <div class="font-semibold text-slate-900">Veterinaria Los Andes Cusco</div>
+                    <div class="text-xs text-slate-500 font-mono">RUC: 20603349182 · Wanchaq</div>
+                  </td>
+                  <td class="py-3.5 px-3.5 col-subject max-w-xs">
+                    <div class="font-medium text-slate-900 truncate">Generación masiva de archivo SIRE Compras/Ventas</div>
+                    <div class="text-xs text-slate-500 truncate">Duda sobre formato TXT de propuesta preliminar SUNAT</div>
+                  </td>
+                  <td class="py-3.5 px-3.5 col-channel">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                      <i data-lucide="mail" class="w-3.5 h-3.5 text-blue-600"></i> Correo
+                    </span>
+                  </td>
+                  <td class="py-3.5 px-3.5 col-agent">
+                    <div class="flex items-center gap-2">
+                      <div class="w-6 h-6 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-[10px] font-bold">LP</div>
+                      <span class="text-xs text-slate-700">Lucía P.</span>
+                    </div>
+                  </td>
+                  <td class="py-3.5 px-3.5 col-status">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                      <i data-lucide="archive" class="w-3 h-3"></i> Cerrado
+                    </span>
+                  </td>
+                  <td class="py-3.5 px-3.5 col-sla text-right font-mono">
+                    <div class="inline-flex flex-col items-end">
+                      <span class="text-xs font-semibold text-emerald-700">Cumplido en 2.1h</span>
+                      <span class="text-[10px] text-slate-400">Objetivo: 24h</span>
+                    </div>
+                  </td>
+                </tr>
+
+              </tbody>
+            </table>
+          </div>
+
+          <!-- PAGINACIÓN NUMERADA Y SELECTOR DE FILAS POR PÁGINA (40px) -->
+          <div class="p-4 border-t border-slate-200 bg-white flex flex-col sm:flex-row items-center justify-between gap-4 select-none">
+            <div class="flex items-center gap-3 text-xs text-slate-500">
+              <span>Mostrando <strong class="text-slate-800 font-semibold">1 a 5</strong> de <strong class="text-slate-800 font-semibold">14</strong> tickets abiertos</span>
+              <span class="text-slate-300">|</span>
+              <div class="flex items-center gap-1.5">
+                <span>Filas por pág:</span>
+                <select class="ctrl-40 h-8 min-h-[32px] px-2 bg-white border border-slate-300 rounded text-xs text-slate-700 focus:outline-none">
+                  <option>10</option>
+                  <option selected>25</option>
+                  <option>50</option>
+                  <option>100</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Botones de Paginación Numérica -->
+            <div class="flex items-center gap-1">
+              <button class="ctrl-40 w-10 flex items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-500 hover:bg-slate-50 disabled:opacity-40" disabled>
+                <i data-lucide="chevron-left" class="w-4 h-4"></i>
+              </button>
+              <button class="ctrl-40 w-10 flex items-center justify-center rounded-lg bg-indigo-600 text-white font-semibold shadow-xs">
+                1
+              </button>
+              <button class="ctrl-40 w-10 flex items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 font-medium">
+                2
+              </button>
+              <button class="ctrl-40 w-10 flex items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 font-medium">
+                3
+              </button>
+              <button class="ctrl-40 w-10 flex items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-500 hover:bg-slate-50">
+                <i data-lucide="chevron-right" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- COLUMNA DERECHA: PANEL DE CONVERSACIÓN, DATOS DEL TENANT Y MACROS (5 cols) -->
+        <div class="xl:col-span-5 flex flex-col gap-6">
+          
+          <!-- TARJETA 1: DATOS CLAVE DEL TENANT AFECTADO & HERRAMIENTAS RÁPIDAS -->
+          <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-4">
+            
+            <div class="flex items-start justify-between">
+              <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-xl bg-indigo-600 text-white font-bold flex items-center justify-center text-lg shadow-sm">
+                  OD
+                </div>
+                <div>
+                  <div class="flex items-center gap-2">
+                    <h3 class="font-bold text-slate-900 text-base">Clínica Dental OdontoSalud</h3>
+                    <span class="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full">Activa</span>
+                  </div>
+                  <p class="text-xs text-slate-500 font-mono mt-0.5">RUC: 20601984211 · ID Tenant: TEN-104</p>
+                </div>
+              </div>
+
+              <!-- Candado dinámico de cuenta (lock / lock-open) -->
+              <button id="btnLockTenant" onclick="toggleTenantLock()" class="ctrl-40 px-3 bg-slate-50 border border-slate-200 hover:bg-slate-100 rounded-lg flex items-center gap-1.5 text-xs text-slate-700 transition-colors" title="Estado de bloqueo administrativo de emisión CPE">
+                <i id="lockIcon" data-lucide="lock-open" class="w-4 h-4 text-emerald-600"></i>
+                <span id="lockText" class="font-medium">Emisión Activa</span>
+              </button>
+            </div>
+
+            <!-- Métricas Rápidas del Tenant en PerúSaaS -->
+            <div class="grid grid-cols-3 gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200/80 text-xs">
+              <div>
+                <span class="text-slate-400 block text-[11px]">Plan Contratado</span>
+                <span class="font-semibold text-slate-800">Pro Multi-Sede</span>
+                <span class="text-[10px] text-slate-500 block">S/ 490.00 / mes</span>
+              </div>
+              <div>
+                <span class="text-slate-400 block text-[11px]">Conector Fiscal</span>
+                <span class="font-semibold text-emerald-700 flex items-center gap-1">
+                  <i data-lucide="check" class="w-3 h-3"></i> Bizlinks OSE
+                </span>
+                <span class="text-[10px] text-slate-500 block">Certificado vig. 18d</span>
+              </div>
+              <div>
+                <span class="text-slate-400 block text-[11px]">Consumo CPE Mes</span>
+                <span class="font-semibold text-slate-800 font-mono">4,820 / 10k</span>
+                <span class="text-[10px] text-indigo-600 block font-medium">48.2% de cuota</span>
+              </div>
+            </div>
+
+            <!-- Botones Operativos de SuperAdmin para este Tenant -->
+            <div class="grid grid-cols-2 gap-2.5">
+              <button class="ctrl-40 w-full bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-medium flex items-center justify-center gap-2 text-xs transition-colors">
+                <i data-lucide="external-link" class="w-4 h-4 text-indigo-600"></i>
+                <span>Impersonar Consola Tenant</span>
+              </button>
+              <button class="ctrl-40 w-full bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 font-medium flex items-center justify-center gap-2 text-xs transition-colors">
+                <i data-lucide="activity" class="w-4 h-4 text-slate-600"></i>
+                <span>Ver Telemetría SUNAT</span>
+              </button>
+            </div>
+
+          </div>
+
+          <!-- TARJETA 2: PANEL DE CONVERSACIÓN & MACROS DE RESPUESTA RÁPIDA -->
+          <div class="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col overflow-hidden">
+            
+            <!-- Encabezado Conversación con Estado SLA en vivo -->
+            <div class="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/70">
+              <div class="flex items-center gap-2.5">
+                <div class="w-2.5 h-2.5 rounded-full bg-rose-600 pulse-danger"></div>
+                <div>
+                  <span class="font-semibold text-slate-900 text-sm">Conversación en Vivo · Ticket #TCK-9402</span>
+                  <p class="text-[11px] text-slate-500">Canal: WhatsApp API Oficial (+51 987 654 321)</p>
+                </div>
+              </div>
+              <div class="text-right">
+                <span class="text-xs font-mono font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
+                  SLA: 18m restantes
+                </span>
+              </div>
+            </div>
+
+            <!-- Historial del Hilo de Mensajes -->
+            <div class="p-4 space-y-4 max-h-80 overflow-y-auto bg-slate-50/30 text-xs">
+              
+              <!-- Mensaje Cliente -->
+              <div class="flex items-start gap-2.5 max-w-[88%]">
+                <div class="w-7 h-7 rounded-full bg-emerald-600 text-white font-bold flex items-center justify-center text-[10px] flex-shrink-0">
+                  OD
+                </div>
+                <div class="bg-white p-3 rounded-xl rounded-tl-none border border-slate-200 shadow-xs space-y-1">
+                  <div class="flex items-center justify-between gap-3">
+                    <span class="font-bold text-slate-900 text-[11px]">Dra. Fiorella Quispe (Admin OdontoSalud)</span>
+                    <span class="text-[10px] text-slate-400 font-mono">15:38 (hace 6m)</span>
+                  </div>
+                  <p class="text-slate-700 leading-relaxed">
+                    Hola soporte PerúSaaS, urgente por favor. Estamos en caja emitiendo las boletas de la tarde en la sede de Miraflores y nos sale error: <strong>"1033: El comprobante fue registrado previamente con otros datos o timeout en OSE"</strong>. Tenemos 12 pacientes esperando sus comprobantes CDR.
+                  </p>
+                  <div class="flex items-center gap-1.5 text-[11px] text-indigo-600 pt-1 font-medium">
+                    <i data-lucide="paperclip" class="w-3 h-3"></i>
+                    <span>captura_error_1033_sunat.png (240 KB)</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Mensaje Interno (Bot / Sistema de Diagnóstico de Plataforma) -->
+              <div class="flex items-center justify-center my-2">
+                <div class="bg-indigo-50 border border-indigo-100 text-indigo-800 px-3 py-1.5 rounded-full text-[11px] flex items-center gap-1.5">
+                  <i data-lucide="bot" class="w-3.5 h-3.5 text-indigo-600"></i>
+                  <span>Diagnóstico SRE: OSE Bizlinks reportó timeout puntual. Conector ya rebalanceó a NubeFact.</span>
+                </div>
+              </div>
+
+              <!-- Mensaje Agente de Soporte -->
+              <div class="flex items-start gap-2.5 max-w-[88%] ml-auto flex-row-reverse">
+                <div class="w-7 h-7 rounded-full bg-indigo-600 text-white font-bold flex items-center justify-center text-[10px] flex-shrink-0">
+                  CB
+                </div>
+                <div class="bg-indigo-600 text-white p-3 rounded-xl rounded-tr-none shadow-xs space-y-1">
+                  <div class="flex items-center justify-between gap-3">
+                    <span class="font-bold text-indigo-100 text-[11px]">Carlos M. Benavides (SRE PerúSaaS)</span>
+                    <span class="text-[10px] text-indigo-200 font-mono">15:41</span>
+                  </div>
+                  <p class="leading-relaxed text-white">
+                    Buenas tardes Dra. Quispe, estamos revisando el log del cluster PE-Lima. Hemos activado la regeneración del hash XML con bypass para que sus comprobantes pasen sin duplicidad.
+                  </p>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- MACROS Y ACCIONES DE RESPUESTA RÁPIDA (ALTURA 40PX) -->
+            <div class="p-4 border-t border-slate-200 bg-white space-y-3">
+              
+              <!-- Selector de Macros de Soporte (40px) -->
+              <div class="flex items-center gap-2">
+                <div class="relative flex-1">
+                  <select id="macroSelect" onchange="applyMacro()" class="ctrl-40 w-full px-3 bg-slate-50 border border-slate-300 text-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium">
+                    <option value="">⚡ Seleccionar Macro / Respuesta Rápida...</option>
+                    <option value="bypass_ose">Macro 1: Bypass Automático OSE por Latencia SUNAT</option>
+                    <option value="cdr_regenerado">Macro 2: Reenvío de CDR y Validación de Correlativo</option>
+                    <option value="solicitar_xml">Macro 3: Solicitar XML original y certificado .PFX</option>
+                    <option value="escalar_n3">Macro 4: Escalamiento a Infraestructura / DevOps</option>
+                  </select>
+                </div>
+
+                <button class="ctrl-40 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-xs flex items-center gap-1.5 transition-colors" title="Gestionar catálogo de macros">
+                  <i data-lucide="settings-2" class="w-4 h-4"></i>
+                  <span class="hidden sm:inline">Config</span>
+                </button>
+              </div>
+
+              <!-- Textarea de Respuesta al Cliente -->
+              <div class="relative">
+                <textarea id="replyTextarea" rows="3" placeholder="Escribe una respuesta o selecciona una macro arriba para insertar plantilla formal..." class="w-full p-3 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white resize-none"></textarea>
+              </div>
+
+              <!-- Barra de Envío y Controles de Estado de Ticket (40px) -->
+              <div class="flex items-center justify-between gap-2 pt-1 flex-wrap">
+                
+                <!-- Acciones complementarias -->
+                <div class="flex items-center gap-1.5 text-slate-500">
+                  <button class="ctrl-40 w-10 flex items-center justify-center border border-slate-300 rounded-lg hover:bg-slate-100 text-slate-600" title="Adjuntar archivo o CDR">
+                    <i data-lucide="paperclip" class="w-4 h-4"></i>
+                  </button>
+                  <button class="ctrl-40 w-10 flex items-center justify-center border border-slate-300 rounded-lg hover:bg-slate-100 text-slate-600" title="Nota interna privada">
+                    <i data-lucide="lock" class="w-4 h-4"></i>
+                  </button>
+                  <span class="text-[11px] text-slate-400 hidden sm:inline">Ctrl + Enter para enviar</span>
+                </div>
+
+                <!-- Botones: Cambiar Estado y Enviar -->
+                <div class="flex items-center gap-2">
+                  <select class="ctrl-40 px-2.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-700 focus:outline-none">
+                    <option>Estado: En Atención</option>
+                    <option>Estado: Resuelto</option>
+                    <option>Estado: Espera Cliente</option>
+                    <option>Estado: Cerrado</option>
+                  </select>
+
+                  <button onclick="sendReply()" class="ctrl-40 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-medium flex items-center gap-2 shadow-xs transition-colors cursor-pointer text-xs">
+                    <i data-lucide="send" class="w-3.5 h-3.5"></i>
+                    <span>Responder & Pausar SLA</span>
+                  </button>
+                </div>
+
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- SECCIÓN DE ESTADOS DEL SISTEMA: ESTADO VACÍO Y ESTADO DE ERROR (REQUERIDOS EN CONSIGNAS) -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+        
+        <!-- Estado Vacío (Empty State) -->
+        <div class="bg-white rounded-xl border border-dashed border-slate-300 p-6 flex flex-col items-center justify-center text-center space-y-3">
+          <div class="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
+            <i data-lucide="inbox" class="w-6 h-6"></i>
+          </div>
+          <div>
+            <h4 class="font-semibold text-slate-900 text-sm">No hay tickets críticos P1 con SLA vencido</h4>
+            <p class="text-xs text-slate-500 max-w-sm mt-1">
+              Todos los incidentes de alta prioridad de la plataforma PerúSaaS se encuentran dentro de la ventana contractual de soporte.
+            </p>
+          </div>
+          <button onclick="resetTableView()" class="ctrl-40 px-4 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium text-xs flex items-center gap-2 shadow-xs transition-colors">
+            <i data-lucide="rotate-ccw" class="w-3.5 h-3.5 text-slate-500"></i>
+            <span>Ver Toda la Bandeja Global</span>
+          </button>
+        </div>
+
+        <!-- Estado de Error / Contingencia Conector OSE -->
+        <div class="bg-rose-50/60 border border-rose-200 rounded-xl p-6 flex flex-col items-center justify-center text-center space-y-3">
+          <div class="w-12 h-12 rounded-full bg-rose-100 flex items-center justify-center text-rose-600">
+            <i data-lucide="alert-circle" class="w-6 h-6 pulse-danger"></i>
+          </div>
+          <div>
+            <h4 class="font-semibold text-rose-950 text-sm">Fallo de Comunicación con Servicio Web SUNAT</h4>
+            <p class="text-xs text-rose-800 max-w-sm mt-1">
+              La API pública de SUNAT (ws.sunat.gob.pe) rechazó 3 peticiones por tiempo de espera. Los comprobantes están seguros en cola de contingencia local.
+            </p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="retryOseConnection()" class="ctrl-40 px-4 bg-rose-600 hover:bg-rose-700 text-white font-medium text-xs flex items-center gap-2 shadow-xs transition-colors">
+              <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+              <span>Reintentar Handshake SUNAT</span>
+            </button>
+            <button class="ctrl-40 px-3 bg-white border border-rose-200 text-rose-700 hover:bg-rose-50 font-medium text-xs transition-colors">
+              Ver Logs de Cola
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+    </main>
+
+    <!-- FOOTER LEGAL Y METADATA DE PLATAFORMA -->
+    <footer class="h-10 bg-white border-t border-slate-200 px-6 flex items-center justify-between text-xs text-slate-500 flex-shrink-0">
+      <div class="flex items-center gap-4">
+        <span>PerúSaaS Admin Console <strong>v4.12.0-prod</strong></span>
+        <span class="text-slate-300">·</span>
+        <span>Zona horaria: America/Lima (UTC-5)</span>
+        <span class="text-slate-300">·</span>
+        <span>Moneda Base: PEN (S/)</span>
+        <span class="text-slate-300">·</span>
+        <span class="flex items-center gap-1.5 text-emerald-600">
+          <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+          Canal SLA 24/7 Operativo
+        </span>
+      </div>
+      <div class="flex items-center gap-3">
+        <a href="#" class="hover:text-indigo-600">Manual SRE</a>
+        <span>·</span>
+        <a href="#" class="hover:text-indigo-600">Normativa SUNAT R.S. 000193-2020</a>
+        <span>·</span>
+        <a href="#" class="hover:text-indigo-600">Bitácora de Auditoría</a>
+      </div>
+    </footer>
+
+  </div>
+
+  <!-- SCRIPTS DE INTERACCIÓN, ICONOS DINÁMICOS Y ANIMACIONES -->
+  <script>
+    // Inicializar Lucide Icons
+    document.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+    });
+
+    // Estado dinámico: Sincronización con animación en refresh-cw
+    function triggerSync() {
+      const syncIcon = document.getElementById('syncIcon');
+      if (syncIcon) {
+        syncIcon.classList.add('animate-spin-slow');
+        setTimeout(() => {
+          syncIcon.classList.remove('animate-spin-slow');
+        }, 1500);
+      }
+    }
+
+    // Toggle Dinámico: Candado de Cuenta (lock / lock-open)
+    let isTenantLocked = false;
+    function toggleTenantLock() {
+      isTenantLocked = !isTenantLocked;
+      const btn = document.getElementById('btnLockTenant');
+      const lockText = document.getElementById('lockText');
+      
+      if (isTenantLocked) {
+        btn.innerHTML = `<i data-lucide="lock" class="w-4 h-4 text-rose-600"></i><span class="font-medium text-rose-700">Emisión Bloqueada</span>`;
+        btn.classList.add('bg-rose-50', 'border-rose-200');
+      } else {
+        btn.innerHTML = `<i data-lucide="lock-open" class="w-4 h-4 text-emerald-600"></i><span class="font-medium text-slate-700">Emisión Activa</span>`;
+        btn.classList.remove('bg-rose-50', 'border-rose-200');
+      }
+      lucide.createIcons();
+    }
+
+    // Toggle Dinámico: Conexión OSE SUNAT (wifi / wifi-off)
+    let isOseOnline = true;
+    function retryOseConnection() {
+      const oseStatus = document.getElementById('oseConnStatus');
+      triggerSync();
+      setTimeout(() => {
+        oseStatus.innerHTML = `
+          <i data-lucide="wifi" class="w-4 h-4 text-emerald-600"></i>
+          <span class="font-medium text-slate-700">OSE Bizlinks / Nube: <strong class="text-emerald-700 font-semibold">Online</strong></span>
+        `;
+        lucide.createIcons();
+      }, 1000);
+    }
+
+    // Dropdown de Menú de Columnas
+    function toggleColumnMenu() {
+      const dropdown = document.getElementById('colMenuDropdown');
+      dropdown.classList.toggle('hidden');
+    }
+
+    // Cerrar menú de columnas si se hace clic fuera
+    document.addEventListener('click', (e) => {
+      const dropdown = document.getElementById('colMenuDropdown');
+      const btn = document.getElementById('btnToggleCols');
+      if (dropdown && !dropdown.contains(e.target) && !btn.contains(e.target)) {
+        dropdown.classList.add('hidden');
+      }
+    });
+
+    // Mostrar/Ocultar columnas en la tabla
+    function toggleTableCol(colClass) {
+      const cells = document.querySelectorAll(`.${colClass}`);
+      cells.forEach(cell => {
+        cell.classList.toggle('hidden');
+      });
+    }
+
+    // Restablecer Vista de Tabla por Defecto
+    function resetTableView() {
+      // Mostrar todas las columnas
+      const hiddenCols = document.querySelectorAll('.hidden');
+      document.querySelectorAll('#colMenuDropdown input[type="checkbox"]').forEach(cb => cb.checked = true);
+      const colsToRestore = ['col-ticket', 'col-tenant', 'col-subject', 'col-channel', 'col-agent', 'col-status', 'col-sla'];
+      colsToRestore.forEach(c => {
+        document.querySelectorAll(`.${c}`).forEach(el => el.classList.remove('hidden'));
+      });
+      
+      // Reset Densidad
+      setTableDensity('comoda');
+      
+      // Reset input
+      const search = document.getElementById('searchInput');
+      if (search) search.value = '';
+
+      triggerSync();
+    }
+
+    // Selector de Densidad (Compacta / Cómoda)
+    function setTableDensity(density) {
+      const rows = document.querySelectorAll('#ticketsTbody tr td');
+      const btnComoda = document.getElementById('btnDensComoda');
+      const btnCompacta = document.getElementById('btnDensCompacta');
+
+      if (density === 'compacta') {
+        rows.forEach(td => {
+          td.classList.remove('py-3.5');
+          td.classList.add('py-2');
+        });
+        btnCompacta.classList.add('bg-indigo-50', 'text-indigo-700');
+        btnCompacta.classList.remove('text-slate-600');
+        btnComoda.classList.remove('bg-indigo-50', 'text-indigo-700');
+        btnComoda.classList.add('text-slate-600');
+      } else {
+        rows.forEach(td => {
+          td.classList.remove('py-2');
+          td.classList.add('py-3.5');
+        });
+        btnComoda.classList.add('bg-indigo-50', 'text-indigo-700');
+        btnComoda.classList.remove('text-slate-600');
+        btnCompacta.classList.remove('bg-indigo-50', 'text-indigo-700');
+        btnCompacta.classList.add('text-slate-600');
+      }
+    }
+
+    // Aplicar Macro seleccionada en el textarea
+    function applyMacro() {
+      const select = document.getElementById('macroSelect');
+      const textarea = document.getElementById('replyTextarea');
+      const val = select.value;
+
+      if (val === 'bypass_ose') {
+        textarea.value = "Estimado cliente, hemos verificado intermitencia temporal en el servidor de timbrado SUNAT directo. Se ha activado el balanceo automático seguro a Bizlinks OSE para que sus boletas y facturas reciban constancia CDR de inmediato sin duplicidad. Por favor reintente la sincronización en caja.";
+      } else if (val === 'cdr_regenerado') {
+        textarea.value = "Estimado usuario, el comprobante reportado ya cuenta con constancia de recepción CDR aceptada con código de hash validado en SUNAT. Adjuntamos la representación impresa PDF y archivo XML firmado.";
+      } else if (val === 'solicitar_xml') {
+        textarea.value = "Para procesar el análisis de firma digital, solicitamos remitir el archivo .XML sin timbrar y confirmar la fecha de vigencia de su certificado digital .PFX subido a la bóveda.";
+      } else if (val === 'escalar_n3') {
+        textarea.value = "El presente ticket ha sido derivado al equipo de Infraestructura SRE Nivel 3 para revisión de conectores y webhook.";
+      }
+    }
+
+    // Enviar respuesta simulada
+    function sendReply() {
+      const textarea = document.getElementById('replyTextarea');
+      if (!textarea.value.trim()) {
+        textarea.focus();
+        return;
+      }
+      alert("Respuesta enviada exitosamente por canal oficial WhatsApp API y registrado en bitácora SIEM.");
+      textarea.value = "";
+    }
+
+    // Ordenamiento simple de cabeceras
+    let sortAsc = true;
+    function sortTable(key) {
+      sortAsc = !sortAsc;
+      const tbody = document.getElementById('ticketsTbody');
+      const rows = Array.from(tbody.querySelectorAll('tr'));
+      
+      rows.reverse();
+      rows.forEach(r => tbody.appendChild(r));
+    }
+
+    // Selección de Ticket
+    function selectTicket(id) {
+      document.querySelectorAll('.ticket-row').forEach(row => {
+        row.classList.remove('bg-indigo-50/70', 'border-l-4', 'border-indigo-600');
+      });
+      const selected = document.querySelector(`.ticket-row[data-id="${id}"]`);
+      if (selected) {
+        selected.classList.add('bg-indigo-50/70', 'border-l-4', 'border-indigo-600');
+      }
+    }
+  </script>
+</body>
+</html>

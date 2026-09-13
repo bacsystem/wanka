@@ -1,0 +1,1419 @@
+<!DOCTYPE html>
+
+<html class="h-full bg-background" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>OperERP Perú | Facturación Electrónica &amp; ERP Multirubro</title>
+<!-- Google Fonts: Inter & JetBrains Mono -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap&family=Geist+Mono:wght@400;500;600" rel="stylesheet"/>
+<!-- Material Symbols Outlined (Mandatory Link) -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Lucide Icons -->
+<script src="https://unpkg.com/lucide@latest"></script>
+<!-- Tailwind CSS CDN -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Theme Configuration Verbatim -->
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "on-secondary": "#ffffff",
+            "outline-variant": "#bdc9c6",
+            "tertiary-fixed-dim": "#bcc9c6",
+            "on-tertiary": "#ffffff",
+            "secondary-fixed-dim": "#6bd8cb",
+            "on-primary-fixed-variant": "#00504a",
+            "on-tertiary-fixed-variant": "#3d4947",
+            "inverse-primary": "#80d5cb",
+            "error-container": "#ffdad6",
+            "on-surface-variant": "#3e4947",
+            "on-error-container": "#93000a",
+            "surface-container-low": "#f2f3ff",
+            "primary-fixed": "#9cf2e8",
+            "primary": "#005c55",
+            "inverse-surface": "#283044",
+            "surface-container-highest": "#dae2fd",
+            "on-background": "#131b2e",
+            "tertiary-container": "#606c6a",
+            "surface-container-lowest": "#ffffff",
+            "on-primary-fixed": "#00201d",
+            "surface-dim": "#d2d9f4",
+            "primary-fixed-dim": "#80d5cb",
+            "on-primary-container": "#a3faef",
+            "on-tertiary-fixed": "#121e1c",
+            "primary-container": "#0f766e",
+            "on-secondary-container": "#006f66",
+            "surface-container-high": "#e2e7ff",
+            "secondary": "#006a61",
+            "on-tertiary-container": "#e0edea",
+            "outline": "#6e7977",
+            "surface-container": "#eaedff",
+            "on-error": "#ffffff",
+            "on-secondary-fixed": "#00201d",
+            "background": "#faf8ff",
+            "secondary-fixed": "#89f5e7",
+            "on-surface": "#131b2e",
+            "error": "#ba1a1a",
+            "inverse-on-surface": "#eef0ff",
+            "surface": "#faf8ff",
+            "secondary-container": "#86f2e4",
+            "tertiary": "#485452",
+            "surface-bright": "#faf8ff",
+            "on-primary": "#ffffff",
+            "on-secondary-fixed-variant": "#005049",
+            "surface-variant": "#dae2fd",
+            "surface-tint": "#006a63",
+            "tertiary-fixed": "#d8e5e2"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.125rem",
+            "lg": "0.25rem",
+            "xl": "0.5rem",
+            "full": "0.75rem"
+          },
+          "spacing": {
+            "gutter": "1rem",
+            "gutter-compact": "0.5rem",
+            "space-md": "0.75rem",
+            "space-xs": "0.25rem",
+            "space-lg": "1rem",
+            "margin-mobile": "0.75rem",
+            "space-xl": "1.5rem",
+            "space-sm": "0.5rem",
+            "margin": "1.5rem"
+          },
+          "fontFamily": {
+            "body-lg": ["Geist"],
+            "body-sm": ["Geist"],
+            "label-sm": ["Geist"],
+            "headline-sm": ["Geist"],
+            "headline-lg": ["Geist"],
+            "headline-md": ["Geist"],
+            "label-md": ["Geist"],
+            "data-mono-md": ["Geist Mono"],
+            "body-md": ["Geist"],
+            "data-mono-sm": ["Geist Mono"]
+          },
+          "fontSize": {
+            "body-lg": ["15px", { "lineHeight": "22px", "letterSpacing": "0em", "fontWeight": "400" }],
+            "body-sm": ["12px", { "lineHeight": "16px", "letterSpacing": "0em", "fontWeight": "400" }],
+            "label-sm": ["11px", { "lineHeight": "14px", "letterSpacing": "0.025em", "fontWeight": "600" }],
+            "headline-sm": ["16px", { "lineHeight": "24px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+            "headline-lg": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+            "headline-md": ["20px", { "lineHeight": "28px", "letterSpacing": "-0.015em", "fontWeight": "600" }],
+            "label-md": ["12px", { "lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "500" }],
+            "data-mono-md": ["13px", { "lineHeight": "18px", "letterSpacing": "-0.01em", "fontWeight": "500" }],
+            "body-md": ["13px", { "lineHeight": "18px", "letterSpacing": "0em", "fontWeight": "400" }],
+            "data-mono-sm": ["11px", { "lineHeight": "14px", "letterSpacing": "0em", "fontWeight": "500" }]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+      font-size: 18px;
+      vertical-align: middle;
+      display: inline-block;
+    }
+    /* Estilos ultra-densos de scrollbar y utilidades de compliance SUNAT */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+  </style>
+</head>
+<body class="h-full font-body-md text-body-md text-on-surface bg-[#F8FAFC] antialiased overflow-x-hidden select-none">
+<!-- ==================== DISPOSITIVO VIEWPORT SIMULATOR / TOP TOOLBAR ==================== -->
+<div class="bg-inverse-surface text-inverse-on-surface px-space-lg py-1.5 flex items-center justify-between text-xs border-b border-outline/30 z-50 relative">
+<div class="flex items-center space-x-3">
+<span class="flex h-2 w-2 relative">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+</span>
+<span class="font-medium tracking-wide text-slate-200">OperERP Multi-Tenant Cloud · SUNAT OSE Producción</span>
+<span class="bg-primary/40 text-primary-fixed text-[10px] px-2 py-0.5 rounded font-data-mono-sm">Ambiente: Producción 2.1</span>
+</div>
+<!-- Responsive Multi-View Toggle Switcher -->
+<div class="flex items-center gap-1 bg-slate-800 p-0.5 rounded border border-slate-700">
+<span class="text-[10px] uppercase font-semibold text-slate-400 px-2">Vista simulada:</span>
+<button class="flex items-center gap-1.5 px-2.5 py-1 rounded text-xs transition-colors bg-primary-container text-white font-medium shadow-sm" id="viewDesktopBtn" onclick="setViewMode('desktop')">
+<i class="w-3.5 h-3.5" data-lucide="monitor"></i>
+<span>Desktop (1440px)</span>
+</button>
+<button class="flex items-center gap-1.5 px-2.5 py-1 rounded text-xs transition-colors text-slate-300 hover:text-white font-medium" id="viewTabletBtn" onclick="setViewMode('tablet')">
+<i class="w-3.5 h-3.5" data-lucide="tablet"></i>
+<span>Tablet (64px mini)</span>
+</button>
+<button class="flex items-center gap-1.5 px-2.5 py-1 rounded text-xs transition-colors text-slate-300 hover:text-white font-medium" id="viewMobileBtn" onclick="setViewMode('mobile')">
+<i class="w-3.5 h-3.5" data-lucide="smartphone"></i>
+<span>Móvil (Bottom Nav)</span>
+</button>
+</div>
+<div class="hidden lg:flex items-center gap-4 text-slate-300 text-xs">
+<span class="flex items-center gap-1 font-data-mono-sm text-slate-400">
+<i class="w-3 h-3 text-emerald-400" data-lucide="clock"></i> UTC-5 Lima: 16:45:12
+      </span>
+<span class="text-slate-400">|</span>
+<span class="hover:text-white cursor-pointer transition" onclick="showToast('Sincronización manual ejecutada con OSE Bizlinks.')">
+<i class="w-3 h-3 inline mr-1" data-lucide="refresh-cw"></i> Sync Forzado
+      </span>
+</div>
+</div>
+<!-- ==================== MAIN VIEW CONTAINER (FLEX ROOT) ==================== -->
+<div class="flex flex-col min-h-screen transition-all duration-300 mx-auto w-full" id="appContainer">
+<!-- ==================== SHARED COMPONENT 1: TopNavBar ==================== -->
+<header class="flex justify-between items-center w-full px-space-lg h-14 bg-surface-container-lowest border-b border-outline-variant sticky top-0 z-40">
+<!-- Izquierda: Marca & Tenant Switcher -->
+<div class="flex items-center gap-4">
+<!-- Botón Toggle Sidebar (Mobile / Tablet drawer) -->
+<button class="p-1.5 rounded hover:bg-surface-container-low text-on-surface-variant transition lg:hidden" onclick="toggleSidebar()" title="Alternar Menú">
+<i class="w-5 h-5" data-lucide="menu"></i>
+</button>
+<div class="flex items-center gap-2">
+<div class="w-8 h-8 rounded bg-primary-container text-white flex items-center justify-center font-bold font-data-mono-md text-sm shadow-sm">
+            OE
+          </div>
+<div>
+<span class="text-headline-sm font-headline-sm font-bold text-primary tracking-tight">OperERP Perú</span>
+</div>
+</div>
+<div class="h-6 w-px bg-slate-200 hidden sm:block"></div>
+<!-- Tenant Selector Dropdown -->
+<div class="relative">
+<button class="flex items-center gap-2 px-2.5 py-1 rounded bg-slate-50 border border-slate-200 hover:bg-slate-100 transition text-left" id="tenantMenuBtn" onclick="toggleTenantDropdown()">
+<div class="w-5 h-5 rounded bg-teal-100 text-teal-800 flex items-center justify-center">
+<i class="w-3.5 h-3.5" data-lucide="building"></i>
+</div>
+<div>
+<div class="flex items-center gap-1.5">
+<span class="font-semibold text-xs text-slate-800" id="currentTenantName">Clínica Dental Sonrisa</span>
+<span class="bg-teal-50 text-teal-700 text-[10px] font-medium px-1.5 py-0.2 rounded border border-teal-200" id="currentTenantBadge">Clínica / Odontología</span>
+</div>
+<div class="text-[10px] text-slate-500 font-data-mono-sm">RUC 20601234567</div>
+</div>
+<i class="w-3.5 h-3.5 text-slate-400 ml-1" data-lucide="chevrons-up-down"></i>
+</button>
+<!-- Dropdown Menu Sede / Empresa -->
+<div class="hidden absolute left-0 mt-1 w-72 bg-white rounded shadow-lg border border-slate-200 py-1.5 z-50 text-xs" id="tenantDropdown">
+<div class="px-3 py-1.5 text-[10px] uppercase font-semibold text-slate-400">Seleccionar Empresa Activa</div>
+<a class="flex items-start gap-2.5 px-3 py-2 hover:bg-teal-50 text-slate-800" href="javascript:void(0)" onclick="selectTenant('Clínica Dental Sonrisa', 'Clínica / Odontología', '20601234567')">
+<i class="w-4 h-4 text-teal-600 mt-0.5" data-lucide="stethoscope"></i>
+<div>
+<p class="font-semibold">Clínica Dental Sonrisa</p>
+<p class="text-[11px] text-slate-500">RUC: 20601234567 · Sede San Isidro</p>
+</div>
+</a>
+<a class="flex items-start gap-2.5 px-3 py-2 hover:bg-teal-50 text-slate-800" href="javascript:void(0)" onclick="selectTenant('Veterinaria San Borja', 'Veterinaria &amp; PetShop', '20554321987')">
+<i class="w-4 h-4 text-teal-600 mt-0.5" data-lucide="dog"></i>
+<div>
+<p class="font-semibold">Veterinaria San Borja</p>
+<p class="text-[11px] text-slate-500">RUC: 20554321987 · Sede Principal</p>
+</div>
+</a>
+<a class="flex items-start gap-2.5 px-3 py-2 hover:bg-teal-50 text-slate-800" href="javascript:void(0)" onclick="selectTenant('Restaurante Sabor Criollo', 'Restaurante / Alimentos', '20498765432')">
+<i class="w-4 h-4 text-teal-600 mt-0.5" data-lucide="utensils"></i>
+<div>
+<p class="font-semibold">Restaurante Sabor Criollo</p>
+<p class="text-[11px] text-slate-500">RUC: 20498765432 · Miraflores Centro</p>
+</div>
+</a>
+</div>
+</div>
+</div>
+<!-- Centro: Búsqueda Global Command Bar -->
+<div class="hidden md:flex items-center flex-1 max-w-md mx-6">
+<button class="w-full flex items-center justify-between px-3 py-1.5 bg-slate-50 border border-slate-200 rounded text-slate-400 hover:border-teal-600 hover:bg-white transition text-xs group" onclick="openCommandPalette()">
+<div class="flex items-center gap-2">
+<i class="w-4 h-4 text-slate-400 group-hover:text-teal-600" data-lucide="search"></i>
+<span>Buscar RUC, DNI, comprobante, producto o paciente...</span>
+</div>
+<kbd class="hidden sm:inline-flex items-center gap-0.5 text-[10px] bg-white border border-slate-200 rounded px-1.5 py-0.5 font-data-mono-sm text-slate-500 shadow-xs">
+<span class="text-[9px]">Ctrl</span> K
+          </kbd>
+</button>
+</div>
+<!-- Derecha: Estado SUNAT, Notificaciones, Botón "+ Nueva Venta", Perfil -->
+<div class="flex items-center gap-2.5">
+<!-- Indicador SUNAT Online -->
+<div class="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-medium" title="Conexión activa con Servidores SUNAT / OSE Bizlinks">
+<span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+<span>SUNAT En línea</span>
+</div>
+<!-- Sync Icon Action -->
+<button class="p-1.5 text-slate-600 hover:bg-slate-100 rounded transition" onclick="showToast('Comprobando lotes pendientes de envío SUNAT...')" title="Sincronizar Lotes CPE">
+<i class="w-4 h-4" data-lucide="refresh-cw"></i>
+</button>
+<!-- Notification Bell -->
+<button class="relative p-1.5 text-slate-600 hover:bg-slate-100 rounded transition" onclick="showToast('Tiene 2 alertas de stock crítico y 1 comprobante observado')" title="Notificaciones del Sistema">
+<i class="w-4 h-4" data-lucide="bell"></i>
+<span class="absolute top-1 right-1 w-2 h-2 bg-rose-500 rounded-full"></span>
+</button>
+<!-- Botón Primario: + Nueva Venta -->
+<button class="flex items-center gap-1.5 bg-primary-container hover:bg-[#0D9488] active:bg-[#115E59] text-white px-3 py-1.5 rounded font-medium text-xs shadow-sm transition" onclick="openDrawerComprobante('B001-0012905')">
+<i class="w-4 h-4" data-lucide="plus-circle"></i>
+<span class="hidden sm:inline font-semibold">Nueva Venta</span>
+</button>
+<div class="h-6 w-px bg-slate-200 hidden sm:block"></div>
+<!-- Perfil Usuario -->
+<div class="flex items-center gap-2 pl-1 cursor-pointer" onclick="showToast('Perfil de usuario: Dr. Carlos Mendoza')">
+<div class="w-7 h-7 rounded-full bg-teal-800 text-white flex items-center justify-center font-bold text-xs border border-white shadow-xs">
+            CM
+          </div>
+<div class="hidden lg:block text-left">
+<p class="text-xs font-semibold text-slate-800 leading-tight">Dr. Carlos Mendoza</p>
+<p class="text-[10px] text-slate-500 leading-none">Administrador de Sede</p>
+</div>
+</div>
+</div>
+</header>
+<!-- ==================== BODY WITH COLLAPSIBLE SIDEBAR + WORKSPACE ==================== -->
+<div class="flex flex-1 overflow-hidden relative">
+<!-- ==================== SHARED COMPONENT 2: SideNavBar ==================== -->
+<aside class="w-60 bg-surface-container-lowest border-r border-outline-variant flex flex-col justify-between transition-all duration-200 z-30 shrink-0 select-none" id="mainSidebar">
+<!-- Sidebar Top / Navigation Tabs -->
+<div class="p-2 space-y-1 overflow-y-auto">
+<!-- Tenant Mini Header inside sidebar -->
+<div class="sidebar-label-full px-2.5 py-2 mb-2 bg-slate-50 rounded border border-slate-100 flex items-center justify-between">
+<div class="overflow-hidden">
+<p class="text-xs font-bold text-slate-800 truncate" id="sidebarTenantTitle">Veterinaria San Borja</p>
+<p class="text-[10px] text-slate-500 truncate" id="sidebarTenantSub">Sede Principal (Lima)</p>
+</div>
+<button class="text-slate-400 hover:text-slate-600 p-1" onclick="toggleCollapseSidebar()" title="Colapsar barra lateral">
+<i class="w-4 h-4" data-lucide="panel-left-close"></i>
+</button>
+</div>
+<!-- Quick CTA inside Sidebar -->
+<div class="sidebar-label-full mb-2">
+<button class="w-full flex items-center justify-center gap-1.5 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 py-1.5 px-2 rounded text-xs font-semibold transition" onclick="openDrawerComprobante('F001-0004583')">
+<i class="w-3.5 h-3.5" data-lucide="receipt"></i>
+<span>Emitir Comprobante</span>
+</button>
+</div>
+<!-- Nav Items: Strict Hierarchy from JSON & Requirements -->
+<nav class="space-y-0.5 text-xs">
+<!-- 1. Inicio (ACTIVO por especificación del prompt) -->
+<a class="flex items-center gap-2.5 px-2.5 py-1.5 rounded font-medium bg-primary-container text-on-primary-container border-l-2 border-primary shadow-xs transition" href="#">
+<i class="w-4 h-4 shrink-0" data-lucide="layout-dashboard"></i>
+<span class="sidebar-text font-semibold">Inicio</span>
+</a>
+<!-- 2. Ventas & POS (con subitems colapsables) -->
+<div>
+<button class="w-full flex items-center justify-between px-2.5 py-1.5 rounded text-slate-700 hover:bg-slate-100 transition group" onclick="toggleSubmenu('ventasSubmenu')">
+<div class="flex items-center gap-2.5">
+<i class="w-4 h-4 shrink-0 text-slate-500 group-hover:text-primary" data-lucide="point-of-sale"></i>
+<span class="sidebar-text">Ventas &amp; POS</span>
+</div>
+<i class="w-3.5 h-3.5 text-slate-400 sidebar-text" data-lucide="chevron-down"></i>
+</button>
+<div class="pl-8 pr-2 py-1 space-y-0.5 sidebar-text" id="ventasSubmenu">
+<a class="block py-1 px-2 text-[11px] rounded text-slate-600 hover:text-primary hover:bg-teal-50/50" href="#">Nueva Venta (POS)</a>
+<a class="block py-1 px-2 text-[11px] rounded text-slate-600 hover:text-primary hover:bg-teal-50/50" href="#">Comprobantes (Boletas / Facturas)</a>
+<a class="block py-1 px-2 text-[11px] rounded text-slate-600 hover:text-primary hover:bg-teal-50/50" href="#">Proformas &amp; Cotizaciones</a>
+<a class="block py-1 px-2 text-[11px] rounded text-slate-600 hover:text-primary hover:bg-teal-50/50" href="#">Guías de Remisión Electrónica</a>
+</div>
+</div>
+<!-- 3. Clientes -->
+<a class="flex items-center gap-2.5 px-2.5 py-1.5 rounded text-slate-700 hover:bg-slate-100 transition" href="#">
+<i class="w-4 h-4 shrink-0 text-slate-500" data-lucide="users"></i>
+<span class="sidebar-text">Clientes</span>
+<span class="sidebar-text ml-auto bg-slate-100 text-slate-600 text-[10px] px-1.5 rounded">1.2k</span>
+</a>
+<!-- 4. Catálogo -->
+<div>
+<button class="w-full flex items-center justify-between px-2.5 py-1.5 rounded text-slate-700 hover:bg-slate-100 transition group" onclick="toggleSubmenu('catalogoSubmenu')">
+<div class="flex items-center gap-2.5">
+<i class="w-4 h-4 shrink-0 text-slate-500 group-hover:text-primary" data-lucide="package"></i>
+<span class="sidebar-text">Catálogo</span>
+</div>
+<i class="w-3.5 h-3.5 text-slate-400 sidebar-text" data-lucide="chevron-down"></i>
+</button>
+<div class="hidden pl-8 pr-2 py-1 space-y-0.5 sidebar-text" id="catalogoSubmenu">
+<a class="block py-1 px-2 text-[11px] rounded text-slate-600 hover:text-primary hover:bg-teal-50/50" href="#">Productos</a>
+<a class="block py-1 px-2 text-[11px] rounded text-slate-600 hover:text-primary hover:bg-teal-50/50" href="#">Servicios</a>
+<a class="block py-1 px-2 text-[11px] rounded text-slate-600 hover:text-primary hover:bg-teal-50/50" href="#">Categorías y Marcas</a>
+</div>
+</div>
+<!-- 5. Inventario -->
+<div>
+<button class="w-full flex items-center justify-between px-2.5 py-1.5 rounded text-slate-700 hover:bg-slate-100 transition group" onclick="toggleSubmenu('inventarioSubmenu')">
+<div class="flex items-center gap-2.5">
+<i class="w-4 h-4 shrink-0 text-slate-500 group-hover:text-primary" data-lucide="warehouse"></i>
+<span class="sidebar-text">Inventario</span>
+</div>
+<i class="w-3.5 h-3.5 text-slate-400 sidebar-text" data-lucide="chevron-down"></i>
+</button>
+<div class="hidden pl-8 pr-2 py-1 space-y-0.5 sidebar-text" id="inventarioSubmenu">
+<a class="block py-1 px-2 text-[11px] rounded text-slate-600 hover:text-primary hover:bg-teal-50/50" href="#">Stock Físico</a>
+<a class="block py-1 px-2 text-[11px] rounded text-slate-600 hover:text-primary hover:bg-teal-50/50" href="#">Almacenes (Múltiple sede)</a>
+<a class="block py-1 px-2 text-[11px] rounded text-slate-600 hover:text-primary hover:bg-teal-50/50" href="#">Movimientos &amp; Traslados</a>
+<a class="block py-1 px-2 text-[11px] rounded text-slate-600 hover:text-primary hover:bg-teal-50/50" href="#">Kardex SUNAT Valorado</a>
+</div>
+</div>
+<!-- 6. Reportes SUNAT -->
+<a class="flex items-center gap-2.5 px-2.5 py-1.5 rounded text-slate-700 hover:bg-slate-100 transition" href="#">
+<i class="w-4 h-4 shrink-0 text-slate-500" data-lucide="bar-chart-3"></i>
+<span class="sidebar-text">Reportes SUNAT</span>
+</a>
+<!-- 7. Configuración -->
+<a class="flex items-center gap-2.5 px-2.5 py-1.5 rounded text-slate-700 hover:bg-slate-100 transition" href="#">
+<i class="w-4 h-4 shrink-0 text-slate-500" data-lucide="settings"></i>
+<span class="sidebar-text">Configuración</span>
+</a>
+</nav>
+</div>
+<!-- Sidebar Footer: Sincronización SUNAT & Cerrar Sesión -->
+<div class="p-2 border-t border-outline-variant space-y-1 bg-slate-50/70">
+<div class="sidebar-label-full px-2 py-1.5 bg-white rounded border border-slate-200">
+<div class="flex items-center justify-between text-[11px] mb-1">
+<span class="font-medium text-slate-700 flex items-center gap-1">
+<i class="w-3.5 h-3.5 text-teal-600" data-lucide="cloud-done"></i> Sincronización SUNAT
+              </span>
+<span class="text-emerald-600 font-bold font-data-mono-sm">99.8%</span>
+</div>
+<div class="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
+<div class="bg-teal-600 h-full rounded-full" style="width: 99.8%"></div>
+</div>
+<p class="text-[9px] text-slate-400 mt-1">Certificado Vigente: 12/2025</p>
+</div>
+<a class="flex items-center gap-2 px-2.5 py-1.5 rounded text-xs text-slate-600 hover:bg-white hover:text-slate-900 transition" href="javascript:void(0)" onclick="showToast('Soporte técnico OperERP: WhatsApp +51 987 654 321')">
+<i class="w-4 h-4 shrink-0 text-slate-500" data-lucide="help-circle"></i>
+<span class="sidebar-text">Soporte &amp; Ayuda</span>
+</a>
+<a class="flex items-center gap-2 px-2.5 py-1.5 rounded text-xs text-rose-600 hover:bg-rose-50 transition" href="javascript:void(0)" onclick="showToast('Cierre de sesión seguro.')">
+<i class="w-4 h-4 shrink-0" data-lucide="logout"></i>
+<span class="sidebar-text font-medium">Cerrar Sesión</span>
+</a>
+</div>
+</aside>
+<!-- ==================== MAIN OPERATIONAL CANVAS ==================== -->
+<main class="flex-1 overflow-y-auto bg-[#F8FAFC] p-4 lg:p-6 pb-20 md:pb-6">
+<!-- Breadcrumb & Sede Quick Status -->
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4 pb-3 border-b border-slate-200">
+<div>
+<div class="flex items-center gap-2 text-xs text-slate-500">
+<span>OperERP</span>
+<i class="w-3 h-3 text-slate-400" data-lucide="chevron-right"></i>
+<span class="text-slate-800 font-semibold">Panel de Operaciones &amp; SUNAT</span>
+</div>
+<h1 class="text-headline-md font-headline-md text-slate-900 mt-0.5 tracking-tight">Tablero de Gestión Empresarial</h1>
+</div>
+<!-- Quick Filters & Actions -->
+<div class="flex items-center gap-2">
+<div class="flex items-center bg-white border border-slate-200 rounded px-2.5 py-1 text-xs text-slate-600 shadow-xs">
+<i class="w-3.5 h-3.5 mr-1.5 text-slate-400" data-lucide="calendar"></i>
+<span class="font-data-mono-sm">Hoy, 24 de Octubre 2024</span>
+</div>
+<button class="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-2.5 py-1 rounded text-xs font-medium flex items-center gap-1 shadow-xs transition" onclick="showToast('Generando reporte consolidado en PDF...')">
+<i class="w-3.5 h-3.5" data-lucide="download"></i>
+<span>Exportar</span>
+</button>
+<button class="bg-primary-container hover:bg-[#0D9488] text-white px-3 py-1 rounded text-xs font-semibold flex items-center gap-1 shadow-xs transition" onclick="openDrawerComprobante('B001-0012905')">
+<i class="w-3.5 h-3.5" data-lucide="receipt"></i>
+<span>Emitir CPE</span>
+</button>
+</div>
+</div>
+<!-- ==================== 4 KPI CARDS (BENTO SECTION) ==================== -->
+<section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+<!-- KPI 1: Ventas de Hoy -->
+<div class="bg-white border border-slate-200 rounded-lg p-3.5 shadow-xs hover:border-teal-500 transition">
+<div class="flex items-center justify-between text-slate-500 mb-1">
+<span class="text-label-sm font-label-sm uppercase text-slate-500">Ventas de Hoy</span>
+<div class="p-1 rounded bg-teal-50 text-teal-700">
+<i class="w-4 h-4" data-lucide="trending-up"></i>
+</div>
+</div>
+<div class="flex items-baseline justify-between mt-1">
+<span class="text-xl font-bold font-data-mono-md text-slate-900 tracking-tight">S/ 4,892.50</span>
+<span class="inline-flex items-center text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                +14.2%
+              </span>
+</div>
+<div class="flex items-center justify-between text-[11px] text-slate-400 mt-2 pt-2 border-t border-slate-100">
+<span>vs. ayer: S/ 4,284.00</span>
+<!-- Sparkline SVG ascendente -->
+<svg class="w-16 h-4 text-emerald-500" fill="none" stroke="currentColor" viewbox="0 0 60 16">
+<polyline points="0,14 12,12 24,13 36,7 48,9 60,2" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></polyline>
+</svg>
+</div>
+</div>
+<!-- KPI 2: Comprobantes Emitidos Hoy -->
+<div class="bg-white border border-slate-200 rounded-lg p-3.5 shadow-xs hover:border-teal-500 transition">
+<div class="flex items-center justify-between text-slate-500 mb-1">
+<span class="text-label-sm font-label-sm uppercase text-slate-500">Comprobantes Emitidos Hoy</span>
+<div class="p-1 rounded bg-blue-50 text-blue-700">
+<i class="w-4 h-4" data-lucide="receipt"></i>
+</div>
+</div>
+<div class="flex items-baseline justify-between mt-1">
+<span class="text-xl font-bold font-data-mono-md text-slate-900 tracking-tight">38 <span class="text-xs font-normal text-slate-500 font-body-md">emitidos</span></span>
+<span class="inline-flex items-center text-[11px] font-semibold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200">
+                +6 vs. ayer
+              </span>
+</div>
+<div class="flex items-center justify-between text-[11px] text-slate-500 mt-2 pt-2 border-t border-slate-100 font-data-mono-sm">
+<span>24 boletas</span>
+<span class="text-slate-300">•</span>
+<span>14 facturas</span>
+<span class="text-slate-300">•</span>
+<span class="text-emerald-600 font-semibold">100% OSE</span>
+</div>
+</div>
+<!-- KPI 3: Cuentas Por Cobrar -->
+<div class="bg-white border border-slate-200 rounded-lg p-3.5 shadow-xs hover:border-amber-500 transition">
+<div class="flex items-center justify-between text-slate-500 mb-1">
+<span class="text-label-sm font-label-sm uppercase text-slate-500">Cuentas Por Cobrar</span>
+<div class="p-1 rounded bg-amber-50 text-amber-700">
+<i class="w-4 h-4" data-lucide="wallet"></i>
+</div>
+</div>
+<div class="flex items-baseline justify-between mt-1">
+<span class="text-xl font-bold font-data-mono-md text-slate-900 tracking-tight">S/ 2,450.00</span>
+<span class="inline-flex items-center text-[11px] font-semibold text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                3 pendientes
+              </span>
+</div>
+<div class="flex items-center justify-between text-[11px] text-slate-400 mt-2 pt-2 border-t border-slate-100">
+<span>Vencimiento promedio: 4 días</span>
+<a class="text-teal-700 hover:underline font-medium" href="#">Ver detalles</a>
+</div>
+</div>
+<!-- KPI 4: Stock Crítico -->
+<div class="bg-white border border-slate-200 rounded-lg p-3.5 shadow-xs hover:border-rose-500 transition">
+<div class="flex items-center justify-between text-slate-500 mb-1">
+<span class="text-label-sm font-label-sm uppercase text-slate-500">Stock Crítico</span>
+<div class="p-1 rounded bg-rose-50 text-rose-700">
+<i class="w-4 h-4" data-lucide="alert-triangle"></i>
+</div>
+</div>
+<div class="flex items-baseline justify-between mt-1">
+<span class="text-xl font-bold font-data-mono-md text-slate-900 tracking-tight">5 <span class="text-xs font-normal text-slate-500 font-body-md">productos</span></span>
+<span class="inline-flex items-center text-[11px] font-semibold text-rose-800 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200">
+                Reposición urgente
+              </span>
+</div>
+<div class="flex items-center justify-between text-[11px] text-slate-400 mt-2 pt-2 border-t border-slate-100">
+<span class="text-rose-600 font-medium">2 por agotarse hoy</span>
+<button class="text-teal-700 hover:underline font-medium" onclick="document.getElementById('stockCriticoSection').scrollIntoView({behavior: 'smooth'})">Gestionar</button>
+</div>
+</div>
+</section>
+<!-- ==================== MAIN WORKSPACE GRID (2/3 + 1/3) ==================== -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+<!-- ==================== COLUMNA IZQUIERDA (8 DE 12 = 2/3) ==================== -->
+<div class="lg:col-span-8 space-y-4">
+<!-- GRÁFICO ANALÍTICO: Ventas últimos 30 días -->
+<div class="bg-white border border-slate-200 rounded-lg p-4 shadow-xs">
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100">
+<div>
+<div class="flex items-center gap-2">
+<h2 class="text-sm font-bold text-slate-900">Ventas de los Últimos 30 Días</h2>
+<span class="text-[11px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-medium">Moneda: PEN (S/)</span>
+</div>
+<p class="text-xs text-slate-500">Total acumulado del mes: <span class="font-bold font-data-mono-md text-slate-800">S/ 118,420.00</span> (+18.4% vs mes anterior)</p>
+</div>
+<!-- Filtros de Rango -->
+<div class="flex items-center bg-slate-100 p-0.5 rounded text-xs">
+<button class="chart-filter-btn px-2.5 py-1 rounded text-slate-600 hover:text-slate-900 font-medium" onclick="filterRange(this, 'hoy')">Hoy</button>
+<button class="chart-filter-btn px-2.5 py-1 rounded text-slate-600 hover:text-slate-900 font-medium" onclick="filterRange(this, 'ayer')">Ayer</button>
+<button class="chart-filter-btn px-2.5 py-1 rounded text-slate-600 hover:text-slate-900 font-medium" onclick="filterRange(this, '7d')">7 días</button>
+<button class="chart-filter-btn px-2.5 py-1 rounded bg-white text-slate-900 shadow-xs font-semibold" onclick="filterRange(this, '30d')">30 días</button>
+</div>
+</div>
+<!-- Barras Interactivas con Tooltips Simulados -->
+<div class="pt-4">
+<div class="h-44 w-full flex items-end gap-1.5 sm:gap-2 px-1 pb-2 border-b border-slate-100 relative">
+<!-- Y-Axis Grid Guidelines -->
+<div class="absolute inset-0 flex flex-col justify-between pointer-events-none opacity-30 text-[10px] font-data-mono-sm text-slate-400">
+<div class="border-b border-slate-200 w-full flex justify-between"><span>S/ 6,000</span></div>
+<div class="border-b border-slate-200 w-full flex justify-between"><span>S/ 4,000</span></div>
+<div class="border-b border-slate-200 w-full flex justify-between"><span>S/ 2,000</span></div>
+<div></div>
+</div>
+<!-- Bar Group 1 -->
+<div class="flex-1 flex flex-col items-center group relative h-full justify-end">
+<div class="w-full bg-slate-100 hover:bg-teal-700 rounded-t transition-all duration-200 cursor-pointer" style="height: 48%"></div>
+<span class="text-[9px] text-slate-400 mt-1 font-data-mono-sm">01</span>
+<!-- Tooltip -->
+<div class="hidden group-hover:block absolute bottom-full mb-1 bg-slate-900 text-white text-[10px] p-1.5 rounded shadow whitespace-nowrap z-20 font-data-mono-sm pointer-events-none">
+                      01 Oct: S/ 2,890.00 (22 CPE)
+                    </div>
+</div>
+<div class="flex-1 flex flex-col items-center group relative h-full justify-end">
+<div class="w-full bg-slate-100 hover:bg-teal-700 rounded-t transition-all duration-200 cursor-pointer" style="height: 60%"></div>
+<span class="text-[9px] text-slate-400 mt-1 font-data-mono-sm">05</span>
+<div class="hidden group-hover:block absolute bottom-full mb-1 bg-slate-900 text-white text-[10px] p-1.5 rounded shadow whitespace-nowrap z-20 font-data-mono-sm pointer-events-none">
+                      05 Oct: S/ 3,600.00 (28 CPE)
+                    </div>
+</div>
+<div class="flex-1 flex flex-col items-center group relative h-full justify-end">
+<div class="w-full bg-slate-100 hover:bg-teal-700 rounded-t transition-all duration-200 cursor-pointer" style="height: 72%"></div>
+<span class="text-[9px] text-slate-400 mt-1 font-data-mono-sm">10</span>
+<div class="hidden group-hover:block absolute bottom-full mb-1 bg-slate-900 text-white text-[10px] p-1.5 rounded shadow whitespace-nowrap z-20 font-data-mono-sm pointer-events-none">
+                      10 Oct: S/ 4,320.00 (34 CPE)
+                    </div>
+</div>
+<div class="flex-1 flex flex-col items-center group relative h-full justify-end">
+<div class="w-full bg-slate-100 hover:bg-teal-700 rounded-t transition-all duration-200 cursor-pointer" style="height: 55%"></div>
+<span class="text-[9px] text-slate-400 mt-1 font-data-mono-sm">15</span>
+<div class="hidden group-hover:block absolute bottom-full mb-1 bg-slate-900 text-white text-[10px] p-1.5 rounded shadow whitespace-nowrap z-20 font-data-mono-sm pointer-events-none">
+                      15 Oct: S/ 3,300.00 (25 CPE)
+                    </div>
+</div>
+<div class="flex-1 flex flex-col items-center group relative h-full justify-end">
+<div class="w-full bg-slate-100 hover:bg-teal-700 rounded-t transition-all duration-200 cursor-pointer" style="height: 82%"></div>
+<span class="text-[9px] text-slate-400 mt-1 font-data-mono-sm">18</span>
+<div class="hidden group-hover:block absolute bottom-full mb-1 bg-slate-900 text-white text-[10px] p-1.5 rounded shadow whitespace-nowrap z-20 font-data-mono-sm pointer-events-none">
+                      18 Oct: S/ 4,920.00 (41 CPE)
+                    </div>
+</div>
+<div class="flex-1 flex flex-col items-center group relative h-full justify-end">
+<div class="w-full bg-slate-100 hover:bg-teal-700 rounded-t transition-all duration-200 cursor-pointer" style="height: 68%"></div>
+<span class="text-[9px] text-slate-400 mt-1 font-data-mono-sm">21</span>
+<div class="hidden group-hover:block absolute bottom-full mb-1 bg-slate-900 text-white text-[10px] p-1.5 rounded shadow whitespace-nowrap z-20 font-data-mono-sm pointer-events-none">
+                      21 Oct: S/ 4,100.00 (31 CPE)
+                    </div>
+</div>
+<div class="flex-1 flex flex-col items-center group relative h-full justify-end">
+<div class="w-full bg-slate-100 hover:bg-teal-700 rounded-t transition-all duration-200 cursor-pointer" style="height: 75%"></div>
+<span class="text-[9px] text-slate-400 mt-1 font-data-mono-sm">23</span>
+<div class="hidden group-hover:block absolute bottom-full mb-1 bg-slate-900 text-white text-[10px] p-1.5 rounded shadow whitespace-nowrap z-20 font-data-mono-sm pointer-events-none">
+                      Ayer 23: S/ 4,284.00 (32 CPE)
+                    </div>
+</div>
+<!-- Barra Actual (Hoy) Resaltada -->
+<div class="flex-1 flex flex-col items-center group relative h-full justify-end">
+<div class="w-full bg-primary hover:bg-primary-container rounded-t transition-all duration-200 cursor-pointer shadow-sm ring-2 ring-teal-200" style="height: 88%"></div>
+<span class="text-[9px] text-teal-800 font-bold mt-1 font-data-mono-sm">Hoy</span>
+<div class="hidden group-hover:block absolute bottom-full mb-1 bg-slate-900 text-white text-[10px] p-1.5 rounded shadow whitespace-nowrap z-20 font-data-mono-sm pointer-events-none">
+                      Hoy 24: S/ 4,892.50 (38 CPE) 🚀
+                    </div>
+</div>
+</div>
+<div class="flex items-center justify-between text-[11px] text-slate-400 pt-2">
+<div class="flex items-center gap-4">
+<span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 bg-primary rounded-xs inline-block"></span> Ventas del día en curso</span>
+<span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 bg-slate-200 rounded-xs inline-block"></span> Días anteriores del ciclo</span>
+</div>
+<span class="font-data-mono-sm">Promedio diario: S/ 3,947.33</span>
+</div>
+</div>
+</div>
+<!-- ==================== DATA TABLE: ÚLTIMOS COMPROBANTES ==================== -->
+<div class="bg-white border border-slate-200 rounded-lg shadow-xs overflow-hidden">
+<!-- Cabecera de la tabla y controles -->
+<div class="p-3 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 bg-slate-50/50">
+<div class="flex items-center gap-2">
+<i class="w-4 h-4 text-teal-700" data-lucide="file-text"></i>
+<h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Últimos Comprobantes Electrónicos</h3>
+<span class="bg-teal-50 text-teal-800 text-[10px] font-semibold px-2 py-0.5 rounded-full border border-teal-200">142 total</span>
+</div>
+<div class="flex items-center gap-2">
+<!-- Búsqueda rápida en tabla -->
+<div class="relative">
+<input class="text-xs pl-7 pr-2 py-1 bg-white border border-slate-200 rounded text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-teal-600 w-48 sm:w-60" id="tableFilterInput" onkeyup="filterTableData()" placeholder="Filtrar por RUC, cliente, serie..." type="text"/>
+<i class="w-3.5 h-3.5 text-slate-400 absolute left-2 top-2" data-lucide="search"></i>
+</div>
+<!-- Filtro SUNAT Dropdown -->
+<select class="text-xs bg-white border border-slate-200 rounded py-1 px-2 text-slate-700 focus:outline-none focus:ring-1 focus:ring-teal-600" onchange="filterBySunatStatus(this.value)">
+<option value="all">Todos los estados</option>
+<option value="Aceptado">Aceptado SUNAT</option>
+<option value="Pendiente">Pendiente</option>
+<option value="Rechazado">Rechazado</option>
+</select>
+</div>
+</div>
+<!-- Desktop / Tablet Table View -->
+<div class="overflow-x-auto">
+<table class="w-full text-left text-xs border-collapse" id="cpeDataTable">
+<thead>
+<tr class="bg-slate-50 text-slate-500 uppercase text-[11px] font-semibold border-b border-slate-200">
+<th class="py-2 px-3">Tipo</th>
+<th class="py-2 px-3">Serie-Número</th>
+<th class="py-2 px-3">Cliente / RUC o DNI</th>
+<th class="py-2 px-3 text-right">Total (PEN)</th>
+<th class="py-2 px-3 text-center">Estado SUNAT</th>
+<th class="py-2 px-3 text-center">Fecha y Hora</th>
+<th class="py-2 px-3 text-center">Acciones</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-100 text-slate-700">
+<!-- Fila 1: Factura Aceptada -->
+<tr class="hover:bg-slate-50 transition cursor-pointer" onclick="openDrawerComprobante('F001-0004582')">
+<td class="py-2 px-3">
+<span class="inline-flex items-center gap-1 font-semibold text-slate-800">
+<span class="w-1.5 h-1.5 rounded-full bg-teal-600"></span> Factura
+                        </span>
+</td>
+<td class="py-2 px-3 font-data-mono-sm font-semibold text-slate-900">F001-0004582</td>
+<td class="py-2 px-3">
+<div class="font-medium text-slate-900 truncate max-w-xs">Inversiones Pardo S.A.C.</div>
+<div class="text-[10px] text-slate-400 font-data-mono-sm">RUC: 20556677881</div>
+</td>
+<td class="py-2 px-3 text-right font-data-mono-sm font-bold text-slate-900">S/ 1,280.00</td>
+<td class="py-2 px-3 text-center">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-800 border border-emerald-200">
+<i class="w-3 h-3 text-emerald-600" data-lucide="check-circle-2"></i> Aceptado
+                        </span>
+</td>
+<td class="py-2 px-3 text-center text-[11px] text-slate-500 font-data-mono-sm">24/10/2024 16:42</td>
+<td class="py-2 px-3 text-center" onclick="event.stopPropagation()">
+<div class="flex items-center justify-center gap-1 text-slate-500">
+<button class="p-1 hover:text-teal-700 hover:bg-slate-100 rounded" onclick="openDrawerComprobante('F001-0004582')" title="Ver detalle"><i class="w-3.5 h-3.5" data-lucide="eye"></i></button>
+<button class="p-1 hover:text-teal-700 hover:bg-slate-100 rounded" onclick="showToast('Descargando PDF F001-0004582...')" title="Descargar PDF"><i class="w-3.5 h-3.5" data-lucide="file-down"></i></button>
+<button class="p-1 hover:text-teal-700 hover:bg-slate-100 rounded" onclick="showToast('Descargando XML firmado...')" title="Descargar XML"><i class="w-3.5 h-3.5" data-lucide="file-code"></i></button>
+<button class="p-1 hover:text-emerald-600 hover:bg-emerald-50 rounded" onclick="showToast('Enlace de comprobante enviado por WhatsApp al cliente.')" title="Enviar WhatsApp"><i class="w-3.5 h-3.5" data-lucide="message-circle"></i></button>
+</div>
+</td>
+</tr>
+<!-- Fila 2: Boleta Aceptada -->
+<tr class="hover:bg-slate-50 transition cursor-pointer" onclick="openDrawerComprobante('B001-0012903')">
+<td class="py-2 px-3">
+<span class="inline-flex items-center gap-1 font-semibold text-slate-800">
+<span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span> Boleta
+                        </span>
+</td>
+<td class="py-2 px-3 font-data-mono-sm font-semibold text-slate-900">B001-0012903</td>
+<td class="py-2 px-3">
+<div class="font-medium text-slate-900 truncate max-w-xs">Juan Pérez Ramos</div>
+<div class="text-[10px] text-slate-400 font-data-mono-sm">DNI: 45892310</div>
+</td>
+<td class="py-2 px-3 text-right font-data-mono-sm font-bold text-slate-900">S/ 145.50</td>
+<td class="py-2 px-3 text-center">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-800 border border-emerald-200">
+<i class="w-3 h-3 text-emerald-600" data-lucide="check-circle-2"></i> Aceptado
+                        </span>
+</td>
+<td class="py-2 px-3 text-center text-[11px] text-slate-500 font-data-mono-sm">24/10/2024 16:20</td>
+<td class="py-2 px-3 text-center" onclick="event.stopPropagation()">
+<div class="flex items-center justify-center gap-1 text-slate-500">
+<button class="p-1 hover:text-teal-700 hover:bg-slate-100 rounded" onclick="openDrawerComprobante('B001-0012903')" title="Ver detalle"><i class="w-3.5 h-3.5" data-lucide="eye"></i></button>
+<button class="p-1 hover:text-teal-700 hover:bg-slate-100 rounded" onclick="showToast('Descargando PDF B001-0012903...')" title="Descargar PDF"><i class="w-3.5 h-3.5" data-lucide="file-down"></i></button>
+<button class="p-1 hover:text-teal-700 hover:bg-slate-100 rounded" onclick="showToast('Descargando XML firmado...')" title="Descargar XML"><i class="w-3.5 h-3.5" data-lucide="file-code"></i></button>
+<button class="p-1 hover:text-emerald-600 hover:bg-emerald-50 rounded" onclick="showToast('Enviado por WhatsApp al cliente.')" title="Enviar WhatsApp"><i class="w-3.5 h-3.5" data-lucide="message-circle"></i></button>
+</div>
+</td>
+</tr>
+<!-- Fila 3: Factura Pendiente OSE -->
+<tr class="hover:bg-slate-50 transition cursor-pointer" onclick="openDrawerComprobante('F001-0004581')">
+<td class="py-2 px-3">
+<span class="inline-flex items-center gap-1 font-semibold text-slate-800">
+<span class="w-1.5 h-1.5 rounded-full bg-teal-600"></span> Factura
+                        </span>
+</td>
+<td class="py-2 px-3 font-data-mono-sm font-semibold text-slate-900">F001-0004581</td>
+<td class="py-2 px-3">
+<div class="font-medium text-slate-900 truncate max-w-xs">Constructora &amp; Minas del Sur E.I.R.L.</div>
+<div class="text-[10px] text-slate-400 font-data-mono-sm">RUC: 20491827364</div>
+</td>
+<td class="py-2 px-3 text-right font-data-mono-sm font-bold text-slate-900">S/ 3,420.00</td>
+<td class="py-2 px-3 text-center">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 text-amber-800 border border-amber-200">
+<i class="w-3 h-3 text-amber-600" data-lucide="clock"></i> Pendiente
+                        </span>
+</td>
+<td class="py-2 px-3 text-center text-[11px] text-slate-500 font-data-mono-sm">24/10/2024 15:58</td>
+<td class="py-2 px-3 text-center" onclick="event.stopPropagation()">
+<div class="flex items-center justify-center gap-1 text-slate-500">
+<button class="p-1 hover:text-teal-700 hover:bg-slate-100 rounded" onclick="openDrawerComprobante('F001-0004581')" title="Ver detalle"><i class="w-3.5 h-3.5" data-lucide="eye"></i></button>
+<button class="p-1 hover:text-teal-700 hover:bg-slate-100 rounded" onclick="showToast('Reintentando envío a SUNAT...')" title="Forzar Envío"><i class="w-3.5 h-3.5" data-lucide="send"></i></button>
+<button class="p-1 hover:text-teal-700 hover:bg-slate-100 rounded" onclick="showToast('Descargando PDF preliminar...')" title="Descargar PDF"><i class="w-3.5 h-3.5" data-lucide="file-down"></i></button>
+</div>
+</td>
+</tr>
+<!-- Fila 4: Boleta Aceptada -->
+<tr class="hover:bg-slate-50 transition cursor-pointer" onclick="openDrawerComprobante('B001-0012902')">
+<td class="py-2 px-3">
+<span class="inline-flex items-center gap-1 font-semibold text-slate-800">
+<span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span> Boleta
+                        </span>
+</td>
+<td class="py-2 px-3 font-data-mono-sm font-semibold text-slate-900">B001-0012902</td>
+<td class="py-2 px-3">
+<div class="font-medium text-slate-900 truncate max-w-xs">María Elena Chávez Ríos</div>
+<div class="text-[10px] text-slate-400 font-data-mono-sm">DNI: 09483721</div>
+</td>
+<td class="py-2 px-3 text-right font-data-mono-sm font-bold text-slate-900">S/ 89.00</td>
+<td class="py-2 px-3 text-center">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-800 border border-emerald-200">
+<i class="w-3 h-3 text-emerald-600" data-lucide="check-circle-2"></i> Aceptado
+                        </span>
+</td>
+<td class="py-2 px-3 text-center text-[11px] text-slate-500 font-data-mono-sm">24/10/2024 15:30</td>
+<td class="py-2 px-3 text-center" onclick="event.stopPropagation()">
+<div class="flex items-center justify-center gap-1 text-slate-500">
+<button class="p-1 hover:text-teal-700 hover:bg-slate-100 rounded" onclick="openDrawerComprobante('B001-0012902')" title="Ver detalle"><i class="w-3.5 h-3.5" data-lucide="eye"></i></button>
+<button class="p-1 hover:text-teal-700 hover:bg-slate-100 rounded" onclick="showToast('Descargando PDF...')"><i class="w-3.5 h-3.5" data-lucide="file-down"></i></button>
+<button class="p-1 hover:text-emerald-600 hover:bg-emerald-50 rounded" onclick="showToast('Enviado por WhatsApp')"><i class="w-3.5 h-3.5" data-lucide="message-circle"></i></button>
+</div>
+</td>
+</tr>
+<!-- Fila 5: Factura Rechazada SUNAT (Código Error 2335) -->
+<tr class="hover:bg-rose-50/50 transition cursor-pointer" onclick="openDrawerComprobante('F001-0004579')">
+<td class="py-2 px-3">
+<span class="inline-flex items-center gap-1 font-semibold text-slate-800">
+<span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span> Factura
+                        </span>
+</td>
+<td class="py-2 px-3 font-data-mono-sm font-semibold text-slate-900">F001-0004579</td>
+<td class="py-2 px-3">
+<div class="font-medium text-slate-900 truncate max-w-xs">Distribuidora Alimentos Lima S.A.</div>
+<div class="text-[10px] text-rose-600 font-data-mono-sm font-medium">RUC: 20112233445 (No habido)</div>
+</td>
+<td class="py-2 px-3 text-right font-data-mono-sm font-bold text-slate-900">S/ 2,150.00</td>
+<td class="py-2 px-3 text-center">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-rose-50 text-rose-800 border border-rose-200" title="Error SUNAT 2335: El RUC del receptor no se encuentra en estado ACTIVO o condición HABIDO">
+<i class="w-3 h-3 text-rose-600" data-lucide="x-circle"></i> Rechazado (2335)
+                        </span>
+</td>
+<td class="py-2 px-3 text-center text-[11px] text-slate-500 font-data-mono-sm">24/10/2024 14:15</td>
+<td class="py-2 px-3 text-center" onclick="event.stopPropagation()">
+<div class="flex items-center justify-center gap-1 text-slate-500">
+<button class="px-2 py-0.5 bg-rose-600 text-white rounded text-[10px] font-semibold hover:bg-rose-700" onclick="openDrawerComprobante('F001-0004579')" title="Corregir y Reemitir">Subsanar</button>
+</div>
+</td>
+</tr>
+<!-- Fila 6: Nota de Crédito Aceptada -->
+<tr class="hover:bg-slate-50 transition cursor-pointer" onclick="openDrawerComprobante('NC01-0000120')">
+<td class="py-2 px-3">
+<span class="inline-flex items-center gap-1 font-semibold text-purple-800">
+<span class="w-1.5 h-1.5 rounded-full bg-purple-600"></span> N. Crédito
+                        </span>
+</td>
+<td class="py-2 px-3 font-data-mono-sm font-semibold text-slate-900">NC01-0000120</td>
+<td class="py-2 px-3">
+<div class="font-medium text-slate-900 truncate max-w-xs">Anulación de F001-0004570</div>
+<div class="text-[10px] text-slate-400 font-data-mono-sm">RUC: 20556677881</div>
+</td>
+<td class="py-2 px-3 text-right font-data-mono-sm font-bold text-rose-600">- S/ 320.00</td>
+<td class="py-2 px-3 text-center">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-800 border border-emerald-200">
+<i class="w-3 h-3 text-emerald-600" data-lucide="check-circle-2"></i> Aceptado
+                        </span>
+</td>
+<td class="py-2 px-3 text-center text-[11px] text-slate-500 font-data-mono-sm">24/10/2024 12:05</td>
+<td class="py-2 px-3 text-center" onclick="event.stopPropagation()">
+<div class="flex items-center justify-center gap-1 text-slate-500">
+<button class="p-1 hover:text-teal-700 hover:bg-slate-100 rounded" onclick="openDrawerComprobante('NC01-0000120')"><i class="w-3.5 h-3.5" data-lucide="eye"></i></button>
+<button class="p-1 hover:text-teal-700 hover:bg-slate-100 rounded" onclick="showToast('Descargando PDF Nota de Crédito...')"><i class="w-3.5 h-3.5" data-lucide="file-down"></i></button>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Paginación Compacta SUNAT -->
+<div class="px-3 py-2 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500 bg-slate-50/50">
+<span>Mostrando <strong class="text-slate-800 font-semibold">1-6</strong> de <strong class="text-slate-800 font-semibold">142</strong> comprobantes</span>
+<div class="flex items-center gap-1">
+<button class="px-2 py-1 rounded border border-slate-200 bg-white text-slate-400 cursor-not-allowed">Anterior</button>
+<button class="px-2.5 py-1 rounded border border-teal-600 bg-teal-50 text-teal-700 font-bold">1</button>
+<button class="px-2.5 py-1 rounded border border-slate-200 bg-white hover:bg-slate-100 text-slate-600">2</button>
+<button class="px-2.5 py-1 rounded border border-slate-200 bg-white hover:bg-slate-100 text-slate-600">3</button>
+<button class="px-2 py-1 rounded border border-slate-200 bg-white hover:bg-slate-100 text-slate-600">Siguiente</button>
+</div>
+</div>
+</div>
+</div>
+<!-- ==================== COLUMNA DERECHA (4 DE 12 = 1/3) ==================== -->
+<div class="lg:col-span-4 space-y-4">
+<!-- TARJETA: Alertas de Stock Crítico -->
+<div class="bg-white border border-slate-200 rounded-lg p-3.5 shadow-xs" id="stockCriticoSection">
+<div class="flex items-center justify-between pb-2 mb-3 border-b border-slate-100">
+<div class="flex items-center gap-1.5">
+<i class="w-4 h-4 text-rose-600" data-lucide="alert-triangle"></i>
+<h3 class="text-xs font-bold text-slate-800 uppercase tracking-wide">Alertas de Stock Crítico</h3>
+</div>
+<span class="bg-rose-50 text-rose-700 text-[10px] font-bold px-2 py-0.5 rounded-full border border-rose-200">5 ítems</span>
+</div>
+<!-- Lista de Ítems Críticos con Barras de Nivel -->
+<div class="space-y-3">
+<!-- Ítem 1 (Dental / Sanitario) -->
+<div class="p-2 rounded border border-slate-100 bg-slate-50/50 hover:bg-white hover:border-slate-200 transition">
+<div class="flex items-start justify-between">
+<div>
+<p class="text-xs font-semibold text-slate-900">Guantes Quirúrgicos Látex Talla M</p>
+<p class="text-[10px] text-slate-500">Almacén Principal Lima</p>
+</div>
+<span class="text-[10px] bg-rose-50 text-rose-700 border border-rose-200 px-1.5 py-0.5 rounded font-bold font-data-mono-sm">3 / mín. 20</span>
+</div>
+<!-- Barra de Nivel -->
+<div class="w-full bg-slate-200 h-1.5 rounded-full mt-2 overflow-hidden">
+<div class="bg-rose-500 h-full rounded-full" style="width: 15%"></div>
+</div>
+<div class="mt-2 flex justify-end">
+<button class="text-[11px] bg-white hover:bg-slate-100 text-teal-800 border border-slate-200 px-2 py-0.5 rounded font-medium transition" onclick="showToast('Orden de Compra generada para Distribuidora Médica S.A.')">
+                      Generar Orden de Compra
+                    </button>
+</div>
+</div>
+<!-- Ítem 2 (Veterinaria) -->
+<div class="p-2 rounded border border-slate-100 bg-slate-50/50 hover:bg-white hover:border-slate-200 transition">
+<div class="flex items-start justify-between">
+<div>
+<p class="text-xs font-semibold text-slate-900">Vacuna Triple Felina Nobivac</p>
+<p class="text-[10px] text-slate-500">Sede San Borja (Refrigerado)</p>
+</div>
+<span class="text-[10px] bg-rose-50 text-rose-700 border border-rose-200 px-1.5 py-0.5 rounded font-bold font-data-mono-sm">2 / mín. 15</span>
+</div>
+<div class="w-full bg-slate-200 h-1.5 rounded-full mt-2 overflow-hidden">
+<div class="bg-rose-500 h-full rounded-full" style="width: 13%"></div>
+</div>
+<div class="mt-2 flex justify-end">
+<button class="text-[11px] bg-white hover:bg-slate-100 text-teal-800 border border-slate-200 px-2 py-0.5 rounded font-medium transition" onclick="showToast('Solicitud de reposición enviada al proveedor.')">
+                      Generar Orden de Compra
+                    </button>
+</div>
+</div>
+<!-- Ítem 3 (Restaurante / Alimentos) -->
+<div class="p-2 rounded border border-slate-100 bg-slate-50/50 hover:bg-white hover:border-slate-200 transition">
+<div class="flex items-start justify-between">
+<div>
+<p class="text-xs font-semibold text-slate-900">Aceite de Oliva Extra Virgen 1L</p>
+<p class="text-[10px] text-slate-500">Cocina Central Miraflores</p>
+</div>
+<span class="text-[10px] bg-amber-50 text-amber-800 border border-amber-200 px-1.5 py-0.5 rounded font-bold font-data-mono-sm">4 / mín. 12</span>
+</div>
+<div class="w-full bg-slate-200 h-1.5 rounded-full mt-2 overflow-hidden">
+<div class="bg-amber-500 h-full rounded-full" style="width: 33%"></div>
+</div>
+<div class="mt-2 flex justify-end">
+<button class="text-[11px] bg-white hover:bg-slate-100 text-teal-800 border border-slate-200 px-2 py-0.5 rounded font-medium transition" onclick="showToast('Generando requerimiento de compra de insumos.')">
+                      Generar Orden de Compra
+                    </button>
+</div>
+</div>
+</div>
+</div>
+<!-- TARJETA: Estado SUNAT & CPE en Tiempo Real -->
+<div class="bg-white border border-slate-200 rounded-lg p-3.5 shadow-xs">
+<div class="flex items-center justify-between pb-2 mb-3 border-b border-slate-100">
+<div class="flex items-center gap-1.5">
+<i class="w-4 h-4 text-teal-700" data-lucide="shield-check"></i>
+<h3 class="text-xs font-bold text-slate-800 uppercase tracking-wide">Estado SUNAT &amp; OSE</h3>
+</div>
+<span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+</div>
+<!-- Lista de Incidencias CPE -->
+<div class="space-y-2 text-xs">
+<!-- 1 Pendiente -->
+<div class="p-2 bg-amber-50/60 rounded border border-amber-200">
+<div class="flex items-center justify-between">
+<span class="font-bold text-amber-900 font-data-mono-sm">B001-0012904</span>
+<span class="text-[10px] text-amber-700">hace 15 min</span>
+</div>
+<p class="text-[11px] text-amber-800 mt-0.5">Pendiente de envío en lote al OSE.</p>
+</div>
+<!-- 1 Rechazado -->
+<div class="p-2 bg-rose-50/60 rounded border border-rose-200">
+<div class="flex items-center justify-between">
+<span class="font-bold text-rose-900 font-data-mono-sm">F001-0004579</span>
+<span class="text-[10px] text-rose-700">Rechazado</span>
+</div>
+<p class="text-[11px] text-rose-800 mt-0.5">RUC receptor no habido. Requiere corrección.</p>
+</div>
+<!-- Info de Certificado Digital -->
+<div class="p-2 bg-slate-50 rounded border border-slate-200 text-[11px] text-slate-600">
+<div class="flex items-center justify-between">
+<span>Certificado Tributario:</span>
+<span class="font-semibold text-slate-800">Llamagas S.A.</span>
+</div>
+<div class="flex items-center justify-between mt-1">
+<span>Vencimiento:</span>
+<span class="font-bold text-emerald-700 font-data-mono-sm">31/12/2025 (432 días)</span>
+</div>
+</div>
+<!-- Botón de Acción Directo: Reintentar envíos -->
+<button class="w-full mt-2 bg-primary-container hover:bg-[#0D9488] active:bg-[#115E59] text-white py-2 px-3 rounded text-xs font-semibold flex items-center justify-center gap-1.5 shadow-sm transition" id="btnReintentarSunat" onclick="reintentarEnviosSunat()">
+<i class="w-3.5 h-3.5" data-lucide="refresh-cw" id="syncIconSunat"></i>
+<span>Reintentar envíos pendientes (2)</span>
+</button>
+</div>
+</div>
+<!-- TARJETA: Acceso Rápido Normativo SUNAT -->
+<div class="bg-teal-900 text-white rounded-lg p-3.5 shadow-xs text-xs">
+<div class="flex items-center justify-between mb-2">
+<span class="text-[10px] uppercase font-bold tracking-wider text-teal-300">Resolución SUNAT 000123-2024</span>
+<i class="w-4 h-4 text-teal-300" data-lucide="info"></i>
+</div>
+<p class="text-[11px] text-teal-100 leading-relaxed">
+                Recuerde que el plazo de envío para Facturas Electrónicas es de máximo 3 días calendario desde su emisión.
+              </p>
+<div class="mt-3 pt-2 border-t border-teal-800/80 flex items-center justify-between text-[11px]">
+<span class="text-teal-300">Servidor OSE: Bizlinks</span>
+<a class="text-white underline font-medium hover:text-teal-200" href="#">Ver constancias CDR</a>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+<!-- ==================== MOBILE FLOATING ACTION BUTTON (FAB) ==================== -->
+<div class="md:hidden fixed bottom-16 right-4 z-40" id="mobileFab">
+<button class="flex items-center gap-2 bg-primary-container hover:bg-teal-700 active:scale-95 text-white px-4 py-2.5 rounded-full shadow-lg font-semibold text-xs transition-transform" onclick="openDrawerComprobante('B001-0012905')">
+<i class="w-4 h-4" data-lucide="plus-circle"></i>
+<span>Nueva Venta</span>
+</button>
+</div>
+<!-- ==================== MOBILE BOTTOM NAVIGATION BAR (5 TABS) ==================== -->
+<nav class="md:hidden fixed bottom-0 left-0 right-0 h-14 bg-white border-t border-slate-200 px-2 flex items-center justify-around z-40 shadow-lg" id="mobileBottomNav">
+<a class="flex flex-col items-center justify-center text-primary py-1" href="#">
+<i class="w-5 h-5" data-lucide="layout-dashboard"></i>
+<span class="text-[10px] font-semibold mt-0.5">Inicio</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-500 py-1 hover:text-primary" href="#" onclick="showToast('Navegando a módulo de Ventas...')">
+<i class="w-5 h-5" data-lucide="shopping-cart"></i>
+<span class="text-[10px] mt-0.5">Ventas</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-500 py-1 hover:text-primary" href="#" onclick="showToast('Navegando a Clientes...')">
+<i class="w-5 h-5" data-lucide="users"></i>
+<span class="text-[10px] mt-0.5">Clientes</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-500 py-1 hover:text-primary" href="#" onclick="showToast('Navegando a Inventario...')">
+<i class="w-5 h-5" data-lucide="warehouse"></i>
+<span class="text-[10px] mt-0.5">Inventario</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-500 py-1 hover:text-primary" href="#" onclick="toggleSidebar()">
+<i class="w-5 h-5" data-lucide="more-horizontal"></i>
+<span class="text-[10px] mt-0.5">Más</span>
+</a>
+</nav>
+</div>
+<!-- ==================== SIDE SHEET / DRAWER: DETALLE DE COMPROBANTE SUNAT ==================== -->
+<div class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 hidden transition-opacity" id="cpeDrawerOverlay" onclick="closeDrawerComprobante()">
+<div class="fixed right-0 top-0 bottom-0 w-full max-w-md bg-white shadow-2xl flex flex-col justify-between overflow-y-auto transform translate-x-full transition-transform duration-300" id="cpeDrawerSheet" onclick="event.stopPropagation()">
+<!-- Drawer Header -->
+<div class="p-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+<div>
+<div class="flex items-center gap-2">
+<span class="bg-teal-100 text-teal-800 text-[11px] font-bold px-2 py-0.5 rounded" id="drawerCpeBadge">Factura Electrónica</span>
+<span class="text-xs font-data-mono-md font-bold text-slate-800" id="drawerCpeNumero">F001-0004582</span>
+</div>
+<p class="text-xs text-slate-500 mt-0.5">Vista oficial de representación impresa CPE</p>
+</div>
+<button class="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200 rounded" onclick="closeDrawerComprobante()">
+<i class="w-5 h-5" data-lucide="x"></i>
+</button>
+</div>
+<!-- Drawer Printable Format Content -->
+<div class="p-5 space-y-4 text-xs">
+<!-- Estado OSE Banner -->
+<div class="p-3 bg-emerald-50 border border-emerald-200 rounded flex items-center justify-between">
+<div class="flex items-center gap-2">
+<i class="w-4 h-4 text-emerald-600" data-lucide="check-circle-2"></i>
+<div>
+<p class="font-bold text-emerald-900">Aceptado por SUNAT / Bizlinks</p>
+<p class="text-[10px] text-emerald-700">CDR generado con éxito · 24/10/2024 16:42</p>
+</div>
+</div>
+<span class="text-[10px] font-data-mono-sm bg-white px-2 py-0.5 rounded border border-emerald-300 text-emerald-800">CDR OK</span>
+</div>
+<!-- Emisor Info -->
+<div class="p-3 border border-slate-200 rounded bg-slate-50/50">
+<p class="font-bold text-slate-900" id="drawerEmisorName">Clínica Dental Sonrisa S.A.C.</p>
+<p class="text-[11px] text-slate-500">RUC: 20601234567</p>
+<p class="text-[11px] text-slate-500">Av. Javier Prado Este 2450, San Isidro, Lima</p>
+</div>
+<!-- Receptor Info -->
+<div class="p-3 border border-slate-200 rounded">
+<span class="text-[10px] uppercase font-bold text-slate-400">Datos del Receptor / Cliente</span>
+<p class="font-bold text-slate-900 mt-1" id="drawerReceptorName">Inversiones Pardo S.A.C.</p>
+<p class="text-[11px] text-slate-600 font-data-mono-sm">RUC: 20556677881</p>
+<p class="text-[11px] text-slate-500">Dirección: Jr. Las Gardenias 412, Surco</p>
+</div>
+<!-- Ítems / Detalle del Comprobante -->
+<div>
+<span class="text-[10px] uppercase font-bold text-slate-400">Detalle de Productos / Servicios</span>
+<table class="w-full mt-1 border-collapse text-left">
+<thead>
+<tr class="border-b border-slate-200 text-[10px] text-slate-500 uppercase">
+<th class="py-1">Cant.</th>
+<th class="py-1">Descripción</th>
+<th class="py-1 text-right">P. Unit</th>
+<th class="py-1 text-right">Total</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-100 text-[11px]">
+<tr>
+<td class="py-1.5 font-data-mono-sm">1.00</td>
+<td class="py-1.5">Tratamiento de Profilaxis &amp; Blanqueamiento Láser</td>
+<td class="py-1.5 text-right font-data-mono-sm">S/ 800.00</td>
+<td class="py-1.5 text-right font-data-mono-sm font-semibold">S/ 800.00</td>
+</tr>
+<tr>
+<td class="py-1.5 font-data-mono-sm">2.00</td>
+<td class="py-1.5">Curación con Resina Fotocurable 3M</td>
+<td class="py-1.5 text-right font-data-mono-sm">S/ 240.00</td>
+<td class="py-1.5 text-right font-data-mono-sm font-semibold">S/ 480.00</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Desglose Tributario SUNAT (18% IGV) -->
+<div class="p-3 bg-slate-50 border border-slate-200 rounded space-y-1 font-data-mono-sm">
+<div class="flex justify-between text-[11px] text-slate-600">
+<span>Operación Gravada:</span>
+<span>S/ 1,084.75</span>
+</div>
+<div class="flex justify-between text-[11px] text-slate-600">
+<span>IGV (18%):</span>
+<span>S/ 195.25</span>
+</div>
+<div class="flex justify-between text-xs font-bold text-slate-900 pt-1.5 border-t border-slate-200">
+<span>IMPORTE TOTAL:</span>
+<span class="text-sm text-teal-800">S/ 1,280.00</span>
+</div>
+</div>
+<!-- QR Code Simulado & Hash SUNAT -->
+<div class="p-3 border border-dashed border-slate-300 rounded flex items-center gap-3">
+<!-- QR Box Vectorial -->
+<div class="w-16 h-16 bg-slate-900 text-white p-1 rounded flex items-center justify-center shrink-0">
+<i class="w-12 h-12 text-white" data-lucide="qr-code"></i>
+</div>
+<div class="overflow-hidden">
+<p class="text-[10px] font-bold text-slate-700">Código Hash SUNAT:</p>
+<p class="text-[9px] text-slate-400 font-data-mono-sm truncate">oK3Jv29zZ8h+9LkWy3/Qv4m8N9A=</p>
+<p class="text-[9px] text-slate-500 mt-1">Autorizado mediante Resolución de Superintendencia 034-005-0005312</p>
+</div>
+</div>
+</div>
+<!-- Drawer Footer Action Buttons -->
+<div class="p-4 border-t border-slate-200 bg-slate-50 flex items-center gap-2">
+<button class="flex-1 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 py-2 rounded text-xs font-semibold flex items-center justify-center gap-1.5 transition" onclick="showToast('Imprimiendo en ticketera térmica de 80mm...')">
+<i class="w-4 h-4" data-lucide="printer"></i>
+<span>Imprimir Ticket</span>
+</button>
+<button class="flex-1 bg-primary-container hover:bg-[#0D9488] text-white py-2 rounded text-xs font-semibold flex items-center justify-center gap-1.5 shadow-sm transition" onclick="showToast('Descargando archivo PDF A4...')">
+<i class="w-4 h-4" data-lucide="file-down"></i>
+<span>Descargar PDF</span>
+</button>
+</div>
+</div>
+</div>
+<!-- ==================== COMMAND PALETTE MODAL (Ctrl + K) ==================== -->
+<div class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 hidden items-start justify-center pt-20 px-4 transition-opacity" id="commandPaletteModal">
+<div class="bg-white rounded-lg shadow-2xl border border-slate-200 w-full max-w-xl overflow-hidden" onclick="event.stopPropagation()">
+<!-- Search Input -->
+<div class="p-3 border-b border-slate-200 flex items-center gap-2.5">
+<i class="w-5 h-5 text-teal-700" data-lucide="search"></i>
+<input class="w-full text-sm outline-none text-slate-800 placeholder-slate-400 border-none p-0 focus:ring-0" id="commandInput" placeholder="Escribe para buscar CPE, cliente, RUC, o acción..." type="text"/>
+<kbd class="text-[10px] bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded font-data-mono-sm text-slate-500 cursor-pointer" onclick="closeCommandPalette()">ESC</kbd>
+</div>
+<!-- Quick Commands List -->
+<div class="max-h-80 overflow-y-auto p-2 text-xs space-y-1">
+<div class="px-2 py-1 text-[10px] uppercase font-bold text-slate-400">Acciones Frecuentes</div>
+<div class="flex items-center justify-between p-2 rounded hover:bg-teal-50 hover:text-teal-900 cursor-pointer transition" onclick="openDrawerComprobante('B001-0012905'); closeCommandPalette();">
+<div class="flex items-center gap-2">
+<i class="w-4 h-4 text-teal-600" data-lucide="plus-circle"></i>
+<span class="font-medium">Emitir Nueva Boleta de Venta Electrónica</span>
+</div>
+<span class="text-[10px] font-data-mono-sm text-slate-400">B001</span>
+</div>
+<div class="flex items-center justify-between p-2 rounded hover:bg-teal-50 hover:text-teal-900 cursor-pointer transition" onclick="openDrawerComprobante('F001-0004583'); closeCommandPalette();">
+<div class="flex items-center gap-2">
+<i class="w-4 h-4 text-teal-600" data-lucide="receipt"></i>
+<span class="font-medium">Emitir Nueva Factura Electrónica (RUC)</span>
+</div>
+<span class="text-[10px] font-data-mono-sm text-slate-400">F001</span>
+</div>
+<div class="flex items-center justify-between p-2 rounded hover:bg-teal-50 hover:text-teal-900 cursor-pointer transition" onclick="reintentarEnviosSunat(); closeCommandPalette();">
+<div class="flex items-center gap-2">
+<i class="w-4 h-4 text-teal-600" data-lucide="refresh-cw"></i>
+<span class="font-medium">Sincronizar y Enviar Lote Pendiente a SUNAT</span>
+</div>
+<span class="text-[10px] font-data-mono-sm text-amber-600">2 Pendientes</span>
+</div>
+<div class="px-2 py-1 text-[10px] uppercase font-bold text-slate-400 mt-2">Búsqueda Rápida de Clientes &amp; RUC</div>
+<div class="flex items-center justify-between p-2 rounded hover:bg-slate-50 cursor-pointer" onclick="showToast('Cargando ficha de Inversiones Pardo S.A.C.'); closeCommandPalette();">
+<div class="flex items-center gap-2">
+<i class="w-4 h-4 text-slate-400" data-lucide="building-2"></i>
+<div>
+<p class="font-medium text-slate-900">Inversiones Pardo S.A.C.</p>
+<p class="text-[10px] text-slate-400">RUC: 20556677881 · Habido</p>
+</div>
+</div>
+<span class="text-[10px] bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded">Activo</span>
+</div>
+<div class="flex items-center justify-between p-2 rounded hover:bg-slate-50 cursor-pointer" onclick="showToast('Cargando ficha de Juan Pérez Ramos'); closeCommandPalette();">
+<div class="flex items-center gap-2">
+<i class="w-4 h-4 text-slate-400" data-lucide="user"></i>
+<div>
+<p class="font-medium text-slate-900">Juan Pérez Ramos</p>
+<p class="text-[10px] text-slate-400">DNI: 45892310 · Paciente Recurrente</p>
+</div>
+</div>
+<span class="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">Cliente</span>
+</div>
+</div>
+<!-- Footer Info -->
+<div class="p-2 border-t border-slate-200 bg-slate-50 text-[11px] text-slate-500 flex justify-between px-3">
+<span>Navega con flechas ↑ ↓</span>
+<span>Selecciona con ENTER</span>
+</div>
+</div>
+</div>
+<!-- ==================== TOAST NOTIFICATION CONTAINER ==================== -->
+<div class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 flex items-center gap-2 bg-slate-900 text-white px-4 py-2.5 rounded-lg shadow-xl text-xs max-w-md pointer-events-none" id="toastNotification">
+<i class="w-4 h-4 text-emerald-400 shrink-0" data-lucide="info" id="toastIcon"></i>
+<span class="font-medium" id="toastMessage">Mensaje de notificación del sistema.</span>
+</div>
+<!-- ==================== INTERACTION SCRIPTS ==================== -->
+<script>
+    // Inicializar íconos Lucide al cargar el DOM
+    document.addEventListener("DOMContentLoaded", () => {
+      lucide.createIcons();
+    });
+
+    // 1. CONTROLADOR DE VISTAS SIMULADAS (Desktop, Tablet, Móvil)
+    function setViewMode(mode) {
+      const container = document.getElementById('appContainer');
+      const sidebar = document.getElementById('mainSidebar');
+      const bottomNav = document.getElementById('mobileBottomNav');
+      const mobileFab = document.getElementById('mobileFab');
+      const btnDesktop = document.getElementById('viewDesktopBtn');
+      const btnTablet = document.getElementById('viewTabletBtn');
+      const btnMobile = document.getElementById('viewMobileBtn');
+
+      // Reset button classes
+      [btnDesktop, btnTablet, btnMobile].forEach(btn => {
+        btn.classList.remove('bg-primary-container', 'text-white', 'shadow-sm');
+        btn.classList.add('text-slate-300');
+      });
+
+      if (mode === 'desktop') {
+        btnDesktop.classList.add('bg-primary-container', 'text-white', 'shadow-sm');
+        btnDesktop.classList.remove('text-slate-300');
+
+        container.style.maxWidth = '100%';
+        container.style.borderLeft = 'none';
+        container.style.borderRight = 'none';
+        sidebar.classList.remove('w-16', 'hidden');
+        sidebar.classList.add('w-60');
+        showSidebarLabels(true);
+        bottomNav.classList.add('md:hidden');
+        mobileFab.classList.add('md:hidden');
+        showToast('Vista Desktop Activa: Resolución 1440px+ con navegación completa.');
+      } else if (mode === 'tablet') {
+        btnTablet.classList.add('bg-primary-container', 'text-white', 'shadow-sm');
+        btnTablet.classList.remove('text-slate-300');
+
+        container.style.maxWidth = '1024px';
+        container.style.borderLeft = '1px solid #e2e8f0';
+        container.style.borderRight = '1px solid #e2e8f0';
+        sidebar.classList.remove('w-60', 'hidden');
+        sidebar.classList.add('w-16');
+        showSidebarLabels(false);
+        showToast('Vista Tablet Activa: Sidebar compacto a 64px con íconos directos.');
+      } else if (mode === 'mobile') {
+        btnMobile.classList.add('bg-primary-container', 'text-white', 'shadow-sm');
+        btnMobile.classList.remove('text-slate-300');
+
+        container.style.maxWidth = '420px';
+        container.style.borderLeft = '1px solid #cbd5e1';
+        container.style.borderRight = '1px solid #cbd5e1';
+        sidebar.classList.add('hidden');
+        bottomNav.classList.remove('hidden');
+        mobileFab.classList.remove('hidden');
+        showToast('Vista Móvil Activa: Barra de 5 pestañas y acceso rápido flotante.');
+      }
+      lucide.createIcons();
+    }
+
+    function showSidebarLabels(show) {
+      const texts = document.querySelectorAll('.sidebar-text');
+      const fullLabels = document.querySelectorAll('.sidebar-label-full');
+      texts.forEach(t => t.style.display = show ? '' : 'none');
+      fullLabels.forEach(l => l.style.display = show ? '' : 'none');
+    }
+
+    function toggleCollapseSidebar() {
+      const sidebar = document.getElementById('mainSidebar');
+      if (sidebar.classList.contains('w-60')) {
+        sidebar.classList.remove('w-60');
+        sidebar.classList.add('w-16');
+        showSidebarLabels(false);
+      } else {
+        sidebar.classList.remove('w-16');
+        sidebar.classList.add('w-60');
+        showSidebarLabels(true);
+      }
+    }
+
+    function toggleSidebar() {
+      const sidebar = document.getElementById('mainSidebar');
+      sidebar.classList.toggle('hidden');
+      if (!sidebar.classList.contains('hidden')) {
+        sidebar.classList.remove('w-16');
+        sidebar.classList.add('w-60');
+        showSidebarLabels(true);
+      }
+    }
+
+    // 2. SELECTOR DE TENANT / EMPRESA
+    function toggleTenantDropdown() {
+      const dd = document.getElementById('tenantDropdown');
+      dd.classList.toggle('hidden');
+    }
+
+    function selectTenant(name, badge, ruc) {
+      document.getElementById('currentTenantName').textContent = name;
+      document.getElementById('currentTenantBadge').textContent = badge;
+      document.getElementById('sidebarTenantTitle').textContent = name;
+      document.getElementById('sidebarTenantSub').textContent = 'RUC: ' + ruc;
+      document.getElementById('drawerEmisorName').textContent = name + ' S.A.C.';
+      document.getElementById('tenantDropdown').classList.add('hidden');
+      showToast(`Empresa activa cambiada a: ${name} (RUC: ${ruc})`);
+    }
+
+    // Cerrar dropdown al hacer click fuera
+    window.addEventListener('click', function(e) {
+      const tenantBtn = document.getElementById('tenantMenuBtn');
+      const tenantDropdown = document.getElementById('tenantDropdown');
+      if (!tenantBtn.contains(e.target) && !tenantDropdown.contains(e.target)) {
+        tenantDropdown.classList.add('hidden');
+      }
+    });
+
+    // 3. SUBMENÚS COLAPSABLES EN SIDEBAR
+    function toggleSubmenu(id) {
+      const el = document.getElementById(id);
+      if (el) el.classList.toggle('hidden');
+    }
+
+    // 4. DRAWER DE COMPROBANTE CPE
+    function openDrawerComprobante(serieNumero) {
+      const overlay = document.getElementById('cpeDrawerOverlay');
+      const sheet = document.getElementById('cpeDrawerSheet');
+      const numLabel = document.getElementById('drawerCpeNumero');
+      const badge = document.getElementById('drawerCpeBadge');
+
+      if (numLabel) numLabel.textContent = serieNumero;
+      if (badge) {
+        if (serieNumero.startsWith('B')) {
+          badge.textContent = 'Boleta de Venta Electrónica';
+          badge.className = 'bg-blue-100 text-blue-800 text-[11px] font-bold px-2 py-0.5 rounded';
+        } else if (serieNumero.startsWith('F')) {
+          badge.textContent = 'Factura Electrónica';
+          badge.className = 'bg-teal-100 text-teal-800 text-[11px] font-bold px-2 py-0.5 rounded';
+        } else {
+          badge.textContent = 'Nota de Crédito Electrónica';
+          badge.className = 'bg-purple-100 text-purple-800 text-[11px] font-bold px-2 py-0.5 rounded';
+        }
+      }
+
+      overlay.classList.remove('hidden');
+      setTimeout(() => {
+        sheet.classList.remove('translate-x-full');
+      }, 10);
+    }
+
+    function closeDrawerComprobante() {
+      const overlay = document.getElementById('cpeDrawerOverlay');
+      const sheet = document.getElementById('cpeDrawerSheet');
+      sheet.classList.add('translate-x-full');
+      setTimeout(() => {
+        overlay.classList.add('hidden');
+      }, 300);
+    }
+
+    // 5. COMMAND PALETTE (CTRL + K)
+    function openCommandPalette() {
+      const modal = document.getElementById('commandPaletteModal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      setTimeout(() => document.getElementById('commandInput').focus(), 50);
+    }
+
+    function closeCommandPalette() {
+      const modal = document.getElementById('commandPaletteModal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        openCommandPalette();
+      }
+      if (e.key === 'Escape') {
+        closeCommandPalette();
+        closeDrawerComprobante();
+      }
+    });
+
+    // 6. FILTRO DE TABLA EN VIVO
+    function filterTableData() {
+      const query = document.getElementById('tableFilterInput').value.toLowerCase();
+      const rows = document.querySelectorAll('#cpeDataTable tbody tr');
+      rows.forEach(row => {
+        const text = row.textContent.toLowerCase();
+        row.style.display = text.includes(query) ? '' : 'none';
+      });
+    }
+
+    function filterBySunatStatus(status) {
+      const rows = document.querySelectorAll('#cpeDataTable tbody tr');
+      rows.forEach(row => {
+        if (status === 'all') {
+          row.style.display = '';
+        } else {
+          const text = row.textContent;
+          row.style.display = text.includes(status) ? '' : 'none';
+        }
+      });
+    }
+
+    // 7. BOTÓN REINTENTAR SUNAT
+    function reintentarEnviosSunat() {
+      const icon = document.getElementById('syncIconSunat');
+      if (icon) icon.classList.add('animate-spin');
+      showToast('Enviando lotes CPE al OSE Bizlinks / SUNAT...');
+      setTimeout(() => {
+        if (icon) icon.classList.remove('animate-spin');
+        showToast('Comprobante F001-0004582 emitido y enviado a SUNAT con éxito (CDR Aceptado).');
+      }, 1500);
+    }
+
+    // 8. FILTRO RANGO GRÁFICO
+    function filterRange(btn, range) {
+      document.querySelectorAll('.chart-filter-btn').forEach(b => {
+        b.classList.remove('bg-white', 'text-slate-900', 'shadow-xs', 'font-semibold');
+        b.classList.add('text-slate-600');
+      });
+      btn.classList.add('bg-white', 'text-slate-900', 'shadow-xs', 'font-semibold');
+      btn.classList.remove('text-slate-600');
+      showToast(`Filtrando métricas analíticas por rango: ${range.toUpperCase()}`);
+    }
+
+    // 9. TOAST NOTIFICACIÓN COMPONENTE
+    let toastTimeout;
+    function showToast(message) {
+      const toast = document.getElementById('toastNotification');
+      const msg = document.getElementById('toastMessage');
+      if (!toast) return;
+      msg.textContent = message;
+      toast.classList.remove('translate-y-20', 'opacity-0');
+      clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        toast.classList.add('translate-y-20', 'opacity-0');
+      }, 3500);
+    }
+  </script>
+</body></html>

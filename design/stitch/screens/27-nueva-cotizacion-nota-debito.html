@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+
+<html class="h-full bg-surface" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>PerúSaaS Dental · Cotizaciones y Notas de Débito SUNAT</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap&family=Geist+Mono:wght@400;500;600" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "on-primary": "#ffffff",
+            "tertiary-container": "#136ea6",
+            "on-background": "#131b2e",
+            "on-surface-variant": "#3e4947",
+            "primary": "#005c55",
+            "tertiary": "#005584",
+            "surface-container": "#eaedff",
+            "outline-variant": "#bdc9c6",
+            "inverse-surface": "#283044",
+            "on-secondary-fixed-variant": "#00504b",
+            "surface-bright": "#faf8ff",
+            "surface-tint": "#006a63",
+            "secondary": "#216963",
+            "on-error": "#ffffff",
+            "surface-container-lowest": "#ffffff",
+            "surface-container-high": "#e2e7ff",
+            "inverse-primary": "#80d5cb",
+            "on-primary-container": "#a3faef",
+            "secondary-fixed": "#abefe8",
+            "primary-fixed-dim": "#80d5cb",
+            "on-secondary-fixed": "#00201e",
+            "secondary-fixed-dim": "#8fd3cc",
+            "outline": "#6e7977",
+            "on-primary-fixed": "#00201d",
+            "surface-container-highest": "#dae2fd",
+            "tertiary-fixed": "#cde5ff",
+            "error": "#ba1a1a",
+            "on-tertiary-fixed": "#001d32",
+            "error-container": "#ffdad6",
+            "primary-container": "#0f766e",
+            "on-tertiary-fixed-variant": "#004b74",
+            "on-tertiary": "#ffffff",
+            "on-secondary": "#ffffff",
+            "inverse-on-surface": "#eef0ff",
+            "primary-fixed": "#9cf2e8",
+            "on-secondary-container": "#266d68",
+            "on-error-container": "#93000a",
+            "tertiary-fixed-dim": "#94ccff",
+            "surface-variant": "#dae2fd",
+            "surface": "#faf8ff",
+            "background": "#faf8ff",
+            "on-primary-fixed-variant": "#00504a",
+            "surface-container-low": "#f2f3ff",
+            "secondary-container": "#a8ece5",
+            "surface-dim": "#d2d9f4",
+            "on-tertiary-container": "#daebff",
+            "on-surface": "#131b2e"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "spacing": {
+            "space-sm": "0.5rem",
+            "margin": "1rem",
+            "gutter": "1rem",
+            "space-xl": "1.5rem",
+            "space-lg": "1rem",
+            "space-xs": "0.25rem",
+            "space-md": "0.75rem"
+          },
+          "fontFamily": {
+            "headline-sm": ["Geist"],
+            "headline-md": ["Geist"],
+            "label-sm": ["Geist"],
+            "code-dense": ["Geist"],
+            "body-lg": ["Geist"],
+            "body-sm": ["Geist"],
+            "headline-xl": ["Geist"],
+            "headline-lg": ["Geist"],
+            "body-md": ["Geist"],
+            "label-md": ["Geist"]
+          },
+          "fontSize": {
+            "headline-sm": ["15px", { "lineHeight": "20px", "fontWeight": "600" }],
+            "headline-md": ["18px", { "lineHeight": "24px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+            "label-sm": ["11px", { "lineHeight": "14px", "letterSpacing": "0.02em", "fontWeight": "600" }],
+            "code-dense": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+            "body-lg": ["15px", { "lineHeight": "22px", "fontWeight": "400" }],
+            "body-sm": ["12px", { "lineHeight": "16px", "fontWeight": "400" }],
+            "headline-xl": ["28px", { "lineHeight": "34px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+            "headline-lg": ["22px", { "lineHeight": "28px", "letterSpacing": "-0.015em", "fontWeight": "700" }],
+            "body-md": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+            "label-md": ["13px", { "lineHeight": "18px", "fontWeight": "600" }]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+      font-size: 18px;
+      line-height: 1;
+      display: inline-block;
+      vertical-align: middle;
+    }
+    .material-symbols-outlined.fill-icon {
+      font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 20;
+    }
+    input[type=number]::-webkit-inner-spin-button, 
+    input[type=number]::-webkit-outer-spin-button { 
+      -webkit-appearance: none; 
+      margin: 0; 
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      height: 6px;
+      width: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #CBD5E1;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body class="h-full bg-[#F8FAFC] text-on-surface flex flex-col font-body-md text-body-md antialiased select-none overflow-x-hidden">
+<!-- ========================================================================= -->
+<!-- 1. TOPBAR CORPORATIVO (Basado en Shared Components TopNavBar) -->
+<!-- ========================================================================= -->
+<header class="flex justify-between items-center h-12 px-4 w-full bg-surface-container-lowest border-b border-outline-variant shrink-0 z-30">
+<!-- Izquierda: Brand + Búsqueda Rápida -->
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2">
+<div class="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-white shadow-sm">
+<span class="material-symbols-outlined fill-icon text-white" style="font-size: 20px;">dentistry</span>
+</div>
+<div>
+<span class="font-headline-md text-headline-md font-extrabold text-primary tracking-tight">PerúSaaS Dental</span>
+<span class="hidden lg:inline-block ml-2 text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-surface-container text-on-surface-variant border border-outline-variant">Clínica Sonrisa S.A.C.</span>
+</div>
+</div>
+<!-- Separador vertical -->
+<div class="hidden md:block h-5 w-px bg-outline-variant"></div>
+<!-- Selector de Sede -->
+<div class="hidden md:flex items-center gap-1.5 text-body-sm text-on-surface-variant hover:text-on-surface cursor-pointer bg-surface px-2 py-1 rounded border border-outline-variant">
+<span class="material-symbols-outlined text-primary text-[16px]">domain</span>
+<span class="font-medium">Sede Miraflores (Principal)</span>
+<span class="material-symbols-outlined text-[14px]">expand_more</span>
+</div>
+<!-- Estado SUNAT / OSE -->
+<div class="hidden sm:flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#ECFDF5] border border-[#A7F3D0] text-[#065F46] font-label-sm text-label-sm">
+<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+<span class="font-semibold">SUNAT Conectado</span>
+<span class="text-[10px] opacity-75 hidden xl:inline">· OSE Bizlinks OK</span>
+</div>
+</div>
+<!-- Navegación central (TopNavBar Desktop links) -->
+<nav class="hidden xl:flex items-center gap-6 font-label-md text-label-md">
+<a class="text-primary border-b-2 border-primary pb-1 font-semibold flex items-center gap-1" href="#">
+<span>Cotizaciones</span>
+<span class="bg-secondary-container text-on-secondary-container text-[10px] px-1.5 py-0.2 rounded-full font-bold">14</span>
+</a>
+<a class="text-on-surface-variant hover:text-on-surface pb-1 transition-colors" href="#">Notas Débito</a>
+<a class="text-on-surface-variant hover:text-on-surface pb-1 transition-colors" href="#">Facturación</a>
+<a class="text-on-surface-variant hover:text-on-surface pb-1 transition-colors" href="#">Pacientes</a>
+</nav>
+<!-- Derecha: Atajos, Indicador de tema, Alertas, Perfil -->
+<div class="flex items-center gap-2 sm:gap-3">
+<!-- Selector de Tema (Claro / Oscuro / Sistema) -->
+<div class="flex items-center bg-surface border border-outline-variant rounded-lg p-0.5 text-on-surface-variant">
+<button class="px-1.5 py-0.5 rounded bg-surface-container-lowest text-primary shadow-xs" title="Modo Claro" type="button">
+<span class="material-symbols-outlined text-[15px]">light_mode</span>
+</button>
+<button class="px-1.5 py-0.5 rounded hover:text-on-surface" title="Modo Oscuro" type="button">
+<span class="material-symbols-outlined text-[15px]">dark_mode</span>
+</button>
+<button class="px-1.5 py-0.5 rounded hover:text-on-surface" title="Tema del Sistema" type="button">
+<span class="material-symbols-outlined text-[15px]">settings_brightness</span>
+</button>
+</div>
+<!-- Conexión Local Wi-Fi & Campana -->
+<div class="hidden sm:flex items-center gap-1 text-on-surface-variant">
+<button class="p-1.5 rounded-lg hover:bg-surface-container transition-colors relative" title="Wi-Fi de Alta Velocidad (12ms)">
+<span class="material-symbols-outlined text-emerald-600">wifi</span>
+</button>
+<button class="p-1.5 rounded-lg hover:bg-surface-container transition-colors relative" title="Alertas de Facturación">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-1 right-1 w-2 h-2 rounded-full bg-error ring-2 ring-white"></span>
+</button>
+<button class="p-1.5 rounded-lg hover:bg-surface-container transition-colors" title="Ayuda y Soporte">
+<span class="material-symbols-outlined">help</span>
+</button>
+</div>
+<!-- Avatar y Datos de Médico -->
+<div class="flex items-center gap-2 pl-2 border-l border-outline-variant cursor-pointer group">
+<div class="w-7 h-7 rounded-full bg-primary-container text-white flex items-center justify-center font-bold text-[12px] ring-1 ring-primary/20">
+          CM
+        </div>
+<div class="hidden lg:flex flex-col text-left leading-tight">
+<span class="font-label-md text-label-md text-on-surface font-semibold group-hover:text-primary">Dr. Carlos Mendoza</span>
+<span class="font-label-sm text-[10px] text-on-surface-variant">COP 34291 · Admisión</span>
+</div>
+</div>
+</div>
+</header>
+<!-- ========================================================================= -->
+<!-- SUBHEADER: BREADCRUMBS, TABS SEGMENTADAS Y ACCIONES RÁPIDAS -->
+<!-- ========================================================================= -->
+<section class="bg-surface-container-lowest border-b border-outline-variant px-4 py-2 flex flex-wrap items-center justify-between gap-3 shrink-0">
+<div class="flex items-center gap-3">
+<div class="flex items-center gap-1 text-body-sm text-on-surface-variant">
+<span class="hover:text-on-surface cursor-pointer font-medium">Ventas</span>
+<span class="material-symbols-outlined text-[14px]">chevron_right</span>
+<span class="hover:text-on-surface cursor-pointer font-medium">Cotizaciones</span>
+<span class="material-symbols-outlined text-[14px]">chevron_right</span>
+<span class="text-primary font-semibold" id="breadcrumb-leaf">Nueva Cotización Dental</span>
+</div>
+<!-- Tag de borrador autoguardado -->
+<span class="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded bg-surface border border-outline-variant text-on-surface-variant">
+<span class="material-symbols-outlined text-[12px] text-emerald-600">cloud_done</span>
+        Borrador guardado (hace 42s)
+      </span>
+</div>
+<!-- Segmented Control Central: Cotización vs Nota Débito -->
+<div class="inline-flex p-0.5 rounded-lg bg-[#F1F5F9] border border-outline-variant">
+<button class="flex items-center gap-1.5 px-3 py-1 text-label-md font-label-md rounded-md bg-white text-primary font-semibold shadow-xs transition-all" id="tab-cotizacion-btn" onclick="switchMainTab('cotizacion')">
+<span class="material-symbols-outlined text-[16px]">receipt_long</span>
+<span>Nueva Cotización (3 Pasos)</span>
+</button>
+<button class="flex items-center gap-1.5 px-3 py-1 text-label-md font-label-md rounded-md text-on-surface-variant hover:text-on-surface transition-all" id="tab-notadebito-btn" onclick="switchMainTab('notadebito')">
+<span class="material-symbols-outlined text-[16px]">note_add</span>
+<span>Nota de Débito SUNAT (Cat. 10)</span>
+</button>
+</div>
+<!-- Acciones Rápidas con Atajos de Teclado -->
+<div class="flex items-center gap-2">
+<button class="hidden md:inline-flex items-center gap-1 px-2.5 py-1 text-body-sm rounded border border-outline-variant bg-white text-on-surface-variant hover:bg-surface-container transition-colors" type="button">
+<kbd class="px-1 py-0.2 bg-surface text-[10px] rounded border border-outline-variant font-mono">F2</kbd>
+<span>Buscar Ítem</span>
+</button>
+<button class="px-3 py-1 text-body-sm font-medium rounded border border-outline-variant bg-white text-on-surface hover:bg-surface-container transition-colors" type="button">
+        Guardar Borrador
+      </button>
+<button class="px-3 py-1 text-body-sm font-semibold rounded bg-primary text-white hover:bg-primary-container transition-colors flex items-center gap-1.5 shadow-xs" type="button">
+<span class="material-symbols-outlined text-[16px]">send</span>
+<span>Emitir &amp; Sincronizar</span>
+<kbd class="hidden lg:inline px-1 bg-white/20 text-[9px] rounded font-mono">Ctrl+Enter</kbd>
+</button>
+</div>
+</section>
+<!-- ========================================================================= -->
+<!-- MAIN WORKSPACE: LAYOUT CON SIDEBAR Y CANVAS FLUIDO -->
+<!-- ========================================================================= -->
+<div class="flex flex-1 overflow-hidden">
+<!-- SIDEBAR EXPANDIBLE (Shared Components SideNavBar) -->
+<aside class="hidden md:flex flex-col justify-between h-full w-60 p-3 bg-surface-container-lowest border-r border-outline-variant shrink-0 select-none">
+<div class="space-y-4">
+<!-- Header de la clínica -->
+<div class="flex items-center gap-2.5 px-2 py-1">
+<div class="w-8 h-8 rounded bg-primary-container/10 border border-primary/20 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">local_hospital</span>
+</div>
+<div class="overflow-hidden">
+<p class="font-headline-sm text-headline-sm font-bold text-on-surface truncate">Sede Principal Lima</p>
+<p class="text-[11px] text-on-surface-variant">RUC 20608941235</p>
+</div>
+</div>
+<!-- Botón Caja Abierta -->
+<div class="px-2">
+<div class="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-surface border border-outline-variant text-[12px]">
+<span class="flex items-center gap-1.5 text-on-surface-variant font-medium">
+<span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+              Caja Abierta
+            </span>
+<span class="font-bold text-primary font-mono">S/ 1,420.00</span>
+</div>
+</div>
+<!-- Lista de Navegación Lateral -->
+<nav class="space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:bg-surface-container rounded-lg transition-colors font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined">calendar_month</span>
+<span>Clínica &amp; Agenda</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 bg-secondary-container text-on-secondary-container rounded-lg font-semibold font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined fill-icon">request_quote</span>
+<span>Presupuestos</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:bg-surface-container rounded-lg transition-colors font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined">receipt_long</span>
+<span>Comprobantes CPE</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:bg-surface-container rounded-lg transition-colors font-label-md text-label-md" href="#" onclick="switchMainTab('notadebito')">
+<span class="material-symbols-outlined">note_add</span>
+<span>Notas Débito SUNAT</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:bg-surface-container rounded-lg transition-colors font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined">medical_services</span>
+<span>Catálogo Dental</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:bg-surface-container rounded-lg transition-colors font-label-md text-label-md" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span>Configuración RUC</span>
+</a>
+</nav>
+</div>
+<!-- Footer SideNavBar -->
+<div class="pt-3 border-t border-outline-variant space-y-1">
+<a class="flex items-center justify-between px-3 py-2 text-on-surface-variant hover:bg-surface-container rounded-lg text-body-sm" href="#">
+<span class="flex items-center gap-2">
+<span class="material-symbols-outlined text-emerald-600">cloud_done</span>
+<span>Sincronización SUNAT</span>
+</span>
+<span class="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 rounded font-mono">En Línea</span>
+</a>
+<a class="flex items-center gap-2 px-3 py-2 text-error hover:bg-error-container/20 rounded-lg text-body-sm transition-colors" href="#">
+<span class="material-symbols-outlined text-error">logout</span>
+<span>Cerrar Sesión</span>
+</a>
+</div>
+</aside>
+<!-- ÁREA DE TRABAJO PRINCIPAL (Scrollable) -->
+<main class="flex-1 overflow-y-auto custom-scrollbar p-3 md:p-4 lg:p-6 pb-20 md:pb-8">
+<!-- ================================================================= -->
+<!-- BLOQUE 1: NUEVA COTIZACIÓN DENTAL EN 3 PASOS                      -->
+<!-- ================================================================= -->
+<div class="space-y-4 max-w-7xl mx-auto" id="section-cotizacion">
+<!-- A) STEPPER VISUAL SUPERIOR -->
+<div class="bg-surface-container-lowest p-3 rounded-lg border border-outline-variant shadow-xs">
+<div class="grid grid-cols-3 gap-2">
+<!-- Paso 1 -->
+<div class="flex items-center gap-3 p-2 rounded-md bg-[#F0FDFA] border-l-4 border-primary">
+<div class="w-7 h-7 rounded-full bg-primary text-white flex items-center justify-center font-bold text-[12px]">1</div>
+<div class="overflow-hidden">
+<span class="text-[10px] uppercase font-bold text-primary tracking-wider block">Paso 1</span>
+<span class="font-headline-sm text-body-md font-semibold text-on-surface truncate block">Cliente y Comercial</span>
+</div>
+</div>
+<!-- Paso 2 (Activo) -->
+<div class="flex items-center gap-3 p-2 rounded-md bg-surface-container-low border-l-4 border-tertiary-container">
+<div class="w-7 h-7 rounded-full bg-tertiary-container text-white flex items-center justify-center font-bold text-[12px]">2</div>
+<div class="overflow-hidden">
+<span class="text-[10px] uppercase font-bold text-tertiary-container tracking-wider block">Paso 2 · En Edición</span>
+<span class="font-headline-sm text-body-md font-semibold text-on-surface truncate block">Ítems Odontológicos</span>
+</div>
+</div>
+<!-- Paso 3 -->
+<div class="flex items-center gap-3 p-2 rounded-md bg-surface border-l-4 border-outline-variant opacity-85">
+<div class="w-7 h-7 rounded-full bg-surface-container text-on-surface-variant flex items-center justify-center font-bold text-[12px]">3</div>
+<div class="overflow-hidden">
+<span class="text-[10px] uppercase font-bold text-on-surface-variant tracking-wider block">Paso 3</span>
+<span class="font-headline-sm text-body-md font-semibold text-on-surface-variant truncate block">Vista Previa &amp; Envío</span>
+</div>
+</div>
+</div>
+</div>
+<!-- B) BARRA DE PLANTILLAS RÁPIDAS -->
+<div class="bg-surface-container-lowest p-3 rounded-lg border border-outline-variant flex flex-wrap items-center justify-between gap-2 shadow-xs">
+<div class="flex items-center gap-2 text-body-sm font-semibold text-on-surface">
+<span class="material-symbols-outlined text-primary">auto_fix_high</span>
+<span>Plantillas Rápidas Odontológicas:</span>
+</div>
+<div class="flex flex-wrap items-center gap-2">
+<button class="px-2.5 py-1 text-[12px] font-medium rounded-full bg-surface hover:bg-surface-container border border-outline-variant text-on-surface flex items-center gap-1.5 transition-all" type="button">
+<span class="material-symbols-outlined text-[14px] text-primary">corporate_fare</span>
+<span>Paquete Corporativo EPS</span>
+<span class="text-[10px] text-primary font-bold">(Resinas + Profilaxis)</span>
+</button>
+<button class="px-2.5 py-1 text-[12px] font-medium rounded-full bg-surface hover:bg-surface-container border border-outline-variant text-on-surface flex items-center gap-1.5 transition-all" type="button">
+<span class="material-symbols-outlined text-[14px] text-tertiary">calendar_view_week</span>
+<span>Tratamiento Ortodoncia</span>
+<span class="text-[10px] text-on-surface-variant">(18 cuotas MBT)</span>
+</button>
+<button class="px-2.5 py-1 text-[12px] font-medium rounded-full bg-surface hover:bg-surface-container border border-outline-variant text-on-surface flex items-center gap-1.5 transition-all" type="button">
+<span class="material-symbols-outlined text-[14px] text-amber-600">flare</span>
+<span>Blanqueamiento LED Promo</span>
+</button>
+<button class="px-2.5 py-1 text-[12px] font-semibold rounded-full bg-primary-container text-white hover:bg-primary transition-all flex items-center gap-1" type="button">
+<span class="material-symbols-outlined text-[14px]">edit_note</span>
+<span>En Blanco</span>
+</button>
+</div>
+</div>
+<!-- C) PASO 1 - FORMULARIO CLIENTE & CONDICIONES COMERCIALES -->
+<div class="bg-surface-container-lowest rounded-lg border border-outline-variant p-4 shadow-xs">
+<div class="flex items-center justify-between pb-3 border-b border-outline-variant mb-4">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">person_search</span>
+<h2 class="font-headline-sm text-headline-sm text-on-surface">1. Datos del Cliente y Condiciones Fiscales SUNAT</h2>
+</div>
+<span class="text-[11px] font-mono text-on-surface-variant bg-surface px-2 py-0.5 rounded border border-outline-variant">COT-2026-00142</span>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+<!-- Búsqueda y Selección de Cliente (7 cols) -->
+<div class="lg:col-span-7 space-y-3">
+<div>
+<label class="block font-label-sm text-label-sm text-on-surface-variant mb-1">Buscar Empresa o Paciente (DNI / RUC / Razón Social)</label>
+<div class="flex gap-2">
+<div class="relative flex-1">
+<span class="material-symbols-outlined absolute left-2.5 top-2 text-on-surface-variant text-[18px]">search</span>
+<input class="w-full h-8 pl-8 pr-3 text-body-md rounded border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary outline-none font-mono" placeholder="Ingresar 8 o 11 dígitos..." type="text" value="20100041953"/>
+</div>
+<button class="px-3 h-8 bg-surface border border-outline-variant rounded hover:bg-surface-container flex items-center gap-1 text-[12px] font-semibold text-primary" type="button">
+<span class="material-symbols-outlined text-[16px]">sync</span>
+<span>Validar SUNAT</span>
+</button>
+<button class="px-3 h-8 bg-white border border-outline-variant rounded hover:bg-surface-container text-[12px] font-semibold text-on-surface" type="button">
+                    + Nuevo Rápido
+                  </button>
+</div>
+</div>
+<!-- Ficha del Cliente Seleccionado -->
+<div class="p-3 bg-[#F8FAFC] rounded-lg border border-outline-variant">
+<div class="flex flex-wrap items-start justify-between gap-2">
+<div>
+<div class="flex items-center gap-2">
+<span class="font-headline-sm text-body-md font-bold text-on-surface">Rimac Seguros y Reaseguros S.A.</span>
+<span class="px-1.5 py-0.2 text-[10px] font-bold rounded bg-emerald-100 text-emerald-800 border border-emerald-300">HABIDO / ACTIVO</span>
+</div>
+<p class="text-[12px] font-mono text-on-surface-variant mt-0.5">RUC: 20100041953 · Av. Paseo de la República 3505, San Isidro</p>
+<p class="text-[12px] text-on-surface-variant mt-1 flex items-center gap-3">
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px] text-primary">account_circle</span>
+                        Lic. Juan Rojas (Gestor EPS Dental)
+                      </span>
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px] text-emerald-600">call</span>
+                        +51 987 123 456
+                      </span>
+</p>
+</div>
+<div class="text-right">
+<span class="inline-block px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-50 text-amber-800 border border-amber-200">Agente de Retención IGV</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Parámetros Comerciales (5 cols) -->
+<div class="lg:col-span-5 grid grid-cols-2 gap-3 bg-surface p-3 rounded-lg border border-outline-variant">
+<div>
+<label class="block font-label-sm text-label-sm text-on-surface-variant mb-1">Validez de Oferta</label>
+<input class="w-full h-8 px-2.5 text-body-sm rounded border border-outline-variant bg-white" type="text" value="15 días (Vence 03/10/2026)"/>
+</div>
+<div>
+<label class="block font-label-sm text-label-sm text-on-surface-variant mb-1">Forma de Pago</label>
+<select class="w-full h-8 px-2 text-body-sm rounded border border-outline-variant bg-white font-medium">
+<option selected="">Crédito a 30 días</option>
+<option>Contado Inmediato</option>
+<option>Crédito a 15 días</option>
+<option>Crédito a 60 días</option>
+<option>Cuotas Quincenales</option>
+</select>
+</div>
+<div>
+<label class="block font-label-sm text-label-sm text-on-surface-variant mb-1">Moneda &amp; T.C. Venta</label>
+<div class="flex items-center gap-1">
+<select class="w-2/3 h-8 px-2 text-body-sm rounded border border-outline-variant bg-white font-semibold">
+<option selected="">Soles (PEN - S/)</option>
+<option>Dólares (USD - $)</option>
+</select>
+<span class="w-1/3 text-[11px] text-on-surface-variant text-center font-mono">T.C: 3.750</span>
+</div>
+</div>
+<div>
+<label class="block font-label-sm text-label-sm text-on-surface-variant mb-1">Lista de Precios</label>
+<select class="w-full h-8 px-2 text-body-sm rounded border border-outline-variant bg-white font-medium">
+<option selected="">Tarifario Corporativo EPS</option>
+<option>Tarifario General Clínica</option>
+<option>Tarifario Asegurados Rímac</option>
+</select>
+</div>
+<!-- Checkboxes Fiscales Obligatorios SUNAT -->
+<div class="col-span-2 pt-1 border-t border-outline-variant/60 flex flex-wrap items-center justify-between gap-2">
+<label class="flex items-center gap-2 cursor-pointer text-[12px] text-on-surface">
+<input checked="" class="w-4 h-4 rounded border-outline-variant text-primary focus:ring-primary" type="checkbox"/>
+<span>Detracción SPOT (12% - Cód. 022)</span>
+</label>
+<label class="flex items-center gap-2 cursor-pointer text-[12px] text-on-surface">
+<input checked="" class="w-4 h-4 rounded border-outline-variant text-primary focus:ring-primary" type="checkbox"/>
+<span>Aplica Retención IGV (3%)</span>
+</label>
+</div>
+</div>
+</div>
+</div>
+<!-- D) PASO 2 - TABLA DE ÍTEMS DEL CATÁLOGO ODONTOLÓGICO -->
+<div class="bg-surface-container-lowest rounded-lg border border-outline-variant overflow-hidden shadow-xs">
+<!-- Barra de Búsqueda rápida F2 de Ítems -->
+<div class="p-3 bg-[#F1F5F9] border-b border-outline-variant flex flex-wrap items-center justify-between gap-3">
+<div class="flex items-center gap-2 flex-1 max-w-xl">
+<div class="relative w-full">
+<span class="material-symbols-outlined absolute left-2.5 top-2 text-on-surface-variant text-[18px]">add_circle</span>
+<input class="w-full h-8 pl-8 pr-3 text-body-sm rounded border border-outline-variant bg-white focus:border-primary focus:ring-1 focus:ring-primary" placeholder="Escriba código o nombre de procedimiento dental (Presione F2 para búsqueda avanzada)..." type="text"/>
+</div>
+<button class="h-8 px-3 bg-primary text-white text-[12px] font-semibold rounded hover:bg-primary-container shrink-0 flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">add</span>
+<span>Agregar Ítem</span>
+</button>
+</div>
+<div class="flex items-center gap-3 text-body-sm text-on-surface-variant">
+<span>Descuento Comercial Global:</span>
+<div class="flex items-center gap-1">
+<input class="w-14 h-8 px-2 text-center rounded border border-outline-variant bg-white font-bold text-primary" type="number" value="10"/>
+<span class="font-bold">%</span>
+</div>
+</div>
+</div>
+<!-- Tabla de Datos Compacta de Alta Densidad -->
+<div class="overflow-x-auto custom-scrollbar">
+<table class="w-full text-left border-collapse text-body-sm">
+<thead>
+<tr class="bg-[#F8FAFC] border-b border-outline-variant text-on-surface-variant font-label-sm text-label-sm uppercase tracking-wider">
+<th class="py-2.5 px-3 w-10 text-center">N°</th>
+<th class="py-2.5 px-3 w-28">Código</th>
+<th class="py-2.5 px-3">Descripción Tratamiento / Insumo</th>
+<th class="py-2.5 px-2 w-28">Pieza / Arcada</th>
+<th class="py-2.5 px-2 w-20 text-center">Cant.</th>
+<th class="py-2.5 px-2 w-16 text-center">U.M.</th>
+<th class="py-2.5 px-2 w-24 text-right">V. Unit.</th>
+<th class="py-2.5 px-2 w-16 text-center">Desc %</th>
+<th class="py-2.5 px-2 w-28 text-center">Tipo IGV</th>
+<th class="py-2.5 px-3 w-28 text-right">Subtotal</th>
+<th class="py-2.5 px-2 w-16 text-center">Acciones</th>
+</tr>
+</thead>
+<tbody class="divide-y border-outline-variant divide-outline-variant/40 font-mono text-[12px]">
+<!-- Fila 1 -->
+<tr class="hover:bg-[#F8FAFC] transition-colors">
+<td class="py-2 px-3 text-center text-on-surface-variant font-sans">1</td>
+<td class="py-2 px-3 font-semibold text-primary">TRAT-0042</td>
+<td class="py-2 px-3 font-sans font-medium text-on-surface">
+                    Restauración Estética Resina Nanohíbrida 3M Z350 XT
+                    <span class="block text-[11px] text-on-surface-variant font-normal">Superficie oclusal y mesial</span>
+</td>
+<td class="py-2 px-2">
+<span class="inline-block px-1.5 py-0.5 rounded bg-surface border border-outline-variant text-on-surface font-sans text-[11px]">Pieza 3.6</span>
+</td>
+<td class="py-2 px-2 text-center">
+<input class="w-12 h-6 text-center font-bold rounded border border-outline-variant bg-white" type="number" value="6"/>
+</td>
+<td class="py-2 px-2 text-center text-on-surface-variant">ZZ</td>
+<td class="py-2 px-2 text-right">S/ 120.00</td>
+<td class="py-2 px-2 text-center text-error">5%</td>
+<td class="py-2 px-2 text-center">
+<span class="px-1.5 py-0.5 rounded text-[10px] font-sans font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">10 Gravado</span>
+</td>
+<td class="py-2 px-3 text-right font-bold text-on-surface">S/ 684.00</td>
+<td class="py-2 px-2 text-center">
+<div class="flex items-center justify-center gap-1 text-on-surface-variant">
+<button class="hover:text-primary"><span class="material-symbols-outlined text-[16px]">content_copy</span></button>
+<button class="hover:text-error"><span class="material-symbols-outlined text-[16px]">delete</span></button>
+</div>
+</td>
+</tr>
+<!-- Fila 2 -->
+<tr class="hover:bg-[#F8FAFC] transition-colors">
+<td class="py-2 px-3 text-center text-on-surface-variant font-sans">2</td>
+<td class="py-2 px-3 font-semibold text-primary">TRAT-0089</td>
+<td class="py-2 px-3 font-sans font-medium text-on-surface">
+                    Endodoncia Mecanizada Multirradicular (Molar)
+                    <span class="block text-[11px] text-on-surface-variant font-normal">Incluye instrumentación rotatoria y radiografías de control</span>
+</td>
+<td class="py-2 px-2">
+<span class="inline-block px-1.5 py-0.5 rounded bg-surface border border-outline-variant text-on-surface font-sans text-[11px]">Pieza 1.6</span>
+</td>
+<td class="py-2 px-2 text-center">
+<input class="w-12 h-6 text-center font-bold rounded border border-outline-variant bg-white" type="number" value="2"/>
+</td>
+<td class="py-2 px-2 text-center text-on-surface-variant">ZZ</td>
+<td class="py-2 px-2 text-right">S/ 450.00</td>
+<td class="py-2 px-2 text-center text-on-surface-variant">0%</td>
+<td class="py-2 px-2 text-center">
+<span class="px-1.5 py-0.5 rounded text-[10px] font-sans font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">10 Gravado</span>
+</td>
+<td class="py-2 px-3 text-right font-bold text-on-surface">S/ 900.00</td>
+<td class="py-2 px-2 text-center">
+<div class="flex items-center justify-center gap-1 text-on-surface-variant">
+<button class="hover:text-primary"><span class="material-symbols-outlined text-[16px]">content_copy</span></button>
+<button class="hover:text-error"><span class="material-symbols-outlined text-[16px]">delete</span></button>
+</div>
+</td>
+</tr>
+<!-- Fila 3 -->
+<tr class="hover:bg-[#F8FAFC] transition-colors">
+<td class="py-2 px-3 text-center text-on-surface-variant font-sans">3</td>
+<td class="py-2 px-3 font-semibold text-primary">SERV-0012</td>
+<td class="py-2 px-3 font-sans font-medium text-on-surface">
+                    Profilaxis Ultrasónica y Fluorización Masiva EPS
+                    <span class="block text-[11px] text-on-surface-variant font-normal">Paquete bienestar corporativo anual Rimac</span>
+</td>
+<td class="py-2 px-2">
+<span class="inline-block px-1.5 py-0.5 rounded bg-surface border border-outline-variant text-on-surface font-sans text-[11px]">Boca Completa</span>
+</td>
+<td class="py-2 px-2 text-center">
+<input class="w-12 h-6 text-center font-bold rounded border border-outline-variant bg-white" type="number" value="25"/>
+</td>
+<td class="py-2 px-2 text-center text-on-surface-variant">ZZ</td>
+<td class="py-2 px-2 text-right">S/ 80.00</td>
+<td class="py-2 px-2 text-center text-error">10%</td>
+<td class="py-2 px-2 text-center">
+<span class="px-1.5 py-0.5 rounded text-[10px] font-sans font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">10 Gravado</span>
+</td>
+<td class="py-2 px-3 text-right font-bold text-on-surface">S/ 1,800.00</td>
+<td class="py-2 px-2 text-center">
+<div class="flex items-center justify-center gap-1 text-on-surface-variant">
+<button class="hover:text-primary"><span class="material-symbols-outlined text-[16px]">content_copy</span></button>
+<button class="hover:text-error"><span class="material-symbols-outlined text-[16px]">delete</span></button>
+</div>
+</td>
+</tr>
+<!-- Fila 4 -->
+<tr class="hover:bg-[#F8FAFC] transition-colors">
+<td class="py-2 px-3 text-center text-on-surface-variant font-sans">4</td>
+<td class="py-2 px-3 font-semibold text-primary">MAT-0104</td>
+<td class="py-2 px-3 font-sans font-medium text-on-surface">
+                    Perno de Fibra de Vidrio + Reconstrucción de Muñón
+                    <span class="block text-[11px] text-on-surface-variant font-normal">Poste radiopaco Whitepost DC 0.5</span>
+</td>
+<td class="py-2 px-2">
+<span class="inline-block px-1.5 py-0.5 rounded bg-surface border border-outline-variant text-on-surface font-sans text-[11px]">Pieza 2.1</span>
+</td>
+<td class="py-2 px-2 text-center">
+<input class="w-12 h-6 text-center font-bold rounded border border-outline-variant bg-white" type="number" value="3"/>
+</td>
+<td class="py-2 px-2 text-center text-on-surface-variant">NIU</td>
+<td class="py-2 px-2 text-right">S/ 180.00</td>
+<td class="py-2 px-2 text-center text-on-surface-variant">0%</td>
+<td class="py-2 px-2 text-center">
+<span class="px-1.5 py-0.5 rounded text-[10px] font-sans font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">10 Gravado</span>
+</td>
+<td class="py-2 px-3 text-right font-bold text-on-surface">S/ 540.00</td>
+<td class="py-2 px-2 text-center">
+<div class="flex items-center justify-center gap-1 text-on-surface-variant">
+<button class="hover:text-primary"><span class="material-symbols-outlined text-[16px]">content_copy</span></button>
+<button class="hover:text-error"><span class="material-symbols-outlined text-[16px]">delete</span></button>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Pie de Totales Fiscales SUNAT -->
+<div class="p-4 bg-[#F8FAFC] border-t border-outline-variant grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4 items-start">
+<div class="lg:col-span-6 space-y-2">
+<label class="block font-label-sm text-label-sm text-on-surface-variant">Observaciones Odontológicas / Notas para el Asegurador</label>
+<textarea class="w-full text-body-sm p-2 rounded border border-outline-variant bg-white focus:border-primary" placeholder="Ej: Tratamiento sujeto a auditoría médica previa. Precios válidos según convenio institucional 2026." rows="3"></textarea>
+</div>
+<div class="lg:col-span-6 space-y-1.5 text-body-sm font-mono">
+<div class="flex justify-between py-0.5 text-on-surface-variant">
+<span class="font-sans">Subtotal / Op. Gravada:</span>
+<span class="font-medium">S/ 3,934.00</span>
+</div>
+<div class="flex justify-between py-0.5 text-error">
+<span class="font-sans">Descuento Global (10%):</span>
+<span class="font-medium">-S/ 393.40</span>
+</div>
+<div class="flex justify-between py-0.5 text-on-surface">
+<span class="font-sans">Base Imponible Neta:</span>
+<span class="font-medium">S/ 3,540.60</span>
+</div>
+<div class="flex justify-between py-0.5 text-on-surface-variant">
+<span class="font-sans">IGV (18.00%):</span>
+<span class="font-medium">S/ 637.31</span>
+</div>
+<div class="flex justify-between py-2 border-t-2 border-outline text-headline-sm font-headline-sm text-primary font-bold">
+<span class="font-sans">TOTAL COTIZACIÓN:</span>
+<span>S/ 4,177.91</span>
+</div>
+<!-- Retenciones & Detracciones -->
+<div class="pt-2 border-t border-outline-variant grid grid-cols-2 gap-2 text-[11px]">
+<div class="p-2 rounded bg-amber-50 border border-amber-200">
+<span class="block text-amber-900 font-sans font-semibold">Detracción SPOT (12%):</span>
+<span class="font-bold text-amber-950 font-mono">S/ 501.35</span>
+<span class="block text-[10px] text-amber-800 font-sans">Neto banco: S/ 3,676.56</span>
+</div>
+<div class="p-2 rounded bg-blue-50 border border-blue-200">
+<span class="block text-blue-900 font-sans font-semibold">Retención IGV (3%):</span>
+<span class="font-bold text-blue-950 font-mono">S/ 125.34</span>
+<span class="block text-[10px] text-blue-800 font-sans">Agente Retenedor</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- E) PASO 3 - CARD VISTA PREVIA DEL ENLACE PÚBLICO & APROBACIÓN CLIENTE -->
+<div class="bg-surface-container-lowest rounded-lg border border-outline-variant p-4 shadow-xs">
+<div class="flex items-center justify-between pb-3 border-b border-outline-variant mb-3">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-emerald-600">public</span>
+<h2 class="font-headline-sm text-headline-sm text-on-surface">3. Vista Previa del Portal de Aprobación en Línea para el Paciente/EPS</h2>
+</div>
+<span class="text-label-sm font-label-sm text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-300 flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+              Enlace Activo y Encriptado
+            </span>
+</div>
+<!-- Tarjeta Simulador Enlace Público -->
+<div class="max-w-3xl mx-auto rounded-xl border border-outline-variant bg-gradient-to-b from-white to-[#F8FAFC] p-5 shadow-sm">
+<div class="flex flex-wrap items-center justify-between gap-3 border-b border-outline-variant pb-3 mb-4">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-primary flex items-center justify-center text-white">
+<span class="material-symbols-outlined text-[24px]">dentistry</span>
+</div>
+<div>
+<h3 class="font-headline-sm text-headline-sm font-bold text-on-surface">Clínica Dental Sonrisa S.A.C.</h3>
+<p class="text-[12px] text-on-surface-variant font-mono">Presupuesto Formal N° COT-2026-00142</p>
+</div>
+</div>
+<div class="text-right">
+<span class="text-[11px] uppercase font-bold text-on-surface-variant block">Monto a Facturar</span>
+<span class="text-headline-lg font-headline-lg font-extrabold text-primary font-mono">S/ 4,177.91</span>
+</div>
+</div>
+<!-- Detalle rápido simulado en la vista del paciente -->
+<div class="bg-white rounded-lg border border-outline-variant p-3 mb-4 text-body-sm space-y-1">
+<p class="font-medium text-on-surface">Paciente / Empresa: <strong class="font-bold">Rimac Seguros (25 tratamientos de profilaxis + 6 resinas nanohíbridas)</strong></p>
+<p class="text-on-surface-variant text-[12px]">Válido hasta: <span class="font-semibold text-on-surface">03 de Octubre de 2026</span> · Garantía de materiales 3M y esterilización certificada.</p>
+</div>
+<!-- Botones de Acción del Portal de Aprobación -->
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+<button class="w-full py-2.5 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-label-md text-label-md flex items-center justify-center gap-2 shadow-xs" type="button">
+<span class="material-symbols-outlined text-[18px]">verified</span>
+<span>Aprobar Cotización Oficialmente</span>
+</button>
+<button class="w-full py-2.5 px-4 rounded-lg bg-white hover:bg-surface border border-outline-variant text-on-surface font-label-md text-label-md flex items-center justify-center gap-2" type="button">
+<span class="material-symbols-outlined text-[18px]">chat</span>
+<span>Solicitar Ajustes o Comentarios</span>
+</button>
+</div>
+<!-- Acciones de Distribución Multicanal -->
+<div class="pt-3 border-t border-outline-variant flex flex-wrap items-center justify-between gap-2 text-body-sm">
+<div class="flex items-center gap-2 flex-1 min-w-[280px]">
+<div class="w-full h-8 px-2.5 bg-surface border border-outline-variant rounded flex items-center justify-between text-[11px] font-mono text-on-surface-variant">
+<span class="truncate">https://cotiza.perusaas.pe/c/COT-2026-00142-SECURE</span>
+<button class="ml-2 text-primary font-sans font-semibold hover:underline">Copiar</button>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<button class="h-8 px-3 rounded bg-[#25D366] text-white text-[12px] font-semibold flex items-center gap-1.5 hover:opacity-90" type="button">
+<span class="material-symbols-outlined text-[16px]">chat</span>
+<span>WhatsApp</span>
+</button>
+<button class="h-8 px-3 rounded bg-primary text-white text-[12px] font-semibold flex items-center gap-1.5 hover:bg-primary-container" type="button">
+<span class="material-symbols-outlined text-[16px]">mail</span>
+<span>Correo EPS</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- ================================================================= -->
+<!-- BLOQUE 2: NOTA DE DÉBITO ELECTRÓNICA SUNAT (CATÁLOGO N° 10)       -->
+<!-- ================================================================= -->
+<div class="hidden space-y-4 max-w-5xl mx-auto" id="section-notadebito">
+<!-- Header explicativo de SUNAT Catálogo 10 -->
+<div class="bg-surface-container-lowest rounded-lg border border-outline-variant p-4 shadow-xs">
+<div class="flex flex-wrap items-start justify-between gap-3 pb-3 border-b border-outline-variant">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-700">
+<span class="material-symbols-outlined text-[24px]">note_add</span>
+</div>
+<div>
+<h1 class="font-headline-md text-headline-md text-on-surface">Emisión de Nota de Débito Electrónica</h1>
+<p class="text-body-sm text-on-surface-variant">Conforme a la normativa SUNAT UBL 2.1 y Catálogo de Motivos N° 10</p>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<span class="font-mono text-[12px] bg-surface px-2.5 py-1 rounded border border-outline-variant font-bold text-primary">
+                Serie Oficial: FD01-00000045
+              </span>
+</div>
+</div>
+<!-- Formulario de Nota de Débito -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+<!-- Comprobante que se modifica -->
+<div class="space-y-3 bg-[#F8FAFC] p-3 rounded-lg border border-outline-variant">
+<label class="block font-label-sm text-label-sm text-on-surface-variant">Comprobante de Pago Afectado</label>
+<div class="relative">
+<input class="w-full h-8 px-2.5 text-body-sm rounded border border-outline-variant bg-white font-medium text-on-surface" type="text" value="Factura Electrónica F001-00000842"/>
+<button class="absolute right-1 top-1 px-2 h-6 bg-surface text-[11px] rounded border border-outline-variant font-semibold text-primary">Cambiar</button>
+</div>
+<div class="text-[12px] space-y-1 text-on-surface-variant pt-2 border-t border-outline-variant/60 font-mono">
+<p>Fecha Emisión Doc: 14/06/2026</p>
+<p>Paciente/Receptor: María Castillo Quispe (DNI 44892104)</p>
+<p>Monto Original: S/ 1,280.00 (Tratamiento Prótesis Fija)</p>
+</div>
+</div>
+<!-- Tipo de Nota de Débito (Catálogo 10) -->
+<div class="space-y-3 bg-[#F8FAFC] p-3 rounded-lg border border-outline-variant">
+<label class="block font-label-sm text-label-sm text-on-surface-variant">Motivo según Catálogo N° 10 SUNAT</label>
+<select class="w-full h-8 px-2 text-body-sm rounded border border-outline-variant bg-white font-semibold text-on-surface">
+<option selected="">01 - Intereses por mora</option>
+<option>02 - Aumento en el valor</option>
+<option>03 - Penalidades / otros conceptos</option>
+</select>
+<div class="p-2 rounded bg-amber-50 border border-amber-200 text-[11px] text-amber-900">
+<span class="font-bold block">Regla SUNAT:</span>
+                Calcula mora diaria o penalidad de acuerdo con la Tasa Activa en Moneda Nacional (TAMN) o contrato dental suscrito.
+              </div>
+</div>
+<!-- Concepto y Monto a Debitar -->
+<div class="md:col-span-2 space-y-3">
+<div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+<div class="md:col-span-8">
+<label class="block font-label-sm text-label-sm text-on-surface-variant mb-1">Descripción del Concepto Adicional a Debitar</label>
+<input class="w-full h-8 px-2.5 text-body-sm rounded border border-outline-variant bg-white" type="text" value="Intereses compensatorios y moratorios por 45 días de vencimiento s/ factura F001-00000842"/>
+</div>
+<div class="md:col-span-4">
+<label class="block font-label-sm text-label-sm text-on-surface-variant mb-1">Monto Base (Sin IGV)</label>
+<div class="relative">
+<span class="absolute left-2.5 top-1.5 text-[12px] font-mono text-on-surface-variant font-bold">S/</span>
+<input class="w-full h-8 pl-8 pr-2.5 text-body-sm rounded border border-outline-variant bg-white font-mono font-bold text-right" step="0.01" type="number" value="85.00"/>
+</div>
+</div>
+</div>
+<!-- Motivo XSD Obligatorio -->
+<div>
+<label class="block font-label-sm text-label-sm text-on-surface-variant mb-1">Sustento o Motivo Legal del Débito (Obligatorio Validación XSD UBL 2.1)</label>
+<textarea class="w-full text-body-sm p-2 rounded border border-outline-variant bg-white" placeholder="Especifique el acuerdo contractual o fecha de retraso..." rows="2"></textarea>
+</div>
+<!-- Cuadro Resumen Liquidación Débito -->
+<div class="bg-surface p-3 rounded-lg border border-outline-variant flex flex-wrap items-center justify-between gap-4 font-mono text-body-sm">
+<div class="flex items-center gap-6">
+<div>
+<span class="block text-[11px] font-sans text-on-surface-variant">Valor Venta:</span>
+<span class="font-bold">S/ 85.00</span>
+</div>
+<div>
+<span class="block text-[11px] font-sans text-on-surface-variant">IGV (18%):</span>
+<span class="font-bold">S/ 15.30</span>
+</div>
+<div>
+<span class="block text-[11px] font-sans text-on-surface-variant">Total Nota Débito:</span>
+<span class="font-extrabold text-headline-sm text-primary">S/ 100.30</span>
+</div>
+</div>
+<button class="px-4 py-2 bg-primary hover:bg-primary-container text-white font-label-md text-label-md rounded-lg flex items-center gap-2 shadow-xs" type="button">
+<span class="material-symbols-outlined text-[18px]">verified_user</span>
+<span>Firmar Digitalmente y Emitir a SUNAT (FD01)</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+<!-- ========================================================================= -->
+<!-- 4. BOTTOM NAVBAR RESPONSIVE (Shared Components BottomNavBar para móvil) -->
+<!-- ========================================================================= -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center h-14 px-2 bg-surface-container-lowest border-t border-outline-variant shadow-lg">
+<button class="flex flex-col items-center justify-center bg-secondary-container text-on-secondary-container rounded-lg px-3 py-1.5 transition-transform" id="mob-cotizacion" onclick="switchMainTab('cotizacion')">
+<span class="material-symbols-outlined text-[20px]">add_circle</span>
+<span class="text-label-sm font-label-sm">Cotización</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant px-3 py-1.5 transition-transform" id="mob-notadebito" onclick="switchMainTab('notadebito')">
+<span class="material-symbols-outlined text-[20px]">receipt_long</span>
+<span class="text-label-sm font-label-sm">Nota Débito</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant px-3 py-1.5 transition-transform">
+<span class="material-symbols-outlined text-[20px]">person</span>
+<span class="text-label-sm font-label-sm">Pacientes</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant px-3 py-1.5 transition-transform">
+<span class="material-symbols-outlined text-[20px]">cloud_done</span>
+<span class="text-label-sm font-label-sm">SUNAT</span>
+</button>
+</nav>
+<!-- ========================================================================= -->
+<!-- 5. FOOTER OPERATIVO DEL SISTEMA (Estado continuo en escritorio)          -->
+<!-- ========================================================================= -->
+<footer class="hidden md:flex items-center justify-between h-7 px-4 bg-surface-container-lowest border-t border-outline-variant text-[11px] text-on-surface-variant shrink-0 select-none">
+<div class="flex items-center gap-4">
+<span class="flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span>Servidor OSE Bizlinks Conectado (Respuesta 0.8s)</span>
+</span>
+<span>·</span>
+<span>Almacén Central: Miraflores</span>
+<span>·</span>
+<span>Terminal: Caja 01 - Admisión</span>
+</div>
+<div class="flex items-center gap-3">
+<span>Esquema XSD: UBL 2.1 SUNAT</span>
+<span class="font-mono font-bold text-primary">v4.14-pe</span>
+</div>
+</footer>
+<!-- ========================================================================= -->
+<!-- INTERACCIONES JS LIVIANAS                                                -->
+<!-- ========================================================================= -->
+<script>
+    function switchMainTab(tab) {
+      const cotSec = document.getElementById('section-cotizacion');
+      const debSec = document.getElementById('section-notadebito');
+      const cotBtn = document.getElementById('tab-cotizacion-btn');
+      const debBtn = document.getElementById('tab-notadebito-btn');
+      const leaf = document.getElementById('breadcrumb-leaf');
+
+      const mobCot = document.getElementById('mob-cotizacion');
+      const mobDeb = document.getElementById('mob-notadebito');
+
+      if (tab === 'cotizacion') {
+        cotSec.classList.remove('hidden');
+        debSec.classList.add('hidden');
+        
+        cotBtn.className = "flex items-center gap-1.5 px-3 py-1 text-label-md font-label-md rounded-md bg-white text-primary font-semibold shadow-xs transition-all";
+        debBtn.className = "flex items-center gap-1.5 px-3 py-1 text-label-md font-label-md rounded-md text-on-surface-variant hover:text-on-surface transition-all";
+        leaf.textContent = "Nueva Cotización Dental";
+
+        if (mobCot && mobDeb) {
+          mobCot.className = "flex flex-col items-center justify-center bg-secondary-container text-on-secondary-container rounded-lg px-3 py-1.5 transition-transform";
+          mobDeb.className = "flex flex-col items-center justify-center text-on-surface-variant px-3 py-1.5 transition-transform";
+        }
+      } else {
+        cotSec.classList.add('hidden');
+        debSec.classList.remove('hidden');
+
+        debBtn.className = "flex items-center gap-1.5 px-3 py-1 text-label-md font-label-md rounded-md bg-white text-primary font-semibold shadow-xs transition-all";
+        cotBtn.className = "flex items-center gap-1.5 px-3 py-1 text-label-md font-label-md rounded-md text-on-surface-variant hover:text-on-surface transition-all";
+        leaf.textContent = "Nota de Débito SUNAT (Catálogo 10)";
+
+        if (mobCot && mobDeb) {
+          mobDeb.className = "flex flex-col items-center justify-center bg-secondary-container text-on-secondary-container rounded-lg px-3 py-1.5 transition-transform";
+          mobCot.className = "flex flex-col items-center justify-center text-on-surface-variant px-3 py-1.5 transition-transform";
+        }
+      }
+    }
+
+    // Atajo de teclado F2 y Ctrl+Enter
+    window.addEventListener('keydown', function(e) {
+      if (e.key === 'F2') {
+        e.preventDefault();
+        alert('Atajo F2: Abriendo buscador modal del Catálogo Dental.');
+      }
+      if (e.ctrlKey && e.key === 'Enter') {
+        e.preventDefault();
+        alert('Atajo Ctrl+Enter: Ejecutando validación y sincronización inmediata con SUNAT.');
+      }
+    });
+  </script>
+</body></html>

@@ -1,0 +1,1337 @@
+<!DOCTYPE html>
+
+<html class="h-full bg-[#F5F6FA]" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>PerúSaaS Admin | Feature Flags &amp; Módulos por Rubro</title>
+<!-- Inter Font -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap&family=Geist+Mono:wght@400;500;600" rel="stylesheet"/>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Lucide Icons -->
+<script src="https://unpkg.com/lucide@latest"></script>
+<!-- Tailwind CSS with custom configuration -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "on-tertiary-fixed": "#002114",
+            "on-tertiary": "#ffffff",
+            "tertiary": "#005338",
+            "secondary-container": "#8a4cfc",
+            "on-secondary-fixed": "#25005a",
+            "on-error-container": "#93000a",
+            "secondary": "#712ae2",
+            "on-background": "#131b2e",
+            "on-secondary": "#ffffff",
+            "surface-container-high": "#e2e7ff",
+            "outline": "#777587",
+            "outline-variant": "#c7c4d8",
+            "error-container": "#ffdad6",
+            "tertiary-container": "#006e4c",
+            "surface-container-lowest": "#ffffff",
+            "inverse-on-surface": "#eef0ff",
+            "on-primary-fixed-variant": "#3323cc",
+            "surface-container-highest": "#dae2fd",
+            "surface-container": "#eaedff",
+            "surface": "#faf8ff",
+            "on-tertiary-container": "#7df1bd",
+            "secondary-fixed-dim": "#d2bbff",
+            "on-secondary-container": "#fffbff",
+            "surface-tint": "#4d44e3",
+            "on-tertiary-fixed-variant": "#005137",
+            "primary-fixed-dim": "#c3c0ff",
+            "primary-fixed": "#e2dfff",
+            "surface-container-low": "#f2f3ff",
+            "primary-container": "#4f46e5",
+            "on-surface": "#131b2e",
+            "surface-bright": "#faf8ff",
+            "on-error": "#ffffff",
+            "surface-dim": "#d2d9f4",
+            "on-surface-variant": "#464555",
+            "on-secondary-fixed-variant": "#5a00c6",
+            "tertiary-fixed-dim": "#68dba9",
+            "primary": "#3525cd",
+            "on-primary-container": "#dad7ff",
+            "surface-variant": "#dae2fd",
+            "error": "#ba1a1a",
+            "background": "#faf8ff",
+            "on-primary": "#ffffff",
+            "inverse-surface": "#0F172A",
+            "on-primary-fixed": "#0f0069",
+            "inverse-primary": "#c3c0ff",
+            "secondary-fixed": "#eaddff",
+            "tertiary-fixed": "#85f8c4"
+          },
+          fontFamily: {
+            "label-md": ["Geist"],
+            "display-sm": ["Geist"],
+            "label-lg": ["Geist"],
+            "headline-sm": ["Geist"],
+            "mono-data": ["Geist"],
+            "body-sm": ["Geist"],
+            "label-sm": ["Geist"],
+            "headline-md": ["Geist"],
+            "display-lg": ["Geist"],
+            "body-lg": ["Geist"],
+            "body-md": ["Geist"],
+            "headline-lg": ["Geist"]
+          },
+          fontSize: {
+            "label-md": ["13px", { lineHeight: "18px", fontWeight: "500" }],
+            "display-sm": ["28px", { lineHeight: "36px", letterSpacing: "-0.02em", fontWeight: "700" }],
+            "label-lg": ["14px", { lineHeight: "20px", fontWeight: "500" }],
+            "headline-sm": ["16px", { lineHeight: "24px", letterSpacing: "-0.01em", fontWeight: "600" }],
+            "mono-data": ["13px", { lineHeight: "18px", letterSpacing: "-0.01em", fontWeight: "500" }],
+            "body-sm": ["12px", { lineHeight: "16px", fontWeight: "400" }],
+            "label-sm": ["11px", { lineHeight: "14px", letterSpacing: "0.04em", fontWeight: "600" }],
+            "headline-md": ["20px", { lineHeight: "28px", letterSpacing: "-0.015em", fontWeight: "600" }],
+            "display-lg": ["36px", { lineHeight: "44px", letterSpacing: "-0.025em", fontWeight: "700" }],
+            "body-lg": ["16px", { lineHeight: "24px", fontWeight: "400" }],
+            "body-md": ["14px", { lineHeight: "20px", fontWeight: "400" }],
+            "headline-lg": ["24px", { lineHeight: "32px", letterSpacing: "-0.02em", fontWeight: "600" }]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    body {
+      font-family: 'Geist', sans-serif;
+    }
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      display: inline-block;
+      vertical-align: middle;
+      line-height: 1;
+    }
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #F1F5F9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #CBD5E1;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94A3B8;
+    }
+    /* Range Slider Styling */
+    input[type=range]::-webkit-slider-thumb {
+      appearance: none;
+      height: 18px;
+      width: 18px;
+      border-radius: 50%;
+      background: #4F46E5;
+      cursor: pointer;
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
+    }
+  </style>
+</head>
+<body class="h-full text-[#111827] antialiased overflow-x-hidden">
+<!-- SIDEBAR NAVIGATION (Dark #0F172A) -->
+<aside class="fixed inset-y-0 left-0 flex flex-col justify-between w-64 h-full bg-[#0F172A] z-40 border-r border-[#1E293B]">
+<div class="flex flex-col h-full">
+<!-- Brand & Cluster Header -->
+<div class="p-5 border-b border-[#1E293B]">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2.5">
+<div class="w-9 h-9 rounded-lg bg-primary-container flex items-center justify-center text-white font-bold text-headline-sm shadow-sm">
+<i class="w-5 h-5 text-white" data-lucide="layers"></i>
+</div>
+<div>
+<span class="font-headline-md text-headline-sm font-bold text-white tracking-tight">PerúSaaS Admin</span>
+<div class="flex items-center gap-1.5 mt-0.5">
+<span class="text-[10px] font-bold tracking-wider uppercase px-1.5 py-0.5 rounded bg-[#1E293B] text-primary-fixed">SUPER-ADMIN</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Regional Cluster Status Box -->
+<div class="mt-3.5 px-3 py-2 bg-[#1E293B]/70 rounded-lg border border-[#334155]/60 flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="relative flex h-2 w-2">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-[#059669]"></span>
+</span>
+<span class="text-body-sm font-body-sm text-[#94A3B8]">Cluster Región PE-Lima (Saludable)</span>
+</div>
+<i class="w-4 h-4 text-[#059669]" data-lucide="shield-check"></i>
+</div>
+</div>
+<!-- Quick Action CTA -->
+<div class="px-4 pt-4 pb-2">
+<button class="w-full h-10 px-4 bg-primary-container hover:bg-[#4338CA] active:bg-[#3730A3] text-white rounded-lg flex items-center justify-center gap-2 font-label-md text-label-md transition-colors shadow-sm" onclick="toggleDrawer('agenda_odontograma_v2')">
+<i class="w-4 h-4" data-lucide="plus-circle"></i>
+<span>Nuevo Feature Flag</span>
+</button>
+</div>
+<!-- Navigation Tabs -->
+<nav class="flex-1 px-3 py-3 space-y-1 overflow-y-auto">
+<a class="text-[#94A3B8] hover:text-white hover:bg-[#1E293B]/60 px-3 py-2.5 rounded-lg flex items-center gap-3 transition-colors text-label-md font-label-md" href="#">
+<span class="material-symbols-outlined text-[20px]">dashboard</span>
+<span>Panel General</span>
+</a>
+<a class="text-[#94A3B8] hover:text-white hover:bg-[#1E293B]/60 px-3 py-2.5 rounded-lg flex items-center gap-3 transition-colors text-label-md font-label-md" href="#">
+<span class="material-symbols-outlined text-[20px]">domain</span>
+<span>Tenants y Sedes</span>
+<span class="ml-auto text-[11px] font-bold px-1.5 py-0.5 rounded-full bg-[#1E293B] text-[#94A3B8]">1,420</span>
+</a>
+<a class="text-[#94A3B8] hover:text-white hover:bg-[#1E293B]/60 px-3 py-2.5 rounded-lg flex items-center gap-3 transition-colors text-label-md font-label-md" href="#">
+<span class="material-symbols-outlined text-[20px]">receipt_long</span>
+<span>Facturación y Núcleo</span>
+</a>
+<!-- ACTIVE ITEM: Feature Flags y Módulos -->
+<a class="bg-[#1E293B] text-white border-l-4 border-primary-container px-3 py-2.5 rounded-r-lg flex items-center gap-3 font-medium text-label-md font-label-md shadow-sm" href="#">
+<span class="material-symbols-outlined text-[20px] text-primary-fixed">tune</span>
+<span class="flex-1">Feature Flags &amp; Módulos</span>
+<span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-primary-container text-white">ACTIVO</span>
+</a>
+<a class="text-[#94A3B8] hover:text-white hover:bg-[#1E293B]/60 px-3 py-2.5 rounded-lg flex items-center gap-3 transition-colors text-label-md font-label-md" href="#">
+<span class="material-symbols-outlined text-[20px]">verified_user</span>
+<span>Certificados y OSE</span>
+</a>
+<a class="text-[#94A3B8] hover:text-white hover:bg-[#1E293B]/60 px-3 py-2.5 rounded-lg flex items-center gap-3 transition-colors text-label-md font-label-md" href="#">
+<span class="material-symbols-outlined text-[20px]">history</span>
+<span>Auditoría de Acciones</span>
+</a>
+<a class="text-[#94A3B8] hover:text-white hover:bg-[#1E293B]/60 px-3 py-2.5 rounded-lg flex items-center gap-3 transition-colors text-label-md font-label-md" href="#">
+<span class="material-symbols-outlined text-[20px]">settings</span>
+<span>Configuración Global</span>
+</a>
+</nav>
+<!-- Sidebar Footer User / SRE Status -->
+<div class="p-3 border-t border-[#1E293B] bg-[#0A0F1D]">
+<div class="flex items-center gap-3 px-2 py-2">
+<div class="relative">
+<div class="w-9 h-9 rounded-full bg-[#334155] border border-[#475569] flex items-center justify-center text-white font-semibold text-label-md">
+              CB
+            </div>
+<span class="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-[#0F172A]"></span>
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-body-sm font-label-md font-medium text-white truncate">Carlos M. Benavides</p>
+<p class="text-[11px] font-mono-data text-[#94A3B8] truncate">Lead SRE SuperAdmin</p>
+</div>
+<button class="text-[#94A3B8] hover:text-white p-1 rounded transition-colors" title="Cerrar Sesión">
+<i class="w-4 h-4" data-lucide="log-out"></i>
+</button>
+</div>
+</div>
+</div>
+</aside>
+<!-- TOP UTILITY HEADER (White #FFFFFF, Height 64px) -->
+<header class="fixed top-0 left-64 right-0 h-16 bg-white border-b border-[#E2E8F0] z-30 px-8 flex items-center justify-between shadow-xs">
+<!-- Left: Breadcrumbs & Global Search -->
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-2 text-body-sm font-body-sm text-[#64748B]">
+<span>Plataforma</span>
+<i class="w-3.5 h-3.5 text-[#94A3B8]" data-lucide="chevron-right"></i>
+<span>Gobernanza &amp; Núcleo</span>
+<i class="w-3.5 h-3.5 text-[#94A3B8]" data-lucide="chevron-right"></i>
+<span class="font-medium text-[#111827]">Feature Flags y Módulos</span>
+</div>
+<!-- Quick Search Bar (40px) -->
+<div class="relative w-80">
+<i class="w-4 h-4 text-[#64748B] absolute left-3.5 top-1/2 -translate-y-1/2" data-lucide="search"></i>
+<input class="w-full h-10 pl-9 pr-12 text-body-md font-body-md bg-white border border-[#CBD5E1] rounded-lg focus:outline-none focus:border-primary-container focus:ring-2 focus:ring-primary-container/20 text-[#111827] placeholder-[#94A3B8]" placeholder="Buscar flags, módulos, tenants..." type="text"/>
+<span class="absolute right-3 top-1/2 -translate-y-1/2 px-1.5 py-0.5 text-[11px] font-mono-data bg-[#F1F5F9] text-[#64748B] rounded border border-[#E2E8F0]">⌘K</span>
+</div>
+</div>
+<!-- Right: Status Signals, Currency, SRE Actions -->
+<div class="flex items-center gap-3">
+<!-- Cluster SUNAT/OSE Status Badge -->
+<div class="flex items-center gap-2 px-3 h-10 bg-[#ECFDF5] border border-[#059669]/20 rounded-lg text-[#059669] text-label-md font-label-md">
+<span class="relative flex h-2 w-2">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-[#059669]"></span>
+</span>
+<span>SUNAT/OSE En Línea</span>
+</div>
+<!-- Currency Anchor (PEN S/) -->
+<div class="h-10 px-3 bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg flex items-center gap-1.5 text-label-md font-label-md text-[#111827]">
+<span class="font-bold text-primary-container">S/</span>
+<span>PEN</span>
+</div>
+<!-- Lima Time Clock (UTC-5) -->
+<div class="h-10 px-3 bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg flex items-center gap-2 text-label-md font-mono-data text-[#64748B]">
+<i class="w-4 h-4 text-[#64748B]" data-lucide="clock"></i>
+<span id="lima-clock">Lima 16:42:19</span>
+</div>
+<!-- Sync Cluster Button with Spin interaction -->
+<button class="h-10 px-3.5 bg-white border border-[#CBD5E1] hover:bg-[#F8FAFC] active:bg-[#F1F5F9] rounded-lg text-[#111827] flex items-center gap-2 text-label-md font-label-md transition-all shadow-xs" onclick="triggerSync(this)">
+<i class="w-4 h-4 text-[#4F46E5] sync-icon" data-lucide="refresh-cw"></i>
+<span>Sincronizar Cluster</span>
+</button>
+<!-- Alert Bell -->
+<div class="relative">
+<button class="w-10 h-10 rounded-lg border border-[#CBD5E1] bg-white flex items-center justify-center text-[#64748B] hover:text-[#111827] hover:bg-[#F8FAFC] transition-colors">
+<i class="w-4 h-4" data-lucide="bell"></i>
+</button>
+<span class="absolute top-1 right-1 w-2.5 h-2.5 bg-[#DC2626] rounded-full border-2 border-white"></span>
+</div>
+<!-- SuperAdmin Primary Action: Impersonate / Emergency -->
+<button class="h-10 px-4 bg-[#111827] hover:bg-[#1E293B] active:bg-[#0F172A] text-white rounded-lg flex items-center gap-2 text-label-md font-label-md transition-colors shadow-sm">
+<i class="w-4 h-4 text-amber-400" data-lucide="shield-alert"></i>
+<span>Acción Emergencia</span>
+</button>
+</div>
+</header>
+<!-- PRIMARY MAIN CONTENT VIEWPORT -->
+<main class="ml-64 pt-16 min-h-screen bg-[#F5F6FA] p-8 pb-16">
+<!-- SECTION HEADER -->
+<div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
+<div>
+<div class="flex items-center gap-3">
+<h1 class="font-headline-lg text-headline-lg font-bold text-[#111827]">Feature Flags &amp; Módulos Verticales por Rubro</h1>
+<span class="px-2.5 py-0.5 rounded-full text-label-sm font-label-sm bg-primary-container/10 text-primary-container border border-primary-container/20">
+            Redis v7.2 Dynamic Keys
+          </span>
+</div>
+<p class="text-body-md font-body-md text-[#64748B] mt-1 max-w-4xl">
+          Control maestro de activación modular por vertical (Salud/Dental, Gastronomía, Veterinaria, Retail, Servicios), asignación por plan, override por tenant específico y motor de despliegue gradual canario (% Rollout).
+        </p>
+</div>
+<!-- Action Buttons (Strict 40px Height) -->
+<div class="flex items-center gap-3 flex-shrink-0">
+<button class="h-10 px-4 bg-white border border-[#CBD5E1] hover:bg-[#F8FAFC] text-[#111827] rounded-lg flex items-center gap-2 text-label-md font-label-md shadow-xs transition-colors" onclick="toggleAuditModal()">
+<i class="w-4 h-4 text-[#64748B]" data-lucide="history"></i>
+<span>Historial de Cambios / Auditoría</span>
+</button>
+<button class="h-10 px-4 bg-primary-container hover:bg-[#4338CA] text-white rounded-lg flex items-center gap-2 text-label-md font-label-md shadow-sm transition-colors" onclick="toggleDrawer('new_flag')">
+<i class="w-4 h-4" data-lucide="plus"></i>
+<span>Crear Nuevo Feature Flag</span>
+</button>
+</div>
+</div>
+<!-- KPI & HEALTH METRICS BENTO GRID -->
+<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5 mb-6">
+<!-- Card 1: Modulos Activos -->
+<div class="bg-white p-5 rounded-lg border border-[#E2E8F0] shadow-xs">
+<div class="flex items-center justify-between">
+<span class="text-label-md font-label-md text-[#64748B]">Módulos Activos Globales</span>
+<div class="w-9 h-9 rounded-lg bg-emerald-50 text-[#059669] flex items-center justify-center">
+<i class="w-5 h-5" data-lucide="boxes"></i>
+</div>
+</div>
+<div class="mt-3 flex items-baseline gap-2">
+<span class="font-display-sm text-display-sm font-bold text-[#111827]">24</span>
+<span class="text-body-sm font-body-sm text-[#64748B]">módulos en producción</span>
+</div>
+<div class="mt-2.5 flex items-center gap-1.5 text-[12px] text-[#059669] font-medium">
+<i class="w-3.5 h-3.5" data-lucide="trending-up"></i>
+<span>+2 nuevas verticales este mes</span>
+</div>
+</div>
+<!-- Card 2: Rollouts Graduales -->
+<div class="bg-white p-5 rounded-lg border border-[#E2E8F0] shadow-xs">
+<div class="flex items-center justify-between">
+<span class="text-label-md font-label-md text-[#64748B]">Rollouts Graduales en Curso</span>
+<div class="w-9 h-9 rounded-lg bg-indigo-50 text-[#4F46E5] flex items-center justify-center">
+<i class="w-5 h-5" data-lucide="git-pull-request"></i>
+</div>
+</div>
+<div class="mt-3 flex items-baseline gap-2">
+<span class="font-display-sm text-display-sm font-bold text-[#111827]">3</span>
+<span class="text-body-sm font-body-sm text-[#64748B]">despliegues canarios</span>
+</div>
+<div class="mt-2.5 flex items-center gap-1.5 text-[12px] text-[#4F46E5] font-medium">
+<i class="w-3.5 h-3.5" data-lucide="percent"></i>
+<span>10% a 50% tráfico gradual</span>
+</div>
+</div>
+<!-- Card 3: Overrides por Tenant -->
+<div class="bg-white p-5 rounded-lg border border-[#E2E8F0] shadow-xs">
+<div class="flex items-center justify-between">
+<span class="text-label-md font-label-md text-[#64748B]">Overrides por Tenant</span>
+<div class="w-9 h-9 rounded-lg bg-amber-50 text-[#D97706] flex items-center justify-center">
+<i class="w-5 h-5" data-lucide="toggle-right"></i>
+</div>
+</div>
+<div class="mt-3 flex items-baseline gap-2">
+<span class="font-display-sm text-display-sm font-bold text-[#111827]">42</span>
+<span class="text-body-sm font-body-sm text-[#64748B]">excepciones activas</span>
+</div>
+<div class="mt-2.5 flex items-center gap-1.5 text-[12px] text-[#D97706] font-medium">
+<i class="w-3.5 h-3.5" data-lucide="alert-circle"></i>
+<span>14 allowlists beta privadas</span>
+</div>
+</div>
+<!-- Card 4: Motor de Flags & Redis -->
+<div class="bg-white p-5 rounded-lg border border-[#E2E8F0] shadow-xs">
+<div class="flex items-center justify-between">
+<span class="text-label-md font-label-md text-[#64748B]">Estado Motor Redis Flags</span>
+<div class="w-9 h-9 rounded-lg bg-emerald-50 text-[#059669] flex items-center justify-center">
+<i class="w-5 h-5" data-lucide="zap"></i>
+</div>
+</div>
+<div class="mt-3 flex items-baseline gap-2">
+<span class="font-display-sm text-display-sm font-bold text-[#111827]">99.99%</span>
+<span class="text-body-sm font-body-sm text-[#059669] font-medium">Saludable</span>
+</div>
+<div class="mt-2.5 flex items-center gap-1.5 text-[12px] text-[#64748B] font-mono-data">
+<i class="w-3.5 h-3.5 text-[#059669]" data-lucide="activity"></i>
+<span>Latencia propagación &lt; 1.2s</span>
+</div>
+</div>
+</div>
+<!-- FILTER TOOLBAR (Uniform 40px Height) -->
+<div class="bg-white rounded-lg border border-[#E2E8F0] p-4 mb-6 shadow-xs">
+<div class="flex flex-wrap items-center justify-between gap-3">
+<!-- Left Filter Controls -->
+<div class="flex flex-wrap items-center gap-3 flex-1">
+<!-- Search Input -->
+<div class="relative min-w-[260px] flex-1 max-w-sm">
+<i class="w-4 h-4 text-[#64748B] absolute left-3 top-1/2 -translate-y-1/2" data-lucide="search"></i>
+<input class="w-full h-10 pl-9 pr-3 text-body-md font-body-md bg-[#F8FAFC] border border-[#CBD5E1] rounded-lg focus:outline-none focus:border-primary-container focus:ring-2 focus:ring-primary-container/20 text-[#111827] placeholder-[#94A3B8]" id="flag-search" placeholder="Buscar módulo, flag key o rubro..." type="text"/>
+</div>
+<!-- Vertical Rubro Select -->
+<div class="relative">
+<select class="h-10 pl-3 pr-8 text-label-md font-label-md bg-[#F8FAFC] border border-[#CBD5E1] rounded-lg text-[#111827] focus:outline-none focus:border-primary-container cursor-pointer appearance-none">
+<option value="">Rubro: Todos los rubros</option>
+<option value="dental">Dental &amp; Salud</option>
+<option value="gastro">Gastronomía &amp; Bar</option>
+<option value="vet">Veterinaria &amp; Mascotas</option>
+<option value="retail">Retail &amp; Moda</option>
+<option value="logistica">Logística &amp; Despacho</option>
+</select>
+<i class="w-4 h-4 text-[#64748B] absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" data-lucide="chevron-down"></i>
+</div>
+<!-- Status Select -->
+<div class="relative">
+<select class="h-10 pl-3 pr-8 text-label-md font-label-md bg-[#F8FAFC] border border-[#CBD5E1] rounded-lg text-[#111827] focus:outline-none focus:border-primary-container cursor-pointer appearance-none">
+<option value="">Estado: Todos</option>
+<option value="ga">En Producción 100%</option>
+<option value="canary">Rollout Gradual</option>
+<option value="beta">Beta Privada</option>
+<option value="paused">Deprecado / En Pausa</option>
+</select>
+<i class="w-4 h-4 text-[#64748B] absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" data-lucide="chevron-down"></i>
+</div>
+<!-- Base Plan Select -->
+<div class="relative">
+<select class="h-10 pl-3 pr-8 text-label-md font-label-md bg-[#F8FAFC] border border-[#CBD5E1] rounded-lg text-[#111827] focus:outline-none focus:border-primary-container cursor-pointer appearance-none">
+<option value="">Plan Base: Todos</option>
+<option value="basic">Básico</option>
+<option value="pro">Pro Multi-Sede</option>
+<option value="enterprise">Enterprise Custom</option>
+</select>
+<i class="w-4 h-4 text-[#64748B] absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" data-lucide="chevron-down"></i>
+</div>
+</div>
+<!-- Right Utility Controls -->
+<div class="flex items-center gap-2">
+<!-- Column Visibility Dropdown Toggle -->
+<div class="relative">
+<button class="h-10 px-3 bg-white border border-[#CBD5E1] hover:bg-[#F8FAFC] text-[#111827] rounded-lg flex items-center gap-2 text-label-md font-label-md shadow-xs" onclick="toggleColumnMenu()">
+<i class="w-4 h-4 text-[#64748B]" data-lucide="columns-3"></i>
+<span>Columnas</span>
+</button>
+<div class="hidden absolute right-0 mt-1 w-52 bg-white border border-[#CBD5E1] rounded-lg shadow-lg p-2.5 z-20" id="column-menu">
+<p class="text-[11px] font-bold text-[#64748B] uppercase px-1 mb-2">Visibilidad de Datos</p>
+<label class="flex items-center gap-2 px-1.5 py-1 text-label-md hover:bg-[#F1F5F9] rounded cursor-pointer">
+<input checked="" class="w-4 h-4 text-primary-container rounded border-[#CBD5E1]" type="checkbox"/> Módulo &amp; Clave
+              </label>
+<label class="flex items-center gap-2 px-1.5 py-1 text-label-md hover:bg-[#F1F5F9] rounded cursor-pointer">
+<input checked="" class="w-4 h-4 text-primary-container rounded border-[#CBD5E1]" type="checkbox"/> Rubro Objetivo
+              </label>
+<label class="flex items-center gap-2 px-1.5 py-1 text-label-md hover:bg-[#F1F5F9] rounded cursor-pointer">
+<input checked="" class="w-4 h-4 text-primary-container rounded border-[#CBD5E1]" type="checkbox"/> Planes Asignados
+              </label>
+<label class="flex items-center gap-2 px-1.5 py-1 text-label-md hover:bg-[#F1F5F9] rounded cursor-pointer">
+<input checked="" class="w-4 h-4 text-primary-container rounded border-[#CBD5E1]" type="checkbox"/> Rollout Gradual
+              </label>
+<label class="flex items-center gap-2 px-1.5 py-1 text-label-md hover:bg-[#F1F5F9] rounded cursor-pointer">
+<input checked="" class="w-4 h-4 text-primary-container rounded border-[#CBD5E1]" type="checkbox"/> Overrides Tenant
+              </label>
+</div>
+</div>
+<!-- Density Toggle -->
+<div class="h-10 bg-[#F1F5F9] p-1 rounded-lg flex items-center gap-1 border border-[#E2E8F0]">
+<button class="h-8 px-2.5 rounded text-label-md font-label-md text-[#64748B] hover:text-[#111827]" id="btn-density-compact" onclick="setDensity('compact')">
+              Compacta
+            </button>
+<button class="h-8 px-2.5 rounded text-label-md font-label-md bg-white shadow-xs text-primary-container font-semibold" id="btn-density-comf" onclick="setDensity('comfortable')">
+              Cómoda
+            </button>
+</div>
+<!-- Reset Filter Button -->
+<button class="w-10 h-10 rounded-lg border border-[#CBD5E1] bg-white flex items-center justify-center text-[#64748B] hover:text-[#111827] hover:bg-[#F8FAFC]" title="Restablecer filtros">
+<i class="w-4 h-4" data-lucide="rotate-ccw"></i>
+</button>
+</div>
+</div>
+</div>
+<!-- MASTER FEATURE FLAGS TABLE (Enterprise Specification) -->
+<div class="bg-white rounded-lg border border-[#E2E8F0] shadow-xs overflow-hidden">
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse" id="flags-table">
+<thead>
+<tr class="bg-[#F8FAFC] border-b border-[#E2E8F0] text-[#64748B] text-label-sm font-label-sm uppercase tracking-wider">
+<th class="py-3 px-5 w-10">
+<input class="w-4 h-4 rounded border-[#CBD5E1] text-primary-container focus:ring-primary-container/20" type="checkbox"/>
+</th>
+<th class="py-3 px-4 font-semibold">
+<div class="flex items-center gap-1.5 cursor-pointer hover:text-[#111827]">
+<span>Módulo &amp; Clave Flag</span>
+<i class="w-3.5 h-3.5" data-lucide="arrow-up-down"></i>
+</div>
+</th>
+<th class="py-3 px-4 font-semibold">Rubro Objetivo</th>
+<th class="py-3 px-4 font-semibold">Disponibilidad por Plan</th>
+<th class="py-3 px-4 font-semibold">Rollout Gradual (%)</th>
+<th class="py-3 px-4 font-semibold">Overrides Tenant</th>
+<th class="py-3 px-4 font-semibold text-center">Estado Motor</th>
+<th class="py-3 px-5 text-right font-semibold">Acciones</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-[#F1F5F9] text-body-md font-body-md">
+<!-- ROW 1: Odontograma v2 -->
+<tr class="hover:bg-[#F8FAFC] transition-colors group">
+<td class="py-3.5 px-5">
+<input class="w-4 h-4 rounded border-[#CBD5E1] text-primary-container" type="checkbox"/>
+</td>
+<td class="py-3.5 px-4">
+<div class="flex items-start gap-3">
+<div class="w-9 h-9 rounded-lg bg-cyan-50 text-cyan-700 flex items-center justify-center flex-shrink-0 mt-0.5">
+<i class="w-5 h-5" data-lucide="stethoscope"></i>
+</div>
+<div>
+<div class="font-headline-sm text-headline-sm font-semibold text-[#111827] group-hover:text-primary-container transition-colors">
+                      Agenda Médica &amp; Odontograma Interactivo v2
+                    </div>
+<div class="flex items-center gap-2 mt-0.5">
+<span class="font-mono-data text-[12px] bg-[#F1F5F9] text-[#475569] px-2 py-0.5 rounded border border-[#E2E8F0]">
+                        agenda_odontograma_v2
+                      </span>
+<span class="text-body-sm text-[#94A3B8]">• Build 2.4.12</span>
+</div>
+</div>
+</div>
+</td>
+<td class="py-3.5 px-4 whitespace-nowrap">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-label-sm font-label-sm bg-cyan-50 text-cyan-800 border border-cyan-200">
+<i class="w-3 h-3" data-lucide="activity"></i>
+                  Odontología &amp; Salud
+                </span>
+</td>
+<td class="py-3.5 px-4">
+<div class="flex items-center gap-1.5">
+<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-[#F1F5F9] text-[#64748B] line-through">Básico</span>
+<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-indigo-50 text-primary-container border border-primary-container/20">Pro</span>
+<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-indigo-50 text-primary-container border border-primary-container/20">Enterprise</span>
+</div>
+</td>
+<td class="py-3.5 px-4 min-w-[180px]">
+<div class="space-y-1.5">
+<div class="flex items-center justify-between text-body-sm font-mono-data">
+<span class="font-semibold text-primary-container">35% Canario</span>
+<span class="text-[#64748B]">518 tenants</span>
+</div>
+<div class="w-full h-2 bg-[#E2E8F0] rounded-full overflow-hidden">
+<div class="h-full bg-primary-container rounded-full" style="width: 35%;"></div>
+</div>
+</div>
+</td>
+<td class="py-3.5 px-4 whitespace-nowrap">
+<button class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 border border-amber-200/80 text-label-sm font-label-sm hover:bg-amber-100 transition-colors" onclick="toggleDrawer('agenda_odontograma_v2')">
+<i class="w-3.5 h-3.5" data-lucide="sliders-horizontal"></i>
+<span>8 tenants forzados</span>
+</button>
+</td>
+<td class="py-3.5 px-4 text-center whitespace-nowrap">
+<button class="inline-flex items-center justify-center w-11 h-6 bg-[#059669] rounded-full p-0.5 transition-colors relative" data-active="true" onclick="toggleRowState(this)">
+<span class="w-5 h-5 bg-white rounded-full shadow-md flex items-center justify-center transform translate-x-5 transition-transform duration-200">
+<i class="w-3 h-3 text-[#059669]" data-lucide="check"></i>
+</span>
+</button>
+</td>
+<td class="py-3.5 px-5 text-right whitespace-nowrap">
+<div class="flex items-center justify-end gap-1.5">
+<button class="h-9 px-3 bg-white border border-[#CBD5E1] hover:bg-[#F8FAFC] text-[#111827] rounded-lg text-label-md font-label-md flex items-center gap-1.5 transition-colors shadow-2xs" onclick="toggleDrawer('agenda_odontograma_v2')">
+<i class="w-3.5 h-3.5 text-primary-container" data-lucide="settings-2"></i>
+<span>Configurar Reglas</span>
+</button>
+<button class="w-9 h-9 rounded-lg border border-[#E2E8F0] hover:bg-[#F8FAFC] flex items-center justify-center text-[#64748B]">
+<i class="w-4 h-4" data-lucide="more-vertical"></i>
+</button>
+</div>
+</td>
+</tr>
+<!-- ROW 2: Salon & Mesas Gastronomia -->
+<tr class="hover:bg-[#F8FAFC] transition-colors group">
+<td class="py-3.5 px-5">
+<input class="w-4 h-4 rounded border-[#CBD5E1] text-primary-container" type="checkbox"/>
+</td>
+<td class="py-3.5 px-4">
+<div class="flex items-start gap-3">
+<div class="w-9 h-9 rounded-lg bg-orange-50 text-orange-700 flex items-center justify-center flex-shrink-0 mt-0.5">
+<i class="w-5 h-5" data-lucide="utensils"></i>
+</div>
+<div>
+<div class="font-headline-sm text-headline-sm font-semibold text-[#111827] group-hover:text-primary-container transition-colors">
+                      Salón y Gestión de Mesas Dinámica (POS Comandero)
+                    </div>
+<div class="flex items-center gap-2 mt-0.5">
+<span class="font-mono-data text-[12px] bg-[#F1F5F9] text-[#475569] px-2 py-0.5 rounded border border-[#E2E8F0]">
+                        rest_pos_tables_map
+                      </span>
+<span class="text-body-sm text-[#94A3B8]">• Build 3.0.1</span>
+</div>
+</div>
+</div>
+</td>
+<td class="py-3.5 px-4 whitespace-nowrap">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-label-sm font-label-sm bg-orange-50 text-orange-800 border border-orange-200">
+<i class="w-3 h-3" data-lucide="coffee"></i>
+                  Gastronomía &amp; Bar
+                </span>
+</td>
+<td class="py-3.5 px-4">
+<div class="flex items-center gap-1.5">
+<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-[#F1F5F9] text-[#64748B] line-through">Básico</span>
+<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-indigo-50 text-primary-container border border-primary-container/20">Pro</span>
+<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-indigo-50 text-primary-container border border-primary-container/20">Enterprise</span>
+</div>
+</td>
+<td class="py-3.5 px-4 min-w-[180px]">
+<div class="space-y-1.5">
+<div class="flex items-center justify-between text-body-sm font-mono-data">
+<span class="font-semibold text-emerald-700">100% General</span>
+<span class="text-[#64748B]">890 tenants</span>
+</div>
+<div class="w-full h-2 bg-[#E2E8F0] rounded-full overflow-hidden">
+<div class="h-full bg-[#059669] rounded-full" style="width: 100%;"></div>
+</div>
+</div>
+</td>
+<td class="py-3.5 px-4 whitespace-nowrap">
+<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#F1F5F9] text-[#64748B] text-label-sm font-label-sm">
+<i class="w-3.5 h-3.5" data-lucide="check"></i>
+                  0 excepciones
+                </span>
+</td>
+<td class="py-3.5 px-4 text-center whitespace-nowrap">
+<button class="inline-flex items-center justify-center w-11 h-6 bg-[#059669] rounded-full p-0.5 transition-colors relative" data-active="true" onclick="toggleRowState(this)">
+<span class="w-5 h-5 bg-white rounded-full shadow-md flex items-center justify-center transform translate-x-5 transition-transform duration-200">
+<i class="w-3 h-3 text-[#059669]" data-lucide="check"></i>
+</span>
+</button>
+</td>
+<td class="py-3.5 px-5 text-right whitespace-nowrap">
+<div class="flex items-center justify-end gap-1.5">
+<button class="h-9 px-3 bg-white border border-[#CBD5E1] hover:bg-[#F8FAFC] text-[#111827] rounded-lg text-label-md font-label-md flex items-center gap-1.5 transition-colors shadow-2xs" onclick="toggleDrawer('rest_pos_tables_map')">
+<i class="w-3.5 h-3.5 text-primary-container" data-lucide="settings-2"></i>
+<span>Configurar Reglas</span>
+</button>
+<button class="w-9 h-9 rounded-lg border border-[#E2E8F0] hover:bg-[#F8FAFC] flex items-center justify-center text-[#64748B]">
+<i class="w-4 h-4" data-lucide="more-vertical"></i>
+</button>
+</div>
+</td>
+</tr>
+<!-- ROW 3: Veterinaria & Historias Clinicas -->
+<tr class="hover:bg-[#F8FAFC] transition-colors group">
+<td class="py-3.5 px-5">
+<input class="w-4 h-4 rounded border-[#CBD5E1] text-primary-container" type="checkbox"/>
+</td>
+<td class="py-3.5 px-4">
+<div class="flex items-start gap-3">
+<div class="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center flex-shrink-0 mt-0.5">
+<i class="w-5 h-5" data-lucide="paw-print"></i>
+</div>
+<div>
+<div class="font-headline-sm text-headline-sm font-semibold text-[#111827] group-hover:text-primary-container transition-colors">
+                      Gestión de Mascotas &amp; Historias Clínicas Veterinarias
+                    </div>
+<div class="flex items-center gap-2 mt-0.5">
+<span class="font-mono-data text-[12px] bg-[#F1F5F9] text-[#475569] px-2 py-0.5 rounded border border-[#E2E8F0]">
+                        vet_pet_records
+                      </span>
+<span class="text-body-sm text-[#94A3B8]">• Build 1.8.4</span>
+</div>
+</div>
+</div>
+</td>
+<td class="py-3.5 px-4 whitespace-nowrap">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-label-sm font-label-sm bg-emerald-50 text-emerald-800 border border-emerald-200">
+<i class="w-3 h-3" data-lucide="heart-pulse"></i>
+                  Veterinarias
+                </span>
+</td>
+<td class="py-3.5 px-4">
+<div class="flex items-center gap-1.5">
+<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-indigo-50 text-primary-container border border-primary-container/20">Básico</span>
+<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-indigo-50 text-primary-container border border-primary-container/20">Pro</span>
+<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-indigo-50 text-primary-container border border-primary-container/20">Enterprise</span>
+</div>
+</td>
+<td class="py-3.5 px-4 min-w-[180px]">
+<div class="space-y-1.5">
+<div class="flex items-center justify-between text-body-sm font-mono-data">
+<span class="font-semibold text-emerald-700">100% General</span>
+<span class="text-[#64748B]">312 tenants</span>
+</div>
+<div class="w-full h-2 bg-[#E2E8F0] rounded-full overflow-hidden">
+<div class="h-full bg-[#059669] rounded-full" style="width: 100%;"></div>
+</div>
+</div>
+</td>
+<td class="py-3.5 px-4 whitespace-nowrap">
+<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#F1F5F9] text-[#64748B] text-label-sm font-label-sm">
+<i class="w-3.5 h-3.5" data-lucide="check"></i>
+                  0 excepciones
+                </span>
+</td>
+<td class="py-3.5 px-4 text-center whitespace-nowrap">
+<button class="inline-flex items-center justify-center w-11 h-6 bg-[#059669] rounded-full p-0.5 transition-colors relative" data-active="true" onclick="toggleRowState(this)">
+<span class="w-5 h-5 bg-white rounded-full shadow-md flex items-center justify-center transform translate-x-5 transition-transform duration-200">
+<i class="w-3 h-3 text-[#059669]" data-lucide="check"></i>
+</span>
+</button>
+</td>
+<td class="py-3.5 px-5 text-right whitespace-nowrap">
+<div class="flex items-center justify-end gap-1.5">
+<button class="h-9 px-3 bg-white border border-[#CBD5E1] hover:bg-[#F8FAFC] text-[#111827] rounded-lg text-label-md font-label-md flex items-center gap-1.5 transition-colors shadow-2xs" onclick="toggleDrawer('vet_pet_records')">
+<i class="w-3.5 h-3.5 text-primary-container" data-lucide="settings-2"></i>
+<span>Configurar Reglas</span>
+</button>
+<button class="w-9 h-9 rounded-lg border border-[#E2E8F0] hover:bg-[#F8FAFC] flex items-center justify-center text-[#64748B]">
+<i class="w-4 h-4" data-lucide="more-vertical"></i>
+</button>
+</div>
+</td>
+</tr>
+<!-- ROW 4: Matriz Variantes Retail -->
+<tr class="hover:bg-[#F8FAFC] transition-colors group">
+<td class="py-3.5 px-5">
+<input class="w-4 h-4 rounded border-[#CBD5E1] text-primary-container" type="checkbox"/>
+</td>
+<td class="py-3.5 px-4">
+<div class="flex items-start gap-3">
+<div class="w-9 h-9 rounded-lg bg-purple-50 text-purple-700 flex items-center justify-center flex-shrink-0 mt-0.5">
+<i class="w-5 h-5" data-lucide="shirt"></i>
+</div>
+<div>
+<div class="font-headline-sm text-headline-sm font-semibold text-[#111827] group-hover:text-primary-container transition-colors">
+                      Matriz de Variantes Retail &amp; Tallas / Colores SKU
+                    </div>
+<div class="flex items-center gap-2 mt-0.5">
+<span class="font-mono-data text-[12px] bg-[#F1F5F9] text-[#475569] px-2 py-0.5 rounded border border-[#E2E8F0]">
+                        retail_matrix_variants
+                      </span>
+<span class="text-body-sm text-[#94A3B8]">• Build 2.0.0</span>
+</div>
+</div>
+</div>
+</td>
+<td class="py-3.5 px-4 whitespace-nowrap">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-label-sm font-label-sm bg-purple-50 text-purple-800 border border-purple-200">
+<i class="w-3 h-3" data-lucide="shopping-bag"></i>
+                  Retail &amp; Moda
+                </span>
+</td>
+<td class="py-3.5 px-4">
+<div class="flex items-center gap-1.5">
+<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-[#F1F5F9] text-[#64748B] line-through">Básico</span>
+<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-indigo-50 text-primary-container border border-primary-container/20">Pro</span>
+<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-indigo-50 text-primary-container border border-primary-container/20">Enterprise</span>
+</div>
+</td>
+<td class="py-3.5 px-4 min-w-[180px]">
+<div class="space-y-1.5">
+<div class="flex items-center justify-between text-body-sm font-mono-data">
+<span class="font-semibold text-purple-700">15% Beta</span>
+<span class="text-[#64748B]">74 tenants</span>
+</div>
+<div class="w-full h-2 bg-[#E2E8F0] rounded-full overflow-hidden">
+<div class="h-full bg-secondary rounded-full" style="width: 15%;"></div>
+</div>
+</div>
+</td>
+<td class="py-3.5 px-4 whitespace-nowrap">
+<button class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-50 text-primary-container border border-primary-container/20 text-label-sm font-label-sm hover:bg-indigo-100 transition-colors" onclick="toggleDrawer('retail_matrix_variants')">
+<i class="w-3.5 h-3.5" data-lucide="user-check"></i>
+<span>3 en prueba VIP</span>
+</button>
+</td>
+<td class="py-3.5 px-4 text-center whitespace-nowrap">
+<button class="inline-flex items-center justify-center w-11 h-6 bg-[#059669] rounded-full p-0.5 transition-colors relative" data-active="true" onclick="toggleRowState(this)">
+<span class="w-5 h-5 bg-white rounded-full shadow-md flex items-center justify-center transform translate-x-5 transition-transform duration-200">
+<i class="w-3 h-3 text-[#059669]" data-lucide="check"></i>
+</span>
+</button>
+</td>
+<td class="py-3.5 px-5 text-right whitespace-nowrap">
+<div class="flex items-center justify-end gap-1.5">
+<button class="h-9 px-3 bg-white border border-[#CBD5E1] hover:bg-[#F8FAFC] text-[#111827] rounded-lg text-label-md font-label-md flex items-center gap-1.5 transition-colors shadow-2xs" onclick="toggleDrawer('retail_matrix_variants')">
+<i class="w-3.5 h-3.5 text-primary-container" data-lucide="settings-2"></i>
+<span>Configurar Reglas</span>
+</button>
+<button class="w-9 h-9 rounded-lg border border-[#E2E8F0] hover:bg-[#F8FAFC] flex items-center justify-center text-[#64748B]">
+<i class="w-4 h-4" data-lucide="more-vertical"></i>
+</button>
+</div>
+</td>
+</tr>
+<!-- ROW 5: Hospitalizacion Vet (En Pausa / Deprecado) -->
+<tr class="hover:bg-[#F8FAFC] transition-colors group opacity-85">
+<td class="py-3.5 px-5">
+<input class="w-4 h-4 rounded border-[#CBD5E1] text-primary-container" type="checkbox"/>
+</td>
+<td class="py-3.5 px-4">
+<div class="flex items-start gap-3">
+<div class="w-9 h-9 rounded-lg bg-rose-50 text-rose-700 flex items-center justify-center flex-shrink-0 mt-0.5">
+<i class="w-5 h-5" data-lucide="bed"></i>
+</div>
+<div>
+<div class="font-headline-sm text-headline-sm font-semibold text-[#111827] group-hover:text-primary-container transition-colors">
+                      Hospitalización &amp; Asignación de Jaulas / Camas
+                    </div>
+<div class="flex items-center gap-2 mt-0.5">
+<span class="font-mono-data text-[12px] bg-[#F1F5F9] text-[#475569] px-2 py-0.5 rounded border border-[#E2E8F0]">
+                        vet_clinic_hospitalization
+                      </span>
+<span class="text-body-sm text-rose-600 font-medium">• Mantenimiento Emergencia</span>
+</div>
+</div>
+</div>
+</td>
+<td class="py-3.5 px-4 whitespace-nowrap">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-label-sm font-label-sm bg-emerald-50 text-emerald-800 border border-emerald-200">
+<i class="w-3 h-3" data-lucide="heart-pulse"></i>
+                  Veterinarias
+                </span>
+</td>
+<td class="py-3.5 px-4">
+<div class="flex items-center gap-1.5">
+<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-[#F1F5F9] text-[#64748B] line-through">Básico</span>
+<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-[#F1F5F9] text-[#64748B] line-through">Pro</span>
+<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-indigo-50 text-primary-container border border-primary-container/20">Enterprise</span>
+</div>
+</td>
+<td class="py-3.5 px-4 min-w-[180px]">
+<div class="space-y-1.5">
+<div class="flex items-center justify-between text-body-sm font-mono-data">
+<span class="font-semibold text-rose-600">0% Pausado</span>
+<span class="text-[#64748B]">0 tenants</span>
+</div>
+<div class="w-full h-2 bg-[#E2E8F0] rounded-full overflow-hidden">
+<div class="h-full bg-rose-500 rounded-full" style="width: 0%;"></div>
+</div>
+</div>
+</td>
+<td class="py-3.5 px-4 whitespace-nowrap">
+<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 text-label-sm font-label-sm border border-rose-200">
+<i class="w-3.5 h-3.5" data-lucide="lock"></i>
+                  Bloqueo Global
+                </span>
+</td>
+<td class="py-3.5 px-4 text-center whitespace-nowrap">
+<button class="inline-flex items-center justify-center w-11 h-6 bg-[#CBD5E1] rounded-full p-0.5 transition-colors relative" data-active="false" onclick="toggleRowState(this)">
+<span class="w-5 h-5 bg-white rounded-full shadow-md flex items-center justify-center transform translate-x-0 transition-transform duration-200">
+<i class="w-3 h-3 text-[#64748B]" data-lucide="lock"></i>
+</span>
+</button>
+</td>
+<td class="py-3.5 px-5 text-right whitespace-nowrap">
+<div class="flex items-center justify-end gap-1.5">
+<button class="h-9 px-3 bg-white border border-[#CBD5E1] hover:bg-[#F8FAFC] text-[#111827] rounded-lg text-label-md font-label-md flex items-center gap-1.5 transition-colors shadow-2xs" onclick="toggleDrawer('vet_clinic_hospitalization')">
+<i class="w-3.5 h-3.5 text-primary-container" data-lucide="settings-2"></i>
+<span>Configurar Reglas</span>
+</button>
+<button class="w-9 h-9 rounded-lg border border-[#E2E8F0] hover:bg-[#F8FAFC] flex items-center justify-center text-[#64748B]">
+<i class="w-4 h-4" data-lucide="more-vertical"></i>
+</button>
+</div>
+</td>
+</tr>
+<!-- ROW 6: Delivery & Despacho Multicanal -->
+<tr class="hover:bg-[#F8FAFC] transition-colors group">
+<td class="py-3.5 px-5">
+<input class="w-4 h-4 rounded border-[#CBD5E1] text-primary-container" type="checkbox"/>
+</td>
+<td class="py-3.5 px-4">
+<div class="flex items-start gap-3">
+<div class="w-9 h-9 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center flex-shrink-0 mt-0.5">
+<i class="w-5 h-5" data-lucide="truck"></i>
+</div>
+<div>
+<div class="font-headline-sm text-headline-sm font-semibold text-[#111827] group-hover:text-primary-container transition-colors">
+                      Delivery &amp; Despacho Multicanal (Rappi/PedidosYa Sync)
+                    </div>
+<div class="flex items-center gap-2 mt-0.5">
+<span class="font-mono-data text-[12px] bg-[#F1F5F9] text-[#475569] px-2 py-0.5 rounded border border-[#E2E8F0]">
+                        delivery_dispatch_hub
+                      </span>
+<span class="text-body-sm text-[#94A3B8]">• Build 4.2.0</span>
+</div>
+</div>
+</div>
+</td>
+<td class="py-3.5 px-4 whitespace-nowrap">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-label-sm font-label-sm bg-blue-50 text-blue-800 border border-blue-200">
+<i class="w-3 h-3" data-lucide="navigation"></i>
+                  Logística &amp; Delivery
+                </span>
+</td>
+<td class="py-3.5 px-4">
+<div class="flex items-center gap-1.5">
+<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-[#F1F5F9] text-[#64748B] line-through">Básico</span>
+<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-indigo-50 text-primary-container border border-primary-container/20">Pro</span>
+<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-indigo-50 text-primary-container border border-primary-container/20">Enterprise</span>
+</div>
+</td>
+<td class="py-3.5 px-4 min-w-[180px]">
+<div class="space-y-1.5">
+<div class="flex items-center justify-between text-body-sm font-mono-data">
+<span class="font-semibold text-emerald-700">100% General</span>
+<span class="text-[#64748B]">1,040 tenants</span>
+</div>
+<div class="w-full h-2 bg-[#E2E8F0] rounded-full overflow-hidden">
+<div class="h-full bg-[#059669] rounded-full" style="width: 100%;"></div>
+</div>
+</div>
+</td>
+<td class="py-3.5 px-4 whitespace-nowrap">
+<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#F1F5F9] text-[#64748B] text-label-sm font-label-sm">
+<i class="w-3.5 h-3.5" data-lucide="check"></i>
+                  0 excepciones
+                </span>
+</td>
+<td class="py-3.5 px-4 text-center whitespace-nowrap">
+<button class="inline-flex items-center justify-center w-11 h-6 bg-[#059669] rounded-full p-0.5 transition-colors relative" data-active="true" onclick="toggleRowState(this)">
+<span class="w-5 h-5 bg-white rounded-full shadow-md flex items-center justify-center transform translate-x-5 transition-transform duration-200">
+<i class="w-3 h-3 text-[#059669]" data-lucide="check"></i>
+</span>
+</button>
+</td>
+<td class="py-3.5 px-5 text-right whitespace-nowrap">
+<div class="flex items-center justify-end gap-1.5">
+<button class="h-9 px-3 bg-white border border-[#CBD5E1] hover:bg-[#F8FAFC] text-[#111827] rounded-lg text-label-md font-label-md flex items-center gap-1.5 transition-colors shadow-2xs" onclick="toggleDrawer('delivery_dispatch_hub')">
+<i class="w-3.5 h-3.5 text-primary-container" data-lucide="settings-2"></i>
+<span>Configurar Reglas</span>
+</button>
+<button class="w-9 h-9 rounded-lg border border-[#E2E8F0] hover:bg-[#F8FAFC] flex items-center justify-center text-[#64748B]">
+<i class="w-4 h-4" data-lucide="more-vertical"></i>
+</button>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- PAGINATION FOOTER (Height 48px) -->
+<div class="h-12 px-5 bg-white border-t border-[#E2E8F0] flex items-center justify-between">
+<div class="text-body-sm font-body-sm text-[#64748B]">
+          Mostrando <span class="font-semibold text-[#111827]">1-6</span> de <span class="font-semibold text-[#111827]">24</span> módulos configurados
+        </div>
+<div class="flex items-center gap-4">
+<!-- Page size selector -->
+<div class="flex items-center gap-2 text-body-sm text-[#64748B]">
+<span>Filas por página:</span>
+<select class="h-8 px-2 text-label-md bg-[#F8FAFC] border border-[#CBD5E1] rounded text-[#111827]">
+<option>10</option>
+<option selected="">25</option>
+<option>50</option>
+</select>
+</div>
+<!-- Page Controls -->
+<div class="flex items-center gap-1">
+<button class="w-8 h-8 rounded border border-[#CBD5E1] bg-white flex items-center justify-center text-[#94A3B8] cursor-not-allowed">
+<i class="w-4 h-4" data-lucide="chevron-left"></i>
+</button>
+<button class="w-8 h-8 rounded bg-primary-container text-white font-label-md text-label-md flex items-center justify-center">1</button>
+<button class="w-8 h-8 rounded border border-[#CBD5E1] bg-white hover:bg-[#F8FAFC] text-[#111827] font-label-md text-label-md flex items-center justify-center">2</button>
+<button class="w-8 h-8 rounded border border-[#CBD5E1] bg-white hover:bg-[#F8FAFC] text-[#111827] font-label-md text-label-md flex items-center justify-center">
+<i class="w-4 h-4" data-lucide="chevron-right"></i>
+</button>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- DRAWER / SLIDE-OVER PANEL: CONFIGURACIÓN DE REGLAS & ROLLOUT -->
+<div class="fixed inset-0 bg-[#0F172A]/60 backdrop-blur-xs z-50 transition-opacity duration-300 opacity-0 pointer-events-none" id="drawer-backdrop" onclick="closeDrawer()"></div>
+<aside class="fixed top-0 right-0 bottom-0 w-full max-w-2xl bg-white shadow-2xl z-50 transform translate-x-full transition-transform duration-300 flex flex-col" id="rules-drawer">
+<!-- Drawer Header -->
+<div class="px-6 py-4 border-b border-[#E2E8F0] flex items-center justify-between bg-[#F8FAFC]">
+<div>
+<div class="flex items-center gap-2">
+<span class="px-2 py-0.5 rounded text-[11px] font-bold bg-indigo-100 text-primary-container">ENGINE v2</span>
+<h2 class="font-headline-sm text-headline-sm font-bold text-[#111827]">Configuración de Reglas &amp; Rollout</h2>
+</div>
+<p class="text-body-sm font-mono-data text-[#64748B] mt-0.5">Clave de Flag: <span class="text-primary-container font-semibold" id="drawer-flag-key">agenda_odontograma_v2</span></p>
+</div>
+<button class="w-8 h-8 rounded-lg hover:bg-[#E2E8F0] text-[#64748B] flex items-center justify-center transition-colors" onclick="closeDrawer()">
+<i class="w-5 h-5" data-lucide="x"></i>
+</button>
+</div>
+<!-- Drawer Content Scrollable -->
+<div class="flex-1 overflow-y-auto p-6 space-y-6">
+<!-- Section 1: Rollout Gradual Slider -->
+<div class="bg-white border border-[#E2E8F0] rounded-lg p-5 shadow-xs">
+<div class="flex items-center justify-between mb-3">
+<div>
+<h3 class="font-headline-sm text-headline-sm font-semibold text-[#111827]">Despliegue Gradual Canario</h3>
+<p class="text-body-sm text-[#64748B]">Distribución estocástica por Tenant UUID hash</p>
+</div>
+<span class="px-3 py-1 bg-indigo-50 text-primary-container font-bold text-headline-sm rounded-lg border border-primary-container/20 font-mono-data" id="rollout-val-badge">35%</span>
+</div>
+<input class="w-full h-2 bg-[#E2E8F0] rounded-lg appearance-none cursor-pointer" id="rollout-slider" max="100" min="0" oninput="updateRollout(this.value)" step="5" type="range" value="35"/>
+<div class="flex justify-between text-body-sm font-mono-data text-[#64748B] mt-2">
+<span>0% (Killswitch)</span>
+<span class="text-[#059669] font-medium" id="impacted-tenants-calc">Impacto actual: ≈ 518 tenants</span>
+<span>100% (GA Completo)</span>
+</div>
+</div>
+<!-- Section 2: Planes Base Disponibles -->
+<div class="bg-white border border-[#E2E8F0] rounded-lg p-5 shadow-xs">
+<h3 class="font-headline-sm text-headline-sm font-semibold text-[#111827] mb-1">Activación por Plan Base</h3>
+<p class="text-body-sm text-[#64748B] mb-4">Los tenants heredan este módulo automáticamente según su suscripción activa.</p>
+<div class="space-y-3">
+<!-- Básico Switch -->
+<div class="flex items-center justify-between p-3 rounded-lg border border-[#E2E8F0] hover:bg-[#F8FAFC]">
+<div>
+<p class="font-label-md font-semibold text-[#111827]">Plan Básico / Emprendedor</p>
+<p class="text-body-sm text-[#64748B]">Facturación estándar hasta 500 comprobantes/mes</p>
+</div>
+<button class="w-11 h-6 bg-[#CBD5E1] rounded-full p-0.5 transition-colors relative" data-checked="false" onclick="toggleSwitch(this)">
+<span class="w-5 h-5 bg-white rounded-full shadow-md block transform translate-x-0 transition-transform"></span>
+</button>
+</div>
+<!-- Pro Switch -->
+<div class="flex items-center justify-between p-3 rounded-lg border border-[#E2E8F0] hover:bg-[#F8FAFC]">
+<div>
+<p class="font-label-md font-semibold text-[#111827]">Plan Pro Multi-Sede</p>
+<p class="text-body-sm text-[#64748B]">Hasta 5 sucursales, facturación ilimitada y reportes BI</p>
+</div>
+<button class="w-11 h-6 bg-primary-container rounded-full p-0.5 transition-colors relative" data-checked="true" onclick="toggleSwitch(this)">
+<span class="w-5 h-5 bg-white rounded-full shadow-md block transform translate-x-5 transition-transform"></span>
+</button>
+</div>
+<!-- Enterprise Switch -->
+<div class="flex items-center justify-between p-3 rounded-lg border border-[#E2E8F0] hover:bg-[#F8FAFC]">
+<div>
+<p class="font-label-md font-semibold text-[#111827]">Plan Enterprise Corporativo</p>
+<p class="text-body-sm text-[#64748B]">SLA 99.99%, soporte Nivel 3 y APIs dedicadas</p>
+</div>
+<button class="w-11 h-6 bg-primary-container rounded-full p-0.5 transition-colors relative" data-checked="true" onclick="toggleSwitch(this)">
+<span class="w-5 h-5 bg-white rounded-full shadow-md block transform translate-x-5 transition-transform"></span>
+</button>
+</div>
+</div>
+</div>
+<!-- Section 3: Allowlist & Tenant Overrides -->
+<div class="bg-white border border-[#E2E8F0] rounded-lg p-5 shadow-xs">
+<div class="flex items-center justify-between mb-2">
+<div>
+<h3 class="font-headline-sm text-headline-sm font-semibold text-[#111827]">Overrides de Tenants (Allowlist Forzada)</h3>
+<p class="text-body-sm text-[#64748B]">Fuerza la activación ignorando porcentaje y plan base.</p>
+</div>
+<span class="text-label-sm font-label-sm px-2 py-0.5 bg-amber-50 text-amber-800 rounded border border-amber-200">8 Tenants Activos</span>
+</div>
+<!-- Add Tenant Input (Height 40px) -->
+<div class="flex gap-2 mt-3 mb-4">
+<div class="relative flex-1">
+<i class="w-4 h-4 text-[#64748B] absolute left-3 top-1/2 -translate-y-1/2" data-lucide="building"></i>
+<input class="w-full h-10 pl-9 pr-3 text-body-md font-body-md bg-white border border-[#CBD5E1] rounded-lg focus:outline-none focus:border-primary-container text-[#111827]" placeholder="Ingresar RUC (11 dígitos) o Razón Social..." type="text"/>
+</div>
+<button class="h-10 px-4 bg-[#111827] hover:bg-[#1E293B] text-white rounded-lg text-label-md font-label-md flex items-center gap-1.5 transition-colors">
+<i class="w-4 h-4" data-lucide="plus"></i>
+<span>Agregar Override</span>
+</button>
+</div>
+<!-- Tag Chips of Current Overrides -->
+<div class="flex flex-wrap gap-2">
+<div class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#F8FAFC] border border-[#CBD5E1] rounded-lg text-body-sm">
+<span class="font-mono-data text-[11px] bg-white px-1 py-0.5 rounded border border-[#E2E8F0] font-semibold text-primary-container">20601928471</span>
+<span class="font-medium text-[#111827]">Clínica OdontoSalud San Isidro</span>
+<button class="hover:text-rose-600 ml-1"><i class="w-3.5 h-3.5" data-lucide="x"></i></button>
+</div>
+<div class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#F8FAFC] border border-[#CBD5E1] rounded-lg text-body-sm">
+<span class="font-mono-data text-[11px] bg-white px-1 py-0.5 rounded border border-[#E2E8F0] font-semibold text-primary-container">20554182901</span>
+<span class="font-medium text-[#111827]">Dental Miraflores SAC</span>
+<button class="hover:text-rose-600 ml-1"><i class="w-3.5 h-3.5" data-lucide="x"></i></button>
+</div>
+<div class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#F8FAFC] border border-[#CBD5E1] rounded-lg text-body-sm">
+<span class="font-mono-data text-[11px] bg-white px-1 py-0.5 rounded border border-[#E2E8F0] font-semibold text-primary-container">20100492813</span>
+<span class="font-medium text-[#111827]">Centro Maxilofacial Sur</span>
+<button class="hover:text-rose-600 ml-1"><i class="w-3.5 h-3.5" data-lucide="x"></i></button>
+</div>
+</div>
+</div>
+<!-- Section 4: Audit Trail Timeline -->
+<div class="bg-white border border-[#E2E8F0] rounded-lg p-5 shadow-xs">
+<h3 class="font-headline-sm text-headline-sm font-semibold text-[#111827] mb-3">Historial de Modificaciones Recientes</h3>
+<div class="space-y-4 border-l-2 border-[#E2E8F0] ml-2 pl-4">
+<div class="relative">
+<span class="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-primary-container ring-4 ring-indigo-50"></span>
+<p class="text-body-sm font-semibold text-[#111827]">Rollout incrementado de 20% a 35%</p>
+<div class="flex items-center gap-2 text-[11px] font-mono-data text-[#64748B] mt-0.5">
+<span>08/03/2025 14:15:22</span>
+<span>•</span>
+<span class="text-[#111827]">carlos.benavides@perusaas.pe</span>
+</div>
+<span class="text-[10px] font-mono-data text-[#94A3B8] block mt-0.5">SHA: e8f2a1b9c04d88e7...</span>
+</div>
+<div class="relative">
+<span class="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-4 ring-emerald-50"></span>
+<p class="text-body-sm font-semibold text-[#111827]">Tenant forzado agregado: 20601928471</p>
+<div class="flex items-center gap-2 text-[11px] font-mono-data text-[#64748B] mt-0.5">
+<span>07/03/2025 10:02:40</span>
+<span>•</span>
+<span class="text-[#111827]">diana.palacios@perusaas.pe</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Drawer Footer Actions (Strict 40px) -->
+<div class="p-4 border-t border-[#E2E8F0] bg-white flex items-center justify-between">
+<button class="h-10 px-4 border border-[#CBD5E1] hover:bg-[#F8FAFC] text-[#111827] rounded-lg text-label-md font-label-md transition-colors" onclick="closeDrawer()">
+        Cancelar
+      </button>
+<div class="flex items-center gap-3">
+<button class="h-10 px-5 bg-primary-container hover:bg-[#4338CA] text-white rounded-lg text-label-md font-label-md shadow-sm transition-colors flex items-center gap-2" onclick="saveChangesNotification()">
+<i class="w-4 h-4" data-lucide="save"></i>
+<span>Propagar Cambios a Redis</span>
+</button>
+</div>
+</div>
+</aside>
+<!-- AUDIT LOG MODAL -->
+<div class="fixed inset-0 bg-[#0F172A]/70 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden" id="audit-modal">
+<div class="bg-white rounded-xl shadow-2xl max-w-3xl w-full border border-[#CBD5E1] overflow-hidden">
+<div class="p-5 border-b border-[#E2E8F0] flex items-center justify-between bg-[#F8FAFC]">
+<div class="flex items-center gap-2">
+<div class="w-8 h-8 rounded-lg bg-indigo-50 text-primary-container flex items-center justify-center">
+<i class="w-4 h-4" data-lucide="shield-check"></i>
+</div>
+<div>
+<h3 class="font-headline-md text-headline-md font-bold text-[#111827]">Registro Criptográfico de Auditoría SuperAdmin</h3>
+<p class="text-body-sm text-[#64748B]">Trazabilidad inmutable de mutaciones de configuración</p>
+</div>
+</div>
+<button class="w-8 h-8 rounded hover:bg-[#E2E8F0] text-[#64748B] flex items-center justify-center" onclick="toggleAuditModal()">
+<i class="w-5 h-5" data-lucide="x"></i>
+</button>
+</div>
+<div class="p-5 max-h-[614px] overflow-y-auto divide-y divide-[#F1F5F9]">
+<div class="py-3 flex items-start justify-between">
+<div>
+<p class="font-label-md font-semibold text-[#111827]">SET flag:vet_clinic_hospitalization status:DISABLED</p>
+<p class="text-body-sm text-[#64748B] mt-0.5">Motivo: Bloqueo preventivo por refactor de migración de base de datos</p>
+<p class="text-[11px] font-mono-data text-[#94A3B8] mt-1">Hash SHA-256: 7d4a51e6b8c459f032aa28...</p>
+</div>
+<div class="text-right font-mono-data text-body-sm">
+<span class="text-rose-600 font-semibold">KILLSWITCH</span>
+<p class="text-[#64748B] text-[11px] mt-0.5">08/03/2025 11:30:12</p>
+</div>
+</div>
+<div class="py-3 flex items-start justify-between">
+<div>
+<p class="font-label-md font-semibold text-[#111827]">ROLLOUT flag:retail_matrix_variants ratio:0.15</p>
+<p class="text-body-sm text-[#64748B] mt-0.5">Asignación canaria expandida al rubro Retail &amp; Moda</p>
+<p class="text-[11px] font-mono-data text-[#94A3B8] mt-1">Hash SHA-256: 3c9b8821fa0919de42b821...</p>
+</div>
+<div class="text-right font-mono-data text-body-sm">
+<span class="text-primary-container font-semibold">ROLLOUT 15%</span>
+<p class="text-[#64748B] text-[11px] mt-0.5">07/03/2025 18:45:00</p>
+</div>
+</div>
+</div>
+<div class="p-4 bg-[#F8FAFC] border-t border-[#E2E8F0] flex justify-end">
+<button class="h-10 px-5 bg-[#111827] text-white rounded-lg font-label-md text-label-md" onclick="toggleAuditModal()">
+          Entendido
+        </button>
+</div>
+</div>
+</div>
+<!-- TOAST NOTIFICATION -->
+<div class="fixed bottom-6 right-6 bg-[#111827] text-white px-4 py-3 rounded-lg shadow-xl border border-[#334155] flex items-center gap-3 transform translate-y-20 opacity-0 transition-all duration-300 z-50" id="toast">
+<div class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+<i class="w-4 h-4" data-lucide="check"></i>
+</div>
+<div>
+<p class="text-label-md font-semibold" id="toast-title">Reglas sincronizadas con éxito</p>
+<p class="text-body-sm text-[#94A3B8]" id="toast-msg">Propagado a 3 nodos Redis en 1.14s</p>
+</div>
+</div>
+<!-- INLINE JAVASCRIPT MICRO-INTERACTIONS -->
+<script>
+    // Initialize Lucide Icons
+    lucide.createIcons();
+
+    // Lima Real-Time Clock Simulator
+    function updateLimaClock() {
+      const now = new Date();
+      const options = { timeZone: 'America/Lima', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
+      const timeString = new Intl.DateTimeFormat('es-PE', options).format(now);
+      const clockEl = document.getElementById('lima-clock');
+      if (clockEl) {
+        clockEl.textContent = `Lima ${timeString}`;
+      }
+    }
+    setInterval(updateLimaClock, 1000);
+    updateLimaClock();
+
+    // Drawer Logic
+    function toggleDrawer(flagKey) {
+      const drawer = document.getElementById('rules-drawer');
+      const backdrop = document.getElementById('drawer-backdrop');
+      const keyLabel = document.getElementById('drawer-flag-key');
+      
+      if (keyLabel && flagKey) {
+        keyLabel.textContent = flagKey;
+      }
+
+      backdrop.classList.remove('opacity-0', 'pointer-events-none');
+      drawer.classList.remove('translate-x-full');
+    }
+
+    function closeDrawer() {
+      const drawer = document.getElementById('rules-drawer');
+      const backdrop = document.getElementById('drawer-backdrop');
+      
+      backdrop.classList.add('opacity-0', 'pointer-events-none');
+      drawer.classList.add('translate-x-full');
+    }
+
+    // Rollout Slider Calculation
+    function updateRollout(val) {
+      document.getElementById('rollout-val-badge').innerText = val + '%';
+      const calcEl = document.getElementById('impacted-tenants-calc');
+      const count = Math.round(1480 * (val / 100));
+      calcEl.innerText = `Impacto actual: ≈ ${count} tenants`;
+    }
+
+    // Interactive Switch Helper
+    function toggleSwitch(btn) {
+      const isChecked = btn.getAttribute('data-checked') === 'true';
+      const thumb = btn.querySelector('span');
+      if (isChecked) {
+        btn.setAttribute('data-checked', 'false');
+        btn.classList.remove('bg-primary-container');
+        btn.classList.add('bg-[#CBD5E1]');
+        thumb.classList.remove('translate-x-5');
+        thumb.classList.add('translate-x-0');
+      } else {
+        btn.setAttribute('data-checked', 'true');
+        btn.classList.remove('bg-[#CBD5E1]');
+        btn.classList.add('bg-primary-container');
+        thumb.classList.remove('translate-x-0');
+        thumb.classList.add('translate-x-5');
+      }
+    }
+
+    // Table Master Switch Helper
+    function toggleRowState(btn) {
+      const isActive = btn.getAttribute('data-active') === 'true';
+      const thumb = btn.querySelector('span');
+      
+      if (isActive) {
+        btn.setAttribute('data-active', 'false');
+        btn.classList.remove('bg-[#059669]');
+        btn.classList.add('bg-[#CBD5E1]');
+        thumb.classList.remove('translate-x-5');
+        thumb.classList.add('translate-x-0');
+        thumb.innerHTML = '<i data-lucide="lock" class="w-3 h-3 text-[#64748B]"></i>';
+        showToast("Módulo Restringido", "El killswitch ha sido aplicado a nivel global.");
+      } else {
+        btn.setAttribute('data-active', 'true');
+        btn.classList.remove('bg-[#CBD5E1]');
+        btn.classList.add('bg-[#059669]');
+        thumb.classList.remove('translate-x-0');
+        thumb.classList.add('translate-x-5');
+        thumb.innerHTML = '<i data-lucide="check" class="w-3 h-3 text-[#059669]"></i>';
+        showToast("Módulo Desbloqueado", "Las reglas canarias han vuelto a operar.");
+      }
+      lucide.createIcons();
+    }
+
+    // Sync Cluster Button Spin
+    function triggerSync(btn) {
+      const icon = btn.querySelector('.sync-icon');
+      icon.classList.add('animate-spin');
+      btn.disabled = true;
+      showToast("Sincronizando Cluster...", "Propagando claves activas a nodos Redis PE-Lima");
+      
+      setTimeout(() => {
+        icon.classList.remove('animate-spin');
+        btn.disabled = false;
+        showToast("Cluster en Sincronía", "Estado consolidado: 24 módulos y 42 overrides verificados.");
+      }, 1200);
+    }
+
+    // Column Menu Toggle
+    function toggleColumnMenu() {
+      const menu = document.getElementById('column-menu');
+      menu.classList.toggle('hidden');
+    }
+
+    // Density Setter
+    function setDensity(level) {
+      const rows = document.querySelectorAll('#flags-table tbody tr');
+      const btnCompact = document.getElementById('btn-density-compact');
+      const btnComf = document.getElementById('btn-density-comf');
+      
+      if (level === 'compact') {
+        rows.forEach(r => {
+          r.querySelectorAll('td').forEach(td => {
+            td.classList.remove('py-3.5');
+            td.classList.add('py-2');
+          });
+        });
+        btnCompact.classList.add('bg-white', 'shadow-xs', 'text-primary-container', 'font-semibold');
+        btnCompact.classList.remove('text-[#64748B]');
+        btnComf.classList.remove('bg-white', 'shadow-xs', 'text-primary-container', 'font-semibold');
+        btnComf.classList.add('text-[#64748B]');
+      } else {
+        rows.forEach(r => {
+          r.querySelectorAll('td').forEach(td => {
+            td.classList.remove('py-2');
+            td.classList.add('py-3.5');
+          });
+        });
+        btnComf.classList.add('bg-white', 'shadow-xs', 'text-primary-container', 'font-semibold');
+        btnComf.classList.remove('text-[#64748B]');
+        btnCompact.classList.remove('bg-white', 'shadow-xs', 'text-primary-container', 'font-semibold');
+        btnCompact.classList.add('text-[#64748B]');
+      }
+    }
+
+    // Audit Modal Toggle
+    function toggleAuditModal() {
+      const modal = document.getElementById('audit-modal');
+      modal.classList.toggle('hidden');
+    }
+
+    // Toast Notification System
+    function showToast(title, message) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toast-title').innerText = title;
+      document.getElementById('toast-msg').innerText = message;
+      
+      toast.classList.remove('translate-y-20', 'opacity-0');
+      setTimeout(() => {
+        toast.classList.add('translate-y-20', 'opacity-0');
+      }, 3500);
+    }
+
+    function saveChangesNotification() {
+      closeDrawer();
+      showToast("Reglas Propagadas", "Configuración persistida y propagada con éxito a Redis Cluster.");
+    }
+  </script>
+</body></html>

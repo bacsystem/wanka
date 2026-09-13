@@ -1,0 +1,1291 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Mi Perfil y Seguridad + Estados del Sistema | PerúSaaS - Clínica Dental Sonrisa</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap&family=Geist+Mono:wght@400;500;600" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "primary": "#0f766e",
+            "primary-hover": "#0d665f",
+            "primary-light": "#ccfbf1",
+            "primary-container": "#0f766e",
+            "on-primary": "#ffffff",
+            "surface": "#faf8ff",
+            "surface-dim": "#d2d9f4",
+            "surface-bright": "#faf8ff",
+            "surface-container-lowest": "#ffffff",
+            "surface-container-low": "#f2f3ff",
+            "surface-container": "#eaedff",
+            "surface-container-high": "#e2e7ff",
+            "surface-container-highest": "#dae2fd",
+            "on-surface": "#131b2e",
+            "on-surface-variant": "#43474e",
+            "outline": "#73777f",
+            "outline-variant": "#c3c7d0",
+            "error": "#ba1a1a",
+            "error-container": "#ffdad6",
+            "on-error": "#ffffff",
+            "warning": "#b45309",
+            "warning-container": "#fef3c7",
+            "success": "#15803d",
+            "success-container": "#dcfce7"
+          },
+          fontFamily: {
+            sans: ['Geist', 'sans-serif'],
+            mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+    }
+    .scrollbar-thin::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .scrollbar-thin::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    .scrollbar-thin::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+    @keyframes shimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+    .animate-shimmer {
+      background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.6s infinite;
+    }
+  </style>
+</head>
+<body class="bg-surface text-on-surface font-sans antialiased min-h-full flex flex-col selection:bg-teal-100 selection:text-teal-900 pb-16 md:pb-0">
+
+  <!-- TOPBAR GLOBAL CORPORATIVO -->
+  <header class="bg-surface-container-lowest border-b border-outline-variant h-12 px-3 md:px-4 flex items-center justify-between shrink-0 sticky top-0 z-40">
+    <div class="flex items-center gap-3">
+      <!-- Mobile menu trigger -->
+      <button class="md:hidden p-1.5 rounded hover:bg-surface-container text-on-surface-variant">
+        <span class="material-symbols-outlined text-[20px]">menu</span>
+      </button>
+
+      <!-- Brand Logo / Badge -->
+      <div class="flex items-center gap-2">
+        <div class="h-7 w-7 rounded-lg bg-primary flex items-center justify-center text-white font-bold text-sm shadow-sm">
+          <span class="material-symbols-outlined text-[18px]">dentistry</span>
+        </div>
+        <div class="flex items-baseline gap-1.5">
+          <span class="font-bold text-sm tracking-tight text-on-surface">PerúSaaS</span>
+          <span class="text-xs text-outline hidden sm:inline">|</span>
+          <span class="text-xs font-medium text-on-surface-variant truncate max-w-[140px] sm:max-w-none">Clínica Dental Sonrisa S.A.C.</span>
+        </div>
+      </div>
+
+      <div class="hidden sm:flex items-center gap-2">
+        <span class="text-[11px] font-mono text-outline bg-surface-container px-2 py-0.5 rounded border border-outline-variant/60">RUC 20608941235</span>
+        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
+          SUNAT OK · OSE Conectado
+        </span>
+      </div>
+    </div>
+
+    <!-- Right Actions -->
+    <div class="flex items-center gap-2 md:gap-3">
+      <!-- Theme Switcher -->
+      <div class="hidden md:flex items-center p-0.5 bg-surface-container rounded-lg border border-outline-variant text-[11px] font-medium" id="themeSwitch">
+        <button onclick="setTheme('light')" class="px-2 py-0.5 rounded bg-surface-container-lowest text-primary font-bold shadow-xs flex items-center gap-1" id="btnThemeLight">
+          <span class="material-symbols-outlined text-[14px]">light_mode</span> Claro
+        </button>
+        <button onclick="setTheme('dark')" class="px-2 py-0.5 rounded text-outline hover:text-on-surface flex items-center gap-1" id="btnThemeDark">
+          <span class="material-symbols-outlined text-[14px]">dark_mode</span> Oscuro
+        </button>
+        <button onclick="setTheme('auto')" class="px-2 py-0.5 rounded text-outline hover:text-on-surface" id="btnThemeAuto">Auto</button>
+      </div>
+
+      <!-- Sede Selector -->
+      <div class="hidden lg:flex items-center gap-1.5 text-xs text-on-surface-variant font-medium bg-surface-container-low px-2 py-1 rounded border border-outline-variant">
+        <span class="material-symbols-outlined text-[16px] text-primary">storefront</span>
+        <span>Sede Miraflores (Principal)</span>
+        <span class="material-symbols-outlined text-[14px] text-outline">expand_more</span>
+      </div>
+
+      <!-- Notifications -->
+      <div class="relative p-1.5 rounded hover:bg-surface-container text-on-surface-variant cursor-pointer">
+        <span class="material-symbols-outlined text-[20px]">notifications</span>
+        <span class="absolute top-1 right-1 w-2 h-2 rounded-full bg-error ring-2 ring-white"></span>
+      </div>
+
+      <div class="h-4 w-px bg-outline-variant hidden sm:block"></div>
+
+      <!-- User Chip (Current Session) -->
+      <div class="flex items-center gap-2 pl-1 cursor-pointer bg-teal-50/60 hover:bg-teal-50 border border-teal-200/80 px-2 py-1 rounded-lg transition-colors">
+        <div class="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center font-bold text-xs">
+          CM
+        </div>
+        <div class="hidden sm:flex flex-col text-left leading-none">
+          <span class="text-xs font-semibold text-on-surface">Dr. Carlos Mendoza</span>
+          <span class="text-[10px] text-primary font-medium">Administrador General</span>
+        </div>
+        <span class="material-symbols-outlined text-[16px] text-primary">expand_more</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- CONTENEDOR PRINCIPAL CON SIDEBAR + CONTENIDO -->
+  <div class="flex-1 flex w-full overflow-hidden">
+
+    <!-- SIDEBAR DE NAVEGACIÓN (Desktop) -->
+    <aside class="w-60 bg-surface border-r border-outline-variant hidden md:flex flex-col justify-between shrink-0">
+      <div class="p-3 space-y-4">
+        <!-- User quick card -->
+        <div class="p-2.5 rounded-lg bg-surface-container-lowest border border-outline-variant flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-full bg-primary text-white flex items-center justify-center font-bold text-sm shrink-0">
+            CM
+          </div>
+          <div class="min-w-0 flex-1">
+            <p class="text-xs font-bold text-on-surface truncate">Carlos Mendoza</p>
+            <p class="text-[11px] text-outline truncate">carlos.m@sonrisa.pe</p>
+            <span class="inline-block mt-0.5 px-1.5 py-0.2 rounded text-[9px] font-semibold bg-teal-100 text-teal-800">Admin General</span>
+          </div>
+        </div>
+
+        <!-- Navegación General -->
+        <nav class="space-y-0.5 text-xs">
+          <div class="px-2 py-1 text-[10px] font-bold text-outline uppercase tracking-wider">Módulos Principales</div>
+          <a href="#" class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-on-surface-variant hover:bg-surface-container hover:text-on-surface font-medium">
+            <span class="material-symbols-outlined text-[18px]">dashboard</span>
+            <span>Dashboard Inicio</span>
+          </a>
+          <a href="#" class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-on-surface-variant hover:bg-surface-container hover:text-on-surface font-medium">
+            <span class="material-symbols-outlined text-[18px]">point_of_sale</span>
+            <span>Nueva Venta (POS)</span>
+          </a>
+          <a href="#" class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-on-surface-variant hover:bg-surface-container hover:text-on-surface font-medium">
+            <span class="material-symbols-outlined text-[18px]">receipt_long</span>
+            <span>Comprobantes de Pago</span>
+          </a>
+          <a href="#" class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-on-surface-variant hover:bg-surface-container hover:text-on-surface font-medium">
+            <span class="material-symbols-outlined text-[18px]">calendar_month</span>
+            <span>Agenda & Citas Clínicas</span>
+          </a>
+          <a href="#" class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-on-surface-variant hover:bg-surface-container hover:text-on-surface font-medium">
+            <span class="material-symbols-outlined text-[18px]">group</span>
+            <span>Clientes & Pacientes</span>
+          </a>
+          <a href="#" class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-on-surface-variant hover:bg-surface-container hover:text-on-surface font-medium">
+            <span class="material-symbols-outlined text-[18px]">inventory_2</span>
+            <span>Inventario & Almacén</span>
+          </a>
+          <a href="#" class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-on-surface-variant hover:bg-surface-container hover:text-on-surface font-medium">
+            <span class="material-symbols-outlined text-[18px]">account_balance</span>
+            <span>Reportes & SUNAT</span>
+          </a>
+
+          <div class="pt-3 px-2 py-1 text-[10px] font-bold text-outline uppercase tracking-wider">Configuración & Cuenta</div>
+          <!-- Item Activo: Mi Perfil -->
+          <a href="#perfil" class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-md bg-teal-50 text-primary font-bold border-l-2 border-primary">
+            <span class="material-symbols-outlined text-[18px]">manage_accounts</span>
+            <span>Mi Perfil y Seguridad</span>
+          </a>
+          <a href="#estados-sistema" class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-on-surface-variant hover:bg-surface-container hover:text-on-surface font-medium">
+            <span class="material-symbols-outlined text-[18px]">widgets</span>
+            <span>Estados del Sistema (UI)</span>
+          </a>
+          <a href="#" class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-on-surface-variant hover:bg-surface-container hover:text-on-surface font-medium">
+            <span class="material-symbols-outlined text-[18px]">security</span>
+            <span>Roles y Permisos</span>
+          </a>
+          <a href="#" class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-on-surface-variant hover:bg-surface-container hover:text-on-surface font-medium">
+            <span class="material-symbols-outlined text-[18px]">settings_suggest</span>
+            <span>Configuración SUNAT / OSE</span>
+          </a>
+        </nav>
+      </div>
+
+      <!-- Footer Sidebar con estado del servidor -->
+      <div class="p-3 border-t border-outline-variant bg-surface-container-lowest/50 text-[11px] space-y-1 text-outline">
+        <div class="flex items-center justify-between">
+          <span class="flex items-center gap-1 text-emerald-700 font-semibold">
+            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+            Servidor Lima: Activo
+          </span>
+          <span class="font-mono text-[10px]">v4.14-pe</span>
+        </div>
+        <p class="text-[10px] text-outline">Última sync SUNAT: Hoy 08:35</p>
+      </div>
+    </aside>
+
+    <!-- ÁREA DE CONTENIDO PRINCIPAL SCROLLABLE -->
+    <main class="flex-1 overflow-y-auto scrollbar-thin bg-surface">
+
+      <!-- HEADER DE LA PÁGINA CON BREADCRUMB & TABS -->
+      <div class="bg-surface-container-lowest border-b border-outline-variant px-4 lg:px-8 py-3 shrink-0">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <div class="flex items-center gap-1.5 text-xs text-outline mb-1">
+              <a href="#" class="hover:text-primary">Menú de usuario</a>
+              <span class="material-symbols-outlined text-[14px]">chevron_right</span>
+              <span class="text-on-surface font-semibold">Mi Perfil y Seguridad</span>
+            </div>
+            <div class="flex items-center gap-2.5">
+              <h1 class="text-lg md:text-xl font-bold text-on-surface tracking-tight">Mi Perfil, Credenciales y Estados del Sistema</h1>
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal-100 text-teal-800 border border-teal-200">2FA Activo</span>
+            </div>
+          </div>
+
+          <!-- Quick Actions -->
+          <div class="flex items-center gap-2">
+            <a href="#estados-sistema" class="px-3 py-1.5 rounded-md border border-primary text-primary hover:bg-teal-50 text-xs font-semibold flex items-center gap-1.5 transition-colors">
+              <span class="material-symbols-outlined text-[16px]">view_quilt</span>
+              <span>Ver Estados Reutilizables (6)</span>
+            </a>
+            <button class="px-3 py-1.5 rounded-md bg-primary hover:bg-primary-hover text-white text-xs font-bold shadow-xs flex items-center gap-1.5 transition-colors">
+              <span class="material-symbols-outlined text-[16px]">save</span>
+              <span>Guardar Cambios</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Pestañas internas ancladas -->
+        <div class="flex items-center gap-4 mt-3 pt-1 border-t border-outline-variant/60 text-xs">
+          <a href="#perfil" class="py-1.5 border-b-2 border-primary text-primary font-bold flex items-center gap-1.5">
+            <span class="material-symbols-outlined text-[16px]">person</span>
+            <span>1. Datos del Usuario & Seguridad</span>
+          </a>
+          <a href="#sesiones" class="py-1.5 text-on-surface-variant hover:text-on-surface font-medium flex items-center gap-1.5">
+            <span class="material-symbols-outlined text-[16px]">devices</span>
+            <span>Sesiones Activas (3)</span>
+          </a>
+          <a href="#preferencias" class="py-1.5 text-on-surface-variant hover:text-on-surface font-medium flex items-center gap-1.5">
+            <span class="material-symbols-outlined text-[16px]">tune</span>
+            <span>Preferencias & Notificaciones</span>
+          </a>
+          <a href="#estados-sistema" class="py-1.5 text-on-surface-variant hover:text-on-surface font-semibold text-teal-800 flex items-center gap-1.5">
+            <span class="material-symbols-outlined text-[16px]">category</span>
+            <span>2. Catálogo de Estados del Sistema (a-f)</span>
+          </a>
+        </div>
+      </div>
+
+      <div class="p-4 lg:p-8 space-y-8 max-w-7xl mx-auto">
+
+        <!-- ========================================================================= -->
+        <!-- PARTE 1: MI PERFIL Y SEGURIDAD (DASHBOARD PERSONAL OPERATIVO)            -->
+        <!-- ========================================================================= -->
+
+        <!-- SECCIÓN 1: DATOS PERSONALES Y AVATAR PROFESIONAL -->
+        <section id="perfil" class="bg-surface-container-lowest rounded-xl border border-outline-variant p-4 md:p-6 shadow-xs">
+          <div class="flex flex-col md:flex-row md:items-start justify-between gap-6 pb-6 border-b border-outline-variant/70">
+            <!-- Left: Avatar grande con initials CM + Quick Bio -->
+            <div class="flex items-start gap-4">
+              <div class="relative shrink-0">
+                <div class="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-primary text-white flex items-center justify-center font-bold text-2xl md:text-3xl shadow-md ring-4 ring-teal-100">
+                  CM
+                </div>
+                <button class="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-white border border-outline-variant text-on-surface-variant hover:text-primary flex items-center justify-center shadow-xs" title="Cambiar fotografía">
+                  <span class="material-symbols-outlined text-[14px]">photo_camera</span>
+                </button>
+              </div>
+              <div class="space-y-1">
+                <div class="flex flex-wrap items-center gap-2">
+                  <h2 class="text-base md:text-lg font-bold text-on-surface">Carlos Alberto Mendoza Ruiz</h2>
+                  <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-teal-100 text-teal-900 border border-teal-200">Administrador General</span>
+                  <span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">COP 34291</span>
+                </div>
+                <p class="text-xs text-outline">Tenant: <strong>Clínica Dental Sonrisa S.A.C.</strong> · RUC 20608941235 · Sede Miraflores (Principal)</p>
+                <div class="flex flex-wrap items-center gap-3 pt-1 text-xs text-on-surface-variant">
+                  <span class="flex items-center gap-1">
+                    <span class="material-symbols-outlined text-[15px] text-outline">badge</span>
+                    DNI: <strong class="text-on-surface font-mono">10721098</strong> (RENIEC Verificado)
+                  </span>
+                  <span class="text-outline">·</span>
+                  <span class="flex items-center gap-1">
+                    <span class="material-symbols-outlined text-[15px] text-outline">mail</span>
+                    carlos.mendoza@clinicasonrisa.pe
+                  </span>
+                  <span class="text-outline">·</span>
+                  <span class="flex items-center gap-1">
+                    <span class="material-symbols-outlined text-[15px] text-outline">phone_iphone</span>
+                    +51 987 654 321
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: Metadata regional / Configuración locale -->
+            <div class="grid grid-cols-2 sm:grid-cols-2 gap-2 bg-surface-container-low p-3 rounded-lg border border-outline-variant/60 text-xs min-w-[260px]">
+              <div>
+                <span class="text-[10px] text-outline block">Idioma del Sistema</span>
+                <span class="font-semibold text-on-surface flex items-center gap-1">
+                  <span class="text-xs">🇵🇪</span> Español (Perú)
+                </span>
+              </div>
+              <div>
+                <span class="text-[10px] text-outline block">Zona Horaria Oficial</span>
+                <span class="font-mono font-semibold text-on-surface">America/Lima (UTC-5)</span>
+              </div>
+              <div>
+                <span class="text-[10px] text-outline block">Moneda de Operación</span>
+                <span class="font-semibold text-primary font-mono">Soles (S/ · PEN)</span>
+              </div>
+              <div>
+                <span class="text-[10px] text-outline block">Formato de Fecha</span>
+                <span class="font-mono font-semibold text-on-surface">dd/mm/aaaa</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Formulario Editable de Datos de Contacto -->
+          <div class="pt-5">
+            <h3 class="text-xs font-bold text-on-surface uppercase tracking-wider mb-3 flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-[16px] text-primary">person_outline</span>
+              Información de Contacto Profesional
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+              <div>
+                <label class="block text-[11px] font-medium text-outline mb-1">Nombres Completos</label>
+                <input type="text" value="Carlos Alberto Mendoza Ruiz" class="w-full h-8 px-2.5 rounded border border-outline text-xs bg-surface-container-lowest focus:border-primary focus:ring-1 focus:ring-primary"/>
+              </div>
+              <div>
+                <label class="block text-[11px] font-medium text-outline mb-1">Correo Electrónico Corporativo</label>
+                <input type="email" value="carlos.mendoza@clinicasonrisa.pe" class="w-full h-8 px-2.5 rounded border border-outline text-xs bg-surface-container-lowest focus:border-primary focus:ring-1 focus:ring-primary"/>
+              </div>
+              <div>
+                <label class="block text-[11px] font-medium text-outline mb-1">Celular / WhatsApp para Alertas (+51)</label>
+                <input type="text" value="+51 987 654 321" class="w-full h-8 px-2.5 rounded border border-outline text-xs bg-surface-container-lowest focus:border-primary focus:ring-1 focus:ring-primary"/>
+              </div>
+              <div>
+                <label class="block text-[11px] font-medium text-outline mb-1">Documento de Identidad (RENIEC)</label>
+                <div class="relative">
+                  <input type="text" value="10721098" disabled class="w-full h-8 px-2.5 rounded border border-outline-variant text-xs bg-surface-container-low text-on-surface font-mono cursor-not-allowed"/>
+                  <span class="material-symbols-outlined absolute right-2 top-2 text-emerald-600 text-[16px]">verified</span>
+                </div>
+              </div>
+              <div>
+                <label class="block text-[11px] font-medium text-outline mb-1">Colegio Odontológico del Perú (COP)</label>
+                <input type="text" value="COP 34291" class="w-full h-8 px-2.5 rounded border border-outline text-xs bg-surface-container-lowest focus:border-primary focus:ring-1 focus:ring-primary"/>
+              </div>
+              <div>
+                <label class="block text-[11px] font-medium text-outline mb-1">Rol Asignado en Sede</label>
+                <input type="text" value="Administrador General Multisede & Director Médico" disabled class="w-full h-8 px-2.5 rounded border border-outline-variant text-xs bg-surface-container-low text-on-surface cursor-not-allowed"/>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- SECCIÓN 2: SEGURIDAD Y ACCESO (CONTRASEÑA, MEDIDOR, 2FA, LLAVES DE HARDWARE) -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+          <!-- Tarjeta: Cambio de Contraseña & Medidor de Fortaleza -->
+          <div class="bg-surface-container-lowest rounded-xl border border-outline-variant p-4 md:p-5 shadow-xs flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between mb-3">
+                <h3 class="text-xs font-bold text-on-surface uppercase tracking-wider flex items-center gap-1.5">
+                  <span class="material-symbols-outlined text-[18px] text-primary">password</span>
+                  Seguridad de la Contraseña
+                </h3>
+                <span class="text-[11px] text-outline font-medium">Último cambio: Hace 42 días</span>
+              </div>
+              <p class="text-xs text-on-surface-variant mb-4">
+                La contraseña protege el acceso a facturación SUNAT, datos médicos de pacientes y certificados digitales.
+              </p>
+
+              <div class="space-y-3 text-xs">
+                <div>
+                  <label class="block text-[11px] font-medium text-outline mb-1">Contraseña Actual</label>
+                  <input type="password" value="••••••••••••••••" class="w-full h-8 px-2.5 rounded border border-outline text-xs bg-surface-container-lowest focus:border-primary focus:ring-1 focus:ring-primary"/>
+                </div>
+                <div>
+                  <label class="block text-[11px] font-medium text-outline mb-1">Nueva Contraseña</label>
+                  <input type="password" value="Dental$Sonrisa#2026!" class="w-full h-8 px-2.5 rounded border border-outline text-xs bg-surface-container-lowest focus:border-primary focus:ring-1 focus:ring-primary"/>
+                </div>
+
+                <!-- Medidor de fortaleza de contraseña interactivo -->
+                <div class="space-y-1.5 pt-1">
+                  <div class="flex items-center justify-between text-[11px]">
+                    <span class="text-outline">Fortaleza de seguridad:</span>
+                    <span class="font-bold text-emerald-700 flex items-center gap-1">
+                      <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                      Muy Fuerte (92/100)
+                    </span>
+                  </div>
+                  <!-- Barras de progreso -->
+                  <div class="grid grid-cols-4 gap-1.5 h-1.5">
+                    <div class="bg-emerald-500 rounded-full"></div>
+                    <div class="bg-emerald-500 rounded-full"></div>
+                    <div class="bg-emerald-500 rounded-full"></div>
+                    <div class="bg-emerald-500 rounded-full"></div>
+                  </div>
+                  <div class="grid grid-cols-2 gap-1 text-[10px] text-on-surface-variant pt-1">
+                    <span class="flex items-center gap-1 text-emerald-700">✓ Mínimo 10 caracteres (tiene 18)</span>
+                    <span class="flex items-center gap-1 text-emerald-700">✓ Números y mayúsculas</span>
+                    <span class="flex items-center gap-1 text-emerald-700">✓ Carácter especial (!, #, $)</span>
+                    <span class="flex items-center gap-1 text-emerald-700">✓ Sin palabras comunes ni RUC</span>
+                  </div>
+                </div>
+
+                <div>
+                  <label class="block text-[11px] font-medium text-outline mb-1">Confirmar Nueva Contraseña</label>
+                  <input type="password" value="Dental$Sonrisa#2026!" class="w-full h-8 px-2.5 rounded border border-outline text-xs bg-surface-container-lowest focus:border-primary focus:ring-1 focus:ring-primary"/>
+                </div>
+              </div>
+            </div>
+
+            <div class="pt-4 mt-4 border-t border-outline-variant/60 flex items-center justify-between">
+              <span class="text-[11px] text-outline">Exigir cambio cada 90 días</span>
+              <button class="px-3 py-1.5 rounded bg-surface-container text-on-surface hover:bg-surface-container-high border border-outline text-xs font-semibold">
+                Actualizar Contraseña
+              </button>
+            </div>
+          </div>
+
+          <!-- Tarjeta: Autenticación en Dos Pasos (2FA) & Llaves FIDO2 -->
+          <div class="bg-surface-container-lowest rounded-xl border border-outline-variant p-4 md:p-5 shadow-xs flex flex-col justify-between">
+            <div class="space-y-4">
+              <div class="flex items-center justify-between">
+                <h3 class="text-xs font-bold text-on-surface uppercase tracking-wider flex items-center gap-1.5">
+                  <span class="material-symbols-outlined text-[18px] text-primary">phonelink_lock</span>
+                  Autenticación en Dos Fases (2FA)
+                </h3>
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">ACTIVO</span>
+              </div>
+
+              <!-- Método 1: App Autenticadora -->
+              <div class="p-3 rounded-lg border border-teal-200 bg-teal-50/40 flex items-start justify-between gap-3">
+                <div class="flex items-start gap-2.5">
+                  <div class="p-1.5 rounded-md bg-teal-100 text-primary shrink-0">
+                    <span class="material-symbols-outlined text-[20px]">smartphone</span>
+                  </div>
+                  <div class="text-xs">
+                    <div class="font-bold text-teal-950 flex items-center gap-1.5">
+                      <span>Google Authenticator / Authy</span>
+                      <span class="text-[10px] text-teal-800 font-mono font-medium">(TOTP 6 dígitos)</span>
+                    </div>
+                    <p class="text-[11px] text-teal-900 mt-0.5">Vinculado a: <strong>Google Pixel 8 Pro</strong> · Configurado el 14/01/2026</p>
+                  </div>
+                </div>
+                <button class="text-xs text-primary hover:underline font-semibold shrink-0">Reconfigurar</button>
+              </div>
+
+              <!-- Códigos de respaldo (Backup Codes) -->
+              <div class="p-3 rounded-lg border border-outline-variant bg-surface-container-low flex items-center justify-between text-xs">
+                <div class="flex items-center gap-2">
+                  <span class="material-symbols-outlined text-[18px] text-outline">key</span>
+                  <div>
+                    <span class="font-bold text-on-surface block">Códigos de Recuperación</span>
+                    <span class="text-[11px] text-outline">8 de 10 códigos disponibles para emergencias sin celular</span>
+                  </div>
+                </div>
+                <button class="px-2.5 py-1 rounded border border-outline bg-surface-container-lowest hover:bg-surface-container text-xs font-semibold">
+                  Ver Códigos
+                </button>
+              </div>
+
+              <!-- Método 2: Llaves de Seguridad de Hardware (FIDO2 / WebAuthn) -->
+              <div class="p-3 rounded-lg border border-outline-variant bg-surface-container-low space-y-2 text-xs">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <span class="material-symbols-outlined text-[18px] text-primary">usb</span>
+                    <div>
+                      <span class="font-bold text-on-surface">Llave de Seguridad Física (FIDO2)</span>
+                      <span class="text-[11px] text-outline block">Yubikey 5 NFC (Recomendada para administradores)</span>
+                    </div>
+                  </div>
+                  <span class="px-1.5 py-0.2 rounded text-[10px] font-mono bg-surface-container-high text-outline">1 registrada</span>
+                </div>
+                <div class="flex items-center justify-between text-[11px] pt-1 border-t border-outline-variant/60 text-outline">
+                  <span>Último uso con llave USB: Ayer 14:15 hrs</span>
+                  <button class="text-primary hover:underline font-semibold">+ Registrar nueva llave</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="pt-3 border-t border-outline-variant/60 flex items-center justify-between text-xs text-outline">
+              <span class="flex items-center gap-1 text-emerald-800 font-medium">
+                <span class="material-symbols-outlined text-[14px]">shield</span> Cumple normativa SUNAT de custodia digital
+              </span>
+              <button class="text-error hover:underline text-xs font-medium">Desactivar 2FA</button>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- SECCIÓN 3: SESIONES ACTIVAS (TABLA CON 3 SESIONES, SEDES, DISPOSITIVO Y BOTÓN CERRAR) -->
+        <section id="sesiones" class="bg-surface-container-lowest rounded-xl border border-outline-variant p-4 md:p-6 shadow-xs">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+            <div>
+              <h3 class="text-xs font-bold text-on-surface uppercase tracking-wider flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-[18px] text-primary">devices</span>
+                Sesiones Activas en el Sistema (3)
+              </h3>
+              <p class="text-xs text-outline mt-0.5">Control de terminales con acceso a comprobantes, caja e historial de pacientes.</p>
+            </div>
+            <button class="px-3 py-1.5 rounded-md border border-error/40 text-error hover:bg-red-50 text-xs font-semibold flex items-center gap-1 self-start sm:self-auto transition-colors">
+              <span class="material-symbols-outlined text-[16px]">logout</span>
+              <span>Cerrar todas las otras sesiones</span>
+            </button>
+          </div>
+
+          <!-- Tabla Operativa de Sesiones -->
+          <div class="overflow-x-auto rounded-lg border border-outline-variant">
+            <table class="w-full text-left text-xs border-collapse">
+              <thead class="bg-surface-container-low text-on-surface-variant font-semibold border-b border-outline-variant">
+                <tr>
+                  <th class="py-2.5 px-3">Dispositivo & Sistema</th>
+                  <th class="py-2.5 px-3">Navegador</th>
+                  <th class="py-2.5 px-3">Dirección IP</th>
+                  <th class="py-2.5 px-3">Sede SUNAT Asignada</th>
+                  <th class="py-2.5 px-3">Último Acceso / Estado</th>
+                  <th class="py-2.5 px-3 text-right">Acción</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-outline-variant/60">
+                <!-- SESIÓN 1 (ACTUAL) -->
+                <tr class="bg-teal-50/40 hover:bg-teal-50/60 transition-colors">
+                  <td class="py-2.5 px-3">
+                    <div class="flex items-center gap-2">
+                      <div class="p-1 rounded bg-teal-100 text-primary">
+                        <span class="material-symbols-outlined text-[16px]">laptop_mac</span>
+                      </div>
+                      <div>
+                        <div class="font-bold text-on-surface flex items-center gap-1.5">
+                          <span>Apple MacBook Pro 16" (macOS 15)</span>
+                          <span class="px-1.5 py-0.2 rounded text-[9px] font-bold bg-primary text-white">ESTA SESIÓN</span>
+                        </div>
+                        <span class="text-[10px] text-outline font-mono">ID: SES-2026-9014-PE</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="py-2.5 px-3 text-on-surface">Chrome 128.0 (Desktop)</td>
+                  <td class="py-2.5 px-3 font-mono text-outline">190.237.45.112 (Lima, PE)</td>
+                  <td class="py-2.5 px-3">
+                    <span class="inline-flex items-center gap-1 text-on-surface font-medium">
+                      <span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+                      Sede Miraflores (Anexo 0000)
+                    </span>
+                  </td>
+                  <td class="py-2.5 px-3">
+                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-900 border border-emerald-200">
+                      <span class="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
+                      En línea ahora
+                    </span>
+                  </td>
+                  <td class="py-2.5 px-3 text-right">
+                    <span class="text-[11px] text-outline font-medium italic">Sesión activa actual</span>
+                  </td>
+                </tr>
+
+                <!-- SESIÓN 2 -->
+                <tr class="hover:bg-surface-container-low transition-colors">
+                  <td class="py-2.5 px-3">
+                    <div class="flex items-center gap-2">
+                      <div class="p-1 rounded bg-surface-container text-on-surface-variant">
+                        <span class="material-symbols-outlined text-[16px]">smartphone</span>
+                      </div>
+                      <div>
+                        <div class="font-semibold text-on-surface">Google Pixel 8 Pro (Android 15)</div>
+                        <span class="text-[10px] text-outline font-mono">App Móvil PerúSaaS</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="py-2.5 px-3 text-on-surface">PWA Mobile v4.12</td>
+                  <td class="py-2.5 px-3 font-mono text-outline">181.176.82.90 (Claro Perú 5G)</td>
+                  <td class="py-2.5 px-3 text-on-surface-variant">Multisede (Móvil)</td>
+                  <td class="py-2.5 px-3 text-outline">Hoy a las 07:15 hrs</td>
+                  <td class="py-2.5 px-3 text-right">
+                    <button class="px-2 py-1 rounded hover:bg-red-50 text-error font-semibold text-[11px] border border-outline-variant hover:border-red-300">
+                      Cerrar
+                    </button>
+                  </td>
+                </tr>
+
+                <!-- SESIÓN 3 -->
+                <tr class="hover:bg-surface-container-low transition-colors">
+                  <td class="py-2.5 px-3">
+                    <div class="flex items-center gap-2">
+                      <div class="p-1 rounded bg-surface-container text-on-surface-variant">
+                        <span class="material-symbols-outlined text-[16px]">desktop_windows</span>
+                      </div>
+                      <div>
+                        <div class="font-semibold text-on-surface">Terminal POS Caja San Isidro</div>
+                        <span class="text-[10px] text-outline font-mono">Windows 11 Enterprise</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="py-2.5 px-3 text-on-surface">MS Edge 127.0</td>
+                  <td class="py-2.5 px-3 font-mono text-outline">200.48.118.5 (Fibra Óptica)</td>
+                  <td class="py-2.5 px-3">
+                    <span class="inline-flex items-center gap-1 text-on-surface font-medium">
+                      <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
+                      Sede San Isidro (Anexo 0001)
+                    </span>
+                  </td>
+                  <td class="py-2.5 px-3 text-outline">Ayer 18:40 hrs</td>
+                  <td class="py-2.5 px-3 text-right">
+                    <button class="px-2 py-1 rounded hover:bg-red-50 text-error font-semibold text-[11px] border border-outline-variant hover:border-red-300">
+                      Cerrar
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- SECCIÓN 4: PREFERENCIAS DEL SISTEMA & CANALES DE NOTIFICACIÓN -->
+        <section id="preferencias" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+          <!-- Preferencias Visuales y de Densidad -->
+          <div class="bg-surface-container-lowest rounded-xl border border-outline-variant p-4 md:p-5 shadow-xs space-y-4">
+            <h3 class="text-xs font-bold text-on-surface uppercase tracking-wider flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-[18px] text-primary">palette</span>
+              Preferencias Visuales & Operativas
+            </h3>
+
+            <!-- Selector de Tema -->
+            <div>
+              <label class="block text-xs font-semibold text-on-surface mb-2">Tema de la Interfaz</label>
+              <div class="grid grid-cols-3 gap-2 text-xs">
+                <label class="cursor-pointer border-2 border-primary bg-teal-50/50 rounded-lg p-2.5 flex flex-col items-center gap-1.5 text-center transition-all">
+                  <input type="radio" name="uiTheme" checked class="sr-only"/>
+                  <span class="material-symbols-outlined text-[22px] text-primary">light_mode</span>
+                  <span class="font-bold text-primary">Tema Claro</span>
+                  <span class="text-[10px] text-outline">Recomendado clínicas</span>
+                </label>
+                <label class="cursor-pointer border border-outline-variant hover:border-primary/40 rounded-lg p-2.5 flex flex-col items-center gap-1.5 text-center transition-all">
+                  <input type="radio" name="uiTheme" class="sr-only"/>
+                  <span class="material-symbols-outlined text-[22px] text-on-surface-variant">dark_mode</span>
+                  <span class="font-semibold text-on-surface">Tema Oscuro</span>
+                  <span class="text-[10px] text-outline">Menor fatiga visual</span>
+                </label>
+                <label class="cursor-pointer border border-outline-variant hover:border-primary/40 rounded-lg p-2.5 flex flex-col items-center gap-1.5 text-center transition-all">
+                  <input type="radio" name="uiTheme" class="sr-only"/>
+                  <span class="material-symbols-outlined text-[22px] text-on-surface-variant">settings_brightness</span>
+                  <span class="font-semibold text-on-surface">Automático</span>
+                  <span class="text-[10px] text-outline">Sigue el SO del equipo</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Densidad de Tablas y Datos -->
+            <div>
+              <label class="block text-xs font-semibold text-on-surface mb-2">Densidad de Información en Tablas</label>
+              <div class="grid grid-cols-3 gap-2 text-xs">
+                <label class="cursor-pointer border-2 border-primary bg-teal-50/30 rounded-lg p-2 flex items-center justify-center gap-1.5 font-bold text-primary">
+                  <span class="material-symbols-outlined text-[16px]">density_small</span>
+                  <span>Compacta (Alta)</span>
+                </label>
+                <label class="cursor-pointer border border-outline-variant hover:border-primary/40 rounded-lg p-2 flex items-center justify-center gap-1.5 text-on-surface font-medium">
+                  <span class="material-symbols-outlined text-[16px]">density_medium</span>
+                  <span>Normal</span>
+                </label>
+                <label class="cursor-pointer border border-outline-variant hover:border-primary/40 rounded-lg p-2 flex items-center justify-center gap-1.5 text-on-surface font-medium">
+                  <span class="material-symbols-outlined text-[16px]">density_large</span>
+                  <span>Espaciada</span>
+                </label>
+              </div>
+              <p class="text-[10px] text-outline mt-1.5">La densidad compacta optimiza la vista en pantallas de 1440px para ver más filas de ventas y pacientes sin scroll.</p>
+            </div>
+
+            <!-- Accesos rápidos / Teclado -->
+            <div class="pt-3 border-t border-outline-variant/60 flex items-center justify-between text-xs">
+              <div>
+                <span class="font-semibold text-on-surface block">Atajos de Teclado Operativos</span>
+                <span class="text-[10px] text-outline">F1 (POS), F2 (Catálogo), F3 (GRE), Ctrl+K (Búsqueda)</span>
+              </div>
+              <input type="checkbox" checked class="rounded border-outline text-primary focus:ring-primary"/>
+            </div>
+          </div>
+
+          <!-- Matriz de Notificaciones Multicanal -->
+          <div class="bg-surface-container-lowest rounded-xl border border-outline-variant p-4 md:p-5 shadow-xs space-y-4">
+            <div class="flex items-center justify-between">
+              <h3 class="text-xs font-bold text-on-surface uppercase tracking-wider flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-[18px] text-primary">notifications_active</span>
+                Canales y Tipos de Notificación
+              </h3>
+              <span class="text-[10px] text-outline">Alertas en tiempo real</span>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-xs text-left border-collapse">
+                <thead class="text-[11px] font-semibold text-outline border-b border-outline-variant">
+                  <tr>
+                    <th class="py-2">Tipo de Alerta</th>
+                    <th class="py-2 text-center">Correo</th>
+                    <th class="py-2 text-center">WhatsApp</th>
+                    <th class="py-2 text-center">Push / Web</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-outline-variant/40">
+                  <!-- SUNAT / OSE -->
+                  <tr>
+                    <td class="py-2.5">
+                      <div class="font-bold text-on-surface">Eventos SUNAT & OSE</div>
+                      <div class="text-[10px] text-outline">Rechazos CDR, caídas de servicio, vigencia de certificado digital</div>
+                    </td>
+                    <td class="py-2.5 text-center">
+                      <input type="checkbox" checked class="rounded border-outline text-primary focus:ring-primary"/>
+                    </td>
+                    <td class="py-2.5 text-center">
+                      <input type="checkbox" checked class="rounded border-outline text-primary focus:ring-primary"/>
+                    </td>
+                    <td class="py-2.5 text-center">
+                      <input type="checkbox" checked class="rounded border-outline text-primary focus:ring-primary"/>
+                    </td>
+                  </tr>
+
+                  <!-- Stock e Inventario -->
+                  <tr>
+                    <td class="py-2.5">
+                      <div class="font-bold text-on-surface">Quiebre de Stock Crítico</div>
+                      <div class="text-[10px] text-outline">Resinas, anestésicos y mermas en almacén Miraflores</div>
+                    </td>
+                    <td class="py-2.5 text-center">
+                      <input type="checkbox" checked class="rounded border-outline text-primary focus:ring-primary"/>
+                    </td>
+                    <td class="py-2.5 text-center">
+                      <input type="checkbox" class="rounded border-outline text-primary focus:ring-primary"/>
+                    </td>
+                    <td class="py-2.5 text-center">
+                      <input type="checkbox" checked class="rounded border-outline text-primary focus:ring-primary"/>
+                    </td>
+                  </tr>
+
+                  <!-- Cobranzas & Crédito -->
+                  <tr>
+                    <td class="py-2.5">
+                      <div class="font-bold text-on-surface">Cobranzas y Vencimientos</div>
+                      <div class="text-[10px] text-outline">Facturas al crédito Rimac EPS y cuotas vencidas</div>
+                    </td>
+                    <td class="py-2.5 text-center">
+                      <input type="checkbox" class="rounded border-outline text-primary focus:ring-primary"/>
+                    </td>
+                    <td class="py-2.5 text-center">
+                      <input type="checkbox" checked class="rounded border-outline text-primary focus:ring-primary"/>
+                    </td>
+                    <td class="py-2.5 text-center">
+                      <input type="checkbox" checked class="rounded border-outline text-primary focus:ring-primary"/>
+                    </td>
+                  </tr>
+
+                  <!-- Agenda Clínica -->
+                  <tr>
+                    <td class="py-2.5">
+                      <div class="font-bold text-on-surface">Cancelaciones y Espera Clínica</div>
+                      <div class="text-[10px] text-outline">Huecos liberados en sillones 1, 2 y 3</div>
+                    </td>
+                    <td class="py-2.5 text-center">
+                      <input type="checkbox" class="rounded border-outline text-primary focus:ring-primary"/>
+                    </td>
+                    <td class="py-2.5 text-center">
+                      <input type="checkbox" checked class="rounded border-outline text-primary focus:ring-primary"/>
+                    </td>
+                    <td class="py-2.5 text-center">
+                      <input type="checkbox" checked class="rounded border-outline text-primary focus:ring-primary"/>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </section>
+
+        <!-- SECCIÓN 5: ACTIVIDAD RECIENTE DEL USUARIO (ÚLTIMAS 8 ACCIONES CON FECHA E IP) -->
+        <section class="bg-surface-container-lowest rounded-xl border border-outline-variant p-4 md:p-6 shadow-xs">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h3 class="text-xs font-bold text-on-surface uppercase tracking-wider flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-[18px] text-primary">history</span>
+                Registro de Actividad Reciente de Carlos Mendoza (Últimas 8 Acciones)
+              </h3>
+              <p class="text-xs text-outline mt-0.5">Auditoría con firma temporal e IP para cumplimiento tributario y trazabilidad clínica.</p>
+            </div>
+            <button class="text-xs text-primary hover:underline font-semibold flex items-center gap-1">
+              <span class="material-symbols-outlined text-[16px]">download</span>
+              Exportar Log Completo
+            </button>
+          </div>
+
+          <div class="overflow-x-auto rounded-lg border border-outline-variant">
+            <table class="w-full text-left text-xs border-collapse">
+              <thead class="bg-surface-container-low text-on-surface-variant font-semibold border-b border-outline-variant">
+                <tr>
+                  <th class="py-2 px-3">Fecha y Hora</th>
+                  <th class="py-2 px-3">Módulo</th>
+                  <th class="py-2 px-3">Acción Realizada</th>
+                  <th class="py-2 px-3">Entidad Afectada</th>
+                  <th class="py-2 px-3">Dirección IP</th>
+                  <th class="py-2 px-3 text-right">Resultado</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-outline-variant/60 font-mono text-[11px]">
+                <!-- Item 1 -->
+                <tr class="hover:bg-surface-container-low">
+                  <td class="py-2 px-3 font-sans text-on-surface">18/09/2026 09:15:22</td>
+                  <td class="py-2 px-3 font-sans"><span class="px-1.5 py-0.2 rounded bg-teal-100 text-teal-800 text-[10px] font-bold">Ventas / CPE</span></td>
+                  <td class="py-2 px-3 font-sans text-on-surface">Emisión de Factura Electrónica</td>
+                  <td class="py-2 px-3 font-bold text-primary">F001-00000842</td>
+                  <td class="py-2 px-3 text-outline">190.237.45.112</td>
+                  <td class="py-2 px-3 text-right font-sans"><span class="text-emerald-700 font-bold">Aceptado CDR</span></td>
+                </tr>
+                <!-- Item 2 -->
+                <tr class="hover:bg-surface-container-low">
+                  <td class="py-2 px-3 font-sans text-on-surface">18/09/2026 08:50:11</td>
+                  <td class="py-2 px-3 font-sans"><span class="px-1.5 py-0.2 rounded bg-surface-container text-on-surface-variant text-[10px] font-bold">Agenda</span></td>
+                  <td class="py-2 px-3 font-sans text-on-surface">Reprogramación de Cita Sillón 1</td>
+                  <td class="py-2 px-3 font-sans text-on-surface">María Castillo Quispe</td>
+                  <td class="py-2 px-3 text-outline">190.237.45.112</td>
+                  <td class="py-2 px-3 text-right font-sans"><span class="text-emerald-700 font-semibold">Exitoso</span></td>
+                </tr>
+                <!-- Item 3 -->
+                <tr class="hover:bg-surface-container-low">
+                  <td class="py-2 px-3 font-sans text-on-surface">17/09/2026 18:22:45</td>
+                  <td class="py-2 px-3 font-sans"><span class="px-1.5 py-0.2 rounded bg-amber-100 text-amber-900 text-[10px] font-bold">Caja POS</span></td>
+                  <td class="py-2 px-3 font-sans text-on-surface">Arqueo y Cierre de Turno Z</td>
+                  <td class="py-2 px-3 font-bold text-on-surface">Caja Miraflores #01</td>
+                  <td class="py-2 px-3 text-outline">190.237.45.112</td>
+                  <td class="py-2 px-3 text-right font-sans"><span class="text-emerald-700 font-semibold">Cuadrado OK</span></td>
+                </tr>
+                <!-- Item 4 -->
+                <tr class="hover:bg-surface-container-low">
+                  <td class="py-2 px-3 font-sans text-on-surface">17/09/2026 16:10:04</td>
+                  <td class="py-2 px-3 font-sans"><span class="px-1.5 py-0.2 rounded bg-teal-100 text-teal-800 text-[10px] font-bold">Logística</span></td>
+                  <td class="py-2 px-3 font-sans text-on-surface">Conformidad Guía GRE Remitente</td>
+                  <td class="py-2 px-3 font-bold text-primary">T001-000145</td>
+                  <td class="py-2 px-3 text-outline">190.237.45.112</td>
+                  <td class="py-2 px-3 text-right font-sans"><span class="text-emerald-700 font-semibold">En tránsito</span></td>
+                </tr>
+                <!-- Item 5 -->
+                <tr class="hover:bg-surface-container-low">
+                  <td class="py-2 px-3 font-sans text-on-surface">17/09/2026 11:35:19</td>
+                  <td class="py-2 px-3 font-sans"><span class="px-1.5 py-0.2 rounded bg-blue-100 text-blue-900 text-[10px] font-bold">Cotizaciones</span></td>
+                  <td class="py-2 px-3 font-sans text-on-surface">Aprobación de Proforma B2B</td>
+                  <td class="py-2 px-3 font-bold text-primary">COT-2026-00128</td>
+                  <td class="py-2 px-3 text-outline">181.176.82.90</td>
+                  <td class="py-2 px-3 text-right font-sans"><span class="text-emerald-700 font-semibold">Aprobada</span></td>
+                </tr>
+                <!-- Item 6 -->
+                <tr class="hover:bg-surface-container-low">
+                  <td class="py-2 px-3 font-sans text-on-surface">16/09/2026 15:40:02</td>
+                  <td class="py-2 px-3 font-sans"><span class="px-1.5 py-0.2 rounded bg-purple-100 text-purple-900 text-[10px] font-bold">Seguridad</span></td>
+                  <td class="py-2 px-3 font-sans text-on-surface">Invitación y Asignación de Rol</td>
+                  <td class="py-2 px-3 font-sans text-on-surface">Dra. Claudia Ramos</td>
+                  <td class="py-2 px-3 text-outline">190.237.45.112</td>
+                  <td class="py-2 px-3 text-right font-sans"><span class="text-emerald-700 font-semibold">Enviado</span></td>
+                </tr>
+                <!-- Item 7 -->
+                <tr class="hover:bg-surface-container-low">
+                  <td class="py-2 px-3 font-sans text-on-surface">16/09/2026 10:18:50</td>
+                  <td class="py-2 px-3 font-sans"><span class="px-1.5 py-0.2 rounded bg-teal-100 text-teal-800 text-[10px] font-bold">Kardex</span></td>
+                  <td class="py-2 px-3 font-sans text-on-surface">Generación TXT PLE 13.1</td>
+                  <td class="py-2 px-3 font-sans text-on-surface">Periodo 2026-08</td>
+                  <td class="py-2 px-3 text-outline">190.237.45.112</td>
+                  <td class="py-2 px-3 text-right font-sans"><span class="text-emerald-700 font-semibold">Descargado</span></td>
+                </tr>
+                <!-- Item 8 -->
+                <tr class="hover:bg-surface-container-low">
+                  <td class="py-2 px-3 font-sans text-on-surface">15/09/2026 08:30:14</td>
+                  <td class="py-2 px-3 font-sans"><span class="px-1.5 py-0.2 rounded bg-slate-100 text-slate-800 text-[10px] font-bold">Acceso</span></td>
+                  <td class="py-2 px-3 font-sans text-on-surface">Inicio de sesión exitoso con 2FA</td>
+                  <td class="py-2 px-3 font-sans text-on-surface">MacBook Pro 16"</td>
+                  <td class="py-2 px-3 text-outline">190.237.45.112</td>
+                  <td class="py-2 px-3 text-right font-sans"><span class="text-emerald-700 font-semibold">Autorizado</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+
+        <!-- ========================================================================= -->
+        <!-- PARTE 2: ESTADOS DEL SISTEMA REUTILIZABLES (CATÁLOGO UI a - f)           -->
+        <!-- ========================================================================= -->
+
+        <div id="estados-sistema" class="pt-6 border-t-2 border-dashed border-outline-variant">
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-2 mb-6">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-primary text-white">CATÁLOGO UI</span>
+                <h2 class="text-base md:text-lg font-bold text-on-surface">Parte 2: Estados del Sistema Reutilizables</h2>
+              </div>
+              <p class="text-xs text-outline mt-0.5">Componentes de estado consistentes con el design system PerúSaaS para toda la aplicación.</p>
+            </div>
+            <span class="text-xs font-semibold text-primary bg-teal-50 border border-teal-200 px-2.5 py-1 rounded-md self-start md:self-auto">
+              6 Estados Implementados (a, b, c, d, e, f)
+            </span>
+          </div>
+
+          <!-- GRID DE ESTADOS DEL SISTEMA -->
+          <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+
+            <!-- ESTADO (a): ESTADO VACÍO DE UNA TABLA (EMPTY STATE) -->
+            <div class="bg-surface-container-lowest rounded-xl border border-outline-variant p-5 shadow-xs flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between border-b border-outline-variant/60 pb-2 mb-4">
+                  <span class="text-[11px] font-mono font-bold text-primary">(a) Estado Vacío</span>
+                  <span class="text-[10px] text-outline">Módulo Comprobantes / Ventas</span>
+                </div>
+
+                <div class="text-center py-6 px-4 space-y-3">
+                  <!-- Ilustración lineal mínima -->
+                  <div class="w-16 h-16 mx-auto rounded-full bg-surface-container-low border border-outline-variant flex items-center justify-center text-outline">
+                    <svg class="w-8 h-8 text-outline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                  </div>
+
+                  <div>
+                    <h4 class="text-sm font-bold text-on-surface">Aún no hay comprobantes en este período</h4>
+                    <p class="text-xs text-on-surface-variant max-w-xs mx-auto mt-1">
+                      No se encontraron boletas ni facturas electrónicas emitidas en la sede seleccionada para este rango de fechas.
+                    </p>
+                  </div>
+
+                  <div class="pt-1 flex flex-col sm:flex-row items-center justify-center gap-2">
+                    <button class="w-full sm:w-auto px-4 py-2 rounded-md bg-primary hover:bg-primary-hover text-white text-xs font-bold shadow-xs flex items-center justify-center gap-1.5 transition-colors">
+                      <span class="material-symbols-outlined text-[16px]">add</span>
+                      <span>Emitir el primero</span>
+                    </button>
+                    <button class="w-full sm:w-auto px-3 py-2 rounded-md border border-outline text-on-surface hover:bg-surface-container text-xs font-semibold">
+                      Limpiar filtros
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="pt-3 border-t border-outline-variant/40 text-[10px] text-outline flex items-center justify-between">
+                <span>Tabla: listado_cpe_sunat</span>
+                <span class="text-emerald-700 font-semibold">Empty State OK</span>
+              </div>
+            </div>
+
+            <!-- ESTADO (b): ESTADO DE CARGA (SKELETONS KPI + TABLA) -->
+            <div class="bg-surface-container-lowest rounded-xl border border-outline-variant p-5 shadow-xs flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between border-b border-outline-variant/60 pb-2 mb-3">
+                  <span class="text-[11px] font-mono font-bold text-primary">(b) Estado de Carga (Skeleton)</span>
+                  <span class="text-[10px] text-primary font-mono animate-pulse">Sincronizando...</span>
+                </div>
+
+                <!-- Skeleton KPI Cards (2 mini cards) -->
+                <div class="grid grid-cols-2 gap-2 mb-3">
+                  <div class="p-2.5 rounded-lg border border-outline-variant/60 bg-surface-container-low space-y-2">
+                    <div class="h-2.5 w-16 rounded animate-shimmer"></div>
+                    <div class="h-5 w-24 rounded animate-shimmer"></div>
+                    <div class="h-2 w-12 rounded animate-shimmer"></div>
+                  </div>
+                  <div class="p-2.5 rounded-lg border border-outline-variant/60 bg-surface-container-low space-y-2">
+                    <div class="h-2.5 w-16 rounded animate-shimmer"></div>
+                    <div class="h-5 w-20 rounded animate-shimmer"></div>
+                    <div class="h-2 w-14 rounded animate-shimmer"></div>
+                  </div>
+                </div>
+
+                <!-- Skeleton Table Rows -->
+                <div class="rounded border border-outline-variant/60 overflow-hidden space-y-1.5 p-2 bg-surface-container-low/40">
+                  <div class="flex items-center justify-between gap-2 pb-1 border-b border-outline-variant/40">
+                    <div class="h-2.5 w-20 rounded animate-shimmer"></div>
+                    <div class="h-2.5 w-16 rounded animate-shimmer"></div>
+                    <div class="h-2.5 w-12 rounded animate-shimmer"></div>
+                  </div>
+                  <div class="flex items-center justify-between gap-2 py-1">
+                    <div class="h-3 w-28 rounded animate-shimmer"></div>
+                    <div class="h-3 w-20 rounded animate-shimmer"></div>
+                    <div class="h-3 w-14 rounded animate-shimmer"></div>
+                  </div>
+                  <div class="flex items-center justify-between gap-2 py-1">
+                    <div class="h-3 w-24 rounded animate-shimmer"></div>
+                    <div class="h-3 w-16 rounded animate-shimmer"></div>
+                    <div class="h-3 w-14 rounded animate-shimmer"></div>
+                  </div>
+                  <div class="flex items-center justify-between gap-2 py-1">
+                    <div class="h-3 w-32 rounded animate-shimmer"></div>
+                    <div class="h-3 w-14 rounded animate-shimmer"></div>
+                    <div class="h-3 w-12 rounded animate-shimmer"></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="pt-3 border-t border-outline-variant/40 text-[10px] text-outline flex items-center justify-between">
+                <span>Animación CSS Shimmer pura</span>
+                <span class="text-primary font-semibold">Carga no intrusiva</span>
+              </div>
+            </div>
+
+            <!-- ESTADO (c): ERROR DE SINCRONIZACIÓN SUNAT CON REINTENTO Y DETALLE TÉCNICO -->
+            <div class="bg-surface-container-lowest rounded-xl border border-red-200 p-5 shadow-xs flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between border-b border-red-100 pb-2 mb-3">
+                  <span class="text-[11px] font-mono font-bold text-error">(c) Error Sincronización SUNAT</span>
+                  <span class="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold bg-red-100 text-red-800">HTTP 503</span>
+                </div>
+
+                <div class="space-y-2.5 text-xs">
+                  <div class="flex items-start gap-2.5 p-3 rounded-lg bg-red-50 border border-red-200 text-red-950">
+                    <span class="material-symbols-outlined text-[20px] text-error shrink-0">cloud_off</span>
+                    <div>
+                      <h4 class="font-bold text-xs text-red-900">Falla de comunicación con OSE / Servidor SUNAT</h4>
+                      <p class="text-[11px] text-red-800 mt-0.5">
+                        No se pudo obtener el CDR para 2 comprobantes en cola. El servicio de recepción SUNAT reporta intermitencia.
+                      </p>
+                    </div>
+                  </div>
+
+                  <!-- Detalle Técnico Colapsable (HTML Details) -->
+                  <details class="group rounded border border-outline-variant bg-surface-container-low text-[11px]">
+                    <summary class="p-2 font-semibold text-on-surface cursor-pointer flex items-center justify-between select-none">
+                      <span class="flex items-center gap-1">
+                        <span class="material-symbols-outlined text-[14px] text-outline">terminal</span>
+                        Detalle técnico (Trazabilidad SoapFault)
+                      </span>
+                      <span class="material-symbols-outlined text-[14px] transition-transform group-open:rotate-180">expand_more</span>
+                    </summary>
+                    <div class="p-2 pt-0 font-mono text-[10px] text-outline border-t border-outline-variant/60 bg-surface-container-lowest space-y-1">
+                      <p>Error Code: <strong class="text-error">SUNAT-ERR-0152</strong></p>
+                      <p>Endpoint: <span class="break-all">https://e-factura.sunat.gob.pe/ol-ti-itcpfcons/billService</span></p>
+                      <p>Timeout: 30000ms alcanzado · Intento 3 de 5</p>
+                      <p>Ticket pre-firmado: #TK-20260918-00412</p>
+                    </div>
+                  </details>
+
+                  <div class="flex items-center gap-2 pt-1">
+                    <button class="flex-1 py-1.5 rounded bg-error text-white font-bold text-xs hover:bg-red-700 flex items-center justify-center gap-1 transition-colors">
+                      <span class="material-symbols-outlined text-[15px]">refresh</span>
+                      <span>Reintentar Transmisión</span>
+                    </button>
+                    <button class="py-1.5 px-2.5 rounded border border-outline hover:bg-surface-container text-xs font-medium">
+                      Ver Cola
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="pt-3 border-t border-outline-variant/40 text-[10px] text-outline flex items-center justify-between">
+                <span>Comprobantes seguros en almacenamiento local</span>
+                <span class="text-error font-semibold">Alerta crítica</span>
+              </div>
+            </div>
+
+            <!-- ESTADO (d): PÁGINA 404 NO ENCONTRAMOS ESTA PÁGINA CON BUSCADOR -->
+            <div class="bg-surface-container-lowest rounded-xl border border-outline-variant p-5 shadow-xs flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between border-b border-outline-variant/60 pb-2 mb-3">
+                  <span class="text-[11px] font-mono font-bold text-primary">(d) Estado 404 No Encontrado</span>
+                  <span class="text-[10px] font-mono text-outline">HTTP 404 Not Found</span>
+                </div>
+
+                <div class="text-center py-2 space-y-3">
+                  <div class="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-teal-50 text-primary border border-teal-200 font-mono font-bold text-lg">
+                    404
+                  </div>
+
+                  <div>
+                    <h4 class="text-sm font-bold text-on-surface">No encontramos esta página</h4>
+                    <p class="text-xs text-on-surface-variant mt-0.5">
+                      La ruta solicitada puede haber cambiado de sede, fue dada de baja o no existe en el sistema.
+                    </p>
+                  </div>
+
+                  <!-- Buscador integrado -->
+                  <div class="relative max-w-xs mx-auto text-xs">
+                    <span class="material-symbols-outlined absolute left-2.5 top-2 text-outline text-[16px]">search</span>
+                    <input type="text" placeholder="Buscar paciente, factura o módulo..." class="w-full h-8 pl-8 pr-2.5 rounded border border-outline text-xs bg-surface-container-lowest focus:border-primary focus:ring-1 focus:ring-primary"/>
+                  </div>
+
+                  <!-- Accesos rápidos -->
+                  <div class="flex flex-wrap items-center justify-center gap-1.5 text-[11px] pt-1">
+                    <span class="text-outline">Ir a:</span>
+                    <a href="#" class="px-2 py-0.5 rounded bg-surface-container hover:bg-surface-container-high text-primary font-medium">Dashboard</a>
+                    <a href="#" class="px-2 py-0.5 rounded bg-surface-container hover:bg-surface-container-high text-primary font-medium">Nueva Venta</a>
+                    <a href="#" class="px-2 py-0.5 rounded bg-surface-container hover:bg-surface-container-high text-primary font-medium">Agenda</a>
+                  </div>
+                </div>
+              </div>
+
+              <div class="pt-3 border-t border-outline-variant/40 text-[10px] text-outline flex items-center justify-between">
+                <span>Componente reutilizable en Router SPA</span>
+                <span class="text-primary font-semibold">Navegación asistida</span>
+              </div>
+            </div>
+
+            <!-- ESTADO (e): SIN PERMISOS 403 (ROL CAJERO POS SIN ACCESO A REPORTES SUNAT) -->
+            <div class="bg-surface-container-lowest rounded-xl border border-amber-200 p-5 shadow-xs flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between border-b border-amber-100 pb-2 mb-3">
+                  <span class="text-[11px] font-mono font-bold text-amber-800">(e) Sin Permisos 403 (RBAC)</span>
+                  <span class="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold bg-amber-100 text-amber-900">HTTP 403</span>
+                </div>
+
+                <div class="text-center py-2 space-y-3">
+                  <div class="w-12 h-12 mx-auto rounded-full bg-amber-50 border border-amber-300 text-amber-700 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-[24px]">lock_person</span>
+                  </div>
+
+                  <div>
+                    <h4 class="text-sm font-bold text-on-surface">Acceso restringido por política de rol</h4>
+                    <div class="p-2 rounded-lg bg-amber-50/70 border border-amber-200 text-xs text-amber-950 mt-1.5 text-left space-y-1">
+                      <p>
+                        Tu rol actual <strong>Cajero POS</strong> no tiene permisos de lectura para el módulo de <strong>Reportes Tributarios y SUNAT (PDT 621 / RVIE)</strong>.
+                      </p>
+                      <p class="text-[11px] text-amber-800 font-medium">
+                        Requiere rol: <strong>Administrador General</strong> o <strong>Contador Auditor</strong>.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div class="pt-1 flex flex-col sm:flex-row items-center justify-center gap-2 text-xs">
+                    <button class="w-full sm:w-auto px-3.5 py-1.5 rounded bg-amber-700 hover:bg-amber-800 text-white font-bold flex items-center justify-center gap-1 transition-colors">
+                      <span class="material-symbols-outlined text-[16px]">mail</span>
+                      <span>Solicitar acceso al administrador</span>
+                    </button>
+                    <button class="w-full sm:w-auto px-3 py-1.5 rounded border border-outline hover:bg-surface-container font-medium text-on-surface">
+                      Volver al POS
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="pt-3 border-t border-outline-variant/40 text-[10px] text-outline flex items-center justify-between">
+                <span>Tenant: Clínica Dental Sonrisa</span>
+                <span class="text-amber-800 font-semibold">Seguridad RBAC</span>
+              </div>
+            </div>
+
+            <!-- ESTADO (f): SESIÓN EXPIRADA POR INACTIVIDAD -->
+            <div class="bg-surface-container-lowest rounded-xl border border-outline-variant p-5 shadow-xs flex flex-col justify-between">
+              <div>
+                <div class="flex items-center justify-between border-b border-outline-variant/60 pb-2 mb-3">
+                  <span class="text-[11px] font-mono font-bold text-outline">(f) Sesión Expirada</span>
+                  <span class="text-[10px] font-mono text-outline">Timeout 15 min</span>
+                </div>
+
+                <div class="text-center py-2 space-y-3">
+                  <div class="w-12 h-12 mx-auto rounded-full bg-surface-container border border-outline-variant text-outline flex items-center justify-center">
+                    <span class="material-symbols-outlined text-[24px]">timer_off</span>
+                  </div>
+
+                  <div>
+                    <h4 class="text-sm font-bold text-on-surface">Tu sesión ha expirado por inactividad</h4>
+                    <p class="text-xs text-on-surface-variant mt-0.5">
+                      Por seguridad tributaria y protección de historias clínicas odontológicas, cerramos tu sesión tras 15 minutos sin interacción.
+                    </p>
+                  </div>
+
+                  <!-- Quick re-login inline -->
+                  <div class="p-2.5 rounded-lg border border-outline-variant bg-surface-container-low text-left space-y-2 text-xs">
+                    <div class="flex items-center gap-2">
+                      <div class="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center font-bold text-[10px]">CM</div>
+                      <span class="font-bold text-on-surface">carlos.mendoza@clinicasonrisa.pe</span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                      <input type="password" placeholder="Ingresa tu contraseña para reanudar..." class="flex-1 h-7 px-2 rounded border border-outline text-xs bg-surface-container-lowest focus:border-primary"/>
+                      <button class="h-7 px-3 rounded bg-primary text-white font-bold text-xs hover:bg-primary-hover">
+                        Reanudar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="pt-3 border-t border-outline-variant/40 text-[10px] text-outline flex items-center justify-between">
+                <span>Conserva el estado de pantalla no guardado</span>
+                <span class="text-primary font-semibold">Reanudación instantánea</span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+
+    </main>
+  </div>
+
+  <!-- FOOTER DESKTOP COMPACTO -->
+  <footer class="hidden md:flex bg-surface-container-lowest border-t border-outline-variant h-9 px-4 items-center justify-between shrink-0 text-[11px] text-outline z-20">
+    <div class="flex items-center gap-4">
+      <span class="flex items-center gap-1.5 text-on-surface font-semibold">
+        <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+        PerúSaaS Cloud Dental v4.14-pe
+      </span>
+      <span>·</span>
+      <span>Sede: <strong>Miraflores (Av. Larco 743)</strong></span>
+      <span>·</span>
+      <span>Terminal: <strong>ADM-01</strong></span>
+    </div>
+    <div class="flex items-center gap-4">
+      <span>Zona: <strong>America/Lima (UTC-5)</strong></span>
+      <span>·</span>
+      <span class="text-primary font-medium">Soporte Técnico: 01 800-SONRISA</span>
+    </div>
+  </footer>
+
+  <!-- BOTTOM NAVIGATION RESPONSIVE (MÓVIL ≤767px) -->
+  <nav class="md:hidden fixed bottom-0 left-0 right-0 h-14 bg-surface-container-lowest border-t border-outline-variant flex items-center justify-around z-50 text-[10px] px-1">
+    <a href="#" class="flex flex-col items-center gap-0.5 text-outline hover:text-primary">
+      <span class="material-symbols-outlined text-[20px]">dashboard</span>
+      <span>Inicio</span>
+    </a>
+    <a href="#" class="flex flex-col items-center gap-0.5 text-outline hover:text-primary">
+      <span class="material-symbols-outlined text-[20px]">point_of_sale</span>
+      <span>POS</span>
+    </a>
+    <a href="#" class="flex flex-col items-center gap-0.5 text-outline hover:text-primary">
+      <span class="material-symbols-outlined text-[20px]">calendar_month</span>
+      <span>Agenda</span>
+    </a>
+    <a href="#" class="flex flex-col items-center gap-0.5 text-outline hover:text-primary">
+      <span class="material-symbols-outlined text-[20px]">receipt_long</span>
+      <span>CPE</span>
+    </a>
+    <!-- Tab Activo: Perfil -->
+    <a href="#perfil" class="flex flex-col items-center gap-0.5 text-primary font-bold">
+      <div class="w-5 h-5 rounded-full bg-primary text-white flex items-center justify-center font-bold text-[9px]">CM</div>
+      <span>Perfil</span>
+    </a>
+  </nav>
+
+  <!-- SCRIPT MINIMO PARA DEMOSTRAR INTERACTIVIDAD DEL SWITCH DE TEMA -->
+  <script>
+    function setTheme(mode) {
+      const html = document.documentElement;
+      const btnLight = document.getElementById('btnThemeLight');
+      const btnDark = document.getElementById('btnThemeDark');
+      const btnAuto = document.getElementById('btnThemeAuto');
+
+      [btnLight, btnDark, btnAuto].forEach(b => {
+        b.className = "px-2 py-0.5 rounded text-outline hover:text-on-surface flex items-center gap-1";
+      });
+
+      if (mode === 'dark') {
+        html.classList.add('dark');
+        btnDark.className = "px-2 py-0.5 rounded bg-surface-container-lowest text-primary font-bold shadow-xs flex items-center gap-1";
+      } else if (mode === 'light') {
+        html.classList.remove('dark');
+        btnLight.className = "px-2 py-0.5 rounded bg-surface-container-lowest text-primary font-bold shadow-xs flex items-center gap-1";
+      } else {
+        html.classList.remove('dark');
+        btnAuto.className = "px-2 py-0.5 rounded bg-surface-container-lowest text-primary font-bold shadow-xs";
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,1129 @@
+<!DOCTYPE html>
+
+<html class="h-full bg-[#F5F6FA]" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>PerúSaaS Admin - Configuración Global de Plataforma</title>
+<!-- Fonts: Inter & Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap&family=Geist+Mono:wght@400;500;600" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Lucide Icons -->
+<script src="https://unpkg.com/lucide@latest"></script>
+<!-- Tailwind CSS CDN -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "outline": "#777587",
+            "on-tertiary-container": "#7df1bd",
+            "surface-dim": "#d2d9f4",
+            "on-secondary": "#ffffff",
+            "on-background": "#131b2e",
+            "on-surface-variant": "#464555",
+            "error": "#ba1a1a",
+            "surface-container-highest": "#dae2fd",
+            "secondary": "#712ae2",
+            "primary": "#3525cd",
+            "tertiary-container": "#006e4c",
+            "on-error-container": "#93000a",
+            "surface-container-high": "#e2e7ff",
+            "primary-fixed": "#e2dfff",
+            "surface-container-low": "#f2f3ff",
+            "tertiary-fixed-dim": "#68dba9",
+            "background": "#faf8ff",
+            "primary-container": "#4f46e5",
+            "on-secondary-fixed-variant": "#5a00c6",
+            "on-error": "#ffffff",
+            "secondary-fixed-dim": "#d2bbff",
+            "primary-fixed-dim": "#c3c0ff",
+            "outline-variant": "#c7c4d8",
+            "on-secondary-fixed": "#25005a",
+            "tertiary": "#005338",
+            "on-primary-container": "#dad7ff",
+            "surface-variant": "#dae2fd",
+            "surface": "#faf8ff",
+            "secondary-container": "#8a4cfc",
+            "inverse-primary": "#c3c0ff",
+            "surface-container": "#eaedff",
+            "surface-bright": "#faf8ff",
+            "on-primary-fixed-variant": "#3323cc",
+            "inverse-on-surface": "#eef0ff",
+            "on-tertiary-fixed": "#002114",
+            "on-secondary-container": "#fffbff",
+            "on-surface": "#131b2e",
+            "inverse-surface": "#283044",
+            "on-primary-fixed": "#0f0069",
+            "surface-container-lowest": "#ffffff",
+            "on-tertiary-fixed-variant": "#005137",
+            "surface-tint": "#4d44e3",
+            "secondary-fixed": "#eaddff",
+            "error-container": "#ffdad6",
+            "on-primary": "#ffffff",
+            "on-tertiary": "#ffffff",
+            "tertiary-fixed": "#85f8c4",
+            "slate-sidebar": "#0F172A",
+            "canvas-bg": "#F5F6FA"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "spacing": {
+            "space-xs": "0.25rem",
+            "space-lg": "1.5rem",
+            "space-xl": "2rem",
+            "space-sm": "0.5rem",
+            "gutter": "1.5rem",
+            "space-md": "1rem",
+            "margin": "2rem"
+          },
+          "fontFamily": {
+            "headline-lg": ["Geist"],
+            "body-sm": ["Geist"],
+            "label-md": ["Geist"],
+            "display-sm": ["Geist"],
+            "display-lg": ["Geist"],
+            "body-md": ["Geist"],
+            "label-lg": ["Geist"],
+            "mono-data": ["Geist"],
+            "headline-md": ["Geist"],
+            "headline-sm": ["Geist"],
+            "label-sm": ["Geist"],
+            "body-lg": ["Geist"]
+          },
+          "fontSize": {
+            "headline-lg": ["24px", { lineHeight: "32px", letterSpacing: "-0.02em", fontWeight: "600" }],
+            "body-sm": ["12px", { lineHeight: "16px", fontWeight: "400" }],
+            "label-md": ["13px", { lineHeight: "18px", fontWeight: "500" }],
+            "display-sm": ["28px", { lineHeight: "36px", letterSpacing: "-0.02em", fontWeight: "700" }],
+            "display-lg": ["36px", { lineHeight: "44px", letterSpacing: "-0.025em", fontWeight: "700" }],
+            "body-md": ["14px", { lineHeight: "20px", fontWeight: "400" }],
+            "label-lg": ["14px", { lineHeight: "20px", fontWeight: "500" }],
+            "mono-data": ["13px", { lineHeight: "18px", letterSpacing: "-0.01em", fontWeight: "500" }],
+            "headline-md": ["20px", { lineHeight: "28px", letterSpacing: "-0.015em", fontWeight: "600" }],
+            "headline-sm": ["16px", { lineHeight: "24px", letterSpacing: "-0.01em", fontWeight: "600" }],
+            "label-sm": ["11px", { lineHeight: "14px", letterSpacing: "0.04em", fontWeight: "600" }],
+            "body-lg": ["16px", { lineHeight: "24px", fontWeight: "400" }]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      display: inline-block;
+      vertical-align: middle;
+      line-height: 1;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #0F172A;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 3px;
+    }
+    .canvas-scrollbar::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    .canvas-scrollbar::-webkit-scrollbar-track {
+      background: #F1F5F9;
+    }
+    .canvas-scrollbar::-webkit-scrollbar-thumb {
+      background: #CBD5E1;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body class="h-full overflow-hidden bg-[#F5F6FA] text-on-surface font-body-md antialiased flex">
+<!-- ========================================================================= -->
+<!-- SIDEBAR NAVIGATION RAIL (Width: 260px, Fixed Desktop Dock) -->
+<!-- ========================================================================= -->
+<aside class="fixed inset-y-0 left-0 w-[260px] bg-[#0F172A] text-slate-300 flex flex-col justify-between z-40 border-r border-slate-800 select-none">
+<!-- Top Branding & Cluster Health Status -->
+<div class="p-4 border-b border-slate-800">
+<div class="flex items-center justify-between mb-2">
+<div class="flex items-center gap-2.5">
+<div class="w-9 h-9 rounded-lg bg-primary-container flex items-center justify-center text-white font-bold shadow-md shadow-indigo-900/50">
+<i class="w-5 h-5 text-white" data-lucide="cloud-cog"></i>
+</div>
+<div>
+<div class="flex items-center gap-1.5">
+<span class="font-headline-sm text-white font-bold tracking-tight">PerúSaaS</span>
+<span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">SUPER</span>
+</div>
+<p class="text-[11px] text-slate-400">Consola Multitenant B2B</p>
+</div>
+</div>
+</div>
+<!-- Cluster Environment Chip -->
+<div class="mt-2.5 flex items-center justify-between px-2.5 py-1.5 rounded-md bg-slate-900/80 border border-slate-800 text-[11px]">
+<div class="flex items-center gap-2">
+<span class="relative flex h-2 w-2">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+</span>
+<span class="text-slate-300 font-medium truncate">Cluster PE-Lima (Prod)</span>
+</div>
+<span class="text-emerald-400 font-mono text-[10px] font-semibold">99.98%</span>
+</div>
+</div>
+<!-- Navigation Menu Items -->
+<nav class="flex-1 overflow-y-auto custom-scrollbar py-3 px-2 space-y-1">
+<div class="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+        Monitoreo &amp; Clientes
+      </div>
+<!-- Item: Dashboard Maestro -->
+<a class="flex items-center justify-between px-3 py-2 text-slate-300 hover:text-white hover:bg-slate-800/60 rounded-lg text-body-md transition-colors group" href="#">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-slate-400 group-hover:text-white text-[20px]">dashboard</span>
+<span>Panel General</span>
+</div>
+</a>
+<!-- Item: Tenants -->
+<a class="flex items-center justify-between px-3 py-2 text-slate-300 hover:text-white hover:bg-slate-800/60 rounded-lg text-body-md transition-colors group" href="#">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-slate-400 group-hover:text-white text-[20px]">domain</span>
+<span>Tenants y Sedes</span>
+</div>
+<span class="text-[11px] font-medium px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">1,482</span>
+</a>
+<!-- Item: Salud OSE / SUNAT -->
+<a class="flex items-center justify-between px-3 py-2 text-slate-300 hover:text-white hover:bg-slate-800/60 rounded-lg text-body-md transition-colors group" href="#">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-slate-400 group-hover:text-white text-[20px]">verified_user</span>
+<span>Salud OSE / SUNAT</span>
+</div>
+<span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+</a>
+<!-- Item: Soporte & Tickets SLA -->
+<a class="flex items-center justify-between px-3 py-2 text-slate-300 hover:text-white hover:bg-slate-800/60 rounded-lg text-body-md transition-colors group" href="#">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-slate-400 group-hover:text-white text-[20px]">support_agent</span>
+<span>Soporte Nivel 3</span>
+</div>
+<span class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">14 act.</span>
+</a>
+<div class="pt-3 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+        Infraestructura &amp; Finanzas
+      </div>
+<!-- Item: Facturación y Núcleo -->
+<a class="flex items-center justify-between px-3 py-2 text-slate-300 hover:text-white hover:bg-slate-800/60 rounded-lg text-body-md transition-colors group" href="#">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-slate-400 group-hover:text-white text-[20px]">receipt_long</span>
+<span>Facturación y Núcleo</span>
+</div>
+</a>
+<!-- Item: Auditoría SIEM & Logs -->
+<a class="flex items-center justify-between px-3 py-2 text-slate-300 hover:text-white hover:bg-slate-800/60 rounded-lg text-body-md transition-colors group" href="#">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-slate-400 group-hover:text-white text-[20px]">history</span>
+<span>Auditoría de Acciones</span>
+</div>
+</a>
+<!-- Item: Certificados PFX & Bóveda -->
+<a class="flex items-center justify-between px-3 py-2 text-slate-300 hover:text-white hover:bg-slate-800/60 rounded-lg text-body-md transition-colors group" href="#">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-slate-400 group-hover:text-white text-[20px]">shield</span>
+<span>Certificados y OSE</span>
+</div>
+</a>
+<!-- Item: CONFIGURACIÓN GLOBAL (ACTIVE STATE ACCORDING TO SPEC) -->
+<a class="relative flex items-center justify-between px-3 py-2 bg-slate-800 text-white rounded-lg text-body-md font-medium border-l-4 border-indigo-500 shadow-sm shadow-indigo-950" href="#">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-indigo-400 text-[20px]">tune</span>
+<span class="text-white font-semibold">Configuración Global</span>
+</div>
+<span class="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse"></span>
+</a>
+</nav>
+<!-- Sidebar Footer / SuperAdmin Persona -->
+<div class="p-3 border-t border-slate-800 bg-slate-950/60">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2.5 overflow-hidden">
+<div class="w-9 h-9 rounded-full bg-gradient-to-tr from-indigo-600 to-violet-600 border border-indigo-400/40 flex items-center justify-center text-white font-semibold text-xs shrink-0">
+            CB
+          </div>
+<div class="truncate">
+<div class="text-xs font-semibold text-white truncate">Carlos M. Benavides</div>
+<div class="text-[10px] text-slate-400 truncate">SRE / SuperAdmin N3</div>
+</div>
+</div>
+<button class="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-slate-800 rounded-md transition-colors" title="Cerrar sesión de SuperAdmin">
+<i class="w-4 h-4" data-lucide="log-out"></i>
+</button>
+</div>
+</div>
+</aside>
+<!-- ========================================================================= -->
+<!-- MAIN WORKSPACE CONTAINER (Left margin 260px for sidebar) -->
+<!-- ========================================================================= -->
+<div class="ml-[260px] flex-1 flex flex-col h-full min-w-0 bg-[#F5F6FA]">
+<!-- ========================================================================= -->
+<!-- TOP NAVIGATION & UTILITY BAR (Height: 64px, White, Clean) -->
+<!-- ========================================================================= -->
+<header class="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between z-30 shrink-0">
+<!-- Breadcrumbs & Quick Search -->
+<div class="flex items-center gap-4">
+<nav class="flex items-center gap-2 text-body-sm text-slate-500">
+<span class="font-medium text-slate-700">Plataforma</span>
+<i class="w-3.5 h-3.5 text-slate-400" data-lucide="chevron-right"></i>
+<span>Gobernanza &amp; Núcleo</span>
+<i class="w-3.5 h-3.5 text-slate-400" data-lucide="chevron-right"></i>
+<span class="font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded">Configuración Global</span>
+</nav>
+</div>
+<!-- Operational Status & Primary Actions -->
+<div class="flex items-center gap-3">
+<!-- Live Cluster Timestamp -->
+<div class="hidden xl:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-xs font-mono text-slate-600">
+<i class="w-3.5 h-3.5 text-slate-400" data-lucide="clock"></i>
+<span>En vivo:</span>
+<span class="font-semibold text-slate-800">15:44:12 UTC-5</span>
+</div>
+<!-- SUNAT / OSE Direct Feed -->
+<div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 font-medium">
+<span class="relative flex h-2 w-2">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-600"></span>
+</span>
+<span>SUNAT / OSE En Línea</span>
+</div>
+<!-- Currency Context Pill -->
+<div class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-700">
+<span class="text-slate-400 font-mono">PEN</span>
+<span>Perú (S/)</span>
+</div>
+<!-- Notification Bell with Active Badge -->
+<button class="relative w-10 h-10 flex items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors">
+<i class="w-4 h-4" data-lucide="bell"></i>
+<span class="absolute top-2 right-2 w-2 h-2 rounded-full bg-amber-500 ring-2 ring-white"></span>
+</button>
+<!-- SRE Terminal Trigger -->
+<button class="h-10 px-3 flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-900 text-slate-100 hover:bg-slate-800 text-body-sm font-medium transition-colors shadow-sm">
+<i class="w-4 h-4 text-emerald-400" data-lucide="terminal"></i>
+<span>Consola SRE</span>
+</button>
+<!-- Emergency Maintenance Trigger -->
+<button class="h-10 px-3 flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 text-body-sm font-medium transition-colors">
+<i class="w-4 h-4 text-rose-600" data-lucide="shield-alert"></i>
+<span>Bloqueo Emergencia</span>
+</button>
+</div>
+</header>
+<!-- ========================================================================= -->
+<!-- SCROLLABLE PAGE CANVAS -->
+<!-- ========================================================================= -->
+<main class="flex-1 overflow-y-auto canvas-scrollbar p-6 space-y-6">
+<!-- AUDIT BANNER NOTIFICATION -->
+<div class="rounded-lg bg-indigo-900/90 text-white p-3.5 px-4 flex items-center justify-between shadow-sm border border-indigo-700">
+<div class="flex items-center gap-3 text-body-md">
+<span class="material-symbols-outlined text-indigo-300 text-[20px]">verified_user</span>
+<div>
+<span class="font-semibold text-white">Aviso Crítico de Plataforma:</span>
+<span class="text-indigo-100 ml-1">Los cambios en esta pantalla se propagan en tiempo real al cluster de producción de PerúSaaS (1,482 tenants) y son auditados criptográficamente con SHA-256 en SIEM.</span>
+</div>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<span class="text-xs bg-indigo-800/80 text-indigo-200 border border-indigo-600/60 px-2 py-1 rounded font-mono">ISO/IEC 27001</span>
+<span class="text-xs bg-indigo-800/80 text-indigo-200 border border-indigo-600/60 px-2 py-1 rounded font-mono">Ley 29733</span>
+</div>
+</div>
+<!-- HEADER TITLE & GLOBAL CONTROLS (Unified 40px actions) -->
+<div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+<div class="space-y-1">
+<div class="flex items-center gap-3">
+<h1 class="font-headline-lg text-slate-900 tracking-tight">Configuración del Sistema &amp; Parámetros Globales</h1>
+<span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">En Producción</span>
+</div>
+<p class="text-body-sm text-slate-500 max-w-4xl">
+            Ajustes maestros para 1,482 tenants: infraestructura de enrutamiento multi-tenant, correos transaccionales (SES/SendGrid), WhatsApp Business API Meta, orquestación de pasarelas peruanas (Niubiz, Culqi, Mercado Pago, PagoEfectivo) y retención tributaria SUNAT.
+          </p>
+</div>
+<div class="flex items-center gap-2.5 shrink-0">
+<!-- Audit Log History -->
+<button class="h-10 px-3.5 flex items-center gap-2 rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-400 font-medium text-body-sm transition-all shadow-xs">
+<i class="w-4 h-4 text-slate-500" data-lucide="history"></i>
+<span>Historial (Audit Log)</span>
+</button>
+<!-- Test Global Connectivity (with animated refresh icon) -->
+<button class="h-10 px-3.5 flex items-center gap-2 rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-400 font-medium text-body-sm transition-all shadow-xs group">
+<i class="w-4 h-4 text-indigo-600 animate-spin group-hover:rotate-180 transition-transform" data-lucide="refresh-cw"></i>
+<span>Probar Conectividad</span>
+</button>
+<!-- Primary Save Button -->
+<button class="h-10 px-4 flex items-center gap-2 rounded-lg bg-[#4F46E5] text-white hover:bg-indigo-700 font-medium text-body-sm transition-all shadow-sm shadow-indigo-600/30">
+<i class="w-4 h-4" data-lucide="save"></i>
+<span>Guardar Parámetros</span>
+</button>
+</div>
+</div>
+<!-- ========================================================================= -->
+<!-- SECTION PILL NAVIGATION TABS (40px Height Uniformity) -->
+<!-- ========================================================================= -->
+<div class="flex items-center gap-2 border-b border-slate-200 pb-1 overflow-x-auto custom-scrollbar">
+<!-- Tab 1: Active -->
+<button class="h-10 px-4 flex items-center gap-2 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-700 font-semibold text-body-sm shrink-0">
+<i class="w-4 h-4 text-indigo-600" data-lucide="globe"></i>
+<span>Dominios &amp; Subdominios</span>
+<span class="ml-1 text-[11px] bg-indigo-200/70 text-indigo-900 px-2 py-0.5 rounded-full font-bold">1,482</span>
+</button>
+<!-- Tab 2 -->
+<button class="h-10 px-4 flex items-center gap-2 rounded-lg bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 font-medium text-body-sm shrink-0 transition-colors">
+<i class="w-4 h-4 text-slate-500" data-lucide="mail"></i>
+<span>Correo Transaccional</span>
+<span class="ml-1 text-[11px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded-full font-medium">99.8%</span>
+</button>
+<!-- Tab 3 -->
+<button class="h-10 px-4 flex items-center gap-2 rounded-lg bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 font-medium text-body-sm shrink-0 transition-colors">
+<i class="w-4 h-4 text-slate-500" data-lucide="message-square"></i>
+<span>WhatsApp Business API</span>
+<span class="ml-1 w-2 h-2 rounded-full bg-emerald-500"></span>
+</button>
+<!-- Tab 4 -->
+<button class="h-10 px-4 flex items-center gap-2 rounded-lg bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 font-medium text-body-sm shrink-0 transition-colors">
+<i class="w-4 h-4 text-slate-500" data-lucide="credit-card"></i>
+<span>Pasarelas de Pago</span>
+<span class="ml-1 text-[11px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-mono">4 Activas</span>
+</button>
+<!-- Tab 5 -->
+<button class="h-10 px-4 flex items-center gap-2 rounded-lg bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 font-medium text-body-sm shrink-0 transition-colors">
+<i class="w-4 h-4 text-slate-500" data-lucide="database"></i>
+<span>Backups &amp; Bóveda Criptográfica</span>
+<span class="ml-1 text-[11px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded font-mono">Ley 29733</span>
+</button>
+<!-- Tab 6 -->
+<button class="h-10 px-4 flex items-center gap-2 rounded-lg bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 font-medium text-body-sm shrink-0 transition-colors">
+<i class="w-4 h-4 text-slate-500" data-lucide="sliders"></i>
+<span>Límites &amp; Cuotas por Defecto</span>
+</button>
+</div>
+<!-- ========================================================================= -->
+<!-- SECTION A: DOMINIOS, SUBDOMINIOS Y ENRUTAMIENTO MULTI-TENANT -->
+<!-- ========================================================================= -->
+<section class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+<!-- Section Header -->
+<div class="px-6 py-4 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-50/50">
+<div>
+<div class="flex items-center gap-2">
+<i class="w-5 h-5 text-indigo-600" data-lucide="globe"></i>
+<h2 class="font-headline-sm text-slate-900">Enrutamiento Multi-Tenant &amp; Dominios CNAME</h2>
+</div>
+<p class="text-body-sm text-slate-500 mt-0.5">Gestión de ingress Cloudflare for SaaS, comodín (*.perusaas.pe) y certificados TLS Let's Encrypt para clientes enterprise.</p>
+</div>
+<div class="flex items-center gap-3">
+<button class="h-10 px-3.5 flex items-center gap-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 text-body-sm font-medium transition-colors shadow-sm">
+<i class="w-4 h-4" data-lucide="plus"></i>
+<span>Vincular Nuevo Dominio / Zona</span>
+</button>
+</div>
+</div>
+<!-- Base Domain Quick Metric Bar -->
+<div class="p-6 border-b border-slate-100 grid grid-cols-1 md:grid-cols-3 gap-4">
+<div class="p-4 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-between">
+<div>
+<span class="text-xs font-medium text-slate-500 uppercase tracking-wider">Dominio Base SaaS</span>
+<p class="font-mono text-sm font-bold text-slate-800 mt-0.5">*.perusaas.pe</p>
+</div>
+<span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1">
+<i class="w-3.5 h-3.5" data-lucide="shield-check"></i> Wildcard TLS 1.3
+            </span>
+</div>
+<div class="p-4 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-between">
+<div>
+<span class="text-xs font-medium text-slate-500 uppercase tracking-wider">Ingress Inbound Gateway</span>
+<p class="font-mono text-sm font-bold text-slate-800 mt-0.5">ingress.perusaas.pe</p>
+</div>
+<span class="text-xs font-mono font-medium px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">AWS NLB Anycast</span>
+</div>
+<div class="p-4 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-between">
+<div>
+<span class="text-xs font-medium text-slate-500 uppercase tracking-wider">Tasa de Propagación DNS</span>
+<p class="text-sm font-bold text-slate-800 mt-0.5">99.4% &lt; 180s</p>
+</div>
+<span class="text-xs text-slate-500">Cloudflare Edge API</span>
+</div>
+</div>
+<!-- Table Controls Toolbar (All exactly 40px height) -->
+<div class="p-4 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 bg-white">
+<div class="flex flex-wrap items-center gap-2.5 flex-1 max-w-2xl">
+<!-- Search bar -->
+<div class="relative flex-1 min-w-[240px]">
+<i class="w-4 h-4 absolute left-3 top-3 text-slate-400" data-lucide="search"></i>
+<input class="w-full h-10 pl-9 pr-8 text-body-md rounded-lg border border-slate-300 bg-white placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 focus:outline-none transition-all" placeholder="Buscar por subdominio, RUC o razón social tenant..." type="text"/>
+<span class="absolute right-2.5 top-2.5 text-[10px] font-mono text-slate-400 bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded">⌘K</span>
+</div>
+<!-- Status Filter -->
+<select class="h-10 px-3 rounded-lg border border-slate-300 bg-white text-body-md text-slate-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 focus:outline-none">
+<option value="">Todos los Estados SSL</option>
+<option value="active">SSL Verificado &amp; Seguro</option>
+<option value="pending">Pendiente Delegación CNAME</option>
+<option value="renewing">En Renovación Let's Encrypt</option>
+</select>
+</div>
+<div class="flex items-center gap-2">
+<!-- Column Visibility Manager -->
+<button class="h-10 px-3 flex items-center gap-2 rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 text-body-sm font-medium">
+<i class="w-4 h-4 text-slate-500" data-lucide="columns-3"></i>
+<span>Columnas (6/6)</span>
+</button>
+<!-- Density Selector -->
+<div class="h-10 p-1 rounded-lg border border-slate-300 bg-slate-50 flex items-center">
+<button class="px-2.5 py-1 text-xs font-semibold rounded bg-white text-slate-800 shadow-xs">Cómoda</button>
+<button class="px-2.5 py-1 text-xs font-medium text-slate-500 hover:text-slate-900">Compacta</button>
+</div>
+<!-- Reset Filters -->
+<button class="h-10 w-10 flex items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-600 hover:bg-slate-50" title="Restablecer vista">
+<i class="w-4 h-4" data-lucide="rotate-ccw"></i>
+</button>
+</div>
+</div>
+<!-- Custom Domains Data Table -->
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-slate-50 text-slate-600 text-label-sm uppercase tracking-wider border-b border-slate-200">
+<th class="py-3 px-4 font-semibold w-10">
+<input class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" type="checkbox"/>
+</th>
+<th class="py-3 px-4 font-semibold">Tenant &amp; RUC</th>
+<th class="py-3 px-4 font-semibold">Dominio Personalizado (CNAME)</th>
+<th class="py-3 px-4 font-semibold">Target Ingress DNS</th>
+<th class="py-3 px-4 font-semibold">Certificado TLS &amp; Expiración</th>
+<th class="py-3 px-4 font-semibold">Estado de Enrutamiento</th>
+<th class="py-3 px-4 font-semibold text-right">Acciones</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-200 text-body-md text-slate-800">
+<!-- Row 1 -->
+<tr class="hover:bg-slate-50/80 transition-colors">
+<td class="py-3.5 px-4">
+<input class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" type="checkbox"/>
+</td>
+<td class="py-3.5 px-4">
+<div class="font-semibold text-slate-900">OdontoSalud S.A.C.</div>
+<div class="text-xs font-mono text-slate-500">RUC: 20601849201 • ID: TEN-104</div>
+</td>
+<td class="py-3.5 px-4">
+<div class="font-mono font-medium text-indigo-600 flex items-center gap-1.5">
+<i class="w-3.5 h-3.5 text-indigo-400" data-lucide="globe"></i>
+                    portal.odontosalud.pe
+                  </div>
+</td>
+<td class="py-3.5 px-4 font-mono text-xs text-slate-600">
+                  ingress.perusaas.pe
+                </td>
+<td class="py-3.5 px-4">
+<div class="text-xs font-medium text-slate-700">Let's Encrypt TLS 1.3</div>
+<div class="text-[11px] text-slate-400">Válido hasta: 14/11/2025 (Auto-renovación)</div>
+</td>
+<td class="py-3.5 px-4">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+<i class="w-3 h-3 text-emerald-600" data-lucide="lock"></i> Verificado &amp; Seguro
+                  </span>
+</td>
+<td class="py-3.5 px-4 text-right">
+<div class="flex items-center justify-end gap-1.5">
+<button class="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-slate-100 rounded-md transition-colors" title="Verificar registros DNS">
+<i class="w-4 h-4" data-lucide="activity"></i>
+</button>
+<button class="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-slate-100 rounded-md transition-colors" title="Detalles del Dominio">
+<i class="w-4 h-4" data-lucide="external-link"></i>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-slate-50/80 transition-colors">
+<td class="py-3.5 px-4">
+<input class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" type="checkbox"/>
+</td>
+<td class="py-3.5 px-4">
+<div class="font-semibold text-slate-900">Corporación Ferretera Lima E.I.R.L.</div>
+<div class="text-xs font-mono text-slate-500">RUC: 20554910283 • ID: TEN-089</div>
+</td>
+<td class="py-3.5 px-4">
+<div class="font-mono font-medium text-indigo-600 flex items-center gap-1.5">
+<i class="w-3.5 h-3.5 text-indigo-400" data-lucide="globe"></i>
+                    facturacion.ferreteralima.com
+                  </div>
+</td>
+<td class="py-3.5 px-4 font-mono text-xs text-slate-600">
+                  ingress.perusaas.pe
+                </td>
+<td class="py-3.5 px-4">
+<div class="text-xs font-medium text-slate-700">Cloudflare Edge SSL</div>
+<div class="text-[11px] text-slate-400">Válido hasta: 28/01/2026</div>
+</td>
+<td class="py-3.5 px-4">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+<i class="w-3 h-3 text-emerald-600" data-lucide="lock"></i> Verificado &amp; Seguro
+                  </span>
+</td>
+<td class="py-3.5 px-4 text-right">
+<div class="flex items-center justify-end gap-1.5">
+<button class="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-slate-100 rounded-md transition-colors" title="Verificar registros DNS">
+<i class="w-4 h-4" data-lucide="activity"></i>
+</button>
+<button class="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-slate-100 rounded-md transition-colors" title="Detalles del Dominio">
+<i class="w-4 h-4" data-lucide="external-link"></i>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 3: Pending DNS -->
+<tr class="hover:bg-slate-50/80 transition-colors bg-amber-50/20">
+<td class="py-3.5 px-4">
+<input class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" type="checkbox"/>
+</td>
+<td class="py-3.5 px-4">
+<div class="font-semibold text-slate-900">Distribuidora Farmacéutica del Sur</div>
+<div class="text-xs font-mono text-slate-500">RUC: 20491028374 • ID: TEN-342</div>
+</td>
+<td class="py-3.5 px-4">
+<div class="font-mono font-medium text-amber-700 flex items-center gap-1.5">
+<i class="w-3.5 h-3.5 text-amber-500" data-lucide="globe"></i>
+                    b2b.farmadelsur.pe
+                  </div>
+</td>
+<td class="py-3.5 px-4 font-mono text-xs text-slate-600">
+                  ingress.perusaas.pe
+                </td>
+<td class="py-3.5 px-4">
+<div class="text-xs font-medium text-amber-800">Esperando CNAME en DNS del Tenant</div>
+<div class="text-[11px] text-slate-400">Solicitado hace: 2h 15m</div>
+</td>
+<td class="py-3.5 px-4">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200">
+<i class="w-3 h-3 text-amber-600" data-lucide="alert-circle"></i> Pendiente DNS
+                  </span>
+</td>
+<td class="py-3.5 px-4 text-right">
+<div class="flex items-center justify-end gap-1.5">
+<button class="p-1.5 text-amber-600 hover:bg-amber-100 rounded-md transition-colors" title="Re-verificar CNAME">
+<i class="w-4 h-4" data-lucide="refresh-cw"></i>
+</button>
+<button class="p-1.5 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-md transition-colors" title="Instrucciones DNS para el Cliente">
+<i class="w-4 h-4" data-lucide="file-code"></i>
+</button>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Pagination Bar (48px Height) -->
+<div class="px-6 py-3 border-t border-slate-200 flex items-center justify-between text-body-sm text-slate-500 bg-white">
+<div class="flex items-center gap-2">
+<span>Mostrando <span class="font-semibold text-slate-800">1 - 3</span> de <span class="font-semibold text-slate-800">1,482</span> dominios registrados</span>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-1 text-xs">
+<span>Filas por página:</span>
+<select class="h-8 rounded border border-slate-300 text-xs px-2 py-0">
+<option>25</option>
+<option>50</option>
+<option>100</option>
+</select>
+</div>
+<div class="flex items-center gap-1">
+<button class="w-8 h-8 flex items-center justify-center rounded border border-slate-200 text-slate-300 cursor-not-allowed" disabled="">
+<i class="w-4 h-4" data-lucide="chevron-left"></i>
+</button>
+<button class="w-8 h-8 flex items-center justify-center rounded bg-indigo-50 border border-indigo-200 text-indigo-700 font-bold text-xs">1</button>
+<button class="w-8 h-8 flex items-center justify-center rounded border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs">2</button>
+<button class="w-8 h-8 flex items-center justify-center rounded border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs">3</button>
+<span class="px-1 text-slate-400">...</span>
+<button class="w-8 h-8 flex items-center justify-center rounded border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs">50</button>
+<button class="w-8 h-8 flex items-center justify-center rounded border border-slate-200 text-slate-600 hover:bg-slate-50">
+<i class="w-4 h-4" data-lucide="chevron-right"></i>
+</button>
+</div>
+</div>
+</div>
+</section>
+<!-- ========================================================================= -->
+<!-- SECTION B & C: BENTO GRID - CORREO TRANSACCIONAL & WHATSAPP META API -->
+<!-- ========================================================================= -->
+<div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+<!-- SECTION B: CORREO TRANSACCIONAL (SES / SENDGRID) -->
+<section class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-5">
+<div class="flex items-center justify-between pb-3 border-b border-slate-100">
+<div class="flex items-center gap-2.5">
+<div class="w-9 h-9 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600">
+<i class="w-5 h-5" data-lucide="mail"></i>
+</div>
+<div>
+<h3 class="font-headline-sm text-slate-900">Enrutador de Correo Transaccional</h3>
+<p class="text-xs text-slate-500">Despacho de facturas PDF, XML homologados y notificaciones a clientes finales</p>
+</div>
+</div>
+<span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1">
+<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> SES Primario Activo
+            </span>
+</div>
+<!-- Dual Provider Switcher -->
+<div class="grid grid-cols-2 gap-3 p-1.5 bg-slate-100 rounded-lg border border-slate-200">
+<div class="flex items-center justify-between p-2.5 bg-white rounded-md shadow-xs border border-slate-200">
+<div class="flex items-center gap-2">
+<span class="font-bold text-slate-800 text-sm">Amazon SES</span>
+<span class="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-mono">us-east-1</span>
+</div>
+<span class="text-xs font-semibold text-emerald-600">Principal</span>
+</div>
+<div class="flex items-center justify-between p-2.5 rounded-md hover:bg-white/60 transition-colors">
+<div class="flex items-center gap-2">
+<span class="font-medium text-slate-600 text-sm">Twilio SendGrid</span>
+<span class="text-[10px] bg-slate-200/60 text-slate-500 px-1.5 py-0.5 rounded font-mono">Failover</span>
+</div>
+<span class="text-xs text-slate-400">Standby (0.2s)</span>
+</div>
+</div>
+<!-- SMTP / API Form Configuration (Height: 40px) -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<div>
+<label class="block text-xs font-semibold text-slate-700 mb-1">Servidor Host SMTP</label>
+<input class="w-full h-10 px-3 text-body-md rounded-lg border border-slate-300 bg-white font-mono text-slate-800 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 focus:outline-none" type="text" value="email-smtp.us-east-1.amazonaws.com"/>
+</div>
+<div>
+<label class="block text-xs font-semibold text-slate-700 mb-1">Puerto de Envío Cifrado</label>
+<select class="w-full h-10 px-3 text-body-md rounded-lg border border-slate-300 bg-white text-slate-800 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 focus:outline-none">
+<option>587 (TLS Obligatorio)</option>
+<option>465 (SSL Directo)</option>
+<option>25 (No Recomendado)</option>
+</select>
+</div>
+<div>
+<label class="block text-xs font-semibold text-slate-700 mb-1">Remitente Maestro Predeterminado</label>
+<input class="w-full h-10 px-3 text-body-md rounded-lg border border-slate-300 bg-white font-mono text-slate-800 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 focus:outline-none" type="email" value="facturacion@perusaas.pe"/>
+</div>
+<div>
+<label class="block text-xs font-semibold text-slate-700 mb-1">Tasa Límite de Ráfaga (Burst Rate)</label>
+<div class="relative">
+<input class="w-full h-10 pl-3 pr-20 text-body-md rounded-lg border border-slate-300 bg-white font-mono text-slate-800 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 focus:outline-none" type="number" value="500"/>
+<span class="absolute right-3 top-2.5 text-xs text-slate-400">emails / seg</span>
+</div>
+</div>
+</div>
+<!-- Deliverability & DNS Records Status -->
+<div class="p-3 bg-slate-50 rounded-lg border border-slate-200 flex items-center justify-between">
+<div class="flex items-center gap-4 text-xs font-medium">
+<span class="flex items-center gap-1 text-emerald-700">
+<i class="w-4 h-4 text-emerald-600" data-lucide="check-circle-2"></i> SPF Aprobado
+              </span>
+<span class="flex items-center gap-1 text-emerald-700">
+<i class="w-4 h-4 text-emerald-600" data-lucide="check-circle-2"></i> DKIM 2048-bit
+              </span>
+<span class="flex items-center gap-1 text-emerald-700">
+<i class="w-4 h-4 text-emerald-600" data-lucide="check-circle-2"></i> DMARC Reject
+              </span>
+</div>
+<button class="h-10 px-3 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 flex items-center gap-1.5 transition-colors">
+<i class="w-3.5 h-3.5 text-indigo-600" data-lucide="send"></i>
+<span>Enviar Test en Vivo</span>
+</button>
+</div>
+</section>
+<!-- SECTION C: WHATSAPP BUSINESS CLOUD API (META) -->
+<section class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-5">
+<div class="flex items-center justify-between pb-3 border-b border-slate-100">
+<div class="flex items-center gap-2.5">
+<div class="w-9 h-9 rounded-lg bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600">
+<i class="w-5 h-5" data-lucide="message-square"></i>
+</div>
+<div>
+<h3 class="font-headline-sm text-slate-900">WhatsApp Business Cloud API (Meta)</h3>
+<p class="text-xs text-slate-500">Envío instantáneo de comprobantes electrónicos, enlaces de pago y avisos OSE</p>
+</div>
+</div>
+<div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
+<i class="w-3.5 h-3.5 text-emerald-600" data-lucide="wifi"></i> Meta v19.0 Conectado
+            </div>
+</div>
+<!-- Account Connection Overview -->
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+<div class="p-3.5 rounded-lg border border-slate-200 bg-slate-50">
+<span class="text-xs font-medium text-slate-500">Número Oficial Verificado</span>
+<p class="font-mono text-sm font-bold text-slate-900 mt-1 flex items-center gap-1.5">
+<i class="w-4 h-4 text-emerald-600" data-lucide="phone"></i> +51 987 654 321
+              </p>
+<span class="text-[11px] text-slate-400">Nombre Visible: PerúSaaS Notificaciones</span>
+</div>
+<div class="p-3.5 rounded-lg border border-slate-200 bg-slate-50">
+<span class="text-xs font-medium text-slate-500">Identificador WABA / App ID</span>
+<p class="font-mono text-sm font-bold text-slate-900 mt-1">104928192039581</p>
+<span class="text-[11px] text-slate-400">Meta Business Manager ID: 882019482</span>
+</div>
+</div>
+<!-- Meta Templates Configuration (40px Uniform Controls) -->
+<div class="space-y-4">
+<div>
+<label class="block text-xs font-semibold text-slate-700 mb-1">Plantilla HSM Homologada para Comprobantes</label>
+<select class="w-full h-10 px-3 text-body-md rounded-lg border border-slate-300 bg-white text-slate-800 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 focus:outline-none">
+<option>envio_comprobante_v3 (Aprobada por Meta - Idioma: es_PE)</option>
+<option>notificacion_pago_exitoso_v2 (Aprobada - Idioma: es_PE)</option>
+<option>alerta_vencimiento_pse_v1 (Aprobada - Idioma: es_PE)</option>
+</select>
+</div>
+<!-- Queue Health & Anti-ban controls -->
+<div class="grid grid-cols-2 gap-4">
+<div>
+<label class="block text-xs font-semibold text-slate-700 mb-1">Cola de Espera (Redis BullMQ)</label>
+<div class="h-10 px-3 flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50">
+<span class="text-xs font-medium text-slate-600">Trabajos en cola:</span>
+<span class="text-xs font-mono font-bold text-indigo-600">0 pendientes</span>
+</div>
+</div>
+<div>
+<label class="block text-xs font-semibold text-slate-700 mb-1">Intervalo Anti-Spam por Destino</label>
+<div class="h-10 px-3 flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50">
+<span class="text-xs font-medium text-slate-600">Retardo mínimo:</span>
+<span class="text-xs font-mono font-bold text-slate-800">1.2 segundos</span>
+</div>
+</div>
+</div>
+</div>
+<div class="pt-2 flex items-center justify-between border-t border-slate-100">
+<span class="text-xs text-slate-500">Tier Meta Actual: <strong class="text-slate-700">100k Mensajes / día (Nivel 3)</strong></span>
+<button class="h-10 px-3.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 flex items-center gap-1.5 transition-colors">
+<i class="w-3.5 h-3.5 text-slate-500" data-lucide="refresh-cw"></i>
+<span>Sincronizar Plantillas Meta</span>
+</button>
+</div>
+</section>
+</div>
+<!-- ========================================================================= -->
+<!-- SECTION D: ORQUESTACIÓN DE PASARELAS DE PAGO (PERÚ) -->
+<!-- ========================================================================= -->
+<section class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-6">
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-4 border-b border-slate-200">
+<div>
+<div class="flex items-center gap-2">
+<i class="w-5 h-5 text-indigo-600" data-lucide="credit-card"></i>
+<h2 class="font-headline-sm text-slate-900">Orquestación de Pasarelas de Pago &amp; Cobranza Recurrente (Perú)</h2>
+</div>
+<p class="text-body-sm text-slate-500 mt-0.5">Enrutamiento inteligente para cobro de suscripciones B2B en soles peruanos (PEN) y pagos diferidos en ventanilla bancaria.</p>
+</div>
+<!-- Smart Routing Failover Indicator -->
+<div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-indigo-50 border border-indigo-200 text-xs text-indigo-900">
+<i class="w-4 h-4 text-indigo-600" data-lucide="git-merge"></i>
+<span><strong>Smart Routing:</strong> Si Niubiz falla → Reintento automático Culqi</span>
+</div>
+</div>
+<!-- Payment Gateway Cards Grid (4 Gateways) -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+<!-- 1. NIUBIZ -->
+<div class="rounded-xl border-2 border-indigo-500/80 bg-slate-50/40 p-4 space-y-3 relative shadow-xs">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<div class="w-8 h-8 rounded-md bg-blue-700 flex items-center justify-center text-white font-black text-xs">
+                  NB
+                </div>
+<div>
+<h4 class="font-bold text-sm text-slate-900">Niubiz PagoWeb</h4>
+<p class="text-[10px] text-slate-500">Visa / Mastercard Perú</p>
+</div>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-9 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
+</label>
+</div>
+<div class="space-y-1.5 text-xs">
+<div class="flex justify-between text-slate-600">
+<span>Comisión pactada:</span>
+<span class="font-semibold text-slate-800">3.45% + S/ 1.00</span>
+</div>
+<div class="flex justify-between text-slate-600">
+<span>Comercio ID:</span>
+<span class="font-mono text-slate-800">459203912</span>
+</div>
+<div class="flex justify-between text-slate-600">
+<span>Webhook:</span>
+<span class="text-emerald-600 font-semibold">200 OK (0.1s)</span>
+</div>
+</div>
+<button class="w-full h-10 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-xs font-semibold text-slate-700 flex items-center justify-center gap-1.5 transition-colors">
+<i class="w-3.5 h-3.5 text-slate-500" data-lucide="settings"></i>
+<span>Credenciales de Producción</span>
+</button>
+</div>
+<!-- 2. CULQI v4 -->
+<div class="rounded-xl border border-slate-200 bg-white p-4 space-y-3 relative shadow-xs">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<div class="w-8 h-8 rounded-md bg-orange-600 flex items-center justify-center text-white font-black text-xs">
+                  CQ
+                </div>
+<div>
+<h4 class="font-bold text-sm text-slate-900">Culqi v4 Radar</h4>
+<p class="text-[10px] text-slate-500">Yape / Plin / Tarjetas</p>
+</div>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-9 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
+</label>
+</div>
+<div class="space-y-1.5 text-xs">
+<div class="flex justify-between text-slate-600">
+<span>Llave Pública:</span>
+<span class="font-mono text-slate-700">pk_live_...48f9</span>
+</div>
+<div class="flex justify-between text-slate-600">
+<span>Tokenización:</span>
+<span class="text-emerald-600 font-semibold">Habilitada 1-Click</span>
+</div>
+<div class="flex justify-between text-slate-600">
+<span>Antifraude:</span>
+<span class="font-semibold text-slate-800">Scoring 3DS 2.0</span>
+</div>
+</div>
+<button class="w-full h-10 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-xs font-semibold text-slate-700 flex items-center justify-center gap-1.5 transition-colors">
+<i class="w-3.5 h-3.5 text-slate-500" data-lucide="settings"></i>
+<span>Configurar Llaves API</span>
+</button>
+</div>
+<!-- 3. MERCADO PAGO PERÚ -->
+<div class="rounded-xl border border-slate-200 bg-white p-4 space-y-3 relative shadow-xs">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<div class="w-8 h-8 rounded-md bg-sky-500 flex items-center justify-center text-white font-black text-xs">
+                  MP
+                </div>
+<div>
+<h4 class="font-bold text-sm text-slate-900">Mercado Pago PE</h4>
+<p class="text-[10px] text-slate-500">Checkout Pro / Dinero en Cuenta</p>
+</div>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-9 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
+</label>
+</div>
+<div class="space-y-1.5 text-xs">
+<div class="flex justify-between text-slate-600">
+<span>Microempresas:</span>
+<span class="text-emerald-600 font-semibold">Cobro con QR</span>
+</div>
+<div class="flex justify-between text-slate-600">
+<span>Comisión Promedio:</span>
+<span class="font-semibold text-slate-800">3.99% + S/ 0.50</span>
+</div>
+<div class="flex justify-between text-slate-600">
+<span>IPN Webhook:</span>
+<span class="text-emerald-600 font-semibold">Activo</span>
+</div>
+</div>
+<button class="w-full h-10 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-xs font-semibold text-slate-700 flex items-center justify-center gap-1.5 transition-colors">
+<i class="w-3.5 h-3.5 text-slate-500" data-lucide="settings"></i>
+<span>Editar Credenciales</span>
+</button>
+</div>
+<!-- 4. PAGOEFECTIVO (CIP BCP / BBVA / INTERBANK) -->
+<div class="rounded-xl border border-slate-200 bg-white p-4 space-y-3 relative shadow-xs">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<div class="w-8 h-8 rounded-md bg-yellow-500 flex items-center justify-center text-slate-950 font-black text-xs">
+                  PE
+                </div>
+<div>
+<h4 class="font-bold text-sm text-slate-900">PagoEfectivo CIP</h4>
+<p class="text-[10px] text-slate-500">Ventanilla &amp; Banca Móvil PE</p>
+</div>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-9 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
+</label>
+</div>
+<div class="space-y-1.5 text-xs">
+<div class="flex justify-between text-slate-600">
+<span>Vigencia CIP:</span>
+<span class="font-semibold text-slate-800">48 horas estándar</span>
+</div>
+<div class="flex justify-between text-slate-600">
+<span>Red Agentes:</span>
+<span class="font-semibold text-slate-800">BCP, BBVA, Interbank</span>
+</div>
+<div class="flex justify-between text-slate-600">
+<span>Conciliación:</span>
+<span class="text-indigo-600 font-semibold">Tiempo Real</span>
+</div>
+</div>
+<button class="w-full h-10 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-xs font-semibold text-slate-700 flex items-center justify-center gap-1.5 transition-colors">
+<i class="w-3.5 h-3.5 text-slate-500" data-lucide="settings"></i>
+<span>Parámetros de Servicio</span>
+</button>
+</div>
+</div>
+</section>
+<!-- ========================================================================= -->
+<!-- SECTION E: POLÍTICAS DE BACKUPS, SNAPSHOTS Y RETENCIÓN SUNAT (5 AÑOS) -->
+<!-- ========================================================================= -->
+<section class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-5">
+<div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-200">
+<div>
+<div class="flex items-center gap-2">
+<i class="w-5 h-5 text-indigo-600" data-lucide="database"></i>
+<h2 class="font-headline-sm text-slate-900">Bóveda Criptográfica &amp; Snapshots Inmutables (SUNAT 5 Años)</h2>
+</div>
+<p class="text-body-sm text-slate-500 mt-0.5">
+              Custodia digital obligatoria según <strong>Ley N° 29733</strong> (Protección de Datos Personales) y normativa tributaria SUNAT para almacenamiento inmutable de XML firmados y CDRs.
+            </p>
+</div>
+<!-- Policy Badges -->
+<div class="flex items-center gap-2 shrink-0">
+<span class="px-3 py-1 rounded-lg bg-slate-100 text-slate-700 text-xs font-mono font-semibold border border-slate-200">
+              WORM / Object Lock: Activo
+            </span>
+<span class="px-3 py-1 rounded-lg bg-emerald-50 text-emerald-800 text-xs font-medium border border-emerald-200">
+              Frecuencia: Cada 6 horas
+            </span>
+</div>
+</div>
+<!-- Latest Backups Table -->
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-slate-50 text-slate-600 text-label-sm uppercase tracking-wider border-b border-slate-200">
+<th class="py-3 px-4 font-semibold">Identificador de Snapshot</th>
+<th class="py-3 px-4 font-semibold">Fecha &amp; Hora Generación</th>
+<th class="py-3 px-4 font-semibold">Destino de Replicación</th>
+<th class="py-3 px-4 font-semibold">Tamaño Cifrado</th>
+<th class="py-3 px-4 font-semibold">Verificación Hash SHA-256</th>
+<th class="py-3 px-4 font-semibold">Estado de Integridad</th>
+<th class="py-3 px-4 font-semibold text-right">Acción</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-200 text-body-md text-slate-800">
+<!-- Backup 1 -->
+<tr class="hover:bg-slate-50/80 transition-colors">
+<td class="py-3 px-4 font-mono font-bold text-slate-900 flex items-center gap-2">
+<i class="w-4 h-4 text-indigo-600" data-lucide="archive"></i>
+                  snap-prod-pe-20251024-001
+                </td>
+<td class="py-3 px-4 text-xs font-mono text-slate-600">24/10/2025 12:00:00 (PET)</td>
+<td class="py-3 px-4 text-xs font-medium text-slate-700">AWS S3 Lima + R2 Vault</td>
+<td class="py-3 px-4 font-mono text-xs text-slate-800">428.6 GB</td>
+<td class="py-3 px-4 font-mono text-[11px] text-slate-500">e3b0c44298fc1c149afb...8b03</td>
+<td class="py-3 px-4">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
+<i class="w-3 h-3" data-lucide="check"></i> Íntegro
+                  </span>
+</td>
+<td class="py-3 px-4 text-right">
+<button class="h-10 px-3 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-xs font-semibold text-indigo-600 transition-colors">
+                    Sandbox Test
+                  </button>
+</td>
+</tr>
+<!-- Backup 2 -->
+<tr class="hover:bg-slate-50/80 transition-colors">
+<td class="py-3 px-4 font-mono font-bold text-slate-900 flex items-center gap-2">
+<i class="w-4 h-4 text-indigo-600" data-lucide="archive"></i>
+                  snap-prod-pe-20251024-000
+                </td>
+<td class="py-3 px-4 text-xs font-mono text-slate-600">24/10/2025 06:00:00 (PET)</td>
+<td class="py-3 px-4 text-xs font-medium text-slate-700">AWS S3 Lima + R2 Vault</td>
+<td class="py-3 px-4 font-mono text-xs text-slate-800">427.1 GB</td>
+<td class="py-3 px-4 font-mono text-[11px] text-slate-500">7f83b1657ff1fc53b92c...9481</td>
+<td class="py-3 px-4">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
+<i class="w-3 h-3" data-lucide="check"></i> Íntegro
+                  </span>
+</td>
+<td class="py-3 px-4 text-right">
+<button class="h-10 px-3 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-xs font-semibold text-indigo-600 transition-colors">
+                    Sandbox Test
+                  </button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<!-- ========================================================================= -->
+<!-- SECTION F: LÍMITES GLOBALES Y PARÁMETROS POR DEFECTO (NUEVOS TENANTS) -->
+<!-- ========================================================================= -->
+<section class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-5">
+<div class="flex items-center justify-between pb-3 border-b border-slate-100">
+<div>
+<h2 class="font-headline-sm text-slate-900">Parámetros Maestros por Defecto (Nuevas Altas de Tenants)</h2>
+<p class="text-body-sm text-slate-500">Reglas aplicadas automáticamente al aprovisionar nuevos clientes en el ecosistema B2B de PerúSaaS.</p>
+</div>
+<span class="text-xs font-mono text-slate-400">Schema Version: v4.8</span>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+<!-- Parameter 1 -->
+<div>
+<label class="block text-xs font-semibold text-slate-700 mb-1">Cuota CPE Inicial en Prueba</label>
+<div class="relative">
+<input class="w-full h-10 px-3 text-body-md rounded-lg border border-slate-300 bg-white font-mono text-slate-800 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 focus:outline-none" type="number" value="500"/>
+<span class="absolute right-3 top-2.5 text-xs text-slate-400">comprobantes</span>
+</div>
+</div>
+<!-- Parameter 2 -->
+<div>
+<label class="block text-xs font-semibold text-slate-700 mb-1">Días de Gracia Corte OSE</label>
+<div class="relative">
+<input class="w-full h-10 px-3 text-body-md rounded-lg border border-slate-300 bg-white font-mono text-slate-800 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 focus:outline-none" type="number" value="15"/>
+<span class="absolute right-3 top-2.5 text-xs text-slate-400">días calendario</span>
+</div>
+</div>
+<!-- Parameter 3 -->
+<div>
+<label class="block text-xs font-semibold text-slate-700 mb-1">Usuarios Concurrentes Básico</label>
+<div class="relative">
+<input class="w-full h-10 px-3 text-body-md rounded-lg border border-slate-300 bg-white font-mono text-slate-800 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 focus:outline-none" type="number" value="3"/>
+<span class="absolute right-3 top-2.5 text-xs text-slate-400">sesiones activas</span>
+</div>
+</div>
+<!-- Parameter 4 -->
+<div>
+<label class="block text-xs font-semibold text-slate-700 mb-1">Timeout de Sesión Admin</label>
+<div class="relative">
+<input class="w-full h-10 px-3 text-body-md rounded-lg border border-slate-300 bg-white font-mono text-slate-800 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 focus:outline-none" type="number" value="480"/>
+<span class="absolute right-3 top-2.5 text-xs text-slate-400">minutos (8h)</span>
+</div>
+</div>
+</div>
+<div class="flex items-center justify-between pt-4 border-t border-slate-100">
+<div class="flex items-center gap-2 text-xs text-slate-500">
+<i class="w-4 h-4 text-indigo-500" data-lucide="info"></i>
+<span>Los tenants enterprise con SLAs firmados pueden anular estos topes desde su ficha individual de cliente.</span>
+</div>
+<div class="flex items-center gap-3">
+<button class="h-10 px-4 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-medium text-body-sm transition-colors">
+              Descartar Modificaciones
+            </button>
+<button class="h-10 px-5 rounded-lg bg-[#4F46E5] text-white hover:bg-indigo-700 font-medium text-body-sm transition-colors shadow-sm">
+              Aplicar a Nuevos Tenants
+            </button>
+</div>
+</div>
+</section>
+<!-- Bottom Spacer for Comfortable Scrolling -->
+<div class="h-6"></div>
+</main>
+</div>
+<!-- Lucide Script Initialization -->
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+    });
+  </script>
+</body></html>

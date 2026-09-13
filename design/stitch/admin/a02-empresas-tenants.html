@@ -1,0 +1,1618 @@
+<!DOCTYPE html>
+<html lang="es-PE">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PerúSaaS Admin - Gestión de Empresas (Tenants)</title>
+  <!-- Google Fonts Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap&family=Geist+Mono:wght@400;500;600" rel="stylesheet">
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons Official Script -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              sidebar: '#0F172A',
+              sidebarHover: '#1E293B',
+              primary: '#4F46E5',
+              primaryHover: '#4338CA',
+              accent: '#7C3AED',
+              success: '#059669',
+              warning: '#D97706',
+              danger: '#DC2626',
+              bgMain: '#F5F6FA',
+              textPrimary: '#111827',
+              textSecondary: '#4B5563',
+              borderLight: '#E2E8F0',
+            }
+          },
+          fontFamily: {
+            sans: ['Geist', 'sans-serif'],
+            mono: ['Geist Mono', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Geist', sans-serif;
+      font-size: 14px;
+      color: #111827;
+      background-color: #F5F6FA;
+      -webkit-font-smoothing: antialiased;
+    }
+    /* Estricta altura uniforme 40px y radio 8px en controles */
+    .ctrl-40 {
+      height: 40px !important;
+      min-height: 40px !important;
+      max-height: 40px !important;
+      border-radius: 8px !important;
+      font-size: 14px !important;
+    }
+    .ctrl-btn {
+      height: 40px !important;
+      border-radius: 8px !important;
+      padding-left: 14px;
+      padding-right: 14px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 500;
+      transition: all 0.15s ease-in-out;
+    }
+    /* Micro-animaciones para iconos */
+    @keyframes spinSync {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .animate-spin-custom {
+      animation: spinSync 1.4s linear infinite;
+    }
+    @keyframes pulseAlert {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.65; transform: scale(1.15); }
+    }
+    .animate-pulse-alert {
+      animation: pulseAlert 1.8s ease-in-out infinite;
+    }
+
+    /* Modal / Drawer backdrop & transitions */
+    .drawer-backdrop {
+      transition: opacity 0.3s ease-out;
+    }
+    .drawer-panel {
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    
+    /* Scrollbar estilizada */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #F1F5F9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #CBD5E1;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94A3B8;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased text-gray-900 bg-[#F5F6FA]">
+
+  <div class="flex flex-1 min-h-screen relative overflow-x-hidden">
+    <!-- SIDEBAR OSCURO #0F172A -->
+    <aside class="w-64 bg-[#0F172A] text-slate-300 flex flex-col justify-between shrink-0 select-none z-30 transition-all duration-200">
+      <div>
+        <!-- Brand / Header -->
+        <div class="h-16 flex items-center px-5 gap-3 border-b border-slate-800/80 bg-[#0B1120]">
+          <div class="w-9 h-9 rounded-lg bg-indigo-600 flex items-center justify-center font-bold text-white shadow-md shadow-indigo-600/30">
+            <i data-lucide="layers" class="w-5 h-5"></i>
+          </div>
+          <div class="flex flex-col">
+            <div class="flex items-center gap-2">
+              <span class="font-bold text-white tracking-tight text-base">PerúSaaS</span>
+              <span class="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-indigo-900/80 text-indigo-300 border border-indigo-700/50">Admin</span>
+            </div>
+            <span class="text-[11px] text-slate-400 font-medium">Consola Central Multitenant</span>
+          </div>
+        </div>
+
+        <!-- Cluster Status Badge -->
+        <div class="px-4 py-3 mx-3 my-3 rounded-lg bg-slate-800/60 border border-slate-700/50 flex items-center justify-between text-xs">
+          <div class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span class="text-slate-300 font-mono text-[11px]">cluster-lima-prod</span>
+          </div>
+          <span class="text-emerald-400 font-medium text-[11px]">99.98% SLA</span>
+        </div>
+
+        <!-- Menú de Navegación -->
+        <nav class="px-3 space-y-1">
+          <p class="px-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Supervisión</p>
+          <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800/70 transition-colors">
+            <i data-lucide="layout-dashboard" class="w-4 h-4 text-slate-400"></i>
+            <span>Dashboard Maestro</span>
+          </a>
+          <a href="#" class="flex items-center justify-between px-3 py-2.5 rounded-lg bg-indigo-600 text-white font-medium shadow-sm shadow-indigo-700/20">
+            <div class="flex items-center gap-3">
+              <i data-lucide="building-2" class="w-4 h-4"></i>
+              <span>Empresas (Tenants)</span>
+            </div>
+            <span class="bg-indigo-700 text-white text-[11px] font-semibold px-2 py-0.5 rounded-full">1,482</span>
+          </a>
+          <a href="#" class="flex items-center justify-between px-3 py-2.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800/70 transition-colors">
+            <div class="flex items-center gap-3">
+              <i data-lucide="activity" class="w-4 h-4 text-emerald-400"></i>
+              <span>Salud OSE / SUNAT</span>
+            </div>
+            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+          </a>
+          <a href="#" class="flex items-center justify-between px-3 py-2.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800/70 transition-colors">
+            <div class="flex items-center gap-3">
+              <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-400 animate-pulse-alert"></i>
+              <span>Incidentes Críticos</span>
+            </div>
+            <span class="bg-amber-500/20 text-amber-300 text-[11px] font-semibold px-2 py-0.5 rounded-full border border-amber-500/30">3</span>
+          </a>
+
+          <div class="pt-4 pb-1">
+            <p class="px-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Facturación y Núcleo</p>
+          </div>
+          <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800/70 transition-colors">
+            <i data-lucide="receipt" class="w-4 h-4 text-slate-400"></i>
+            <span>Comprobantes Global</span>
+          </a>
+          <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800/70 transition-colors">
+            <i data-lucide="credit-card" class="w-4 h-4 text-slate-400"></i>
+            <span>Planes y Suscripciones</span>
+          </a>
+          <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800/70 transition-colors">
+            <i data-lucide="file-check-2" class="w-4 h-4 text-slate-400"></i>
+            <span>Auditoría &amp; Logs</span>
+          </a>
+          <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800/70 transition-colors">
+            <i data-lucide="sliders-horizontal" class="w-4 h-4 text-slate-400"></i>
+            <span>Configuración Sistema</span>
+          </a>
+        </nav>
+      </div>
+
+      <!-- Footer de Sesión Admin -->
+      <div class="p-3 border-t border-slate-800 bg-[#0B1120]">
+        <div class="flex items-center justify-between p-2 rounded-lg bg-slate-800/40">
+          <div class="flex items-center gap-2.5 min-w-0">
+            <div class="w-8 h-8 rounded-full bg-indigo-500 text-white font-bold flex items-center justify-center text-xs shrink-0 ring-2 ring-indigo-400/20">
+              SA
+            </div>
+            <div class="min-w-0 flex-1">
+              <p class="text-xs font-semibold text-white truncate">SuperAdmin Central</p>
+              <p class="text-[11px] text-slate-400 truncate">ops@perusaas.pe</p>
+            </div>
+          </div>
+          <button title="Cerrar sesión segura" class="p-1.5 text-slate-400 hover:text-red-400 transition-colors rounded">
+            <i data-lucide="log-out" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ÁREA PRINCIPAL -->
+    <main class="flex-1 flex flex-col min-w-0 overflow-y-auto">
+      
+      <!-- TOPBAR BLANCA -->
+      <header class="h-16 bg-white border-b border-[#E2E8F0] px-8 flex items-center justify-between sticky top-0 z-20 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
+        <div class="flex items-center gap-4">
+          <div class="flex items-center gap-2 text-sm text-gray-500">
+            <span class="hover:text-gray-900 cursor-pointer">Plataforma</span>
+            <i data-lucide="chevron-right" class="w-4 h-4 text-gray-400"></i>
+            <span class="font-semibold text-gray-900">Directorio de Empresas (Tenants)</span>
+          </div>
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+            1,482 Clientes Activos
+          </span>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <!-- Live Sync Indicator -->
+          <div class="flex items-center gap-2 text-xs text-gray-500 bg-gray-50 px-3 py-1.5 rounded-md border border-gray-200">
+            <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-indigo-600 animate-spin-custom"></i>
+            <span>Sincronizando SUNAT: <strong class="text-gray-700 font-mono">15:44:12</strong></span>
+          </div>
+
+          <!-- Currency badge -->
+          <div class="px-2.5 py-1 text-xs font-semibold bg-indigo-50 text-indigo-700 rounded-md border border-indigo-100">
+            Moneda: Soles (S/)
+          </div>
+
+          <!-- Botón Notificaciones -->
+          <button class="relative p-2 rounded-lg text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition-colors">
+            <i data-lucide="bell" class="w-5 h-5"></i>
+            <span class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500 ring-2 ring-white"></span>
+          </button>
+        </div>
+      </header>
+
+      <!-- CONTENIDO CENTRAL SOBRE #F5F6FA -->
+      <div class="p-8 space-y-6 max-w-[1600px] w-full mx-auto">
+
+        <!-- CABECERA DE SECCIÓN & METRICAS RÁPIDAS -->
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div>
+            <h1 class="text-2xl font-bold text-gray-900 tracking-tight">Directorio Global de Tenants</h1>
+            <p class="text-sm text-gray-500 mt-1">Supervisa consumo mensual de CPE, conectores OSE certificados, límites de emisión y control de acceso administrativo.</p>
+          </div>
+
+          <!-- Botones de Acción Primaria -->
+          <div class="flex items-center gap-3">
+            <button onclick="exportCSV()" class="ctrl-btn bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 shadow-sm gap-2">
+              <i data-lucide="download" class="w-4 h-4 text-gray-500"></i>
+              <span>Exportar Reporte</span>
+            </button>
+            <button onclick="openCreateDrawer()" class="ctrl-btn bg-[#4F46E5] hover:bg-[#4338CA] text-white shadow-sm shadow-indigo-600/30 gap-2">
+              <i data-lucide="plus-circle" class="w-4 h-4"></i>
+              <span>Alta de Empresa</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- TARJETAS DE RESUMEN EJECUTIVO (KPIs) -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+          <div class="bg-white p-4 rounded-xl border border-gray-200/80 shadow-sm flex items-center justify-between">
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Empresas</p>
+              <p class="text-2xl font-bold text-gray-900 mt-1">1,482</p>
+              <p class="text-xs text-emerald-600 font-medium flex items-center gap-1 mt-1">
+                <i data-lucide="trending-up" class="w-3.5 h-3.5"></i>
+                +38 netas este mes (Oct 2024)
+              </p>
+            </div>
+            <div class="w-11 h-11 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+              <i data-lucide="building" class="w-6 h-6"></i>
+            </div>
+          </div>
+
+          <div class="bg-white p-4 rounded-xl border border-gray-200/80 shadow-sm flex items-center justify-between">
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">En Periodo de Prueba (Trial)</p>
+              <p class="text-2xl font-bold text-gray-900 mt-1">64</p>
+              <p class="text-xs text-amber-600 font-medium flex items-center gap-1 mt-1">
+                <i data-lucide="clock" class="w-3.5 h-3.5"></i>
+                14 vencen en &le; 48 horas
+              </p>
+            </div>
+            <div class="w-11 h-11 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
+              <i data-lucide="hourglass" class="w-6 h-6"></i>
+            </div>
+          </div>
+
+          <div class="bg-white p-4 rounded-xl border border-gray-200/80 shadow-sm flex items-center justify-between">
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Emisión CPE Total (Mes)</p>
+              <p class="text-2xl font-bold text-gray-900 mt-1">342,890</p>
+              <p class="text-xs text-indigo-600 font-medium flex items-center gap-1 mt-1">
+                <i data-lucide="file-check" class="w-3.5 h-3.5"></i>
+                99.7% CDR Aprobados SUNAT
+              </p>
+            </div>
+            <div class="w-11 h-11 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+              <i data-lucide="zap" class="w-6 h-6"></i>
+            </div>
+          </div>
+
+          <div class="bg-white p-4 rounded-xl border border-gray-200/80 shadow-sm flex items-center justify-between">
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Suspendidas / Bloqueadas</p>
+              <p class="text-2xl font-bold text-red-600 mt-1">9</p>
+              <p class="text-xs text-red-500 font-medium flex items-center gap-1 mt-1">
+                <i data-lucide="alert-circle" class="w-3.5 h-3.5 animate-pulse-alert"></i>
+                5 por mora, 4 cert. caduco
+              </p>
+            </div>
+            <div class="w-11 h-11 rounded-lg bg-red-50 text-red-600 flex items-center justify-center">
+              <i data-lucide="lock" class="w-6 h-6"></i>
+            </div>
+          </div>
+        </div>
+
+        <!-- BARRA DE FILTROS & BÚSQUEDA (TODOS ALTURA 40px, RADIO 8px) -->
+        <div class="bg-white p-4 rounded-xl border border-gray-200/80 shadow-sm space-y-3">
+          <div class="flex flex-wrap items-center gap-3">
+            <!-- Buscador general (40px) -->
+            <div class="relative flex-1 min-w-[280px]">
+              <i data-lucide="search" class="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+              <input type="text" id="searchInput" oninput="applyFilters()" placeholder="Buscar por RUC (11 dígitos), Razón Social, Administrador o Sede..."
+                     class="ctrl-40 w-full pl-10 pr-4 bg-gray-50/50 border border-gray-300 rounded-lg text-gray-800 placeholder-gray-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all text-sm">
+            </div>
+
+            <!-- Filtro Rubro (40px) -->
+            <div class="w-48">
+              <select id="filterRubro" onchange="applyFilters()" class="ctrl-40 w-full px-3 bg-white border border-gray-300 rounded-lg text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 cursor-pointer">
+                <option value="ALL">Todos los Rubros</option>
+                <option value="Odontología">Odontología (Clínicas)</option>
+                <option value="Veterinaria">Veterinarias &amp; PetShops</option>
+                <option value="Restaurantes">Gastronomía &amp; Pollerías</option>
+                <option value="Retail">Retail &amp; Ferreterías</option>
+                <option value="Salud">Salud &amp; Laboratorios</option>
+              </select>
+            </div>
+
+            <!-- Filtro Plan (40px) -->
+            <div class="w-44">
+              <select id="filterPlan" onchange="applyFilters()" class="ctrl-40 w-full px-3 bg-white border border-gray-300 rounded-lg text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 cursor-pointer">
+                <option value="ALL">Todos los Planes</option>
+                <option value="Básico">Plan Básico (S/ 180)</option>
+                <option value="Clínico">Plan Clínico (S/ 320)</option>
+                <option value="Pro">Plan Pro Multi (S/ 490)</option>
+                <option value="Enterprise">Enterprise (S/ 850+)</option>
+              </select>
+            </div>
+
+            <!-- Filtro Estado (40px) -->
+            <div class="w-44">
+              <select id="filterEstado" onchange="applyFilters()" class="ctrl-40 w-full px-3 bg-white border border-gray-300 rounded-lg text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 cursor-pointer">
+                <option value="ALL">Todos los Estados</option>
+                <option value="Activa">Activa (Vigente)</option>
+                <option value="Trial">En Periodo de Prueba</option>
+                <option value="Suspendida">Suspendida</option>
+              </select>
+            </div>
+
+            <!-- Botón Limpiar Filtros (40px) -->
+            <button onclick="resetFilters()" title="Limpiar todos los filtros" class="ctrl-btn bg-gray-100 hover:bg-gray-200 text-gray-600 gap-1.5 border border-gray-200">
+              <i data-lucide="filter-x" class="w-4 h-4"></i>
+              <span>Limpiar</span>
+            </button>
+          </div>
+
+          <!-- Quick Chips de Filtro rápido (Altura 40px, radio 8px) -->
+          <div class="flex items-center gap-2 pt-1 border-t border-gray-100 overflow-x-auto pb-1">
+            <span class="text-xs font-semibold text-gray-400 uppercase tracking-wide mr-1">Vistas rápidas:</span>
+            <button onclick="setQuickFilter('odontologia')" class="ctrl-40 px-3.5 inline-flex items-center gap-2 rounded-lg text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition-colors">
+              <i data-lucide="stethoscope" class="w-3.5 h-3.5"></i>
+              <span>Odontología (384)</span>
+            </button>
+            <button onclick="setQuickFilter('veterinaria')" class="ctrl-40 px-3.5 inline-flex items-center gap-2 rounded-lg text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition-colors">
+              <i data-lucide="paw-print" class="w-3.5 h-3.5"></i>
+              <span>Veterinarias (291)</span>
+            </button>
+            <button onclick="setQuickFilter('restaurantes')" class="ctrl-40 px-3.5 inline-flex items-center gap-2 rounded-lg text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition-colors">
+              <i data-lucide="utensils" class="w-3.5 h-3.5"></i>
+              <span>Restaurantes (472)</span>
+            </button>
+            <button onclick="setQuickFilter('alerta_cuota')" class="ctrl-40 px-3.5 inline-flex items-center gap-2 rounded-lg text-xs font-medium bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 transition-colors">
+              <i data-lucide="alert-triangle" class="w-3.5 h-3.5 animate-pulse-alert"></i>
+              <span>Cuota CPE &gt; 90% (14)</span>
+            </button>
+            <button onclick="setQuickFilter('bizlinks')" class="ctrl-40 px-3.5 inline-flex items-center gap-2 rounded-lg text-xs font-medium bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100 transition-colors">
+              <i data-lucide="radio" class="w-3.5 h-3.5"></i>
+              <span>OSE Bizlinks (812)</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- CONTENEDOR DE TABLA PRINCIPAL CON CONTROL DE COLUMNAS & DENSIDAD -->
+        <div class="bg-white rounded-xl border border-gray-200/80 shadow-sm overflow-hidden flex flex-col">
+          
+          <!-- SUB-BARRA DE HERRAMIENTAS DE TABLA -->
+          <div class="px-6 py-3.5 border-b border-gray-200 bg-gray-50/50 flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-bold text-gray-500 uppercase tracking-wider">Mostrando:</span>
+              <span id="recordCountLabel" class="text-xs font-semibold text-gray-800 bg-white px-2.5 py-1 rounded border border-gray-200 font-mono">6 de 1,482 tenants</span>
+            </div>
+
+            <div class="flex items-center gap-3">
+              <!-- Selector de Densidad (Compacta / Cómoda) (40px) -->
+              <div class="ctrl-40 bg-gray-100 p-1 rounded-lg flex items-center border border-gray-200">
+                <button id="btnDensityCompact" onclick="setDensity('compact')" class="ctrl-40 px-2.5 py-1 text-xs font-medium rounded-md text-gray-600 hover:text-gray-900 transition-all">
+                  Compacta
+                </button>
+                <button id="btnDensityComfort" onclick="setDensity('comfort')" class="ctrl-40 px-2.5 py-1 text-xs font-semibold rounded-md bg-white text-indigo-700 shadow-sm transition-all">
+                  Cómoda
+                </button>
+              </div>
+
+              <!-- Menú Desplegable 'Columnas' (icono columns-3) -->
+              <div class="relative">
+                <button onclick="toggleColumnMenu()" class="ctrl-btn bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 text-xs gap-2">
+                  <i data-lucide="columns-3" class="w-4 h-4 text-indigo-600"></i>
+                  <span>Columnas</span>
+                  <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-gray-400"></i>
+                </button>
+
+                <!-- Menú Popover de Columnas -->
+                <div id="columnDropdown" class="hidden absolute right-0 mt-1 w-64 bg-white border border-gray-200 rounded-xl shadow-xl z-30 p-3 space-y-2">
+                  <div class="flex items-center justify-between pb-2 border-b border-gray-100">
+                    <span class="text-xs font-bold text-gray-700">Columnas visibles</span>
+                    <button onclick="resetDefaultColumns()" class="text-[11px] font-semibold text-indigo-600 hover:text-indigo-800">
+                      Restablecer
+                    </button>
+                  </div>
+                  <div class="space-y-1.5 max-h-60 overflow-y-auto text-xs text-gray-600">
+                    <label class="flex items-center gap-2 p-1 hover:bg-gray-50 rounded cursor-pointer">
+                      <input type="checkbox" checked onchange="toggleCol('col-empresa', this.checked)" class="rounded text-indigo-600">
+                      <span>Razón Social / RUC</span>
+                    </label>
+                    <label class="flex items-center gap-2 p-1 hover:bg-gray-50 rounded cursor-pointer">
+                      <input type="checkbox" checked onchange="toggleCol('col-rubro', this.checked)" class="rounded text-indigo-600">
+                      <span>Rubro / Vertical</span>
+                    </label>
+                    <label class="flex items-center gap-2 p-1 hover:bg-gray-50 rounded cursor-pointer">
+                      <input type="checkbox" checked onchange="toggleCol('col-plan', this.checked)" class="rounded text-indigo-600">
+                      <span>Plan Contratado</span>
+                    </label>
+                    <label class="flex items-center gap-2 p-1 hover:bg-gray-50 rounded cursor-pointer">
+                      <input type="checkbox" checked onchange="toggleCol('col-estado', this.checked)" class="rounded text-indigo-600">
+                      <span>Estado Tenant</span>
+                    </label>
+                    <label class="flex items-center gap-2 p-1 hover:bg-gray-50 rounded cursor-pointer">
+                      <input type="checkbox" checked onchange="toggleCol('col-sedes', this.checked)" class="rounded text-indigo-600">
+                      <span>Sedes y Usuarios</span>
+                    </label>
+                    <label class="flex items-center gap-2 p-1 hover:bg-gray-50 rounded cursor-pointer">
+                      <input type="checkbox" checked onchange="toggleCol('col-cpe', this.checked)" class="rounded text-indigo-600">
+                      <span>Consumo CPE / Mes</span>
+                    </label>
+                    <label class="flex items-center gap-2 p-1 hover:bg-gray-50 rounded cursor-pointer">
+                      <input type="checkbox" checked onchange="toggleCol('col-ose', this.checked)" class="rounded text-indigo-600">
+                      <span>Proveedor OSE</span>
+                    </label>
+                    <label class="flex items-center gap-2 p-1 hover:bg-gray-50 rounded cursor-pointer">
+                      <input type="checkbox" checked onchange="toggleCol('col-acceso', this.checked)" class="rounded text-indigo-600">
+                      <span>Último Acceso</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Botón Restablecer Vistas (40px) -->
+              <button onclick="resetAllTableViews()" title="Restablecer tabla por defecto" class="ctrl-btn bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 text-xs gap-1.5">
+                <i data-lucide="rotate-ccw" class="w-3.5 h-3.5 text-gray-400"></i>
+                <span>Restablecer</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- TABLA PRINCIPAL RESPONSIVE -->
+          <div class="overflow-x-auto min-h-[360px]">
+            <table id="tenantsTable" class="w-full text-left border-collapse comfort-mode">
+              <thead>
+                <tr class="border-b border-gray-200 bg-gray-50/80 text-[11px] font-bold text-gray-500 uppercase tracking-wider select-none">
+                  <th class="py-3.5 px-5 col-empresa">
+                    <div class="flex items-center gap-1.5 cursor-pointer hover:text-gray-900" onclick="sortTable('name')">
+                      <span>Empresa / RUC</span>
+                      <i data-lucide="arrow-up-down" class="w-3.5 h-3.5 text-gray-400"></i>
+                    </div>
+                  </th>
+                  <th class="py-3.5 px-4 col-rubro">
+                    <div class="flex items-center gap-1.5 cursor-pointer hover:text-gray-900" onclick="sortTable('rubro')">
+                      <span>Rubro</span>
+                      <i data-lucide="arrow-up-down" class="w-3.5 h-3.5 text-gray-400"></i>
+                    </div>
+                  </th>
+                  <th class="py-3.5 px-4 col-plan">
+                    <div class="flex items-center gap-1.5 cursor-pointer hover:text-gray-900" onclick="sortTable('plan')">
+                      <span>Plan &amp; Tarifa</span>
+                      <i data-lucide="arrow-up-down" class="w-3.5 h-3.5 text-gray-400"></i>
+                    </div>
+                  </th>
+                  <th class="py-3.5 px-4 col-estado">
+                    <div class="flex items-center gap-1.5 cursor-pointer hover:text-gray-900" onclick="sortTable('estado')">
+                      <span>Estado</span>
+                      <i data-lucide="arrow-up-down" class="w-3.5 h-3.5 text-gray-400"></i>
+                    </div>
+                  </th>
+                  <th class="py-3.5 px-4 col-sedes">
+                    <span>Sedes / Usr</span>
+                  </th>
+                  <th class="py-3.5 px-5 col-cpe w-64">
+                    <div class="flex items-center gap-1.5 cursor-pointer hover:text-gray-900" onclick="sortTable('cpe')">
+                      <span>Uso Comprobantes / Mes</span>
+                      <i data-lucide="arrow-up-down" class="w-3.5 h-3.5 text-gray-400"></i>
+                    </div>
+                  </th>
+                  <th class="py-3.5 px-4 col-ose">
+                    <span>Conector OSE</span>
+                  </th>
+                  <th class="py-3.5 px-4 col-acceso">
+                    <span>Último Acceso</span>
+                  </th>
+                  <th class="py-3.5 px-5 text-right">
+                    <span>Acciones</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody id="tenantRows" class="divide-y divide-gray-100 text-sm">
+                <!-- Renglón 1: OdontoSalud (Activa, Bizlinks) -->
+                <tr class="hover:bg-slate-50/80 transition-colors group">
+                  <td class="py-4 px-5 col-empresa">
+                    <div class="flex items-start gap-3">
+                      <div class="w-9 h-9 rounded-lg bg-blue-100 text-blue-700 font-bold flex items-center justify-center text-xs shrink-0 mt-0.5">
+                        OD
+                      </div>
+                      <div>
+                        <div class="flex items-center gap-2">
+                          <span class="font-bold text-gray-900 hover:text-indigo-600 cursor-pointer">Clínica Dental OdontoSalud S.A.C.</span>
+                          <span class="text-[10px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded font-mono font-medium">TEN-104</span>
+                        </div>
+                        <div class="flex items-center gap-2 text-xs text-gray-500 mt-0.5 font-mono">
+                          <span>RUC: 20601984211</span>
+                          <span>&bull;</span>
+                          <span class="text-gray-500 font-sans">Miraflores, Lima</span>
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="py-4 px-4 col-rubro">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100">
+                      <i data-lucide="stethoscope" class="w-3 h-3"></i>
+                      Odontología
+                    </span>
+                  </td>
+                  <td class="py-4 px-4 col-plan">
+                    <div>
+                      <span class="font-bold text-gray-900">S/ 490.00</span>
+                      <span class="text-xs text-gray-500">/mes</span>
+                      <div class="text-[11px] text-indigo-600 font-medium">Plan Pro Multi-Sede</div>
+                    </div>
+                  </td>
+                  <td class="py-4 px-4 col-estado">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      <!-- Dinámico: Check-circle / Activa -->
+                      <i data-lucide="check-circle" class="w-3.5 h-3.5 text-emerald-600"></i>
+                      Activa
+                    </span>
+                  </td>
+                  <td class="py-4 px-4 col-sedes">
+                    <div class="text-xs text-gray-700">
+                      <span class="font-semibold">3</span> sedes <span class="text-gray-400">/</span> <span class="font-semibold">12</span> usuarios
+                    </div>
+                    <span class="text-[11px] text-gray-400">Matriz: José Pardo</span>
+                  </td>
+                  <td class="py-4 px-5 col-cpe">
+                    <div class="space-y-1">
+                      <div class="flex justify-between text-xs font-medium">
+                        <span class="text-gray-700 font-mono">4,820 / 10,000 CPE</span>
+                        <span class="text-indigo-600 font-bold">48.2%</span>
+                      </div>
+                      <div class="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                        <div class="h-full bg-indigo-600 rounded-full" style="width: 48.2%"></div>
+                      </div>
+                      <p class="text-[10px] text-gray-400">Facturas, Boletas &amp; NC</p>
+                    </div>
+                  </td>
+                  <td class="py-4 px-4 col-ose">
+                    <div class="flex items-center gap-2">
+                      <!-- Dinámico conector: wifi conectado -->
+                      <i data-lucide="wifi" class="w-4 h-4 text-emerald-600"></i>
+                      <div class="text-xs">
+                        <p class="font-semibold text-gray-800">Bizlinks OSE</p>
+                        <p class="text-[10px] text-gray-400 font-mono">180ms latencia</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="py-4 px-4 col-acceso text-xs text-gray-600">
+                    <div>24/10/2024</div>
+                    <div class="text-[10px] text-gray-400">15:38 hrs</div>
+                  </td>
+                  <td class="py-4 px-5 text-right">
+                    <div class="flex items-center justify-end gap-1.5">
+                      <button onclick="viewTenantDetail('TEN-104')" title="Ver Ficha y Configuración" class="p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
+                        <i data-lucide="eye" class="w-4 h-4"></i>
+                      </button>
+                      <button onclick="impersonateTenant('Clínica Dental OdontoSalud S.A.C.', 'TEN-104')" title="Impersonar sesión (Superadmin)" class="p-2 text-gray-500 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors">
+                        <i data-lucide="user-check" class="w-4 h-4"></i>
+                      </button>
+                      <button onclick="toggleSuspendModal('TEN-104', 'Clínica Dental OdontoSalud S.A.C.', true)" title="Bloquear / Suspender Tenant" class="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                        <!-- Dinámico: lock / lock-open -->
+                        <i data-lucide="lock" class="w-4 h-4"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+
+                <!-- Renglón 2: PetMed Sur (Alerta Cuota > 90%, Nubefact) -->
+                <tr class="hover:bg-slate-50/80 transition-colors group bg-amber-50/20">
+                  <td class="py-4 px-5 col-empresa">
+                    <div class="flex items-start gap-3">
+                      <div class="w-9 h-9 rounded-lg bg-amber-100 text-amber-700 font-bold flex items-center justify-center text-xs shrink-0 mt-0.5">
+                        VT
+                      </div>
+                      <div>
+                        <div class="flex items-center gap-2">
+                          <span class="font-bold text-gray-900 hover:text-indigo-600 cursor-pointer">Hospital Veterinario PetMed Sur E.I.R.L.</span>
+                          <span class="text-[10px] bg-amber-100 text-amber-800 font-semibold px-1.5 py-0.5 rounded">CUOTA LÍMITE</span>
+                        </div>
+                        <div class="flex items-center gap-2 text-xs text-gray-500 mt-0.5 font-mono">
+                          <span>RUC: 20554819230</span>
+                          <span>&bull;</span>
+                          <span class="text-gray-500 font-sans">Cayma, Arequipa</span>
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="py-4 px-4 col-rubro">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-amber-50 text-amber-700 border border-amber-100">
+                      <i data-lucide="paw-print" class="w-3 h-3"></i>
+                      Veterinaria
+                    </span>
+                  </td>
+                  <td class="py-4 px-4 col-plan">
+                    <div>
+                      <span class="font-bold text-gray-900">S/ 320.00</span>
+                      <span class="text-xs text-gray-500">/mes</span>
+                      <div class="text-[11px] text-gray-500 font-medium">Plan Clínico Base</div>
+                    </div>
+                  </td>
+                  <td class="py-4 px-4 col-estado">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-300">
+                      <!-- Dinámico: alerta advertencia -->
+                      <i data-lucide="alert-triangle" class="w-3.5 h-3.5 text-amber-600 animate-pulse-alert"></i>
+                      Cuota 94%
+                    </span>
+                  </td>
+                  <td class="py-4 px-4 col-sedes">
+                    <div class="text-xs text-gray-700">
+                      <span class="font-semibold">2</span> sedes <span class="text-gray-400">/</span> <span class="font-semibold">8</span> usuarios
+                    </div>
+                    <span class="text-[11px] text-gray-400">Sede Cayma &amp; Yanahuara</span>
+                  </td>
+                  <td class="py-4 px-5 col-cpe">
+                    <div class="space-y-1">
+                      <div class="flex justify-between text-xs font-medium">
+                        <span class="text-red-700 font-mono font-bold">4,710 / 5,000 CPE</span>
+                        <span class="text-red-600 font-bold">94.2%</span>
+                      </div>
+                      <div class="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                        <div class="h-full bg-red-500 rounded-full" style="width: 94.2%"></div>
+                      </div>
+                      <p class="text-[10px] text-amber-600 font-medium">Requiere upgrade a Plan Pro</p>
+                    </div>
+                  </td>
+                  <td class="py-4 px-4 col-ose">
+                    <div class="flex items-center gap-2">
+                      <i data-lucide="wifi" class="w-4 h-4 text-emerald-600"></i>
+                      <div class="text-xs">
+                        <p class="font-semibold text-gray-800">Nubefact</p>
+                        <p class="text-[10px] text-gray-400 font-mono">210ms latencia</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="py-4 px-4 col-acceso text-xs text-gray-600">
+                    <div>24/10/2024</div>
+                    <div class="text-[10px] text-gray-400">15:41 hrs</div>
+                  </td>
+                  <td class="py-4 px-5 text-right">
+                    <div class="flex items-center justify-end gap-1.5">
+                      <button onclick="viewTenantDetail('TEN-105')" class="p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg">
+                        <i data-lucide="eye" class="w-4 h-4"></i>
+                      </button>
+                      <button onclick="impersonateTenant('Hospital Veterinario PetMed Sur', 'TEN-105')" class="p-2 text-gray-500 hover:text-purple-600 hover:bg-purple-50 rounded-lg">
+                        <i data-lucide="user-check" class="w-4 h-4"></i>
+                      </button>
+                      <button onclick="toggleSuspendModal('TEN-105', 'Hospital Veterinario PetMed Sur', true)" class="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg">
+                        <i data-lucide="lock" class="w-4 h-4"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+
+                <!-- Renglón 3: Cevicheras La Mar (Enterprise, Efact) -->
+                <tr class="hover:bg-slate-50/80 transition-colors group">
+                  <td class="py-4 px-5 col-empresa">
+                    <div class="flex items-start gap-3">
+                      <div class="w-9 h-9 rounded-lg bg-emerald-100 text-emerald-700 font-bold flex items-center justify-center text-xs shrink-0 mt-0.5">
+                        RS
+                      </div>
+                      <div>
+                        <div class="flex items-center gap-2">
+                          <span class="font-bold text-gray-900 hover:text-indigo-600 cursor-pointer">Grupo Gastronómico Cevicherías La Mar S.A.</span>
+                          <span class="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded font-bold">ENTERPRISE</span>
+                        </div>
+                        <div class="flex items-center gap-2 text-xs text-gray-500 mt-0.5 font-mono">
+                          <span>RUC: 20498112349</span>
+                          <span>&bull;</span>
+                          <span class="text-gray-500 font-sans">6 Locales Lima</span>
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="py-4 px-4 col-rubro">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-100">
+                      <i data-lucide="utensils" class="w-3 h-3"></i>
+                      Restaurantes
+                    </span>
+                  </td>
+                  <td class="py-4 px-4 col-plan">
+                    <div>
+                      <span class="font-bold text-gray-900">S/ 850.00</span>
+                      <span class="text-xs text-gray-500">/mes</span>
+                      <div class="text-[11px] text-purple-600 font-semibold">Plan Unlimited POS</div>
+                    </div>
+                  </td>
+                  <td class="py-4 px-4 col-estado">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      <i data-lucide="check-circle" class="w-3.5 h-3.5 text-emerald-600"></i>
+                      Activa
+                    </span>
+                  </td>
+                  <td class="py-4 px-4 col-sedes">
+                    <div class="text-xs text-gray-700">
+                      <span class="font-semibold">6</span> sedes <span class="text-gray-400">/</span> <span class="font-semibold">45</span> cajas POS
+                    </div>
+                    <span class="text-[11px] text-gray-400">Alta concurrencia fin de semana</span>
+                  </td>
+                  <td class="py-4 px-5 col-cpe">
+                    <div class="space-y-1">
+                      <div class="flex justify-between text-xs font-medium">
+                        <span class="text-gray-700 font-mono">32,490 / 50,000 CPE</span>
+                        <span class="text-emerald-600 font-bold">64.9%</span>
+                      </div>
+                      <div class="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                        <div class="h-full bg-emerald-500 rounded-full" style="width: 64.9%"></div>
+                      </div>
+                      <p class="text-[10px] text-gray-400">Boletas electrónicas rápidas</p>
+                    </div>
+                  </td>
+                  <td class="py-4 px-4 col-ose">
+                    <div class="flex items-center gap-2">
+                      <i data-lucide="wifi" class="w-4 h-4 text-emerald-600"></i>
+                      <div class="text-xs">
+                        <p class="font-semibold text-gray-800">Efact OSE</p>
+                        <p class="text-[10px] text-gray-400 font-mono">245ms latencia</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="py-4 px-4 col-acceso text-xs text-gray-600">
+                    <div>24/10/2024</div>
+                    <div class="text-[10px] text-gray-400">15:42 hrs</div>
+                  </td>
+                  <td class="py-4 px-5 text-right">
+                    <div class="flex items-center justify-end gap-1.5">
+                      <button onclick="viewTenantDetail('TEN-106')" class="p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg">
+                        <i data-lucide="eye" class="w-4 h-4"></i>
+                      </button>
+                      <button onclick="impersonateTenant('Grupo Gastronómico La Mar', 'TEN-106')" class="p-2 text-gray-500 hover:text-purple-600 hover:bg-purple-50 rounded-lg">
+                        <i data-lucide="user-check" class="w-4 h-4"></i>
+                      </button>
+                      <button onclick="toggleSuspendModal('TEN-106', 'Grupo Gastronómico La Mar', true)" class="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg">
+                        <i data-lucide="lock" class="w-4 h-4"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+
+                <!-- Renglón 4: Comercializadora Textil Gamarra (SUSPENDIDA, SUNAT Directo Fallando) -->
+                <tr class="hover:bg-slate-50/80 transition-colors group bg-red-50/30">
+                  <td class="py-4 px-5 col-empresa">
+                    <div class="flex items-start gap-3">
+                      <div class="w-9 h-9 rounded-lg bg-red-100 text-red-700 font-bold flex items-center justify-center text-xs shrink-0 mt-0.5">
+                        RT
+                      </div>
+                      <div>
+                        <div class="flex items-center gap-2">
+                          <span class="font-bold text-gray-900 hover:text-indigo-600 cursor-pointer">Comercializadora Textil Gamarra Perú S.A.C.</span>
+                          <span class="text-[10px] bg-red-100 text-red-700 font-bold px-1.5 py-0.5 rounded">SUSPENDIDO</span>
+                        </div>
+                        <div class="flex items-center gap-2 text-xs text-gray-500 mt-0.5 font-mono">
+                          <span>RUC: 20114092812</span>
+                          <span>&bull;</span>
+                          <span class="text-gray-500 font-sans">La Victoria, Lima</span>
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="py-4 px-4 col-rubro">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-purple-50 text-purple-700 border border-purple-100">
+                      <i data-lucide="shopping-bag" class="w-3 h-3"></i>
+                      Retail
+                    </span>
+                  </td>
+                  <td class="py-4 px-4 col-plan">
+                    <div>
+                      <span class="font-bold text-gray-900">S/ 280.00</span>
+                      <span class="text-xs text-gray-500">/mes</span>
+                      <div class="text-[11px] text-red-600 font-medium">Mora 32 días</div>
+                    </div>
+                  </td>
+                  <td class="py-4 px-4 col-estado">
+                    <!-- Dinámico: lock cerrado / Suspendida -->
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800 border border-red-200">
+                      <i data-lucide="lock" class="w-3.5 h-3.5 text-red-600"></i>
+                      Suspendida
+                    </span>
+                  </td>
+                  <td class="py-4 px-4 col-sedes">
+                    <div class="text-xs text-gray-700">
+                      <span class="font-semibold">1</span> sede <span class="text-gray-400">/</span> <span class="font-semibold">4</span> usuarios
+                    </div>
+                    <span class="text-[11px] text-red-500 font-medium">Acceso bloqueado</span>
+                  </td>
+                  <td class="py-4 px-5 col-cpe">
+                    <div class="space-y-1">
+                      <div class="flex justify-between text-xs font-medium">
+                        <span class="text-gray-400 font-mono">1,120 / 3,000 CPE</span>
+                        <span class="text-gray-400 font-bold">37.3%</span>
+                      </div>
+                      <div class="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                        <div class="h-full bg-gray-400 rounded-full" style="width: 37.3%"></div>
+                      </div>
+                      <p class="text-[10px] text-red-500">Timbrado pausado por morosidad</p>
+                    </div>
+                  </td>
+                  <td class="py-4 px-4 col-ose">
+                    <div class="flex items-center gap-2">
+                      <!-- Dinámico conector: wifi-off desconectado -->
+                      <i data-lucide="wifi-off" class="w-4 h-4 text-red-500"></i>
+                      <div class="text-xs">
+                        <p class="font-semibold text-gray-800">SUNAT Directo</p>
+                        <p class="text-[10px] text-red-500 font-mono">Token OAUTH vencido</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="py-4 px-4 col-acceso text-xs text-gray-600">
+                    <div>18/10/2024</div>
+                    <div class="text-[10px] text-gray-400">09:12 hrs</div>
+                  </td>
+                  <td class="py-4 px-5 text-right">
+                    <div class="flex items-center justify-end gap-1.5">
+                      <button onclick="viewTenantDetail('TEN-107')" class="p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg">
+                        <i data-lucide="eye" class="w-4 h-4"></i>
+                      </button>
+                      <button onclick="impersonateTenant('Textil Gamarra Perú', 'TEN-107')" class="p-2 text-gray-500 hover:text-purple-600 hover:bg-purple-50 rounded-lg">
+                        <i data-lucide="user-check" class="w-4 h-4"></i>
+                      </button>
+                      <!-- Desbloquear (lock-open) -->
+                      <button onclick="toggleSuspendModal('TEN-107', 'Textil Gamarra Perú', false)" title="Reactivar / Desbloquear" class="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg">
+                        <i data-lucide="lock-open" class="w-4 h-4"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+
+                <!-- Renglón 5: Dental Norte Especialistas (Trial, Bizlinks) -->
+                <tr class="hover:bg-slate-50/80 transition-colors group">
+                  <td class="py-4 px-5 col-empresa">
+                    <div class="flex items-start gap-3">
+                      <div class="w-9 h-9 rounded-lg bg-blue-100 text-blue-700 font-bold flex items-center justify-center text-xs shrink-0 mt-0.5">
+                        DN
+                      </div>
+                      <div>
+                        <div class="flex items-center gap-2">
+                          <span class="font-bold text-gray-900 hover:text-indigo-600 cursor-pointer">Dental Norte Especialistas Trujillo</span>
+                          <span class="text-[10px] bg-amber-50 text-amber-800 border border-amber-200 px-1.5 py-0.5 rounded font-bold">TRIAL 7 DÍAS</span>
+                        </div>
+                        <div class="flex items-center gap-2 text-xs text-gray-500 mt-0.5 font-mono">
+                          <span>RUC: 20481902410</span>
+                          <span>&bull;</span>
+                          <span class="text-gray-500 font-sans">Trujillo, La Libertad</span>
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="py-4 px-4 col-rubro">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100">
+                      <i data-lucide="stethoscope" class="w-3 h-3"></i>
+                      Odontología
+                    </span>
+                  </td>
+                  <td class="py-4 px-4 col-plan">
+                    <div>
+                      <span class="font-bold text-gray-900">S/ 0.00</span>
+                      <span class="text-xs text-amber-600 font-medium">(Periodo Prueba)</span>
+                      <div class="text-[11px] text-gray-500">Demo Plan Pro</div>
+                    </div>
+                  </td>
+                  <td class="py-4 px-4 col-estado">
+                    <!-- Dinámico: Reloj / Periodo Trial -->
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                      <i data-lucide="hourglass" class="w-3.5 h-3.5 text-amber-500"></i>
+                      Trial
+                    </span>
+                  </td>
+                  <td class="py-4 px-4 col-sedes">
+                    <div class="text-xs text-gray-700">
+                      <span class="font-semibold">1</span> sede <span class="text-gray-400">/</span> <span class="font-semibold">3</span> usuarios
+                    </div>
+                    <span class="text-[11px] text-gray-400">Sede El Golf</span>
+                  </td>
+                  <td class="py-4 px-5 col-cpe">
+                    <div class="space-y-1">
+                      <div class="flex justify-between text-xs font-medium">
+                        <span class="text-gray-700 font-mono">140 / 500 CPE</span>
+                        <span class="text-indigo-600 font-bold">28.0%</span>
+                      </div>
+                      <div class="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                        <div class="h-full bg-indigo-500 rounded-full" style="width: 28%"></div>
+                      </div>
+                      <p class="text-[10px] text-gray-400">Cuota de prueba asignada</p>
+                    </div>
+                  </td>
+                  <td class="py-4 px-4 col-ose">
+                    <div class="flex items-center gap-2">
+                      <i data-lucide="wifi" class="w-4 h-4 text-emerald-600"></i>
+                      <div class="text-xs">
+                        <p class="font-semibold text-gray-800">Bizlinks OSE</p>
+                        <p class="text-[10px] text-gray-400 font-mono">175ms latencia</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="py-4 px-4 col-acceso text-xs text-gray-600">
+                    <div>24/10/2024</div>
+                    <div class="text-[10px] text-gray-400">14:15 hrs</div>
+                  </td>
+                  <td class="py-4 px-5 text-right">
+                    <div class="flex items-center justify-end gap-1.5">
+                      <button onclick="viewTenantDetail('TEN-108')" class="p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg">
+                        <i data-lucide="eye" class="w-4 h-4"></i>
+                      </button>
+                      <button onclick="impersonateTenant('Dental Norte Especialistas', 'TEN-108')" class="p-2 text-gray-500 hover:text-purple-600 hover:bg-purple-50 rounded-lg">
+                        <i data-lucide="user-check" class="w-4 h-4"></i>
+                      </button>
+                      <button onclick="toggleSuspendModal('TEN-108', 'Dental Norte Especialistas', true)" class="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg">
+                        <i data-lucide="lock" class="w-4 h-4"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+
+                <!-- Renglón 6: Cadena Veterinaria Los Andes (Activa, Nubefact) -->
+                <tr class="hover:bg-slate-50/80 transition-colors group">
+                  <td class="py-4 px-5 col-empresa">
+                    <div class="flex items-start gap-3">
+                      <div class="w-9 h-9 rounded-lg bg-amber-100 text-amber-700 font-bold flex items-center justify-center text-xs shrink-0 mt-0.5">
+                        VA
+                      </div>
+                      <div>
+                        <div class="flex items-center gap-2">
+                          <span class="font-bold text-gray-900 hover:text-indigo-600 cursor-pointer">Cadena Veterinaria Los Andes Cusco S.R.L.</span>
+                          <span class="text-[10px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded font-mono font-medium">TEN-109</span>
+                        </div>
+                        <div class="flex items-center gap-2 text-xs text-gray-500 mt-0.5 font-mono">
+                          <span>RUC: 20603349182</span>
+                          <span>&bull;</span>
+                          <span class="text-gray-500 font-sans">Wanchaq, Cusco</span>
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="py-4 px-4 col-rubro">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-amber-50 text-amber-700 border border-amber-100">
+                      <i data-lucide="paw-print" class="w-3 h-3"></i>
+                      Veterinaria
+                    </span>
+                  </td>
+                  <td class="py-4 px-4 col-plan">
+                    <div>
+                      <span class="font-bold text-gray-900">S/ 490.00</span>
+                      <span class="text-xs text-gray-500">/mes</span>
+                      <div class="text-[11px] text-indigo-600 font-medium">Plan Pro Multi-Sede</div>
+                    </div>
+                  </td>
+                  <td class="py-4 px-4 col-estado">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      <i data-lucide="check-circle" class="w-3.5 h-3.5 text-emerald-600"></i>
+                      Activa
+                    </span>
+                  </td>
+                  <td class="py-4 px-4 col-sedes">
+                    <div class="text-xs text-gray-700">
+                      <span class="font-semibold">4</span> sedes <span class="text-gray-400">/</span> <span class="font-semibold">16</span> usuarios
+                    </div>
+                    <span class="text-[11px] text-gray-400">Cusco &amp; Valle Sagrado</span>
+                  </td>
+                  <td class="py-4 px-5 col-cpe">
+                    <div class="space-y-1">
+                      <div class="flex justify-between text-xs font-medium">
+                        <span class="text-gray-700 font-mono">6,120 / 10,000 CPE</span>
+                        <span class="text-indigo-600 font-bold">61.2%</span>
+                      </div>
+                      <div class="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                        <div class="h-full bg-indigo-600 rounded-full" style="width: 61.2%"></div>
+                      </div>
+                      <p class="text-[10px] text-gray-400">Consumo estable</p>
+                    </div>
+                  </td>
+                  <td class="py-4 px-4 col-ose">
+                    <div class="flex items-center gap-2">
+                      <i data-lucide="wifi" class="w-4 h-4 text-emerald-600"></i>
+                      <div class="text-xs">
+                        <p class="font-semibold text-gray-800">Nubefact</p>
+                        <p class="text-[10px] text-gray-400 font-mono">195ms latencia</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="py-4 px-4 col-acceso text-xs text-gray-600">
+                    <div>23/10/2024</div>
+                    <div class="text-[10px] text-gray-400">19:22 hrs</div>
+                  </td>
+                  <td class="py-4 px-5 text-right">
+                    <div class="flex items-center justify-end gap-1.5">
+                      <button onclick="viewTenantDetail('TEN-109')" class="p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg">
+                        <i data-lucide="eye" class="w-4 h-4"></i>
+                      </button>
+                      <button onclick="impersonateTenant('Cadena Veterinaria Los Andes', 'TEN-109')" class="p-2 text-gray-500 hover:text-purple-600 hover:bg-purple-50 rounded-lg">
+                        <i data-lucide="user-check" class="w-4 h-4"></i>
+                      </button>
+                      <button onclick="toggleSuspendModal('TEN-109', 'Cadena Veterinaria Los Andes', true)" class="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg">
+                        <i data-lucide="lock" class="w-4 h-4"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+
+              </tbody>
+            </table>
+          </div>
+
+          <!-- ESTADO VACÍO (EMPTY STATE OCULTO POR DEFECTO) -->
+          <div id="emptyState" class="hidden py-16 px-4 text-center">
+            <div class="w-16 h-16 bg-indigo-50 text-indigo-500 rounded-full flex items-center justify-center mx-auto mb-4">
+              <i data-lucide="search-x" class="w-8 h-8"></i>
+            </div>
+            <h3 class="text-base font-bold text-gray-800">No se encontraron empresas clientes</h3>
+            <p class="text-sm text-gray-500 mt-1 max-w-sm mx-auto">No hay ningún tenant que coincida con los filtros de búsqueda aplicados actualmente.</p>
+            <button onclick="resetFilters()" class="ctrl-btn mt-4 bg-indigo-600 hover:bg-indigo-700 text-white text-xs">
+              Limpiar filtros de búsqueda
+            </button>
+          </div>
+
+          <!-- PAGINACIÓN NUMERADA CON SELECTOR DE FILAS POR PÁGINA (ALTURA 40px) -->
+          <div class="px-6 py-4 border-t border-gray-200 bg-white flex flex-wrap items-center justify-between gap-4">
+            <!-- Selector de filas por página -->
+            <div class="flex items-center gap-3">
+              <span class="text-xs text-gray-500">Mostrar</span>
+              <select class="ctrl-40 px-3 bg-white border border-gray-300 rounded-lg text-xs font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
+                <option value="10">10 empresas</option>
+                <option value="25" selected>25 empresas</option>
+                <option value="50">50 empresas</option>
+                <option value="100">100 empresas</option>
+              </select>
+              <span class="text-xs text-gray-500">de <strong class="text-gray-800 font-mono">1,482</strong> registradas</span>
+            </div>
+
+            <!-- Paginación numerada con controles de 40px -->
+            <div class="flex items-center gap-1.5">
+              <button class="ctrl-40 w-10 flex items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:bg-gray-50 disabled:opacity-40" disabled>
+                <i data-lucide="chevron-left" class="w-4 h-4"></i>
+              </button>
+              
+              <button class="ctrl-40 w-10 flex items-center justify-center rounded-lg bg-indigo-600 text-white font-bold text-xs shadow-sm">
+                1
+              </button>
+              <button class="ctrl-40 w-10 flex items-center justify-center rounded-lg border border-gray-200 hover:bg-gray-50 text-gray-700 text-xs font-medium">
+                2
+              </button>
+              <button class="ctrl-40 w-10 flex items-center justify-center rounded-lg border border-gray-200 hover:bg-gray-50 text-gray-700 text-xs font-medium">
+                3
+              </button>
+              <span class="px-2 text-gray-400 text-xs">...</span>
+              <button class="ctrl-40 w-10 flex items-center justify-center rounded-lg border border-gray-200 hover:bg-gray-50 text-gray-700 text-xs font-medium">
+                60
+              </button>
+
+              <button class="ctrl-40 w-10 flex items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">
+                <i data-lucide="chevron-right" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- FOOTER INSTITUCIONAL -->
+      <footer class="mt-auto border-t border-gray-200 bg-white px-8 py-4 text-xs text-gray-500 flex flex-wrap items-center justify-between gap-2">
+        <div class="flex items-center gap-2">
+          <span class="font-bold text-gray-700">PerúSaaS Admin Console v4.12</span>
+          <span>&bull;</span>
+          <span>Zona horaria: America/Lima (UTC-5)</span>
+          <span>&bull;</span>
+          <span>Moneda Base: Soles (S/)</span>
+        </div>
+        <div class="flex items-center gap-4 text-indigo-600">
+          <a href="#" class="hover:underline">Manual Operaciones</a>
+          <a href="#" class="hover:underline">API OSE Status</a>
+          <a href="#" class="hover:underline">Bitácora Auditoría</a>
+        </div>
+      </footer>
+    </main>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- DRAWER LATERAL: 'ALTA DE EMPRESA' (RUC con consulta SUNAT, rubro, plan, etc.) -->
+  <!-- ========================================================================= -->
+  <div id="createTenantDrawer" class="fixed inset-0 z-50 overflow-hidden hidden" aria-labelledby="drawer-title" role="dialog" aria-modal="true">
+    <!-- Backdrop oscuro -->
+    <div onclick="closeCreateDrawer()" class="drawer-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"></div>
+
+    <div class="fixed inset-y-0 right-0 max-w-full flex pl-10">
+      <div class="drawer-panel w-screen max-w-xl bg-white shadow-2xl flex flex-col border-l border-gray-200">
+        
+        <!-- Drawer Header -->
+        <div class="px-6 py-5 border-b border-gray-200 bg-slate-900 text-white flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-lg bg-indigo-600 flex items-center justify-center text-white">
+              <i data-lucide="building" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <h2 id="drawer-title" class="text-base font-bold text-white tracking-tight">Alta de Nueva Empresa (Tenant)</h2>
+              <p class="text-xs text-slate-300">Aprovisionamiento multi-tenant y configuración tributaria SUNAT</p>
+            </div>
+          </div>
+          <button onclick="closeCreateDrawer()" class="text-slate-400 hover:text-white p-1 rounded-lg">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </div>
+
+        <!-- Drawer Content Form -->
+        <div class="flex-1 overflow-y-auto p-6 space-y-5 bg-[#F8FAFC]">
+          
+          <!-- SECCIÓN 1: CONSULTA SUNAT / RUC -->
+          <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm space-y-3">
+            <div class="flex items-center justify-between">
+              <label class="block text-xs font-bold text-gray-700 uppercase tracking-wide">
+                Identificación Tributaria SUNAT <span class="text-red-500">*</span>
+              </label>
+              <span class="text-[11px] text-emerald-600 font-medium flex items-center gap-1">
+                <i data-lucide="shield-check" class="w-3.5 h-3.5"></i> Conexión API Padron RUC
+              </span>
+            </div>
+
+            <div class="flex gap-2">
+              <div class="relative flex-1">
+                <input type="text" id="drawerRucInput" maxlength="11" placeholder="Ingrese RUC (11 dígitos, ej: 20609871234)" value="20608912341"
+                       class="ctrl-40 w-full px-3.5 font-mono text-sm font-semibold bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
+              </div>
+              <button type="button" onclick="simulateSunatQuery()" id="btnSunatQuery" class="ctrl-btn bg-indigo-600 hover:bg-indigo-700 text-white gap-1.5 shadow-sm text-xs">
+                <i data-lucide="refresh-cw" id="sunatSpinner" class="w-4 h-4"></i>
+                <span id="sunatQueryBtnText">Consultar SUNAT</span>
+              </button>
+            </div>
+
+            <!-- Resultado de Consulta SUNAT (Simulado automático) -->
+            <div id="sunatResultBox" class="p-3 bg-emerald-50/70 border border-emerald-200 rounded-lg text-xs space-y-1.5">
+              <div class="flex items-center justify-between">
+                <span class="font-bold text-emerald-900 flex items-center gap-1.5">
+                  <i data-lucide="check-circle" class="w-4 h-4 text-emerald-600"></i>
+                  Datos Tributarios Verificados
+                </span>
+                <span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold text-[10px]">HABIDO / ACTIVO</span>
+              </div>
+              <p class="font-bold text-gray-800 text-sm">INVERSIONES VETERINARIAS DEL VALLE S.A.C.</p>
+              <p class="text-gray-600">Dirección Fiscal: Av. El Sol 845, Distrito San Sebastián, Cusco</p>
+              <p class="text-gray-500 font-mono text-[11px]">Tipo Contribuyente: SOCIEDAD ANONIMA CERRADA &bull; Emisor Electrónico desde 2019</p>
+            </div>
+          </div>
+
+          <!-- SECCIÓN 2: DATOS DE NEGOCIO & PLAN -->
+          <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm space-y-4">
+            <h3 class="text-xs font-bold text-gray-700 uppercase tracking-wide">Parámetros del SaaS &amp; Rubro</h3>
+
+            <div class="grid grid-cols-2 gap-3">
+              <!-- Rubro -->
+              <div>
+                <label class="block text-xs font-semibold text-gray-700 mb-1.5">Rubro de la Empresa <span class="text-red-500">*</span></label>
+                <select class="ctrl-40 w-full px-3 bg-white border border-gray-300 rounded-lg text-sm text-gray-800 focus:ring-2 focus:ring-indigo-500/20">
+                  <option value="Veterinaria" selected>Veterinaria &amp; PetShop</option>
+                  <option value="Odontología">Odontología &amp; Dental</option>
+                  <option value="Restaurantes">Gastronomía &amp; Restaurante</option>
+                  <option value="Retail">Retail &amp; Comercio</option>
+                  <option value="Servicios">Servicios Profesionales</option>
+                </select>
+              </div>
+
+              <!-- Plan Asignado -->
+              <div>
+                <label class="block text-xs font-semibold text-gray-700 mb-1.5">Plan de Suscripción <span class="text-red-500">*</span></label>
+                <select class="ctrl-40 w-full px-3 bg-white border border-gray-300 rounded-lg text-sm text-gray-800 focus:ring-2 focus:ring-indigo-500/20">
+                  <option value="Plan Pro" selected>Plan Pro Multi-Sede (S/ 490/m)</option>
+                  <option value="Plan Clínico">Plan Clínico Base (S/ 320/m)</option>
+                  <option value="Plan Básico">Plan Básico (S/ 180/m)</option>
+                  <option value="Enterprise">Enterprise Personalizado (S/ 850/m)</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Sede Inicial & Ciudad -->
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-semibold text-gray-700 mb-1.5">Nombre de Sede Principal <span class="text-red-500">*</span></label>
+                <input type="text" value="Sede Central - San Sebastián" class="ctrl-40 w-full px-3.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-800 focus:ring-2 focus:ring-indigo-500/20">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-gray-700 mb-1.5">Conector OSE Homologado <span class="text-red-500">*</span></label>
+                <select class="ctrl-40 w-full px-3 bg-white border border-gray-300 rounded-lg text-sm text-gray-800 focus:ring-2 focus:ring-indigo-500/20">
+                  <option value="Bizlinks" selected>Bizlinks OSE (Recomendado)</option>
+                  <option value="Nubefact">Nubefact PSE/OSE</option>
+                  <option value="Efact">Efact OSE</option>
+                  <option value="SUNAT_Directo">SUNAT Directo (Sin OSE)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- SECCIÓN 3: ADMINISTRADOR INVITADO (TENANT ADMIN) -->
+          <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm space-y-3">
+            <div class="flex items-center justify-between">
+              <h3 class="text-xs font-bold text-gray-700 uppercase tracking-wide">Administrador Invitado (Tenant Owner)</h3>
+              <span class="text-[11px] text-gray-400">Recibirá enlace de activación</span>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-gray-700 mb-1.5">Nombres y Apellidos del Responsable <span class="text-red-500">*</span></label>
+              <input type="text" value="Dra. Mariana Valverde Quispe" class="ctrl-40 w-full px-3.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-800 focus:ring-2 focus:ring-indigo-500/20">
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-semibold text-gray-700 mb-1.5">Correo Electrónico Corporativo <span class="text-red-500">*</span></label>
+                <input type="email" value="gerencia@veterinariavalle.pe" class="ctrl-40 w-full px-3.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-800 focus:ring-2 focus:ring-indigo-500/20">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-gray-700 mb-1.5">Teléfono Móvil (WhatsApp) <span class="text-red-500">*</span></label>
+                <input type="tel" value="+51 984 556 712" class="ctrl-40 w-full px-3.5 font-mono bg-white border border-gray-300 rounded-lg text-sm text-gray-800 focus:ring-2 focus:ring-indigo-500/20">
+              </div>
+            </div>
+
+            <!-- Checkbox de configuración inicial -->
+            <div class="pt-2 border-t border-gray-100 space-y-2">
+              <label class="flex items-center gap-2.5 text-xs text-gray-700 cursor-pointer">
+                <input type="checkbox" checked class="rounded text-indigo-600 focus:ring-indigo-500">
+                <span>Crear base de datos multitenant aislada con prefijo <code class="font-mono text-indigo-600 font-semibold">db_ten_valle</code></span>
+              </label>
+              <label class="flex items-center gap-2.5 text-xs text-gray-700 cursor-pointer">
+                <input type="checkbox" checked class="rounded text-indigo-600 focus:ring-indigo-500">
+                <span>Enviar credenciales de acceso primario y certificado de timbrado digital</span>
+              </label>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Drawer Footer (Acciones Altura 40px) -->
+        <div class="px-6 py-4 border-t border-gray-200 bg-white flex items-center justify-between gap-3">
+          <button onclick="closeCreateDrawer()" class="ctrl-btn bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 text-xs">
+            Cancelar
+          </button>
+          <button onclick="saveNewTenant()" class="ctrl-btn bg-indigo-600 hover:bg-indigo-700 text-white gap-2 text-xs shadow-md shadow-indigo-600/20">
+            <i data-lucide="check" class="w-4 h-4"></i>
+            <span>Aprovisionar y Activar Empresa</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: SUSPENDER / REACTIVAR TENANT (Acción Crítica) -->
+  <!-- ========================================================================= -->
+  <div id="suspendModal" class="fixed inset-0 z-50 overflow-y-auto hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+      <div onclick="closeSuspendModal()" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"></div>
+      <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+      
+      <div class="inline-block align-bottom bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full border border-gray-200">
+        <div class="bg-white px-6 pt-6 pb-4">
+          <div class="sm:flex sm:items-start gap-4">
+            <div id="modalIconContainer" class="mx-auto shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 text-red-600 sm:mx-0">
+              <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+            </div>
+            <div class="mt-3 text-center sm:mt-0 sm:text-left flex-1">
+              <h3 id="modalTenantTitle" class="text-base font-bold text-gray-900">
+                Confirmar Suspensión de Empresa
+              </h3>
+              <div class="mt-2 text-xs text-gray-500 space-y-2">
+                <p>Está a punto de alterar el estado de acceso de <strong id="modalTenantName" class="text-gray-900">Empresa</strong> (<span id="modalTenantId" class="font-mono font-semibold">TEN-104</span>).</p>
+                <div class="p-3 bg-red-50 border border-red-200 rounded-lg text-red-800 text-xs">
+                  <p class="font-bold mb-1">Impacto Operativo:</p>
+                  <ul class="list-disc list-inside space-y-0.5">
+                    <li>Los usuarios no podrán ingresar al portal web ni a las cajas POS.</li>
+                    <li>La emisión de comprobantes electrónicos (CPE) quedará suspendida en la API OSE.</li>
+                  </ul>
+                </div>
+                <div>
+                  <label class="block font-semibold text-gray-700 mt-2 mb-1">Motivo de la acción:</label>
+                  <select class="ctrl-40 w-full px-3 border border-gray-300 rounded-lg text-xs">
+                    <option>Mora en pago de suscripción mensual (&gt;15 días)</option>
+                    <option>Certificado Digital Tributario vencido o revocado</option>
+                    <option>Solicitud voluntaria del representante legal</option>
+                    <option>Infracción de términos de servicio / spam CPE</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="bg-gray-50 px-6 py-4 flex items-center justify-end gap-3 border-t border-gray-200">
+          <button type="button" onclick="closeSuspendModal()" class="ctrl-btn bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 text-xs">
+            Cancelar
+          </button>
+          <button type="button" onclick="confirmSuspendAction()" id="modalConfirmBtn" class="ctrl-btn bg-red-600 hover:bg-red-700 text-white text-xs">
+            Confirmar Suspensión
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICACIÓN FLOTANTE -->
+  <div id="toastNotification" class="fixed bottom-6 right-6 z-50 transform translate-y-24 opacity-0 transition-all duration-300 pointer-events-none">
+    <div class="bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 border border-slate-700 max-w-md">
+      <div id="toastIcon" class="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+        <i data-lucide="check-circle" class="w-4 h-4"></i>
+      </div>
+      <div>
+        <p id="toastTitle" class="text-xs font-bold text-white">Operación Exitosa</p>
+        <p id="toastMsg" class="text-xs text-slate-300">Se aplicó el cambio al tenant correctamente.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCRIPT DE COMPORTAMIENTO & LUCIDE -->
+  <script>
+    // Inicialización de iconos
+    lucide.createIcons();
+
+    // Estado local para filtros y tabla
+    let currentDensity = 'comfort';
+
+    function showToast(title, msg, isError = false) {
+      const toast = document.getElementById('toastNotification');
+      const toastTitle = document.getElementById('toastTitle');
+      const toastMsg = document.getElementById('toastMsg');
+      const toastIcon = document.getElementById('toastIcon');
+
+      toastTitle.innerText = title;
+      toastMsg.innerText = msg;
+      
+      if (isError) {
+        toastIcon.className = 'w-7 h-7 rounded-lg bg-red-500/20 text-red-400 flex items-center justify-center shrink-0';
+        toastIcon.innerHTML = '<i data-lucide="alert-circle" class="w-4 h-4"></i>';
+      } else {
+        toastIcon.className = 'w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0';
+        toastIcon.innerHTML = '<i data-lucide="check-circle" class="w-4 h-4"></i>';
+      }
+      lucide.createIcons();
+
+      toast.classList.remove('translate-y-24', 'opacity-0');
+      setTimeout(() => {
+        toast.classList.add('translate-y-24', 'opacity-0');
+      }, 3500);
+    }
+
+    // Modal de Drawer Alta de Empresa
+    function openCreateDrawer() {
+      const drawer = document.getElementById('createTenantDrawer');
+      drawer.classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeCreateDrawer() {
+      const drawer = document.getElementById('createTenantDrawer');
+      drawer.classList.add('hidden');
+    }
+
+    function simulateSunatQuery() {
+      const spinner = document.getElementById('sunatSpinner');
+      const btnText = document.getElementById('sunatQueryBtnText');
+      const btn = document.getElementById('btnSunatQuery');
+      
+      spinner.classList.add('animate-spin-custom');
+      btnText.innerText = 'Consultando...';
+      btn.disabled = true;
+
+      setTimeout(() => {
+        spinner.classList.remove('animate-spin-custom');
+        btnText.innerText = 'Consultar SUNAT';
+        btn.disabled = false;
+        showToast('Consulta SUNAT Exitosa', 'RUC 20608912341 verificado en Padrón de Contribuyentes.');
+      }, 900);
+    }
+
+    function saveNewTenant() {
+      closeCreateDrawer();
+      showToast('Empresa Aprovisionada', 'Tenant creado con base aislada y credenciales enviadas.');
+    }
+
+    // Impersonación
+    function impersonateTenant(name, id) {
+      showToast('Iniciando Impersonación', `Generando token de sesión temporal para ingresar a ${name} (${id})...`);
+    }
+
+    function viewTenantDetail(id) {
+      showToast('Cargando Ficha Técnica', `Abriendo configuración y monitoreo del tenant ${id}.`);
+    }
+
+    // Modal de Suspensión
+    let activeTenantForModal = { id: '', name: '', suspend: true };
+    function toggleSuspendModal(id, name, isSuspending) {
+      activeTenantForModal = { id, name, suspend: isSuspending };
+      const modal = document.getElementById('suspendModal');
+      const title = document.getElementById('modalTenantTitle');
+      const tenantName = document.getElementById('modalTenantName');
+      const tenantId = document.getElementById('modalTenantId');
+      const confirmBtn = document.getElementById('modalConfirmBtn');
+
+      tenantName.innerText = name;
+      tenantId.innerText = id;
+
+      if (isSuspending) {
+        title.innerText = 'Confirmar Suspensión de Empresa';
+        confirmBtn.innerText = 'Confirmar Suspensión';
+        confirmBtn.className = 'ctrl-btn bg-red-600 hover:bg-red-700 text-white text-xs';
+      } else {
+        title.innerText = 'Reactivar Acceso a Empresa';
+        confirmBtn.innerText = 'Reactivar Acceso';
+        confirmBtn.className = 'ctrl-btn bg-emerald-600 hover:bg-emerald-700 text-white text-xs';
+      }
+
+      modal.classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeSuspendModal() {
+      document.getElementById('suspendModal').classList.add('hidden');
+    }
+
+    function confirmSuspendAction() {
+      closeSuspendModal();
+      const actionStr = activeTenantForModal.suspend ? 'suspendido' : 'reactivado';
+      showToast('Estado de Tenant Actualizado', `El tenant ${activeTenantForModal.name} fue ${actionStr} con éxito.`);
+    }
+
+    // Menú de Columnas
+    function toggleColumnMenu() {
+      const menu = document.getElementById('columnDropdown');
+      menu.classList.toggle('hidden');
+    }
+
+    function toggleCol(colClass, show) {
+      const elements = document.querySelectorAll(`.${colClass}`);
+      elements.forEach(el => {
+        if (show) {
+          el.classList.remove('hidden');
+        } else {
+          el.classList.add('hidden');
+        }
+      });
+    }
+
+    function resetDefaultColumns() {
+      const checkboxes = document.querySelectorAll('#columnDropdown input[type="checkbox"]');
+      checkboxes.forEach(cb => {
+        cb.checked = true;
+      });
+      const allCols = ['col-empresa', 'col-rubro', 'col-plan', 'col-estado', 'col-sedes', 'col-cpe', 'col-ose', 'col-acceso'];
+      allCols.forEach(col => toggleCol(col, true));
+      showToast('Columnas Restablecidas', 'Se restauró la visualización predeterminada de columnas.');
+    }
+
+    // Densidad (Compacta / Cómoda)
+    function setDensity(mode) {
+      currentDensity = mode;
+      const table = document.getElementById('tenantsTable');
+      const btnCompact = document.getElementById('btnDensityCompact');
+      const btnComfort = document.getElementById('btnDensityComfort');
+
+      const cells = table.querySelectorAll('tbody td');
+
+      if (mode === 'compact') {
+        btnCompact.className = 'ctrl-40 px-2.5 py-1 text-xs font-semibold rounded-md bg-white text-indigo-700 shadow-sm transition-all';
+        btnComfort.className = 'ctrl-40 px-2.5 py-1 text-xs font-medium rounded-md text-gray-600 hover:text-gray-900 transition-all';
+        
+        cells.forEach(c => {
+          c.classList.remove('py-4');
+          c.classList.add('py-2');
+        });
+        showToast('Densidad Compacta', 'Filas condensadas para visualización de alta densidad.');
+      } else {
+        btnComfort.className = 'ctrl-40 px-2.5 py-1 text-xs font-semibold rounded-md bg-white text-indigo-700 shadow-sm transition-all';
+        btnCompact.className = 'ctrl-40 px-2.5 py-1 text-xs font-medium rounded-md text-gray-600 hover:text-gray-900 transition-all';
+        
+        cells.forEach(c => {
+          c.classList.remove('py-2');
+          c.classList.add('py-4');
+        });
+        showToast('Densidad Cómoda', 'Espaciado estándar restaurado.');
+      }
+    }
+
+    // Filtros
+    function applyFilters() {
+      const searchVal = document.getElementById('searchInput').value.toLowerCase();
+      const rubroVal = document.getElementById('filterRubro').value;
+      const estadoVal = document.getElementById('filterEstado').value;
+      const rows = document.querySelectorAll('#tenantRows tr');
+
+      let visibleCount = 0;
+      rows.forEach(row => {
+        const text = row.innerText.toLowerCase();
+        const matchesSearch = text.includes(searchVal);
+        const matchesRubro = (rubroVal === 'ALL') || text.includes(rubroVal.toLowerCase());
+        const matchesEstado = (estadoVal === 'ALL') || text.includes(estadoVal.toLowerCase());
+
+        if (matchesSearch && matchesRubro && matchesEstado) {
+          row.style.display = '';
+          visibleCount++;
+        } else {
+          row.style.display = 'none';
+        }
+      });
+
+      const empty = document.getElementById('emptyState');
+      const table = document.getElementById('tenantsTable');
+      const countLabel = document.getElementById('recordCountLabel');
+
+      if (visibleCount === 0) {
+        empty.classList.remove('hidden');
+        table.classList.add('hidden');
+        countLabel.innerText = '0 de 1,482 tenants';
+      } else {
+        empty.classList.add('hidden');
+        table.classList.remove('hidden');
+        countLabel.innerText = `${visibleCount} de 1,482 tenants`;
+      }
+    }
+
+    function setQuickFilter(type) {
+      resetFilters();
+      if (type === 'odontologia') {
+        document.getElementById('filterRubro').value = 'Odontología';
+      } else if (type === 'veterinaria') {
+        document.getElementById('filterRubro').value = 'Veterinaria';
+      } else if (type === 'restaurantes') {
+        document.getElementById('filterRubro').value = 'Restaurantes';
+      } else if (type === 'alerta_cuota') {
+        document.getElementById('searchInput').value = 'cuota';
+      } else if (type === 'bizlinks') {
+        document.getElementById('searchInput').value = 'bizlinks';
+      }
+      applyFilters();
+    }
+
+    function resetFilters() {
+      document.getElementById('searchInput').value = '';
+      document.getElementById('filterRubro').value = 'ALL';
+      document.getElementById('filterPlan').value = 'ALL';
+      document.getElementById('filterEstado').value = 'ALL';
+      applyFilters();
+    }
+
+    function resetAllTableViews() {
+      resetFilters();
+      resetDefaultColumns();
+      setDensity('comfort');
+      showToast('Tabla Restablecida', 'Se restauraron los filtros, columnas y orden predeterminado.');
+    }
+
+    function sortTable(column) {
+      showToast('Ordenando', `Ordenando lista por ${column.toUpperCase()} (ascendente/descendente)...`);
+    }
+
+    function exportCSV() {
+      showToast('Exportando Datos', 'Generando archivo CSV con el reporte consolidado de los 1,482 tenants...');
+    }
+
+    // Cerrar menú popover al hacer clic fuera
+    document.addEventListener('click', function(event) {
+      const menu = document.getElementById('columnDropdown');
+      const isClickInside = menu.contains(event.target) || event.target.closest('button[onclick="toggleColumnMenu()"]');
+      if (!isClickInside && !menu.classList.contains('hidden')) {
+        menu.classList.add('hidden');
+      }
+    });
+  </script>
+</body>
+</html>

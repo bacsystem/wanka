@@ -1,0 +1,1107 @@
+<!DOCTYPE html>
+
+<html class="h-full bg-surface" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Facturación y Cobranzas SaaS - PerúSaaS Admin SuperAdmin</title>
+<!-- Material Symbols & Inter Google Font -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap&family=Geist+Mono:wght@400;500;600" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS & Official Configuration -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "surface-bright": "#faf8ff",
+            "secondary": "#712ae2",
+            "on-tertiary": "#ffffff",
+            "on-tertiary-fixed-variant": "#005137",
+            "on-tertiary-container": "#7df1bd",
+            "surface-container-low": "#f2f3ff",
+            "background": "#faf8ff",
+            "secondary-fixed": "#eaddff",
+            "on-primary-container": "#dad7ff",
+            "on-surface": "#131b2e",
+            "inverse-surface": "#0f172a",
+            "secondary-container": "#8a4cfc",
+            "on-background": "#131b2e",
+            "error": "#ba1a1a",
+            "error-container": "#ffdad6",
+            "surface-container-highest": "#dae2fd",
+            "outline": "#777587",
+            "primary": "#3525cd",
+            "on-primary-fixed-variant": "#3323cc",
+            "on-primary": "#ffffff",
+            "secondary-fixed-dim": "#d2bbff",
+            "primary-fixed": "#e2dfff",
+            "on-error-container": "#93000a",
+            "tertiary": "#005338",
+            "inverse-primary": "#c3c0ff",
+            "surface-variant": "#dae2fd",
+            "on-surface-variant": "#464555",
+            "on-secondary-fixed-variant": "#5a00c6",
+            "on-secondary": "#ffffff",
+            "on-secondary-container": "#fffbff",
+            "on-error": "#ffffff",
+            "on-tertiary-fixed": "#002114",
+            "surface": "#f5f6fa",
+            "inverse-on-surface": "#eef0ff",
+            "tertiary-fixed-dim": "#68dba9",
+            "surface-container-high": "#e2e7ff",
+            "on-secondary-fixed": "#25005a",
+            "primary-fixed-dim": "#c3c0ff",
+            "surface-tint": "#4d44e3",
+            "primary-container": "#4f46e5",
+            "outline-variant": "#c7c4d8",
+            "tertiary-fixed": "#85f8c4",
+            "tertiary-container": "#006e4c",
+            "surface-dim": "#d2d9f4",
+            "surface-container": "#eaedff",
+            "surface-container-lowest": "#ffffff",
+            "on-primary-fixed": "#0f0069"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "spacing": {
+            "space-xs": "0.25rem",
+            "space-sm": "0.5rem",
+            "margin": "2rem",
+            "space-xl": "2rem",
+            "gutter": "1.5rem",
+            "space-md": "1rem",
+            "space-lg": "1.5rem"
+          },
+          "fontFamily": {
+            "mono-data": ["Geist", "monospace"],
+            "body-sm": ["Geist"],
+            "headline-sm": ["Geist"],
+            "label-md": ["Geist"],
+            "headline-md": ["Geist"],
+            "display-sm": ["Geist"],
+            "headline-lg": ["Geist"],
+            "body-lg": ["Geist"],
+            "label-lg": ["Geist"],
+            "body-md": ["Geist"],
+            "label-sm": ["Geist"],
+            "display-lg": ["Geist"]
+          },
+          "fontSize": {
+            "mono-data": ["13px", { "lineHeight": "18px", "letterSpacing": "-0.01em", "fontWeight": "500" }],
+            "body-sm": ["12px", { "lineHeight": "16px", "fontWeight": "400" }],
+            "headline-sm": ["16px", { "lineHeight": "24px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+            "label-md": ["13px", { "lineHeight": "18px", "fontWeight": "500" }],
+            "headline-md": ["20px", { "lineHeight": "28px", "letterSpacing": "-0.015em", "fontWeight": "600" }],
+            "display-sm": ["28px", { "lineHeight": "36px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+            "headline-lg": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+            "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+            "label-lg": ["14px", { "lineHeight": "20px", "fontWeight": "500" }],
+            "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+            "label-sm": ["11px", { "lineHeight": "14px", "letterSpacing": "0.04em", "fontWeight": "600" }],
+            "display-lg": ["36px", { "lineHeight": "44px", "letterSpacing": "-0.025em", "fontWeight": "700" }]
+          }
+        },
+      },
+    }
+  </script>
+<!-- Lucide Icons Script -->
+<script src="https://unpkg.com/lucide@latest"></script>
+<style>
+    /* Custom scrollbars and pulse micro-effects */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+  </style>
+</head>
+<body class="h-full bg-surface text-on-surface antialiased overflow-x-hidden font-body-md text-body-md">
+<!-- ========================================================================= -->
+<!-- 1. LATERAL OPERATIONAL RAIL (SideNavBar Component JSON Anchored)        -->
+<!-- ========================================================================= -->
+<aside class="fixed inset-y-0 left-0 flex flex-col justify-between w-64 h-full bg-inverse-surface border-r border-slate-800 z-40">
+<!-- Brand Header -->
+<div>
+<div class="h-16 flex items-center px-5 border-b border-slate-800 gap-3">
+<div class="w-9 h-9 rounded-lg bg-primary-container flex items-center justify-center text-on-primary font-headline-sm font-bold shadow-md">
+<i class="w-5 h-5 text-white" data-lucide="layers"></i>
+</div>
+<div class="flex flex-col">
+<div class="flex items-center gap-1.5">
+<span class="text-headline-sm font-headline-sm font-bold text-white tracking-tight">PerúSaaS Admin</span>
+<span class="px-1.5 py-0.5 text-[9px] font-bold bg-secondary-container text-white rounded">SUPER</span>
+</div>
+<span class="text-[11px] text-slate-400 font-mono-data tracking-tight">Cluster Región PE-Lima (Saludable)</span>
+</div>
+</div>
+<!-- Action: Nuevo Tenant CTA -->
+<div class="p-3">
+<button class="w-full h-10 px-3 rounded-lg bg-primary-container hover:bg-indigo-600 text-white font-label-md text-label-md flex items-center justify-center gap-2 transition-colors shadow-sm">
+<i class="w-4 h-4" data-lucide="plus-circle"></i>
+<span>Nuevo Tenant</span>
+</button>
+</div>
+<!-- Navigation Links from JSON Anchor -->
+<nav class="px-2 space-y-1 mt-1">
+<!-- Item 1: Panel General -->
+<a class="text-slate-400 hover:text-white hover:bg-slate-800/60 px-4 py-2.5 rounded-lg flex items-center gap-3 transition-colors duration-150" href="#">
+<i class="w-5 h-5" data-lucide="layout-dashboard"></i>
+<span class="text-label-md font-label-md">Panel General</span>
+</a>
+<!-- Item 2: Tenants y Sedes -->
+<a class="text-slate-400 hover:text-white hover:bg-slate-800/60 px-4 py-2.5 rounded-lg flex items-center justify-between transition-colors duration-150" href="#">
+<div class="flex items-center gap-3">
+<i class="w-5 h-5" data-lucide="building-2"></i>
+<span class="text-label-md font-label-md">Tenants y Sedes</span>
+</div>
+<span class="px-2 py-0.5 text-xs font-semibold bg-slate-800 text-indigo-300 rounded-full border border-slate-700">1,482</span>
+</a>
+<!-- Item 3: Facturación y Núcleo (ACTIVE DESTINATION) -->
+<a class="bg-slate-800/90 text-white border-l-4 border-primary-container font-medium px-4 py-2.5 flex items-center justify-between rounded-r-lg shadow-sm" href="#">
+<div class="flex items-center gap-3">
+<i class="w-5 h-5 text-indigo-400" data-lucide="receipt"></i>
+<span class="text-label-md font-label-md font-semibold text-white">Facturación y Núcleo</span>
+</div>
+<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+</a>
+<!-- Item 4: Certificados y OSE -->
+<a class="text-slate-400 hover:text-white hover:bg-slate-800/60 px-4 py-2.5 rounded-lg flex items-center justify-between transition-colors duration-150" href="#">
+<div class="flex items-center gap-3">
+<i class="w-5 h-5" data-lucide="shield-check"></i>
+<span class="text-label-md font-label-md">Certificados y OSE</span>
+</div>
+<span class="text-[10px] text-emerald-400 font-mono-data bg-emerald-950/40 px-1.5 py-0.5 rounded border border-emerald-800/40">SUNAT OK</span>
+</a>
+<!-- Item 5: Auditoría de Acciones -->
+<a class="text-slate-400 hover:text-white hover:bg-slate-800/60 px-4 py-2.5 rounded-lg flex items-center gap-3 transition-colors duration-150" href="#">
+<i class="w-5 h-5" data-lucide="history"></i>
+<span class="text-label-md font-label-md">Auditoría de Acciones</span>
+</a>
+<!-- Item 6: Configuración Global -->
+<a class="text-slate-400 hover:text-white hover:bg-slate-800/60 px-4 py-2.5 rounded-lg flex items-center gap-3 transition-colors duration-150" href="#">
+<i class="w-5 h-5" data-lucide="sliders-horizontal"></i>
+<span class="text-label-md font-label-md">Configuración Global</span>
+</a>
+</nav>
+</div>
+<!-- Sidebar Footer -->
+<div class="p-3 border-t border-slate-800 space-y-1">
+<a class="text-slate-400 hover:text-white hover:bg-slate-800/60 px-3 py-2 rounded-lg flex items-center gap-3 text-label-md font-label-md transition-colors" href="#">
+<i class="w-4 h-4 text-slate-400" data-lucide="headphones"></i>
+<span>Soporte Nivel 3</span>
+</a>
+<a class="text-slate-400 hover:text-white hover:bg-slate-800/60 px-3 py-2 rounded-lg flex items-center justify-between text-label-md font-label-md transition-colors" href="#">
+<div class="flex items-center gap-3">
+<i class="w-4 h-4 text-slate-400" data-lucide="user-cog"></i>
+<span>Ajustes SuperAdmin</span>
+</div>
+<i class="w-3.5 h-3.5 text-slate-500" data-lucide="external-link"></i>
+</a>
+<!-- Current Super Admin Card -->
+<div class="pt-2">
+<div class="bg-slate-800/50 rounded-lg p-2.5 border border-slate-700/60 flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center font-bold text-white text-xs ring-2 ring-indigo-400/30">
+            SA
+          </div>
+<div class="flex flex-col min-w-0 flex-1">
+<span class="text-xs font-semibold text-slate-200 truncate">Carlos M. Benavides</span>
+<span class="text-[10px] text-slate-400 truncate">superadmin@perusaas.pe</span>
+</div>
+<span class="w-2 h-2 rounded-full bg-emerald-400" title="Activo ahora"></span>
+</div>
+</div>
+</div>
+</aside>
+<!-- ========================================================================= -->
+<!-- 2. TOPBAR UTILITY HEADER (TopNavBar JSON Anchored)                      -->
+<!-- ========================================================================= -->
+<header class="fixed top-0 left-0 right-0 h-16 bg-surface-container-lowest border-b border-slate-200 z-30 pl-64 flex items-center justify-between px-6 shadow-sm">
+<!-- Left: Breadcrumb and Search Bar -->
+<div class="flex items-center gap-5 flex-1 max-w-2xl">
+<!-- Breadcrumb Nav -->
+<div class="flex items-center gap-2 text-body-sm font-body-sm text-slate-500 whitespace-nowrap">
+<span>Plataforma</span>
+<i class="w-3.5 h-3.5 text-slate-400" data-lucide="chevron-right"></i>
+<span class="text-slate-900 font-semibold">Facturación y Conciliación SaaS</span>
+</div>
+<!-- Live Search Bar (40px) -->
+<div class="relative w-full">
+<i class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" data-lucide="search"></i>
+<input class="w-full h-10 pl-9 pr-12 rounded-lg bg-surface border border-slate-300 text-body-md font-body-md text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100 transition-all" placeholder="Buscar comprobante, RUC o tenant... (Presiona ⌘K)" type="text"/>
+<div class="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
+<kbd class="px-1.5 py-0.5 text-[10px] font-mono-data bg-slate-200 text-slate-600 rounded border border-slate-300">⌘K</kbd>
+</div>
+</div>
+</div>
+<!-- Right: Operational Badges, Currency, Impersonar, Notifications & Avatar -->
+<div class="flex items-center gap-3 pl-4">
+<!-- OSE / SUNAT Synchronized Badge -->
+<div class="h-10 px-3 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-lg flex items-center gap-2 text-label-md font-label-md">
+<span class="relative flex h-2.5 w-2.5">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-600"></span>
+</span>
+<span class="font-medium">SUNAT / OSE Online</span>
+<span class="text-[11px] font-mono-data text-emerald-600 pl-1">0.42s</span>
+</div>
+<!-- Currency Switcher (40px uniform height) -->
+<div class="h-10 bg-slate-100 p-1 rounded-lg flex items-center border border-slate-200">
+<button class="h-8 px-2.5 bg-white text-indigo-700 font-semibold rounded text-xs shadow-xs transition-all flex items-center gap-1">
+<span>S/ Soles</span>
+</button>
+<button class="h-8 px-2.5 text-slate-600 hover:text-slate-900 rounded text-xs transition-all flex items-center gap-1">
+<span>USD ($)</span>
+</button>
+</div>
+<!-- Trailing Primary Actions from JSON -->
+<button class="h-10 px-3.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg font-label-md text-label-md flex items-center gap-2 transition-colors shadow-xs">
+<i class="w-4 h-4 text-indigo-300" data-lucide="user-check"></i>
+<span>Impersonar Tenant</span>
+</button>
+<button class="h-10 px-3.5 bg-primary-container hover:bg-indigo-700 text-white rounded-lg font-label-md text-label-md flex items-center gap-2 transition-colors shadow-xs">
+<i class="w-4 h-4" data-lucide="file-plus"></i>
+<span>Nueva Emisión Manual</span>
+</button>
+<div class="h-6 w-px bg-slate-200 mx-1"></div>
+<!-- Icon Actions -->
+<button class="w-10 h-10 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 flex items-center justify-center transition-colors" title="Sincronizar Pasarelas">
+<i class="w-4 h-4" data-lucide="refresh-cw"></i>
+</button>
+<button class="w-10 h-10 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 flex items-center justify-center relative transition-colors" title="Alertas">
+<i class="w-4 h-4" data-lucide="bell"></i>
+<span class="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white"></span>
+</button>
+<!-- SuperAdmin Avatar -->
+<div class="w-10 h-10 rounded-lg bg-gradient-to-tr from-indigo-600 to-purple-600 p-0.5 cursor-pointer" title="Super Admin: Carlos M. Benavides">
+<div class="w-full h-full bg-white rounded-[6px] flex items-center justify-center font-bold text-xs text-indigo-700">
+          PE
+        </div>
+</div>
+</div>
+</header>
+<!-- ========================================================================= -->
+<!-- 3. MAIN ADMINISTRATIVE CONTENT CANVAS                                   -->
+<!-- ========================================================================= -->
+<main class="pl-64 pt-16 min-h-screen bg-surface pb-16">
+<div class="p-8 max-w-[1720px] mx-auto space-y-6">
+<!-- ===================================================================== -->
+<!-- SECTION HEADER & QUICK SYSTEM ACTIONS                                 -->
+<!-- ===================================================================== -->
+<div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 bg-white p-6 rounded-xl border border-slate-200 shadow-xs">
+<div>
+<div class="flex items-center gap-3">
+<h1 class="text-headline-lg font-headline-lg font-bold text-slate-900 tracking-tight">Facturación y Cobranzas de la Plataforma</h1>
+<span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
+              Periodo: Octubre 2024
+            </span>
+</div>
+<p class="text-body-md font-body-md text-slate-500 mt-1 max-w-3xl">
+            Gestión de comprobantes electrónicos B2B emitidos a tenants, pagos por pasarelas (Niubiz, Izipay, BCP), conciliación automática y recuperación de cobros.
+          </p>
+</div>
+<!-- Right Quick Actions (All 40px height) -->
+<div class="flex flex-wrap items-center gap-2.5">
+<button class="h-10 px-4 rounded-lg bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-label-md text-label-md flex items-center gap-2 shadow-xs transition-colors">
+<i class="w-4 h-4 text-indigo-600 animate-spin" data-lucide="refresh-cw" style="animation-duration: 8s;"></i>
+<span>Conciliación Bancaria Automática</span>
+</button>
+<button class="h-10 px-4 rounded-lg bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-label-md text-label-md flex items-center gap-2 shadow-xs transition-colors">
+<i class="w-4 h-4 text-slate-600" data-lucide="receipt"></i>
+<span>Emitir Factura Masiva</span>
+</button>
+<button class="h-10 px-4 rounded-lg bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 text-indigo-700 font-label-md text-label-md flex items-center gap-2 shadow-xs transition-colors">
+<i class="w-4 h-4 text-indigo-700" data-lucide="download"></i>
+<span>Descargar Reporte SUNAT (PLE/SIRE)</span>
+</button>
+</div>
+</div>
+<!-- ===================================================================== -->
+<!-- EXECUTIVE KPIS GRID (5 Key Indicators)                                -->
+<!-- ===================================================================== -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+<!-- KPI 1: Cobrado del Mes (MRR Efectivo) -->
+<div class="bg-white p-5 rounded-xl border border-slate-200 shadow-xs hover:border-indigo-200 transition-all flex flex-col justify-between">
+<div class="flex items-center justify-between">
+<span class="text-label-md font-label-md text-slate-500">Cobrado del Mes (MRR)</span>
+<div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+<i class="w-4 h-4" data-lucide="trending-up"></i>
+</div>
+</div>
+<div class="mt-3">
+<div class="text-headline-lg font-headline-lg font-bold text-slate-900 tracking-tight font-mono-data">
+              S/ 486,520.00
+            </div>
+<div class="flex items-center gap-2 mt-1">
+<span class="text-xs font-semibold text-emerald-600 flex items-center">
+<i class="w-3.5 h-3.5 mr-0.5" data-lucide="arrow-up-right"></i> +12.4%
+              </span>
+<span class="text-[11px] text-slate-400">vs mes anterior</span>
+</div>
+</div>
+<div class="mt-3 pt-2.5 border-t border-slate-100 text-[11px] text-slate-500 flex justify-between font-mono-data">
+<span>Niubiz: 68%</span>
+<span>BCP Transf: 32%</span>
+</div>
+</div>
+<!-- KPI 2: Facturación Pendiente (Por Vencer) -->
+<div class="bg-white p-5 rounded-xl border border-slate-200 shadow-xs hover:border-indigo-200 transition-all flex flex-col justify-between">
+<div class="flex items-center justify-between">
+<span class="text-label-md font-label-md text-slate-500">Por Vencer (Ciclo 7d)</span>
+<div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+<i class="w-4 h-4" data-lucide="clock"></i>
+</div>
+</div>
+<div class="mt-3">
+<div class="text-headline-lg font-headline-lg font-bold text-slate-900 tracking-tight font-mono-data">
+              S/ 42,150.00
+            </div>
+<div class="flex items-center gap-1.5 mt-1">
+<span class="text-xs font-medium text-slate-600">84 empresas en ciclo</span>
+</div>
+</div>
+<div class="mt-3 pt-2.5 border-t border-slate-100 text-[11px] text-blue-600 flex items-center justify-between">
+<span>Débito auto activo: 79</span>
+<i class="w-3 h-3" data-lucide="arrow-right"></i>
+</div>
+</div>
+<!-- KPI 3: Vencido y Morosidad Crítica -->
+<div class="bg-white p-5 rounded-xl border border-rose-200 shadow-xs bg-rose-50/20 hover:border-rose-300 transition-all flex flex-col justify-between">
+<div class="flex items-center justify-between">
+<span class="text-label-md font-label-md text-rose-700 font-semibold">Morosidad Crítica</span>
+<div class="w-8 h-8 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center">
+<i class="w-4 h-4" data-lucide="alert-triangle"></i>
+</div>
+</div>
+<div class="mt-3">
+<div class="text-headline-lg font-headline-lg font-bold text-rose-600 tracking-tight font-mono-data">
+              S/ 14,890.00
+            </div>
+<div class="flex items-center gap-1.5 mt-1">
+<span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-rose-100 text-rose-700">
+                19 tenants en riesgo
+              </span>
+</div>
+</div>
+<div class="mt-3 pt-2.5 border-t border-rose-100 text-[11px] text-rose-600 font-medium">
+            Riesgo suspensión OSE inmediata
+          </div>
+</div>
+<!-- KPI 4: Notas de Crédito & Anulaciones -->
+<div class="bg-white p-5 rounded-xl border border-slate-200 shadow-xs hover:border-indigo-200 transition-all flex flex-col justify-between">
+<div class="flex items-center justify-between">
+<span class="text-label-md font-label-md text-slate-500">Notas de Crédito (NC)</span>
+<div class="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center">
+<i class="w-4 h-4" data-lucide="file-minus"></i>
+</div>
+</div>
+<div class="mt-3">
+<div class="text-headline-lg font-headline-lg font-bold text-slate-900 tracking-tight font-mono-data">
+              S/ 2,450.00
+            </div>
+<div class="flex items-center gap-1.5 mt-1">
+<span class="text-xs font-medium text-slate-600">4 ajustes por RUC / Downgrade</span>
+</div>
+</div>
+<div class="mt-3 pt-2.5 border-t border-slate-100 text-[11px] text-slate-500">
+            0.5% del volumen facturado
+          </div>
+</div>
+<!-- KPI 5: Tasa de Conciliación Automática -->
+<div class="bg-white p-5 rounded-xl border border-slate-200 shadow-xs hover:border-indigo-200 transition-all flex flex-col justify-between">
+<div class="flex items-center justify-between">
+<span class="text-label-md font-label-md text-slate-500">Auto-Conciliación</span>
+<div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+<i class="w-4 h-4" data-lucide="check-check"></i>
+</div>
+</div>
+<div class="mt-3">
+<div class="text-headline-lg font-headline-lg font-bold text-emerald-700 tracking-tight font-mono-data">
+              98.2%
+            </div>
+<div class="flex items-center gap-1.5 mt-1">
+<span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+<span class="text-xs text-slate-600">Niubiz &amp; BCP API Activo</span>
+</div>
+</div>
+<div class="mt-3 pt-2.5 border-t border-slate-100 text-[11px] text-emerald-600 font-medium">
+            3 manuales pendientes
+          </div>
+</div>
+</div>
+<!-- ===================================================================== -->
+<!-- 2-COLUMN OPERATIONAL WORKBENCH: TABLE + SLIDE-OVER DRAWER             -->
+<!-- ===================================================================== -->
+<div class="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
+<!-- LEFT 8 COLUMNS: MAIN DATA TABLE & FILTER CONTROL MATRIX -->
+<div class="xl:col-span-8 bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+<!-- QUICK STATUS PILL TABS -->
+<div class="px-5 pt-4 pb-3 border-b border-slate-100 flex items-center justify-between flex-wrap gap-2">
+<div class="flex items-center gap-1.5 flex-wrap">
+<button class="h-8 px-3 rounded-full bg-slate-900 text-white text-xs font-semibold flex items-center gap-1.5">
+<span>Todos</span>
+<span class="bg-slate-700 text-slate-200 px-1.5 py-0.2 rounded-full text-[10px]">1,482</span>
+</button>
+<button class="h-8 px-3 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium flex items-center gap-1.5 transition-colors">
+<span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+<span>Pagados</span>
+<span class="text-slate-500 text-[10px]">1,379</span>
+</button>
+<button class="h-8 px-3 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium flex items-center gap-1.5 transition-colors">
+<span class="w-2 h-2 rounded-full bg-amber-500"></span>
+<span>Pendientes</span>
+<span class="text-slate-500 text-[10px]">84</span>
+</button>
+<button class="h-8 px-3 rounded-full bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-medium flex items-center gap-1.5 transition-colors border border-rose-200">
+<span class="w-2 h-2 rounded-full bg-rose-600 animate-pulse"></span>
+<span>Reintentos Fallidos</span>
+<span class="bg-rose-200 text-rose-800 px-1.5 py-0.2 rounded-full text-[10px]">19</span>
+</button>
+<button class="h-8 px-3 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium flex items-center gap-1.5 transition-colors">
+<span class="w-2 h-2 rounded-full bg-purple-500"></span>
+<span>Notas de Crédito</span>
+<span class="text-slate-500 text-[10px]">4</span>
+</button>
+</div>
+<!-- Table View Density Control -->
+<div class="flex items-center gap-1 border border-slate-200 rounded-lg p-0.5 bg-slate-50">
+<button class="px-2.5 py-1 text-xs font-medium bg-white text-slate-800 rounded shadow-2xs">Cómoda</button>
+<button class="px-2.5 py-1 text-xs font-medium text-slate-500 hover:text-slate-800 rounded">Compacta</button>
+</div>
+</div>
+<!-- UNIFORM 40PX FILTER CONTROL BAR -->
+<div class="p-5 border-b border-slate-200 bg-slate-50/50 space-y-3">
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3">
+<!-- Search Input (40px) -->
+<div class="lg:col-span-4 relative">
+<i class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" data-lucide="search"></i>
+<input class="w-full h-10 pl-9 pr-3 rounded-lg bg-white border border-slate-300 text-body-md font-body-md text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-100" placeholder="F001-XXXX, RUC o Empresa..." type="text"/>
+</div>
+<!-- Tipo de Comprobante (40px) -->
+<div class="lg:col-span-2">
+<select class="w-full h-10 px-3 rounded-lg bg-white border border-slate-300 text-body-md font-body-md text-slate-700 focus:outline-none focus:border-indigo-600">
+<option selected="">Tipo: Todos</option>
+<option>Factura Electrónica (01)</option>
+<option>Boleta de Venta (03)</option>
+<option>Nota de Crédito (07)</option>
+<option>Nota de Débito (08)</option>
+</select>
+</div>
+<!-- Estado de Pago (40px) -->
+<div class="lg:col-span-2">
+<select class="w-full h-10 px-3 rounded-lg bg-white border border-slate-300 text-body-md font-body-md text-slate-700 focus:outline-none focus:border-indigo-600">
+<option selected="">Estado: Todos</option>
+<option>Pagado</option>
+<option>Pendiente</option>
+<option>Moroso / Reintentos</option>
+<option>Anulado</option>
+</select>
+</div>
+<!-- Date Picker Range (40px) -->
+<div class="lg:col-span-2 relative">
+<i class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" data-lucide="calendar"></i>
+<input class="w-full h-10 pl-9 pr-2 rounded-lg bg-white border border-slate-300 text-xs font-mono-data text-slate-700 focus:outline-none cursor-pointer" readonly="" type="text" value="01/10/2024 - 31/10/2024"/>
+</div>
+<!-- Pasarela / Método (40px) -->
+<div class="lg:col-span-2">
+<select class="w-full h-10 px-3 rounded-lg bg-white border border-slate-300 text-body-md font-body-md text-slate-700 focus:outline-none focus:border-indigo-600">
+<option selected="">Método: Todos</option>
+<option>Niubiz Débito Auto</option>
+<option>Transferencia BCP</option>
+<option>Izipay Checkout</option>
+<option>PagoEfectivo</option>
+</select>
+</div>
+</div>
+<!-- Secondary Actions Row: Column Visibility & Reset Filters -->
+<div class="flex items-center justify-between pt-1">
+<div class="flex items-center gap-2">
+<!-- Column Visibility Dropdown Trigger -->
+<div class="relative inline-block text-left">
+<button class="h-10 px-3 rounded-lg bg-white border border-slate-300 text-slate-700 text-xs font-medium flex items-center gap-2 hover:bg-slate-50 transition-colors shadow-2xs">
+<i class="w-4 h-4 text-slate-500" data-lucide="columns-3"></i>
+<span>Columnas Visibles (7/8)</span>
+<i class="w-3.5 h-3.5 text-slate-400" data-lucide="chevron-down"></i>
+</button>
+</div>
+<span class="text-xs text-slate-500">Mostrando registros del tenant cluster principal</span>
+</div>
+<button class="h-10 px-3 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 text-xs font-medium flex items-center gap-1.5 transition-colors">
+<i class="w-3.5 h-3.5" data-lucide="rotate-ccw"></i>
+<span>Restablecer Filtros</span>
+</button>
+</div>
+</div>
+<!-- TABLE VIEWPORT CONTAINER -->
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-slate-50/80 border-b border-slate-200 text-[11px] font-semibold text-slate-500 uppercase tracking-wider font-mono-data">
+<th class="py-3.5 px-4 w-10">
+<input class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500" type="checkbox"/>
+</th>
+<th class="py-3.5 px-4 cursor-pointer hover:text-slate-800">
+<div class="flex items-center gap-1">
+<span>N° Comprobante &amp; Fecha</span>
+<i class="w-3 h-3 text-slate-400" data-lucide="arrow-up-down"></i>
+</div>
+</th>
+<th class="py-3.5 px-4">Empresa Cliente / RUC</th>
+<th class="py-3.5 px-4">Plan y Concepto SaaS</th>
+<th class="py-3.5 px-4 text-right">Total S/ (Inc. IGV)</th>
+<th class="py-3.5 px-4">Pasarela &amp; Conciliación</th>
+<th class="py-3.5 px-4">Estado &amp; OSE</th>
+<th class="py-3.5 px-4 text-center">Acciones</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-100 text-body-md font-body-md">
+<!-- ROW 1: SELECTED ROW (OdontoSalud S.A.C.) -->
+<tr class="bg-indigo-50/40 hover:bg-indigo-50/70 transition-colors border-l-4 border-indigo-600 cursor-pointer">
+<td class="py-3.5 px-4">
+<input checked="" class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500" type="checkbox"/>
+</td>
+<td class="py-3.5 px-4">
+<div class="flex flex-col">
+<div class="flex items-center gap-1.5">
+<span class="font-mono-data font-semibold text-indigo-900">F001-0004921</span>
+<span class="text-[9px] px-1 bg-indigo-100 text-indigo-800 rounded font-bold">FACT</span>
+</div>
+<span class="text-xs text-slate-500 font-mono-data">15/10/2024 08:30</span>
+</div>
+</td>
+<td class="py-3.5 px-4">
+<div class="flex flex-col">
+<span class="font-medium text-slate-900">OdontoSalud S.A.C.</span>
+<span class="text-xs text-slate-500 font-mono-data">RUC: 20601984211</span>
+</div>
+</td>
+<td class="py-3.5 px-4">
+<div class="flex flex-col">
+<span class="text-slate-800">Plan Pro Multi-Sede</span>
+<span class="text-xs text-slate-500">+ 5k CPE add-on</span>
+</div>
+</td>
+<td class="py-3.5 px-4 text-right">
+<div class="flex flex-col">
+<span class="font-bold text-slate-900 font-mono-data">S/ 578.20</span>
+<span class="text-[10px] text-slate-400 font-mono-data">IGV: S/ 88.20</span>
+</div>
+</td>
+<td class="py-3.5 px-4">
+<div class="flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+<div class="flex flex-col">
+<span class="text-xs font-medium text-slate-800">Niubiz Débito Auto</span>
+<span class="text-[10px] text-emerald-600 font-medium">Conciliado BCP</span>
+</div>
+</div>
+</td>
+<td class="py-3.5 px-4">
+<div class="flex flex-col gap-1">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Pagado
+                      </span>
+<span class="text-[10px] text-slate-500 font-mono-data flex items-center gap-0.5">
+<i class="w-3 h-3 text-emerald-500" data-lucide="check"></i> CDR Bizlinks OK
+                      </span>
+</div>
+</td>
+<td class="py-3.5 px-4 text-center">
+<div class="flex items-center justify-center gap-1">
+<button class="p-1.5 text-indigo-700 hover:bg-indigo-100 rounded-md transition-colors" title="Ver Detalle">
+<i class="w-4 h-4" data-lucide="eye"></i>
+</button>
+<button class="p-1.5 text-slate-500 hover:bg-slate-100 rounded-md transition-colors" title="Descargar PDF/XML">
+<i class="w-4 h-4" data-lucide="download"></i>
+</button>
+</div>
+</td>
+</tr>
+<!-- ROW 2: CRITICAL FAILED ROW (Hospital Veterinario PetMed) -->
+<tr class="bg-rose-50/30 hover:bg-rose-50/50 transition-colors">
+<td class="py-3.5 px-4">
+<input class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500" type="checkbox"/>
+</td>
+<td class="py-3.5 px-4">
+<div class="flex flex-col">
+<div class="flex items-center gap-1.5">
+<span class="font-mono-data font-semibold text-slate-900">F001-0004920</span>
+<span class="text-[9px] px-1 bg-indigo-100 text-indigo-800 rounded font-bold">FACT</span>
+</div>
+<span class="text-xs text-slate-500 font-mono-data">14/10/2024 10:15</span>
+</div>
+</td>
+<td class="py-3.5 px-4">
+<div class="flex flex-col">
+<span class="font-medium text-slate-900">Hosp. Veterinario PetMed Sur E.I.R.L.</span>
+<span class="text-xs text-slate-500 font-mono-data">RUC: 20554819230</span>
+</div>
+</td>
+<td class="py-3.5 px-4">
+<div class="flex flex-col">
+<span class="text-slate-800">Plan Básico Clínico</span>
+<span class="text-xs text-slate-500">Suscripción Mensual</span>
+</div>
+</td>
+<td class="py-3.5 px-4 text-right">
+<div class="flex flex-col">
+<span class="font-bold text-slate-900 font-mono-data">S/ 377.60</span>
+<span class="text-[10px] text-slate-400 font-mono-data">IGV: S/ 57.60</span>
+</div>
+</td>
+<td class="py-3.5 px-4">
+<div class="flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
+<div class="flex flex-col">
+<span class="text-xs font-semibold text-rose-700">Niubiz (Falló Intento 3)</span>
+<span class="text-[10px] text-rose-600">Fondos insuficientes</span>
+</div>
+</div>
+</td>
+<td class="py-3.5 px-4">
+<div class="flex flex-col gap-1">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-rose-100 text-rose-700 border border-rose-200">
+<span class="w-1.5 h-1.5 rounded-full bg-rose-600"></span> Moroso
+                      </span>
+<span class="text-[10px] text-amber-700 font-mono-data">Corte OSE en 48h</span>
+</div>
+</td>
+<td class="py-3.5 px-4 text-center">
+<div class="flex items-center justify-center gap-1">
+<button class="px-2 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded text-xs font-medium shadow-xs transition-colors flex items-center gap-1">
+<i class="w-3 h-3" data-lucide="refresh-cw"></i> Reintentar
+                      </button>
+<button class="p-1.5 text-slate-500 hover:bg-slate-100 rounded-md transition-colors">
+<i class="w-4 h-4" data-lucide="eye"></i>
+</button>
+</div>
+</td>
+</tr>
+<!-- ROW 3: ENTERPRISE PAID ROW (Grupo Gastronómico Cevicheras La Mar) -->
+<tr class="hover:bg-slate-50 transition-colors">
+<td class="py-3.5 px-4">
+<input class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500" type="checkbox"/>
+</td>
+<td class="py-3.5 px-4">
+<div class="flex flex-col">
+<div class="flex items-center gap-1.5">
+<span class="font-mono-data font-semibold text-slate-900">F001-0004919</span>
+<span class="text-[9px] px-1 bg-indigo-100 text-indigo-800 rounded font-bold">FACT</span>
+</div>
+<span class="text-xs text-slate-500 font-mono-data">14/10/2024 09:02</span>
+</div>
+</td>
+<td class="py-3.5 px-4">
+<div class="flex flex-col">
+<span class="font-medium text-slate-900">Grupo Gastronómico Cevicheras La Mar</span>
+<span class="text-xs text-slate-500 font-mono-data">RUC: 20498112349</span>
+</div>
+</td>
+<td class="py-3.5 px-4">
+<div class="flex flex-col">
+<span class="text-slate-800">Plan Enterprise Unlimited POS</span>
+<span class="text-xs text-slate-500">12 Locales Lima</span>
+</div>
+</td>
+<td class="py-3.5 px-4 text-right">
+<div class="flex flex-col">
+<span class="font-bold text-slate-900 font-mono-data">S/ 1,003.00</span>
+<span class="text-[10px] text-slate-400 font-mono-data">IGV: S/ 153.00</span>
+</div>
+</td>
+<td class="py-3.5 px-4">
+<div class="flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+<div class="flex flex-col">
+<span class="text-xs font-medium text-slate-800">Transferencia BCP Factoring</span>
+<span class="text-[10px] text-emerald-600 font-medium">Conciliado Auto</span>
+</div>
+</div>
+</td>
+<td class="py-3.5 px-4">
+<div class="flex flex-col gap-1">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Pagado
+                      </span>
+<span class="text-[10px] text-slate-500 font-mono-data flex items-center gap-0.5">
+<i class="w-3 h-3 text-emerald-500" data-lucide="check"></i> SUNAT Aceptado
+                      </span>
+</div>
+</td>
+<td class="py-3.5 px-4 text-center">
+<div class="flex items-center justify-center gap-1">
+<button class="p-1.5 text-indigo-700 hover:bg-indigo-100 rounded-md transition-colors">
+<i class="w-4 h-4" data-lucide="eye"></i>
+</button>
+<button class="p-1.5 text-slate-500 hover:bg-slate-100 rounded-md transition-colors" title="Descargar CDR">
+<i class="w-4 h-4" data-lucide="file-check"></i>
+</button>
+</div>
+</td>
+</tr>
+<!-- ROW 4: NOTA DE CRÉDITO ROW (Comercializadora Textil Gamarra) -->
+<tr class="hover:bg-slate-50 transition-colors">
+<td class="py-3.5 px-4">
+<input class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500" type="checkbox"/>
+</td>
+<td class="py-3.5 px-4">
+<div class="flex flex-col">
+<div class="flex items-center gap-1.5">
+<span class="font-mono-data font-semibold text-purple-900">NC01-0000182</span>
+<span class="text-[9px] px-1 bg-purple-100 text-purple-800 rounded font-bold">N.CRÉDITO</span>
+</div>
+<span class="text-xs text-slate-500 font-mono-data">13/10/2024 16:45</span>
+</div>
+</td>
+<td class="py-3.5 px-4">
+<div class="flex flex-col">
+<span class="font-medium text-slate-900">Comercializadora Textil Gamarra</span>
+<span class="text-xs text-slate-500 font-mono-data">RUC: 20114092812</span>
+</div>
+</td>
+<td class="py-3.5 px-4">
+<div class="flex flex-col">
+<span class="text-purple-900 font-medium">Corrección de RUC</span>
+<span class="text-xs text-slate-500">Anulación parcial F001-4902</span>
+</div>
+</td>
+<td class="py-3.5 px-4 text-right">
+<div class="flex flex-col">
+<span class="font-bold text-purple-700 font-mono-data">-S/ 330.40</span>
+<span class="text-[10px] text-slate-400 font-mono-data">IGV: -S/ 50.40</span>
+</div>
+</td>
+<td class="py-3.5 px-4">
+<div class="flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-purple-400"></span>
+<span class="text-xs text-slate-700">Ajuste Contable Directo</span>
+</div>
+</td>
+<td class="py-3.5 px-4">
+<div class="flex flex-col gap-1">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200">
+                        Aplicada
+                      </span>
+<span class="text-[10px] text-slate-500 font-mono-data">CDR NC SUNAT OK</span>
+</div>
+</td>
+<td class="py-3.5 px-4 text-center">
+<div class="flex items-center justify-center gap-1">
+<button class="p-1.5 text-indigo-700 hover:bg-indigo-100 rounded-md transition-colors">
+<i class="w-4 h-4" data-lucide="eye"></i>
+</button>
+<button class="p-1.5 text-slate-500 hover:bg-slate-100 rounded-md transition-colors">
+<i class="w-4 h-4" data-lucide="download"></i>
+</button>
+</div>
+</td>
+</tr>
+<!-- ROW 5: PENDIENTE ROW (Cadena Veterinaria Los Andes Cusco) -->
+<tr class="hover:bg-slate-50 transition-colors">
+<td class="py-3.5 px-4">
+<input class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500" type="checkbox"/>
+</td>
+<td class="py-3.5 px-4">
+<div class="flex flex-col">
+<div class="flex items-center gap-1.5">
+<span class="font-mono-data font-semibold text-slate-900">F001-0004918</span>
+<span class="text-[9px] px-1 bg-indigo-100 text-indigo-800 rounded font-bold">FACT</span>
+</div>
+<span class="text-xs text-slate-500 font-mono-data">12/10/2024 11:20</span>
+</div>
+</td>
+<td class="py-3.5 px-4">
+<div class="flex flex-col">
+<span class="font-medium text-slate-900">Cadena Vet. Los Andes Cusco S.R.L.</span>
+<span class="text-xs text-slate-500 font-mono-data">RUC: 20603349182</span>
+</div>
+</td>
+<td class="py-3.5 px-4">
+<div class="flex flex-col">
+<span class="text-slate-800">Plan Pro Multi-Sede</span>
+<span class="text-xs text-slate-500">Sede Principal Cusco</span>
+</div>
+</td>
+<td class="py-3.5 px-4 text-right">
+<div class="flex flex-col">
+<span class="font-bold text-slate-900 font-mono-data">S/ 578.20</span>
+<span class="text-[10px] text-slate-400 font-mono-data">IGV: S/ 88.20</span>
+</div>
+</td>
+<td class="py-3.5 px-4">
+<div class="flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-blue-500"></span>
+<div class="flex flex-col">
+<span class="text-xs text-slate-800">Diners Club Débito</span>
+<span class="text-[10px] text-blue-600">Pendiente autorización</span>
+</div>
+</div>
+</td>
+<td class="py-3.5 px-4">
+<div class="flex flex-col gap-1">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                        Pendiente
+                      </span>
+<span class="text-[10px] text-slate-500 font-mono-data">Vence: 19/10/2024</span>
+</div>
+</td>
+<td class="py-3.5 px-4 text-center">
+<div class="flex items-center justify-center gap-1">
+<button class="p-1.5 text-indigo-700 hover:bg-indigo-100 rounded-md transition-colors">
+<i class="w-4 h-4" data-lucide="eye"></i>
+</button>
+<button class="p-1.5 text-slate-500 hover:bg-slate-100 rounded-md transition-colors">
+<i class="w-4 h-4" data-lucide="mail"></i>
+</button>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- PAGINATION FOOTER (48px Height) -->
+<div class="h-14 px-5 border-t border-slate-200 flex items-center justify-between flex-wrap gap-3 bg-white">
+<div class="flex items-center gap-3 text-xs text-slate-600">
+<span>Mostrando <strong class="font-semibold text-slate-900">1 - 5</strong> de <strong class="font-semibold text-slate-900">1,482</strong> comprobantes emitidos</span>
+<div class="h-4 w-px bg-slate-200"></div>
+<div class="flex items-center gap-1.5">
+<span>Filas por página:</span>
+<select class="h-7 text-xs rounded border-slate-200 py-0 pl-2 pr-6 bg-slate-50 text-slate-700">
+<option>10</option>
+<option selected="">25</option>
+<option>50</option>
+<option>100</option>
+</select>
+</div>
+</div>
+<!-- Page Buttons -->
+<div class="flex items-center gap-1">
+<button class="w-8 h-8 rounded border border-slate-200 text-slate-400 hover:bg-slate-50 flex items-center justify-center disabled:opacity-50" disabled="">
+<i class="w-4 h-4" data-lucide="chevron-left"></i>
+</button>
+<button class="w-8 h-8 rounded bg-primary-container text-white text-xs font-semibold">1</button>
+<button class="w-8 h-8 rounded hover:bg-slate-100 text-slate-700 text-xs font-medium">2</button>
+<button class="w-8 h-8 rounded hover:bg-slate-100 text-slate-700 text-xs font-medium">3</button>
+<span class="px-1 text-slate-400 text-xs">...</span>
+<button class="w-8 h-8 rounded hover:bg-slate-100 text-slate-700 text-xs font-medium">60</button>
+<button class="w-8 h-8 rounded border border-slate-200 text-slate-600 hover:bg-slate-50 flex items-center justify-center">
+<i class="w-4 h-4" data-lucide="chevron-right"></i>
+</button>
+</div>
+</div>
+</div>
+<!-- ===================================================================== -->
+<!-- RIGHT 4 COLUMNS: HIGH-DENSITY AUDIT DRAWER (SLIDE-OVER SIMULATED)     -->
+<!-- ===================================================================== -->
+<div class="xl:col-span-4 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden sticky top-24">
+<!-- Drawer Header -->
+<div class="p-5 border-b border-slate-200 flex items-center justify-between bg-slate-900 text-white">
+<div class="flex items-center gap-2.5">
+<div class="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white">
+<i class="w-4 h-4" data-lucide="receipt-text"></i>
+</div>
+<div>
+<h3 class="font-headline-sm font-headline-sm text-sm font-bold text-white">Detalle de Comprobante</h3>
+<span class="text-xs font-mono-data text-indigo-300">F001-0004921 • Factura Electrónica</span>
+</div>
+</div>
+<div class="flex items-center gap-1.5">
+<button class="w-7 h-7 rounded hover:bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center transition-colors">
+<i class="w-4 h-4" data-lucide="external-link"></i>
+</button>
+<button class="w-7 h-7 rounded hover:bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center transition-colors">
+<i class="w-4 h-4" data-lucide="x"></i>
+</button>
+</div>
+</div>
+<!-- Drawer Body Content -->
+<div class="p-5 space-y-5 max-h-[720px] overflow-y-auto">
+<!-- 1. Tenant Entity Summary -->
+<div class="p-4 rounded-lg bg-slate-50 border border-slate-200/80 space-y-2">
+<div class="flex items-center justify-between">
+<span class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Receptor Fiscal (Tenant)</span>
+<span class="text-xs font-mono-data bg-white px-2 py-0.5 rounded border border-slate-200 text-indigo-600 font-semibold">
+                  RUC: 20601984211
+                </span>
+</div>
+<div class="font-semibold text-slate-900 text-sm">OdontoSalud S.A.C.</div>
+<div class="text-xs text-slate-600 flex items-center gap-1.5">
+<i class="w-3.5 h-3.5 text-slate-400" data-lucide="map-pin"></i>
+<span>Av. Larco 743 Of. 502, Miraflores, Lima</span>
+</div>
+<div class="text-xs text-slate-500 flex items-center gap-1.5">
+<i class="w-3.5 h-3.5 text-slate-400" data-lucide="mail"></i>
+<span>administracion@odontosalud.pe</span>
+</div>
+</div>
+<!-- 2. SUNAT Tax Breakdown Grid -->
+<div class="space-y-2">
+<div class="flex items-center justify-between">
+<span class="text-xs font-semibold text-slate-700">Desglose Tributario SUNAT</span>
+<span class="text-[10px] font-mono-data text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 font-bold">
+                  OSE BIZLINKS ACEPTADO
+                </span>
+</div>
+<div class="bg-slate-50 rounded-lg p-3 border border-slate-200 font-mono-data text-xs space-y-1.5">
+<div class="flex justify-between text-slate-600">
+<span>Operación Gravada (Base):</span>
+<span class="font-semibold text-slate-800">S/ 490.00</span>
+</div>
+<div class="flex justify-between text-slate-600">
+<span>IGV (18% Régimen General):</span>
+<span class="font-semibold text-slate-800">S/ 88.20</span>
+</div>
+<div class="flex justify-between text-slate-600">
+<span>Operación Inafecta / Exonerada:</span>
+<span>S/ 0.00</span>
+</div>
+<div class="pt-2 border-t border-slate-200 flex justify-between items-center text-sm font-bold text-slate-900">
+<span class="text-xs uppercase font-sans font-bold">Total Facturado:</span>
+<span class="text-indigo-700">S/ 578.20</span>
+</div>
+</div>
+<!-- Cryptographic Hash Verification -->
+<div class="bg-slate-900 text-slate-300 p-2.5 rounded-lg text-[11px] font-mono-data space-y-1">
+<div class="flex items-center justify-between text-[10px] text-slate-400">
+<span>HASH CPE (SHA-256 SUNAT):</span>
+<span class="text-emerald-400">Firmado</span>
+</div>
+<div class="text-[10px] text-slate-400 break-all leading-tight">
+                  8f9b2e7c41a0d8e23f9901bc772a41d08e5e9b8214fbc9a1
+                </div>
+<div class="pt-1 text-[10px] text-slate-400 flex items-center justify-between border-t border-slate-800">
+<span>CDR ID: <strong class="text-slate-200">F001-0004921_01.xml</strong></span>
+<span class="text-emerald-400 font-semibold">Código 0</span>
+</div>
+</div>
+</div>
+<!-- 3. Gateway Transaction & Banking Details -->
+<div class="space-y-2">
+<span class="text-xs font-semibold text-slate-700">Transacción de Pasarela y Conciliación</span>
+<div class="border border-slate-200 rounded-lg p-3 space-y-2 text-xs">
+<div class="flex items-center justify-between">
+<span class="text-slate-500">Pasarela:</span>
+<span class="font-semibold text-slate-800 flex items-center gap-1">
+<span class="w-2 h-2 rounded-full bg-blue-600"></span> Niubiz Checkout API
+                  </span>
+</div>
+<div class="flex items-center justify-between">
+<span class="text-slate-500">ID Transacción:</span>
+<span class="font-mono-data font-semibold text-slate-700">NIU-TX-99824128</span>
+</div>
+<div class="flex items-center justify-between">
+<span class="text-slate-500">Tarjeta Débito:</span>
+<span class="font-mono-data text-slate-700">Visa Débito **** 4812</span>
+</div>
+<div class="flex items-center justify-between">
+<span class="text-slate-500">Fecha y Hora Cobro:</span>
+<span class="font-mono-data text-slate-700">15/10/2024 08:30:12</span>
+</div>
+<div class="pt-2 border-t border-slate-100 flex items-center justify-between">
+<span class="text-slate-500">Cuenta Corriente BCP:</span>
+<span class="font-mono-data text-emerald-700 font-semibold">193-98218-0-12 (Match 100%)</span>
+</div>
+</div>
+</div>
+<!-- 4. Communication & Retry Audit Trail -->
+<div class="space-y-2">
+<span class="text-xs font-semibold text-slate-700">Auditoría de Envíos &amp; Notificaciones</span>
+<div class="space-y-2">
+<div class="flex items-start gap-2.5 text-xs p-2 rounded bg-slate-50 border border-slate-200">
+<i class="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" data-lucide="mail-check"></i>
+<div>
+<div class="font-medium text-slate-800">Correo Electrónico Entregado</div>
+<div class="text-[11px] text-slate-500">Comprobante PDF/XML enviado a facturacion@odontosalud.pe</div>
+<div class="text-[10px] text-slate-400 font-mono-data">15/10/2024 08:31:04</div>
+</div>
+</div>
+<div class="flex items-start gap-2.5 text-xs p-2 rounded bg-slate-50 border border-slate-200">
+<i class="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" data-lucide="message-square"></i>
+<div>
+<div class="font-medium text-slate-800">WhatsApp Notifier Bot</div>
+<div class="text-[11px] text-slate-500">Aviso de cobro exitoso entregado a +51 987 654 321</div>
+<div class="text-[10px] text-slate-400 font-mono-data">15/10/2024 08:31:18</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Drawer Action Footer (Uniform 40px buttons) -->
+<div class="p-4 border-t border-slate-200 bg-slate-50/70 space-y-2">
+<div class="grid grid-cols-2 gap-2">
+<button class="h-10 px-3 bg-white border border-slate-300 hover:bg-slate-100 text-slate-800 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 shadow-2xs transition-colors">
+<i class="w-4 h-4 text-indigo-600" data-lucide="file-down"></i>
+<span>Descargar PDF A4</span>
+</button>
+<button class="h-10 px-3 bg-white border border-slate-300 hover:bg-slate-100 text-slate-800 rounded-lg text-xs font-medium flex items-center justify-center gap-1.5 shadow-2xs transition-colors">
+<i class="w-4 h-4 text-emerald-600" data-lucide="code-xml"></i>
+<span>XML &amp; CDR (ZIP)</span>
+</button>
+</div>
+<div class="grid grid-cols-2 gap-2">
+<button class="h-10 px-3 bg-rose-50 border border-rose-200 hover:bg-rose-100 text-rose-700 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors">
+<i class="w-4 h-4" data-lucide="file-x-2"></i>
+<span>Nota de Crédito</span>
+</button>
+<button class="h-10 px-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 shadow-2xs transition-colors">
+<i class="w-4 h-4" data-lucide="send"></i>
+<span>Reenviar Aviso</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- ===================================================================== -->
+<!-- BANNER INFORMATIVO: CONCILIACIÓN AUTOMÁTICA Y CONTINGENCIA SUNAT      -->
+<!-- ===================================================================== -->
+<div class="rounded-xl border border-indigo-200 bg-gradient-to-r from-indigo-50/80 via-white to-blue-50/80 p-5 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+<div class="flex items-center gap-3.5">
+<div class="w-10 h-10 rounded-lg bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+<i class="w-5 h-5" data-lucide="database-zap"></i>
+</div>
+<div>
+<h4 class="font-headline-sm font-semibold text-slate-900 text-sm">
+              Servicio de Conciliación Automática de Extractos BCP &amp; Niubiz Activo
+            </h4>
+<p class="text-xs text-slate-600 mt-0.5">
+              Próxima reconciliación nocturna programada para hoy a las 23:59:00 UTC-5. Los comprobantes sin match bancario se retendrán 24 horas antes de emitir notificación de mora al tenant.
+            </p>
+</div>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<span class="text-xs text-slate-500 font-mono-data">Última sync: Hace 3 min</span>
+<button class="h-10 px-4 rounded-lg bg-white border border-slate-300 hover:bg-slate-50 text-indigo-700 font-label-md text-xs font-semibold flex items-center gap-1.5 shadow-2xs">
+<i class="w-4 h-4" data-lucide="settings-2"></i>
+<span>Configurar Pasarelas</span>
+</button>
+</div>
+</div>
+</div>
+</main>
+<!-- ========================================================================= -->
+<!-- LUCIDE ICONS INITIALIZATION & INTERACTIVITY MICRO-SCRIPTS                -->
+<!-- ========================================================================= -->
+<script>
+    // Inicializar todos los iconos de la librería Lucide
+    document.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+    });
+  </script>
+</body></html>

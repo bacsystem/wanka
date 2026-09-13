@@ -1,0 +1,1232 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Ficha de Mascota y Carné de Vacunas | Veterinaria San Borja</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap&family=Geist+Mono:wght@400;500;600" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "primary": "#0f766e",
+            "primary-hover": "#0d655e",
+            "primary-light": "#ccfbf1",
+            "primary-container": "#0f766e",
+            "on-primary": "#ffffff",
+            "surface": "#faf8ff",
+            "surface-dim": "#d2d9f4",
+            "surface-container-lowest": "#ffffff",
+            "surface-container-low": "#f4f6f8",
+            "surface-container": "#eaedf2",
+            "surface-container-high": "#e1e5eb",
+            "on-surface": "#131b2e",
+            "on-surface-variant": "#434e5a",
+            "outline": "#6b7280",
+            "outline-variant": "#e2e8f0",
+            "error": "#dc2626",
+            "error-container": "#fee2e2",
+            "warning": "#d97706",
+            "warning-container": "#fef3c7",
+            "success": "#16a34a",
+            "success-container": "#dcfce7"
+          },
+          fontFamily: {
+            sans: ['Geist', 'system-ui', 'sans-serif'],
+            mono: ['"Geist Mono"', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+    }
+    .material-symbols-filled {
+      font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 20;
+    }
+    .scrollbar-thin::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+    .scrollbar-thin::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .scrollbar-thin::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+    /* Estilos de modo oscuro simulado o nativo */
+    .dark body { background-color: #0b131f; color: #e2e8f0; }
+    .dark .bg-surface-container-lowest { background-color: #111a28 !important; }
+    .dark .bg-surface-container-low { background-color: #162032 !important; }
+    .dark .bg-surface-container { background-color: #1c283c !important; }
+    .dark .border-outline-variant { border-color: #2a374d !important; }
+    .dark .text-on-surface { color: #f1f5f9 !important; }
+    .dark .text-on-surface-variant { color: #94a3b8 !important; }
+  </style>
+</head>
+<body class="bg-[#f8fafc] text-on-surface font-sans antialiased h-full flex flex-col overflow-x-hidden text-xs">
+
+  <!-- TOPBAR CORPORATIVO PERÚSAAS (VETERINARIA SAN BORJA) -->
+  <header class="bg-surface-container-lowest border-b border-outline-variant h-12 px-3 md:px-5 flex items-center justify-between shrink-0 z-30 sticky top-0">
+    <div class="flex items-center gap-2 md:gap-3">
+      <!-- Tenant Switcher / Branding -->
+      <div class="h-8 w-8 rounded-lg bg-teal-700 flex items-center justify-center text-white font-bold shadow-sm">
+        <span class="material-symbols-outlined text-[20px]">pets</span>
+      </div>
+      <div class="flex items-center gap-1.5 md:gap-2">
+        <div class="flex flex-col">
+          <div class="flex items-center gap-1.5">
+            <span class="font-bold text-sm tracking-tight text-on-surface">Veterinaria San Borja E.I.R.L.</span>
+            <span class="hidden sm:inline-block px-1.5 py-0.2 rounded bg-teal-50 text-teal-800 border border-teal-200 text-[10px] font-semibold">RUBRO VET</span>
+          </div>
+          <div class="flex items-center gap-2 text-[10px] text-gray-500 font-mono">
+            <span>RUC 20512345678</span>
+            <span>·</span>
+            <span class="text-emerald-700 font-medium flex items-center gap-0.5">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-600 inline-block"></span> SUNAT OK · OSE Conectado
+            </span>
+          </div>
+        </div>
+      </div>
+      <div class="h-4 w-px bg-outline-variant mx-1 hidden lg:block"></div>
+      <!-- Selector de Sede -->
+      <div class="hidden lg:flex items-center gap-1 text-[11px] text-on-surface-variant font-medium bg-surface-container-low px-2 py-1 rounded border border-outline-variant">
+        <span class="material-symbols-outlined text-[15px] text-primary">location_on</span>
+        <span>Sede San Borja (Av. San Luis 1420)</span>
+        <span class="material-symbols-outlined text-[14px]">arrow_drop_down</span>
+      </div>
+    </div>
+
+    <!-- Acciones Derecha & Theme Toggler -->
+    <div class="flex items-center gap-2 md:gap-3">
+      <!-- Conmutador de Temas Claro/Oscuro/Sistema -->
+      <div class="hidden sm:flex items-center p-0.5 bg-gray-100 rounded-lg border border-outline-variant text-[11px] font-medium" id="themeGroup">
+        <button onclick="document.documentElement.classList.remove('dark')" class="px-2 py-0.5 rounded bg-white text-primary font-semibold shadow-xs flex items-center gap-1">
+          <span class="material-symbols-outlined text-[14px]">light_mode</span> Claro
+        </button>
+        <button onclick="document.documentElement.classList.add('dark')" class="px-2 py-0.5 rounded text-gray-500 hover:text-gray-900 flex items-center gap-1">
+          <span class="material-symbols-outlined text-[14px]">dark_mode</span> Oscuro
+        </button>
+        <button class="px-2 py-0.5 rounded text-gray-500 hover:text-gray-900 hidden md:inline-block">Auto</button>
+      </div>
+
+      <!-- Notificaciones y Caja -->
+      <div class="flex items-center gap-1">
+        <div class="hidden sm:flex items-center gap-1 text-[11px] font-mono px-2 py-1 rounded bg-emerald-50 text-emerald-800 border border-emerald-200">
+          <span class="material-symbols-outlined text-[14px]">point_of_sale</span>
+          <span>Caja Clínica #01: Abierta</span>
+        </div>
+        <button class="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100 relative" title="Notificaciones del consultorio">
+          <span class="material-symbols-outlined text-[19px]">notifications</span>
+          <span class="absolute top-1 right-1 w-2 h-2 rounded-full bg-red-600"></span>
+        </button>
+      </div>
+
+      <div class="h-4 w-px bg-outline-variant hidden sm:block"></div>
+
+      <!-- Perfil Veterinario -->
+      <div class="flex items-center gap-2 pl-1 cursor-pointer">
+        <div class="w-7 h-7 rounded-full bg-teal-800 text-white flex items-center justify-center font-bold text-xs">
+          MV
+        </div>
+        <div class="hidden md:flex flex-col text-left">
+          <span class="text-xs font-semibold leading-tight text-on-surface">M.V. Rodrigo Morales</span>
+          <span class="text-[10px] text-gray-500 font-mono">CMVP 8492 · Cirujano</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- BODY CONTAINER CON SIDEBAR Y CONTENIDO PRINCIPAL -->
+  <div class="flex-1 flex overflow-hidden">
+
+    <!-- SIDEBAR VETERINARIA (DESKTOP) -->
+    <aside class="w-56 bg-surface-container-lowest border-r border-outline-variant flex flex-col justify-between shrink-0 hidden md:flex z-20">
+      <div class="p-3 space-y-1">
+        <div class="px-2 py-1 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Módulos Veterinarios</div>
+        
+        <a href="#" class="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-gray-600 hover:bg-gray-100 font-medium">
+          <span class="material-symbols-outlined text-[18px]">dashboard</span>
+          <span>Inicio</span>
+        </a>
+
+        <a href="#" class="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-gray-600 hover:bg-gray-100 font-medium">
+          <span class="material-symbols-outlined text-[18px]">calendar_month</span>
+          <span>Agenda & Turnos</span>
+        </a>
+
+        <!-- Activo: Pacientes (Mascotas) -->
+        <a href="#" class="flex items-center gap-2.5 px-2.5 py-2 rounded-lg bg-teal-50 text-teal-800 border-l-3 border-teal-700 font-bold shadow-2xs">
+          <span class="material-symbols-outlined text-[18px] text-teal-700">pets</span>
+          <span class="flex-1">Pacientes (Mascotas)</span>
+          <span class="px-1.5 py-0.2 rounded bg-teal-200 text-teal-900 text-[10px] font-mono">1.4k</span>
+        </a>
+
+        <a href="#" class="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-gray-600 hover:bg-gray-100 font-medium">
+          <span class="material-symbols-outlined text-[18px]">emergency</span>
+          <span class="flex-1">Hospitalización</span>
+          <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+        </a>
+
+        <a href="#" class="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-gray-600 hover:bg-gray-100 font-medium">
+          <span class="material-symbols-outlined text-[18px]">content_cut</span>
+          <span>Grooming & Peluquería</span>
+        </a>
+
+        <a href="#" class="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-gray-600 hover:bg-gray-100 font-medium">
+          <span class="material-symbols-outlined text-[18px]">point_of_sale</span>
+          <span>Ventas / POS Mostrador</span>
+        </a>
+
+        <a href="#" class="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-gray-600 hover:bg-gray-100 font-medium">
+          <span class="material-symbols-outlined text-[18px]">shopping_bag</span>
+          <span>Petshop e Inventario</span>
+        </a>
+
+        <a href="#" class="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-gray-600 hover:bg-gray-100 font-medium">
+          <span class="material-symbols-outlined text-[18px]">receipt_long</span>
+          <span>Comprobantes CPE</span>
+        </a>
+
+        <a href="#" class="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-gray-600 hover:bg-gray-100 font-medium">
+          <span class="material-symbols-outlined text-[18px]">bar_chart</span>
+          <span>Reportes & SUNAT</span>
+        </a>
+      </div>
+
+      <!-- Footer de Sidebar -->
+      <div class="p-3 border-t border-outline-variant bg-gray-50/50 space-y-2">
+        <div class="flex items-center justify-between text-[11px] text-gray-500">
+          <span class="flex items-center gap-1 font-medium">
+            <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Lector Microchip USB
+          </span>
+          <span class="font-mono text-[10px] text-emerald-700 font-semibold">ONLINE</span>
+        </div>
+        <button onclick="document.getElementById('vaccineDrawer').classList.remove('translate-x-full')" class="w-full h-8 rounded-lg bg-teal-700 hover:bg-teal-800 text-white font-semibold flex items-center justify-center gap-1.5 transition-colors shadow-2xs">
+          <span class="material-symbols-outlined text-[16px]">vaccines</span>
+          <span>+ Registrar Vacuna</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- ÁREA DE CONTENIDO PRINCIPAL SCROLLABLE -->
+    <main class="flex-1 flex flex-col overflow-y-auto scrollbar-thin bg-surface pb-16 md:pb-6">
+      
+      <!-- BREADCRUMB Y ACCIONES SUPERIORES -->
+      <div class="px-4 md:px-6 py-2 bg-surface-container-lowest border-b border-outline-variant flex flex-wrap items-center justify-between gap-2">
+        <div class="flex items-center gap-1.5 text-[11px] text-gray-500">
+          <a href="#" class="hover:text-teal-700">Pacientes</a>
+          <span class="material-symbols-outlined text-[12px]">chevron_right</span>
+          <a href="#" class="hover:text-teal-700">Caninos</a>
+          <span class="material-symbols-outlined text-[12px]">chevron_right</span>
+          <span class="font-semibold text-gray-800">HC-VET-2023-0418 · Rocky</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-medium bg-gray-100 text-gray-600 border border-gray-200">
+            Última sync carné: Hoy 10:14 hrs
+          </span>
+          <button onclick="window.print()" class="h-7 px-2.5 rounded bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 font-medium flex items-center gap-1 text-[11px] shadow-2xs">
+            <span class="material-symbols-outlined text-[15px] text-gray-500">print</span>
+            <span class="hidden sm:inline">Imprimir Carné Oficial</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="p-3 md:p-6 space-y-4 max-w-[1440px] w-full mx-auto">
+
+        <!-- CABECERA PRINCIPAL DE LA MASCOTA -->
+        <section class="bg-surface-container-lowest rounded-xl border border-outline-variant p-4 md:p-5 shadow-2xs">
+          <div class="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
+            
+            <!-- Columna Izquierda: Identidad y Propietario -->
+            <div class="flex items-start gap-4">
+              <!-- Avatar / Foto Mascota con Badge de Especie -->
+              <div class="relative shrink-0">
+                <div class="w-18 h-18 md:w-20 md:h-20 rounded-2xl bg-amber-100 border-2 border-amber-300 flex flex-col items-center justify-center text-amber-900 shadow-xs">
+                  <span class="material-symbols-outlined text-[38px] md:text-[42px]">sound_detection_dog_barking</span>
+                  <span class="text-[9px] font-black uppercase tracking-wider bg-amber-200 px-1 rounded -mt-1">CANINO</span>
+                </div>
+                <div class="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-teal-700 text-white flex items-center justify-center border-2 border-white shadow-2xs" title="Macho Castrado">
+                  <span class="material-symbols-outlined text-[13px]">male</span>
+                </div>
+              </div>
+
+              <!-- Datos de Rocky -->
+              <div class="space-y-1">
+                <div class="flex flex-wrap items-center gap-2">
+                  <h1 class="text-xl md:text-2xl font-bold text-gray-900 tracking-tight">Rocky</h1>
+                  <span class="px-2 py-0.5 rounded-md bg-teal-50 text-teal-800 border border-teal-200 text-[11px] font-semibold">
+                    Golden Retriever
+                  </span>
+                  <span class="px-2 py-0.5 rounded-md bg-gray-100 text-gray-700 text-[11px] font-medium">
+                    Macho Castrado
+                  </span>
+                  <span class="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 text-[11px] font-medium">
+                    4 años (08/04/2022)
+                  </span>
+                </div>
+
+                <!-- Chips Clínicos -->
+                <div class="flex flex-wrap items-center gap-3 text-gray-600 text-[11px] pt-0.5">
+                  <span class="flex items-center gap-1 font-semibold text-gray-800">
+                    <span class="material-symbols-outlined text-[15px] text-teal-700">scale</span>
+                    32.00 kg
+                  </span>
+                  <span>·</span>
+                  <span class="flex items-center gap-1 font-mono text-gray-700" title="Microchip internacional ISO">
+                    <span class="material-symbols-outlined text-[15px] text-teal-700">qr_code_scanner</span>
+                    Chip: <strong>985112004567890</strong>
+                  </span>
+                  <span>·</span>
+                  <span class="font-mono text-gray-500">HC: #VET-0418</span>
+                </div>
+
+                <!-- Datos de Propietario (DNI, Teléfono y WhatsApp) -->
+                <div class="flex flex-wrap items-center gap-2.5 pt-1.5 text-[11px] bg-gray-50/80 px-2.5 py-1.5 rounded-lg border border-gray-200/80">
+                  <div class="flex items-center gap-1 font-medium text-gray-800">
+                    <span class="material-symbols-outlined text-[15px] text-gray-500">person</span>
+                    <span>Propietario: <strong>Juan Carlos Pérez Huamán</strong></span>
+                  </div>
+                  <span class="text-gray-400">|</span>
+                  <span class="font-mono text-gray-600">DNI 45892147 (RENIEC OK)</span>
+                  <span class="text-gray-400">|</span>
+                  <a href="https://wa.me/51987654321" target="_blank" class="flex items-center gap-1 text-emerald-700 hover:text-emerald-800 font-semibold">
+                    <span class="material-symbols-outlined text-[15px] text-emerald-600">chat</span>
+                    +51 987 654 321
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            <!-- Columna Derecha: Alertas Médicas & Botones de Acción -->
+            <div class="flex flex-col sm:items-end justify-between gap-3 shrink-0">
+              <!-- Alertas Críticas (Pills de advertencia) -->
+              <div class="flex flex-wrap sm:flex-col items-start sm:items-end gap-1.5 w-full sm:w-auto">
+                <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-red-50 border border-red-200 text-red-700 font-semibold text-[11px] shadow-2xs">
+                  <span class="material-symbols-outlined text-[15px] text-red-600">warning</span>
+                  <span>Alergia severa a AINEs (Ketoprofeno / Meloxicam)</span>
+                </div>
+                <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-50 border border-amber-300 text-amber-800 font-semibold text-[11px] shadow-2xs">
+                  <span class="material-symbols-outlined text-[15px] text-amber-600">security</span>
+                  <span>Agresivo por dolor en consulta: Usar Bozal Canino L</span>
+                </div>
+              </div>
+
+              <!-- Barra de Acciones Rápidas -->
+              <div class="flex flex-wrap items-center gap-1.5 pt-1">
+                <button class="h-8 px-2.5 rounded-lg bg-teal-700 hover:bg-teal-800 text-white font-semibold flex items-center gap-1 shadow-2xs transition-colors">
+                  <span class="material-symbols-outlined text-[16px]">stethoscope</span>
+                  <span>Nueva Consulta</span>
+                </button>
+                <button class="h-8 px-2.5 rounded-lg bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 font-semibold flex items-center gap-1 shadow-2xs transition-colors">
+                  <span class="material-symbols-outlined text-[16px] text-teal-700">event_available</span>
+                  <span>Agendar Cita</span>
+                </button>
+                <button class="h-8 px-2.5 rounded-lg bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 font-semibold flex items-center gap-1 shadow-2xs transition-colors">
+                  <span class="material-symbols-outlined text-[16px] text-emerald-600">point_of_sale</span>
+                  <span>Cobrar en POS</span>
+                </button>
+                <a href="https://wa.me/51987654321?text=Hola%20Juan%20Carlos,%20le%20escribimos%20de%20Veterinaria%20San%20Borja%20sobre%20su%20mascota%20Rocky" target="_blank" class="h-8 px-2.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-800 font-semibold flex items-center gap-1 shadow-2xs transition-colors">
+                  <span class="material-symbols-outlined text-[16px] text-emerald-600">chat</span>
+                  <span>WhatsApp</span>
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <!-- FILA DE KPIS CLÍNICOS Y TENDENCIA DE PESO (6 PUNTOS) -->
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4 pt-4 border-t border-outline-variant">
+            
+            <!-- KPI 1: Consultas -->
+            <div class="bg-surface-container-low p-2.5 rounded-lg border border-outline-variant flex items-center justify-between">
+              <div>
+                <span class="text-[10px] uppercase font-bold text-gray-500 tracking-wider">Historial Consultas</span>
+                <div class="text-base font-bold text-gray-900 mt-0.5">14 atenciones</div>
+                <span class="text-[10px] text-teal-700 font-medium">Paciente regular activo</span>
+              </div>
+              <div class="w-8 h-8 rounded-lg bg-teal-100 text-teal-800 flex items-center justify-center">
+                <span class="material-symbols-outlined text-[18px]">medical_services</span>
+              </div>
+            </div>
+
+            <!-- KPI 2: Última Visita -->
+            <div class="bg-surface-container-low p-2.5 rounded-lg border border-outline-variant flex items-center justify-between">
+              <div>
+                <span class="text-[10px] uppercase font-bold text-gray-500 tracking-wider">Última Visita</span>
+                <div class="text-base font-bold text-gray-900 mt-0.5 font-mono">02/09/2026</div>
+                <span class="text-[10px] text-gray-500">Hace 16 días (Dermatología)</span>
+              </div>
+              <div class="w-8 h-8 rounded-lg bg-blue-100 text-blue-800 flex items-center justify-center">
+                <span class="material-symbols-outlined text-[18px]">history</span>
+              </div>
+            </div>
+
+            <!-- KPI 3: Deuda en Cuenta -->
+            <div class="bg-surface-container-low p-2.5 rounded-lg border border-outline-variant flex items-center justify-between">
+              <div>
+                <span class="text-[10px] uppercase font-bold text-gray-500 tracking-wider">Saldo / Deuda</span>
+                <div class="text-base font-bold text-emerald-700 mt-0.5 font-mono">S/ 0.00</div>
+                <span class="text-[10px] text-emerald-700 font-medium">Al día · Sin saldos pendientes</span>
+              </div>
+              <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center">
+                <span class="material-symbols-outlined text-[18px]">verified</span>
+              </div>
+            </div>
+
+            <!-- KPI 4: Tendencia de Peso (Gráfico Sparkline SVG de 6 Puntos) -->
+            <div class="bg-surface-container-low p-2.5 rounded-lg border border-outline-variant flex flex-col justify-between">
+              <div class="flex items-center justify-between">
+                <span class="text-[10px] uppercase font-bold text-gray-500 tracking-wider">Control de Peso</span>
+                <span class="font-mono text-[11px] font-bold text-teal-800">32.0 kg (+0.5)</span>
+              </div>
+              <!-- Sparkline SVG interactivo de 6 puntos reales -->
+              <div class="py-1">
+                <svg class="w-full h-7 overflow-visible" viewBox="0 0 160 30">
+                  <polyline fill="none" stroke="#0f766e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="5,24 35,22 65,18 95,15 125,12 155,10"></polyline>
+                  <!-- 6 Puntos de Peso -->
+                  <circle cx="5" cy="24" r="2.5" fill="#ffffff" stroke="#0f766e" stroke-width="2"><title>Mar 2026: 30.1 kg</title></circle>
+                  <circle cx="35" cy="22" r="2.5" fill="#ffffff" stroke="#0f766e" stroke-width="2"><title>May 2026: 30.6 kg</title></circle>
+                  <circle cx="65" cy="18" r="2.5" fill="#ffffff" stroke="#0f766e" stroke-width="2"><title>Jun 2026: 31.2 kg</title></circle>
+                  <circle cx="95" cy="15" r="2.5" fill="#ffffff" stroke="#0f766e" stroke-width="2"><title>Jul 2026: 31.5 kg</title></circle>
+                  <circle cx="125" cy="12" r="2.5" fill="#ffffff" stroke="#0f766e" stroke-width="2"><title>Ago 2026: 31.8 kg</title></circle>
+                  <circle cx="155" cy="10" r="3.5" fill="#0f766e" stroke="#ffffff" stroke-width="2"><title>02 Sep 2026: 32.0 kg</title></circle>
+                </svg>
+              </div>
+              <div class="flex justify-between text-[9px] text-gray-500 font-mono">
+                <span>30.1 kg (Mar)</span>
+                <span>31.2 kg</span>
+                <span class="font-bold text-teal-800">32.0 kg (Hoy)</span>
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+        <!-- NAVEGACIÓN POR PESTAÑAS (SCROLLABLE EN MÓVIL) -->
+        <div class="border-b border-outline-variant bg-surface-container-lowest rounded-t-xl px-2 pt-2 flex items-center gap-1 overflow-x-auto scrollbar-thin">
+          <button onclick="switchTab('resumen')" id="tabBtn-resumen" class="tab-button px-3.5 py-2 text-xs font-semibold text-gray-500 hover:text-gray-900 border-b-2 border-transparent flex items-center gap-1.5 whitespace-nowrap">
+            <span class="material-symbols-outlined text-[16px]">overview</span>
+            <span>Resumen General</span>
+          </button>
+
+          <!-- Pestaña Activa por defecto: Carné de vacunas -->
+          <button onclick="switchTab('vacunas')" id="tabBtn-vacunas" class="tab-button px-3.5 py-2 text-xs font-bold text-teal-800 border-b-2 border-teal-700 bg-teal-50/50 rounded-t-lg flex items-center gap-1.5 whitespace-nowrap">
+            <span class="material-symbols-outlined text-[16px] text-teal-700">vaccines</span>
+            <span>Carné de Vacunas & Desparasitación</span>
+            <span class="px-1.5 py-0.2 rounded-full bg-teal-200 text-teal-900 text-[10px] font-mono font-bold">5</span>
+          </button>
+
+          <button onclick="switchTab('historia')" id="tabBtn-historia" class="tab-button px-3.5 py-2 text-xs font-semibold text-gray-500 hover:text-gray-900 border-b-2 border-transparent flex items-center gap-1.5 whitespace-nowrap">
+            <span class="material-symbols-outlined text-[16px]">clinical_notes</span>
+            <span>Historia Clínica (SOAP)</span>
+            <span class="px-1.5 py-0.2 rounded bg-gray-200 text-gray-700 text-[10px] font-mono">14</span>
+          </button>
+
+          <button onclick="switchTab('hospital')" id="tabBtn-hospital" class="tab-button px-3.5 py-2 text-xs font-semibold text-gray-500 hover:text-gray-900 border-b-2 border-transparent flex items-center gap-1.5 whitespace-nowrap">
+            <span class="material-symbols-outlined text-[16px]">hotel</span>
+            <span>Hospitalización</span>
+          </button>
+
+          <button onclick="switchTab('grooming')" id="tabBtn-grooming" class="tab-button px-3.5 py-2 text-xs font-semibold text-gray-500 hover:text-gray-900 border-b-2 border-transparent flex items-center gap-1.5 whitespace-nowrap">
+            <span class="material-symbols-outlined text-[16px]">content_cut</span>
+            <span>Peluquería / Grooming</span>
+          </button>
+
+          <button onclick="switchTab('comprobantes')" id="tabBtn-comprobantes" class="tab-button px-3.5 py-2 text-xs font-semibold text-gray-500 hover:text-gray-900 border-b-2 border-transparent flex items-center gap-1.5 whitespace-nowrap">
+            <span class="material-symbols-outlined text-[16px]">receipt</span>
+            <span>Comprobantes CPE (Boletas)</span>
+          </button>
+        </div>
+
+        <!-- CONTENIDO TAB 1: CARNÉ DE VACUNAS (ACTIVO) -->
+        <div id="tab-vacunas" class="space-y-4">
+          
+          <!-- Banner de Notificación y Alerta de Vencimiento Próximo -->
+          <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 md:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+            <div class="flex items-start sm:items-center gap-2.5">
+              <div class="w-8 h-8 rounded-lg bg-amber-200 text-amber-800 flex items-center justify-center shrink-0">
+                <span class="material-symbols-outlined text-[20px]">notification_important</span>
+              </div>
+              <div>
+                <span class="font-bold text-amber-950 text-xs block">
+                  1 Vacuna próxima a vencer: <span class="text-amber-800 underline">Bordetella KC Bronchicine</span>
+                </span>
+                <p class="text-[11px] text-amber-800">
+                  Vence el <strong>30/09/2026 (en 12 días)</strong>. Se programó recordatorio automático vía WhatsApp al dueño (+51 987 654 321) con 48h de antelación.
+                </p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+              <button class="h-7 px-2.5 rounded bg-emerald-700 hover:bg-emerald-800 text-white font-semibold text-[11px] flex items-center gap-1 shadow-2xs">
+                <span class="material-symbols-outlined text-[14px]">send</span>
+                <span>Notificar Ahora por WhatsApp</span>
+              </button>
+              <button onclick="document.getElementById('vaccineDrawer').classList.remove('translate-x-full')" class="h-7 px-2.5 rounded bg-teal-700 hover:bg-teal-800 text-white font-semibold text-[11px] flex items-center gap-1 shadow-2xs">
+                <span class="material-symbols-outlined text-[14px]">add_circle</span>
+                <span>+ Aplicar Refuerzo</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- SECCIÓN 1: PLAN DE VACUNACIÓN OFICIAL -->
+          <div class="bg-surface-container-lowest rounded-xl border border-outline-variant p-4 shadow-2xs space-y-3">
+            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-outline-variant pb-3">
+              <div>
+                <h3 class="font-bold text-gray-900 text-sm flex items-center gap-1.5">
+                  <span class="material-symbols-outlined text-teal-700 text-[18px]">vaccines</span>
+                  <span>Inmunizaciones y Vacunas Caninas (Normativa Sanitaria SENASA)</span>
+                </h3>
+                <p class="text-[11px] text-gray-500">Registro oficial de biológicos con trazabilidad de lote, laboratorio fabricante y veterinario colegiado.</p>
+              </div>
+              <div class="flex items-center gap-2">
+                <button onclick="document.getElementById('vaccineDrawer').classList.remove('translate-x-full')" class="h-8 px-3 rounded-lg bg-teal-700 hover:bg-teal-800 text-white font-semibold text-xs flex items-center gap-1.5 shadow-2xs transition-colors">
+                  <span class="material-symbols-outlined text-[16px]">add</span>
+                  <span>Registrar Nueva Vacuna</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- TABLA DESKTOP DE VACUNAS (≥768px) -->
+            <div class="hidden md:block overflow-x-auto">
+              <table class="w-full text-left text-xs">
+                <thead>
+                  <tr class="border-b border-gray-200 bg-gray-50/80 text-gray-600 font-semibold text-[11px]">
+                    <th class="py-2.5 px-3">Biológico / Vacuna</th>
+                    <th class="py-2.5 px-3">Laboratorio</th>
+                    <th class="py-2.5 px-3">Lote & Serie</th>
+                    <th class="py-2.5 px-3">Fecha Aplicada</th>
+                    <th class="py-2.5 px-3">Médico Veterinario</th>
+                    <th class="py-2.5 px-3">Próxima Dosis</th>
+                    <th class="py-2.5 px-3 text-center">Estado</th>
+                    <th class="py-2.5 px-3 text-right">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                  
+                  <!-- Ítem 1: Séxtuple (Vigente) -->
+                  <tr class="hover:bg-gray-50/70 transition-colors">
+                    <td class="py-2.5 px-3 font-semibold text-gray-900">
+                      <div class="flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                        <div>
+                          <div class="font-bold">Vacuna Séxtuple Canina (DHPPi/L)</div>
+                          <span class="text-[10px] text-gray-500">Distemper, Parvo, Adenovirus, Parainfluenza, Leptospira</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="py-2.5 px-3 text-gray-700">Zoetis (Vanguard Plus 5 L4)</td>
+                    <td class="py-2.5 px-3 font-mono text-[11px] text-gray-600">LOT-682194-Z</td>
+                    <td class="py-2.5 px-3 font-mono text-gray-800 font-medium">15/04/2026</td>
+                    <td class="py-2.5 px-3 text-gray-700">M.V. Rodrigo Morales <span class="font-mono text-[10px] text-gray-400">(CMVP 8492)</span></td>
+                    <td class="py-2.5 px-3 font-mono font-bold text-gray-900">15/04/2027</td>
+                    <td class="py-2.5 px-3 text-center">
+                      <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span> Vigente
+                      </span>
+                    </td>
+                    <td class="py-2.5 px-3 text-right">
+                      <div class="flex items-center justify-end gap-1">
+                        <button class="p-1 rounded hover:bg-gray-100 text-gray-500" title="Ver comprobante de compra"><span class="material-symbols-outlined text-[16px]">receipt</span></button>
+                        <button class="p-1 rounded hover:bg-gray-100 text-teal-700" title="Reenviar recordatorio WhatsApp"><span class="material-symbols-outlined text-[16px]">chat</span></button>
+                      </div>
+                    </td>
+                  </tr>
+
+                  <!-- Ítem 2: Bordetella (Vence en 12 días) -->
+                  <tr class="bg-amber-50/40 hover:bg-amber-50 transition-colors">
+                    <td class="py-2.5 px-3 font-semibold text-gray-900">
+                      <div class="flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                        <div>
+                          <div class="font-bold text-amber-950">Bordetella Bronchiseptica (Tos de las Perreras)</div>
+                          <span class="text-[10px] text-amber-800">Bronchicine CAe · Inyectable subcutánea</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="py-2.5 px-3 text-gray-700">Zoetis Perú</td>
+                    <td class="py-2.5 px-3 font-mono text-[11px] text-gray-600">LOT-441092-B</td>
+                    <td class="py-2.5 px-3 font-mono text-gray-800 font-medium">30/09/2025</td>
+                    <td class="py-2.5 px-3 text-gray-700">Dra. Camila Alva <span class="font-mono text-[10px] text-gray-400">(CMVP 9104)</span></td>
+                    <td class="py-2.5 px-3 font-mono font-bold text-amber-900">30/09/2026</td>
+                    <td class="py-2.5 px-3 text-center">
+                      <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                        <span class="w-1.5 h-1.5 rounded-full bg-amber-600 animate-pulse"></span> Vence en 12 días
+                      </span>
+                    </td>
+                    <td class="py-2.5 px-3 text-right">
+                      <div class="flex items-center justify-end gap-1">
+                        <button onclick="document.getElementById('vaccineDrawer').classList.remove('translate-x-full')" class="h-6 px-2 rounded bg-amber-600 hover:bg-amber-700 text-white font-bold text-[10px] flex items-center gap-1">
+                          <span>Renovar</span>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+
+                  <!-- Ítem 3: Antirrábica (Vigente) -->
+                  <tr class="hover:bg-gray-50/70 transition-colors">
+                    <td class="py-2.5 px-3 font-semibold text-gray-900">
+                      <div class="flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                        <div>
+                          <div class="font-bold">Vacuna Antirrábica Monovalente</div>
+                          <span class="text-[10px] text-gray-500">Rabisin · Certificado oficial SENASA #RAB-2026-904</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="py-2.5 px-3 text-gray-700">Boehringer Ingelheim</td>
+                    <td class="py-2.5 px-3 font-mono text-[11px] text-gray-600">LOT-892110-R</td>
+                    <td class="py-2.5 px-3 font-mono text-gray-800 font-medium">10/06/2026</td>
+                    <td class="py-2.5 px-3 text-gray-700">M.V. Rodrigo Morales <span class="font-mono text-[10px] text-gray-400">(CMVP 8492)</span></td>
+                    <td class="py-2.5 px-3 font-mono font-bold text-gray-900">10/06/2027</td>
+                    <td class="py-2.5 px-3 text-center">
+                      <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span> Vigente
+                      </span>
+                    </td>
+                    <td class="py-2.5 px-3 text-right">
+                      <div class="flex items-center justify-end gap-1">
+                        <button class="p-1 rounded hover:bg-gray-100 text-gray-500" title="Ver certificado SENASA"><span class="material-symbols-outlined text-[16px]">verified</span></button>
+                      </div>
+                    </td>
+                  </tr>
+
+                  <!-- Ítem 4: GiardiaVax (Vigente) -->
+                  <tr class="hover:bg-gray-50/70 transition-colors">
+                    <td class="py-2.5 px-3 font-semibold text-gray-900">
+                      <div class="flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                        <div>
+                          <div class="font-bold">GiardiaVax (Prevención Giardiasis)</div>
+                          <span class="text-[10px] text-gray-500">Inactivada de trofozoítos</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="py-2.5 px-3 text-gray-700">Zoetis</td>
+                    <td class="py-2.5 px-3 font-mono text-[11px] text-gray-600">LOT-129048-G</td>
+                    <td class="py-2.5 px-3 font-mono text-gray-800 font-medium">20/01/2026</td>
+                    <td class="py-2.5 px-3 text-gray-700">Dra. Camila Alva <span class="font-mono text-[10px] text-gray-400">(CMVP 9104)</span></td>
+                    <td class="py-2.5 px-3 font-mono font-bold text-gray-900">20/01/2027</td>
+                    <td class="py-2.5 px-3 text-center">
+                      <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span> Vigente
+                      </span>
+                    </td>
+                    <td class="py-2.5 px-3 text-right">
+                      <div class="flex items-center justify-end gap-1">
+                        <button class="p-1 rounded hover:bg-gray-100 text-gray-500"><span class="material-symbols-outlined text-[16px]">more_vert</span></button>
+                      </div>
+                    </td>
+                  </tr>
+
+                </tbody>
+              </table>
+            </div>
+
+            <!-- TARJETAS MÓVILES PARA VACUNAS (≤767px) -->
+            <div class="block md:hidden space-y-2.5">
+              
+              <!-- Card 1: Séxtuple -->
+              <div class="p-3 rounded-lg border border-gray-200 bg-white space-y-2 shadow-2xs">
+                <div class="flex items-start justify-between">
+                  <div>
+                    <span class="font-bold text-gray-900 block text-xs">Vacuna Séxtuple (DHPPi/L)</span>
+                    <span class="text-[10px] text-gray-500">Zoetis · Vanguard Plus 5 L4</span>
+                  </div>
+                  <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-100 text-emerald-800">
+                    Vigente
+                  </span>
+                </div>
+                <div class="grid grid-cols-2 gap-1 text-[10px] bg-gray-50 p-2 rounded">
+                  <div><span class="text-gray-400 block">Aplicada:</span> <strong class="font-mono">15/04/2026</strong></div>
+                  <div><span class="text-gray-400 block">Próxima dosis:</span> <strong class="font-mono text-teal-800">15/04/2027</strong></div>
+                  <div><span class="text-gray-400 block">Lote:</span> <span class="font-mono">LOT-682194-Z</span></div>
+                  <div><span class="text-gray-400 block">Veterinario:</span> <span>Dr. Morales</span></div>
+                </div>
+              </div>
+
+              <!-- Card 2: Bordetella (Alerta) -->
+              <div class="p-3 rounded-lg border-2 border-amber-300 bg-amber-50/50 space-y-2 shadow-2xs">
+                <div class="flex items-start justify-between">
+                  <div>
+                    <span class="font-bold text-amber-950 block text-xs">Bordetella Bronchiseptica</span>
+                    <span class="text-[10px] text-amber-800">Zoetis · Bronchicine CAe</span>
+                  </div>
+                  <span class="px-2 py-0.5 rounded-full text-[9px] font-black bg-amber-200 text-amber-950 animate-pulse">
+                    Vence en 12 días
+                  </span>
+                </div>
+                <div class="grid grid-cols-2 gap-1 text-[10px] bg-amber-100/50 p-2 rounded">
+                  <div><span class="text-amber-700 block">Aplicada:</span> <strong class="font-mono">30/09/2025</strong></div>
+                  <div><span class="text-amber-700 block">Próxima dosis:</span> <strong class="font-mono text-amber-900">30/09/2026</strong></div>
+                  <div><span class="text-amber-700 block">Lote:</span> <span class="font-mono">LOT-441092-B</span></div>
+                  <div><span class="text-amber-700 block">Veterinario:</span> <span>Dra. C. Alva</span></div>
+                </div>
+                <button onclick="document.getElementById('vaccineDrawer').classList.remove('translate-x-full')" class="w-full h-7 rounded bg-amber-600 hover:bg-amber-700 text-white font-bold text-[11px] flex items-center justify-center gap-1">
+                  <span class="material-symbols-outlined text-[14px]">add_circle</span> Renovar Dosis
+                </button>
+              </div>
+
+              <!-- Card 3: Antirrábica -->
+              <div class="p-3 rounded-lg border border-gray-200 bg-white space-y-2 shadow-2xs">
+                <div class="flex items-start justify-between">
+                  <div>
+                    <span class="font-bold text-gray-900 block text-xs">Vacuna Antirrábica Monovalente</span>
+                    <span class="text-[10px] text-gray-500">Boehringer Ingelheim · Rabisin</span>
+                  </div>
+                  <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-100 text-emerald-800">
+                    Vigente
+                  </span>
+                </div>
+                <div class="grid grid-cols-2 gap-1 text-[10px] bg-gray-50 p-2 rounded">
+                  <div><span class="text-gray-400 block">Aplicada:</span> <strong class="font-mono">10/06/2026</strong></div>
+                  <div><span class="text-gray-400 block">Próxima dosis:</span> <strong class="font-mono text-teal-800">10/06/2027</strong></div>
+                  <div><span class="text-gray-400 block">Lote:</span> <span class="font-mono">LOT-892110-R</span></div>
+                  <div><span class="text-gray-400 block">Certificado:</span> <span class="font-mono">SENASA OK</span></div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- SECCIÓN 2: CONTROL DE DESPARASITACIÓN (INTERNA Y EXTERNA) -->
+          <div class="bg-surface-container-lowest rounded-xl border border-outline-variant p-4 shadow-2xs space-y-3">
+            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-outline-variant pb-2">
+              <div>
+                <h3 class="font-bold text-gray-900 text-sm flex items-center gap-1.5">
+                  <span class="material-symbols-outlined text-teal-700 text-[18px]">bug_report</span>
+                  <span>Desparasitaciones Internas y Externas (Antiparasitarios Petshop)</span>
+                </h3>
+                <p class="text-[11px] text-gray-500">Control de ectoparásitos (pulgas/garrapatas) y endoparásitos según peso actual (32 kg).</p>
+              </div>
+              <button class="h-7 px-2.5 rounded bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 font-semibold text-xs flex items-center gap-1">
+                <span class="material-symbols-outlined text-[14px]">medication</span>
+                <span>+ Registrar Antiparasitario</span>
+              </button>
+            </div>
+
+            <!-- TABLA DESPARASITACIÓN DESKTOP -->
+            <div class="hidden md:block overflow-x-auto">
+              <table class="w-full text-left text-xs">
+                <thead>
+                  <tr class="border-b border-gray-200 bg-gray-50/80 text-gray-600 font-semibold text-[11px]">
+                    <th class="py-2.5 px-3">Tipo</th>
+                    <th class="py-2.5 px-3">Producto Comercial</th>
+                    <th class="py-2.5 px-3">Principio Activo</th>
+                    <th class="py-2.5 px-3">Dosis Administrada</th>
+                    <th class="py-2.5 px-3">Fecha Aplicación</th>
+                    <th class="py-2.5 px-3">Próxima Aplicación</th>
+                    <th class="py-2.5 px-3 text-center">Estado</th>
+                    <th class="py-2.5 px-3 text-right">Comprobante POS</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                  <tr class="hover:bg-gray-50/70">
+                    <td class="py-2.5 px-3"><span class="px-2 py-0.5 rounded bg-purple-50 text-purple-800 font-bold text-[10px]">EXTERNA</span></td>
+                    <td class="py-2.5 px-3 font-semibold text-gray-900">Bravecto Comprimido 20-40 kg (MSD)</td>
+                    <td class="py-2.5 px-3 text-gray-600">Fluralaner 1000 mg</td>
+                    <td class="py-2.5 px-3 font-mono">1 tableta vía oral</td>
+                    <td class="py-2.5 px-3 font-mono font-medium">10/07/2026</td>
+                    <td class="py-2.5 px-3 font-mono font-bold text-gray-900">10/10/2026 (en 22 días)</td>
+                    <td class="py-2.5 px-3 text-center">
+                      <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                        Protegido (3 meses)
+                      </span>
+                    </td>
+                    <td class="py-2.5 px-3 text-right font-mono text-[11px] text-gray-500">BOL-B001-002891</td>
+                  </tr>
+
+                  <tr class="hover:bg-gray-50/70">
+                    <td class="py-2.5 px-3"><span class="px-2 py-0.5 rounded bg-blue-50 text-blue-800 font-bold text-[10px]">INTERNA</span></td>
+                    <td class="py-2.5 px-3 font-semibold text-gray-900">Drontal Plus Sabor Perros Grandes (Bayer)</td>
+                    <td class="py-2.5 px-3 text-gray-600">Praziquantel, Pirantel, Febantel</td>
+                    <td class="py-2.5 px-3 font-mono">1 comp. x 35 kg</td>
+                    <td class="py-2.5 px-3 font-mono font-medium">02/09/2026</td>
+                    <td class="py-2.5 px-3 font-mono font-bold text-gray-900">02/12/2026</td>
+                    <td class="py-2.5 px-3 text-center">
+                      <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                        Vigente
+                      </span>
+                    </td>
+                    <td class="py-2.5 px-3 text-right font-mono text-[11px] text-gray-500">BOL-B001-003112</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- TARJETAS MÓVILES PARA DESPARASITACIÓN -->
+            <div class="block md:hidden space-y-2">
+              <div class="p-3 rounded-lg border border-gray-200 bg-white space-y-1.5 shadow-2xs">
+                <div class="flex items-center justify-between">
+                  <span class="px-2 py-0.5 rounded bg-purple-50 text-purple-800 font-bold text-[9px]">EXTERNA (Fluralaner)</span>
+                  <span class="text-[9px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">Protegido</span>
+                </div>
+                <div class="font-bold text-gray-900 text-xs">Bravecto 20-40 kg (MSD)</div>
+                <div class="flex justify-between text-[10px] text-gray-500 font-mono pt-1">
+                  <span>Aplicado: 10/07/2026</span>
+                  <span class="font-bold text-gray-800">Próx: 10/10/2026</span>
+                </div>
+              </div>
+
+              <div class="p-3 rounded-lg border border-gray-200 bg-white space-y-1.5 shadow-2xs">
+                <div class="flex items-center justify-between">
+                  <span class="px-2 py-0.5 rounded bg-blue-50 text-blue-800 font-bold text-[9px]">INTERNA (Praziquantel)</span>
+                  <span class="text-[9px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">Vigente</span>
+                </div>
+                <div class="font-bold text-gray-900 text-xs">Drontal Plus Perros Grandes</div>
+                <div class="flex justify-between text-[10px] text-gray-500 font-mono pt-1">
+                  <span>Aplicado: 02/09/2026</span>
+                  <span class="font-bold text-gray-800">Próx: 02/12/2026</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+        <!-- CONTENIDO TAB 2: HISTORIA CLÍNICA (EVOLUCIONES SOAP) -->
+        <div id="tab-historia" class="hidden space-y-4">
+          <div class="bg-surface-container-lowest rounded-xl border border-outline-variant p-4 shadow-2xs space-y-4">
+            
+            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-outline-variant pb-3">
+              <div>
+                <h3 class="font-bold text-gray-900 text-sm flex items-center gap-1.5">
+                  <span class="material-symbols-outlined text-teal-700 text-[18px]">history_edu</span>
+                  <span>Evoluciones Clínicas Estructuradas (Formato SOAP Oficial)</span>
+                </h3>
+                <p class="text-[11px] text-gray-500">Signos vitales de Rocky, diagnóstico definitivo y prescripción farmacológica con stock del Petshop.</p>
+              </div>
+              <button class="h-8 px-3 rounded-lg bg-teal-700 hover:bg-teal-800 text-white font-semibold text-xs flex items-center gap-1 shadow-2xs">
+                <span class="material-symbols-outlined text-[16px]">add_notes</span>
+                <span>+ Nueva Evolución SOAP</span>
+              </button>
+            </div>
+
+            <!-- EVOLUCIÓN SOAP N° 14 (ÚLTIMA CONSULTA - 02/09/2026) -->
+            <div class="border border-outline-variant rounded-xl p-3 md:p-4 bg-surface-container-low space-y-3">
+              <div class="flex flex-wrap items-center justify-between gap-2 border-b border-gray-200 pb-2">
+                <div class="flex items-center gap-2">
+                  <span class="px-2 py-0.5 rounded bg-teal-800 text-white font-mono text-[10px] font-bold">SESIÓN #14</span>
+                  <span class="font-bold text-gray-900 text-xs">Consulta Dermatológica y Control de Otitis Externa</span>
+                  <span class="text-gray-400">·</span>
+                  <span class="text-[11px] font-mono text-gray-600">02/09/2026 11:30 hrs</span>
+                </div>
+                <div class="text-[11px] text-gray-600 font-medium">
+                  Atendido por: <strong>M.V. Rodrigo Morales</strong> (CMVP 8492)
+                </div>
+              </div>
+
+              <!-- Fila de Signos Vitales de la Mascota -->
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-white p-2.5 rounded-lg border border-gray-200 text-[11px]">
+                <div class="flex items-center gap-2">
+                  <span class="material-symbols-outlined text-teal-700 text-[18px]">scale</span>
+                  <div>
+                    <span class="text-[10px] text-gray-400 block">Peso</span>
+                    <strong class="font-mono text-gray-900">32.0 kg</strong>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="material-symbols-outlined text-red-600 text-[18px]">device_thermostat</span>
+                  <div>
+                    <span class="text-[10px] text-gray-400 block">Temperatura Rectal</span>
+                    <strong class="font-mono text-gray-900">38.6 °C (Normal)</strong>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="material-symbols-outlined text-blue-600 text-[18px]">cardiology</span>
+                  <div>
+                    <span class="text-[10px] text-gray-400 block">Frec. Cardíaca (FC)</span>
+                    <strong class="font-mono text-gray-900">92 lpm</strong>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="material-symbols-outlined text-teal-600 text-[18px]">air</span>
+                  <div>
+                    <span class="text-[10px] text-gray-400 block">Frec. Respiratoria (FR)</span>
+                    <strong class="font-mono text-gray-900">24 rpm</strong>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Bloques S - O - A - P -->
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                <!-- S & O -->
+                <div class="space-y-2">
+                  <div class="p-2.5 rounded-lg bg-white border border-gray-200">
+                    <span class="font-bold text-teal-800 text-[11px] block">S (Subjetivo - Anamnesis del dueño):</span>
+                    <p class="text-gray-700 mt-0.5 leading-relaxed">
+                      Propietario refiere que Rocky sacude constantemente la cabeza y se rasca la oreja derecha con intensidad desde hace 4 días. Sin decaimiento ni pérdida de apetito.
+                    </p>
+                  </div>
+                  <div class="p-2.5 rounded-lg bg-white border border-gray-200">
+                    <span class="font-bold text-teal-800 text-[11px] block">O (Objetivo - Examen Clínico Veterinario):</span>
+                    <p class="text-gray-700 mt-0.5 leading-relaxed">
+                      Conducto auditivo derecho con eritema moderado, exudado ceruminoso marrón oscuro y olor sui generis. Membrana timpánica íntegra. Citología en consultorio: presencia moderada de <em>Malassezia pachydermatis</em>. Se aplicó bozal preventivo por molestia a la palpación auricular.
+                    </p>
+                  </div>
+                </div>
+
+                <!-- A & P -->
+                <div class="space-y-2">
+                  <div class="p-2.5 rounded-lg bg-white border border-gray-200">
+                    <span class="font-bold text-teal-800 text-[11px] block">A (Apreciación / Diagnóstico Veterinario):</span>
+                    <div class="flex items-center gap-2 mt-1">
+                      <span class="px-2 py-0.5 rounded bg-blue-100 text-blue-900 font-bold font-mono text-[11px]">VET-DX-104</span>
+                      <span class="font-semibold text-gray-900">Otitis externa eritematoceruminosa derecha por Malassezia</span>
+                    </div>
+                  </div>
+                  <div class="p-2.5 rounded-lg bg-teal-50/50 border border-teal-200">
+                    <span class="font-bold text-teal-900 text-[11px] block">P (Plan Terapéutico y Receta Farmacia Petshop):</span>
+                    <ul class="list-disc list-inside text-gray-800 mt-1 space-y-1">
+                      <li><strong>Limpieza ótica previa:</strong> Epi-Otic Limpiador Auricular (Virbac) 1 vez al día por 7 días.</li>
+                      <li><strong>Gotas antibacterianas/antifúngicas:</strong> Otomax / Posatex (MSD) 4 gotas cada 12h por 10 días.</li>
+                      <li class="text-red-700 font-medium">⚠ CONTRAINDICADO: NO usar antiinflamatorios derivados de Meloxicam por historial alérgico.</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Footer de la Evolución: Cobro en POS y Boleta -->
+              <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-gray-200 text-[11px]">
+                <div class="flex items-center gap-2">
+                  <span class="text-gray-500">Comprobante SUNAT emitido:</span>
+                  <a href="#" class="font-mono font-bold text-teal-700 hover:underline">Boleta B001-003112</a>
+                  <span class="px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 font-mono text-[10px]">Aceptada CDR</span>
+                </div>
+                <div class="font-mono text-gray-700 font-bold">
+                  Total Consulta + Fármacos: S/ 145.00 (Cancelado POS Izipay)
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+        </div>
+
+        <!-- CONTENIDO TAB 3: RESUMEN GENERAL -->
+        <div id="tab-resumen" class="hidden space-y-4">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <!-- Columna 1: Ficha Canina -->
+            <div class="bg-surface-container-lowest p-4 rounded-xl border border-outline-variant space-y-2">
+              <h4 class="font-bold text-gray-900 text-xs border-b border-gray-200 pb-1.5 flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-teal-700 text-[16px]">info</span> Datos Fisiológicos
+              </h4>
+              <div class="space-y-1.5 text-xs">
+                <div class="flex justify-between"><span class="text-gray-500">Especie / Raza:</span> <span class="font-semibold">Canino / Golden Retriever</span></div>
+                <div class="flex justify-between"><span class="text-gray-500">Sexo / Reprod:</span> <span class="font-semibold">Macho / Castrado (2023)</span></div>
+                <div class="flex justify-between"><span class="text-gray-500">Color de manto:</span> <span class="font-semibold">Dorado claro</span></div>
+                <div class="flex justify-between"><span class="text-gray-500">Alimentación:</span> <span class="font-semibold">Pro Plan Adult Large Breed</span></div>
+                <div class="flex justify-between"><span class="text-gray-500">Temperamento:</span> <span class="text-amber-700 font-semibold">Sociable / Ansioso en clínica</span></div>
+              </div>
+            </div>
+
+            <!-- Columna 2: Vacunas y Desparasitación al día -->
+            <div class="bg-surface-container-lowest p-4 rounded-xl border border-outline-variant space-y-2">
+              <h4 class="font-bold text-gray-900 text-xs border-b border-gray-200 pb-1.5 flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-teal-700 text-[16px]">shield</span> Estado Inmunitario
+              </h4>
+              <div class="space-y-2 text-xs">
+                <div class="flex items-center justify-between p-2 rounded bg-emerald-50 text-emerald-900">
+                  <span>Séxtuple DHPPi:</span> <strong class="font-mono">Vigente (Abr 2027)</strong>
+                </div>
+                <div class="flex items-center justify-between p-2 rounded bg-amber-50 text-amber-900 border border-amber-200">
+                  <span>Bordetella KC:</span> <strong class="font-mono font-bold">Vence en 12 días</strong>
+                </div>
+                <div class="flex items-center justify-between p-2 rounded bg-emerald-50 text-emerald-900">
+                  <span>Antirrábica:</span> <strong class="font-mono">Vigente (Jun 2027)</strong>
+                </div>
+              </div>
+            </div>
+
+            <!-- Columna 3: Contacto de Emergencia -->
+            <div class="bg-surface-container-lowest p-4 rounded-xl border border-outline-variant space-y-2">
+              <h4 class="font-bold text-gray-900 text-xs border-b border-gray-200 pb-1.5 flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-teal-700 text-[16px]">contact_phone</span> Contactos Registrados
+              </h4>
+              <div class="space-y-2 text-xs">
+                <div class="p-2 rounded border border-gray-200 bg-gray-50">
+                  <span class="font-bold block text-gray-900">Juan Carlos Pérez Huamán (Titular)</span>
+                  <span class="text-gray-500 text-[11px] block">+51 987 654 321 · DNI 45892147</span>
+                  <span class="text-[10px] text-teal-700">Av. Las Artes Norte 340, San Borja</span>
+                </div>
+                <div class="p-2 rounded border border-gray-200 bg-gray-50">
+                  <span class="font-bold block text-gray-900">Mariana Huamán (Contacto 2)</span>
+                  <span class="text-gray-500 text-[11px] block">+51 993 112 458 (Esposa)</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CONTENIDO TAB 4: HOSPITALIZACIÓN -->
+        <div id="tab-hospital" class="hidden">
+          <div class="bg-surface-container-lowest rounded-xl border border-outline-variant p-6 text-center space-y-2">
+            <span class="material-symbols-outlined text-[42px] text-teal-700">hotel</span>
+            <h3 class="font-bold text-gray-800 text-sm">Sin hospitalizaciones activas en este momento</h3>
+            <p class="text-xs text-gray-500 max-w-md mx-auto">Rocky se encuentra en tratamiento ambulatorio en casa. Su última estancia en canil post-operatorio fue el 14/05/2023 por orquiectomía (castración electiva) con evolución favorable.</p>
+            <button class="h-8 px-3 rounded-lg bg-teal-700 text-white font-semibold text-xs mt-2">+ Ingresar a Hospitalización / Observación</button>
+          </div>
+        </div>
+
+        <!-- CONTENIDO TAB 5: GROOMING / PELUQUERÍA -->
+        <div id="tab-grooming" class="hidden space-y-3">
+          <div class="bg-surface-container-lowest rounded-xl border border-outline-variant p-4 space-y-3">
+            <div class="flex items-center justify-between border-b border-gray-200 pb-2">
+              <h3 class="font-bold text-gray-900 text-sm">Historial de Peluquería y Spa Canino</h3>
+              <button class="h-7 px-2.5 rounded bg-teal-700 text-white font-semibold text-xs">+ Agendar Baño & Corte</button>
+            </div>
+            <div class="p-3 rounded-lg border border-gray-200 bg-gray-50 flex items-center justify-between text-xs">
+              <div>
+                <span class="font-bold text-gray-900 block">Baño Medicado Clorhexidina + Deslanado Golden</span>
+                <span class="text-[11px] text-gray-500">Realizado el 20/08/2026 por Groomer: Mario Salas · Limpieza de glándulas anales y corte de uñas OK</span>
+              </div>
+              <span class="font-mono font-bold text-teal-800">S/ 75.00 (Pagado)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- CONTENIDO TAB 6: COMPROBANTES CPE -->
+        <div id="tab-comprobantes" class="hidden space-y-3">
+          <div class="bg-surface-container-lowest rounded-xl border border-outline-variant p-4 space-y-3">
+            <div class="flex items-center justify-between border-b border-gray-200 pb-2">
+              <h3 class="font-bold text-gray-900 text-sm">Comprobantes de Pago Electrónicos (SUNAT)</h3>
+              <button class="h-7 px-2.5 rounded bg-teal-700 text-white font-semibold text-xs">+ Emitir Boleta en POS</button>
+            </div>
+            <table class="w-full text-left text-xs">
+              <thead>
+                <tr class="bg-gray-50 text-gray-600 font-semibold border-b">
+                  <th class="p-2">Comprobante</th>
+                  <th class="p-2">Fecha</th>
+                  <th class="p-2">Concepto</th>
+                  <th class="p-2">Total S/</th>
+                  <th class="p-2">Estado SUNAT</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-100">
+                <tr>
+                  <td class="p-2 font-mono font-bold text-teal-700">B001-003112</td>
+                  <td class="p-2 font-mono">02/09/2026</td>
+                  <td class="p-2">Consulta Dermatológica + Epi-Otic + Posatex</td>
+                  <td class="p-2 font-mono font-bold">S/ 145.00</td>
+                  <td class="p-2"><span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-semibold">Aceptado CDR</span></td>
+                </tr>
+                <tr>
+                  <td class="p-2 font-mono font-bold text-teal-700">B001-002891</td>
+                  <td class="p-2 font-mono">10/07/2026</td>
+                  <td class="p-2">Bravecto 20-40 kg (Antiparasitario externo)</td>
+                  <td class="p-2 font-mono font-bold">S/ 120.00</td>
+                  <td class="p-2"><span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-semibold">Aceptado CDR</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </main>
+
+    <!-- DRAWER LATERAL DERECHO: 'REGISTRAR VACUNA' (OFF-CANVAS INTERACTIVO) -->
+    <aside id="vaccineDrawer" class="fixed inset-y-0 right-0 w-full sm:w-[480px] bg-white border-l border-gray-300 shadow-2xl z-50 transform translate-x-full transition-transform duration-200 ease-in-out flex flex-col">
+      
+      <!-- Drawer Header -->
+      <div class="px-4 py-3 border-b border-gray-200 bg-teal-800 text-white flex items-center justify-between shrink-0">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-[20px]">vaccines</span>
+          <div>
+            <h2 class="font-bold text-sm">Registrar Vacuna Canina</h2>
+            <p class="text-[11px] text-teal-100 font-mono">Paciente: Rocky · Golden Retriever (32 kg)</p>
+          </div>
+        </div>
+        <button onclick="document.getElementById('vaccineDrawer').classList.add('translate-x-full')" class="text-teal-200 hover:text-white p-1 rounded hover:bg-teal-700 transition-colors">
+          <span class="material-symbols-outlined text-[20px]">close</span>
+        </button>
+      </div>
+
+      <!-- Drawer Body (Formulario de Vacunación & Descuento de Stock) -->
+      <div class="flex-1 overflow-y-auto p-4 space-y-4 text-xs scrollbar-thin">
+        
+        <!-- Mascota Confirmada -->
+        <div class="p-2.5 rounded-lg border border-teal-200 bg-teal-50/60 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-teal-700 text-[22px]">pets</span>
+            <div>
+              <span class="font-bold text-teal-950">Rocky (Golden Retriever)</span>
+              <span class="text-[10px] text-teal-800 block">Dueño: Juan Carlos Pérez Huamán · +51 987 654 321</span>
+            </div>
+          </div>
+          <span class="font-mono font-bold text-[11px] text-teal-900 bg-teal-200/80 px-2 py-0.5 rounded">HC #0418</span>
+        </div>
+
+        <!-- 1. Selección de Producto Biológico del Inventario Petshop -->
+        <div class="space-y-1.5">
+          <label class="font-bold text-gray-800 flex items-center justify-between">
+            <span>Biológico / Vacuna del Inventario</span>
+            <span class="text-[10px] text-teal-700 font-normal">Conectado a Kárdex Almacén San Borja</span>
+          </label>
+          <select class="w-full h-8 px-2.5 rounded-lg border border-gray-300 text-xs focus:ring-1 focus:ring-teal-700 focus:border-teal-700 bg-white">
+            <option selected>Bordetella Bronchiseptica - Bronchicine CAe (Zoetis) · Stock: 14 viales</option>
+            <option>Séxtuple Canina - Vanguard Plus 5 L4 (Zoetis) · Stock: 22 viales</option>
+            <option>Antirrábica Monovalente - Rabisin (Boehringer) · Stock: 40 viales</option>
+            <option>GiardiaVax Inactivada (Zoetis) · Stock: 8 viales</option>
+            <option>Puppy DP (Parvovirus/Distemper) (MSD) · Stock: 11 viales</option>
+          </select>
+          <p class="text-[10px] text-gray-500">Al confirmar la aplicación, se descontará automáticamente <strong>1 unidad</strong> del Kárdex oficial SUNAT.</p>
+        </div>
+
+        <!-- 2. Lote, Vencimiento y Laboratorio (Autocompletados) -->
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-[10px] font-bold text-gray-600 mb-1">Lote del Vial</label>
+            <input type="text" value="LOT-559201-B" class="w-full h-8 px-2.5 rounded border border-gray-300 text-xs font-mono bg-gray-50"/>
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold text-gray-600 mb-1">Vencimiento del Frasco</label>
+            <input type="text" value="11/2027" class="w-full h-8 px-2.5 rounded border border-gray-300 text-xs font-mono bg-gray-50"/>
+          </div>
+        </div>
+
+        <!-- 3. Fechas de Aplicación y Próxima Dosis -->
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-[10px] font-bold text-gray-600 mb-1">Fecha de Aplicación</label>
+            <input type="date" value="2026-09-18" class="w-full h-8 px-2 rounded border border-gray-300 text-xs font-mono"/>
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold text-gray-600 mb-1">Próximo Refuerzo (1 año)</label>
+            <input type="date" value="2027-09-18" class="w-full h-8 px-2 rounded border border-gray-300 text-xs font-mono font-bold text-teal-800"/>
+          </div>
+        </div>
+
+        <!-- 4. Vía de Administración y Médico Veterinario -->
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-[10px] font-bold text-gray-600 mb-1">Vía de Aplicación</label>
+            <select class="w-full h-8 px-2 rounded border border-gray-300 text-xs bg-white">
+              <option selected>Subcutánea (SC) - Región Interescapular</option>
+              <option>Intramuscular (IM)</option>
+              <option>Intranasal (IN)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold text-gray-600 mb-1">Médico Responsable</label>
+            <select class="w-full h-8 px-2 rounded border border-gray-300 text-xs bg-white">
+              <option selected>M.V. Rodrigo Morales (CMVP 8492)</option>
+              <option>Dra. Camila Alva (CMVP 9104)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- 5. Automatización de Recordatorios WhatsApp -->
+        <div class="p-3 rounded-lg border border-emerald-200 bg-emerald-50/60 space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-emerald-950 flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-[16px] text-emerald-600">chat</span>
+              Recordatorio WhatsApp Automático
+            </span>
+            <input type="checkbox" checked class="rounded border-gray-300 text-teal-700 focus:ring-teal-700"/>
+          </div>
+          <p class="text-[10px] text-emerald-800 leading-tight">
+            Se enviará confirmación inmediata con el carné actualizado a <strong>+51 987 654 321</strong> y alerta automática 7 días antes de la fecha de refuerzo (18/09/2027).
+          </p>
+        </div>
+
+        <!-- 6. Cobro Inmediato en POS y Emisión de Boleta -->
+        <div class="p-3 rounded-lg border border-gray-200 bg-gray-50 space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-gray-800 flex items-center gap-1">
+              <span class="material-symbols-outlined text-[16px] text-teal-700">payments</span>
+              Facturación & Cobro en POS
+            </span>
+            <span class="font-mono font-bold text-sm text-teal-800">S/ 65.00</span>
+          </div>
+          <div class="space-y-1 text-[11px]">
+            <label class="flex items-center gap-2">
+              <input type="radio" name="payType" checked class="text-teal-700 focus:ring-teal-700"/>
+              <span>Emitir Boleta de Venta Electrónica inmediata (B001)</span>
+            </label>
+            <label class="flex items-center gap-2">
+              <input type="radio" name="payType" class="text-teal-700 focus:ring-teal-700"/>
+              <span>Cargar a cuenta corriente del cliente (Cobro diferido)</span>
+            </label>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Drawer Footer -->
+      <div class="p-3 border-t border-gray-200 bg-gray-50 flex items-center gap-2 shrink-0">
+        <button onclick="document.getElementById('vaccineDrawer').classList.add('translate-x-full')" class="w-1/3 h-9 rounded-lg border border-gray-300 bg-white font-semibold text-gray-700 hover:bg-gray-100 transition-colors">
+          Cancelar
+        </button>
+        <button onclick="document.getElementById('vaccineDrawer').classList.add('translate-x-full'); alert('Vacuna Bordetella registrada con éxito, stock descontado y carné actualizado.')" class="w-2/3 h-9 rounded-lg bg-teal-700 hover:bg-teal-800 text-white font-bold flex items-center justify-center gap-1.5 shadow-2xs transition-colors">
+          <span class="material-symbols-outlined text-[16px]">check</span>
+          <span>Guardar & Aplicar</span>
+        </button>
+      </div>
+
+    </aside>
+
+  </div>
+
+  <!-- BOTTOM NAVIGATION BAR PARA MÓVIL (≤767px) -->
+  <nav class="md:hidden fixed bottom-0 inset-x-0 bg-surface-container-lowest border-t border-outline-variant h-14 flex items-center justify-around px-2 z-40 shadow-lg">
+    <a href="#" class="flex flex-col items-center justify-center text-gray-500 hover:text-teal-700">
+      <span class="material-symbols-outlined text-[20px]">dashboard</span>
+      <span class="text-[9px] mt-0.5 font-medium">Inicio</span>
+    </a>
+    <a href="#" class="flex flex-col items-center justify-center text-gray-500 hover:text-teal-700">
+      <span class="material-symbols-outlined text-[20px]">calendar_month</span>
+      <span class="text-[9px] mt-0.5 font-medium">Agenda</span>
+    </a>
+    <!-- Activo en Mascota -->
+    <a href="#" class="flex flex-col items-center justify-center text-teal-700 font-bold">
+      <span class="material-symbols-outlined text-[22px] text-teal-700">pets</span>
+      <span class="text-[9px] mt-0.5">Pacientes</span>
+    </a>
+    <a href="#" class="flex flex-col items-center justify-center text-gray-500 hover:text-teal-700">
+      <span class="material-symbols-outlined text-[20px]">point_of_sale</span>
+      <span class="text-[9px] mt-0.5 font-medium">Ventas POS</span>
+    </a>
+    <a href="#" class="flex flex-col items-center justify-center text-gray-500 hover:text-teal-700" onclick="document.getElementById('vaccineDrawer').classList.remove('translate-x-full')">
+      <span class="material-symbols-outlined text-[20px] text-teal-600">add_circle</span>
+      <span class="text-[9px] mt-0.5 font-bold text-teal-700">Vacunar</span>
+    </a>
+  </nav>
+
+  <!-- JAVASCRIPT LIGERO PARA PESTAÑAS Y TEMAS -->
+  <script>
+    function switchTab(tabId) {
+      // Ocultar todos los tabs
+      const tabs = ['resumen', 'vacunas', 'historia', 'hospital', 'grooming', 'comprobantes'];
+      tabs.forEach(t => {
+        const el = document.getElementById('tab-' + t);
+        const btn = document.getElementById('tabBtn-' + t);
+        if (el) el.classList.add('hidden');
+        if (btn) {
+          btn.classList.remove('text-teal-800', 'border-teal-700', 'bg-teal-50/50', 'font-bold');
+          btn.classList.add('text-gray-500', 'border-transparent', 'font-semibold');
+        }
+      });
+
+      // Mostrar tab seleccionado
+      const targetEl = document.getElementById('tab-' + tabId);
+      const targetBtn = document.getElementById('tabBtn-' + tabId);
+      if (targetEl) targetEl.classList.remove('hidden');
+      if (targetBtn) {
+        targetBtn.classList.add('text-teal-800', 'border-teal-700', 'bg-teal-50/50', 'font-bold');
+        targetBtn.classList.remove('text-gray-500', 'border-transparent', 'font-semibold');
+      }
+    }
+  </script>
+
+</body>
+</html>

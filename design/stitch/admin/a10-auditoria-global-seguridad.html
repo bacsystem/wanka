@@ -1,0 +1,1582 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PerúSaaS Admin - Auditoría Global & Seguridad SIEM</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap&family=Geist+Mono:wght@400;500;600" rel="stylesheet">
+  <!-- Lucide Icons Official Script -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Geist', 'sans-serif'],
+            mono: ['Geist Mono', 'monospace'],
+          },
+          colors: {
+            brand: {
+              DEFAULT: '#4F46E5',
+              dark: '#4338CA',
+              light: '#EEF2FF',
+              accent: '#7C3AED',
+            },
+            surface: '#F5F6FA',
+            sidebar: '#0F172A',
+            success: '#059669',
+            warning: '#D97706',
+            danger: '#DC2626',
+            body: '#111827',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { font-family: 'Geist', sans-serif; }
+    .control-40 { height: 40px !important; min-height: 40px; }
+    .animate-spin-slow { animation: spin 2.5s linear infinite; }
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    .pulse-danger { animation: pulseDanger 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+    @keyframes pulseDanger {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.65; transform: scale(1.08); }
+    }
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f5; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+  </style>
+</head>
+<body class="bg-surface text-body flex h-full overflow-hidden text-sm antialiased selection:bg-indigo-100 selection:text-indigo-900">
+
+  <!-- SIDEBAR LATERAL OSCURO (#0F172A) -->
+  <aside class="w-64 bg-sidebar text-slate-300 flex flex-col shrink-0 border-r border-slate-800 z-30 transition-all duration-200">
+    <!-- Header Sidebar -->
+    <div class="h-16 flex items-center justify-between px-5 border-b border-slate-800 bg-[#0B1120]">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-md shadow-indigo-600/30 font-bold">
+          <i data-lucide="shield-check" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-1.5">
+            <span class="font-bold text-white text-base tracking-tight">PerúSaaS</span>
+            <span class="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">SUPER</span>
+          </div>
+          <p class="text-[11px] text-slate-400 font-mono flex items-center gap-1.5 mt-0.5">
+            <span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            Cluster PE-Lima (Prod)
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- CTA Botón Acción Principal -->
+    <div class="p-4 border-b border-slate-800/60">
+      <button onclick="toggleExportModal()" class="w-full control-40 px-4 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white rounded-lg font-medium flex items-center justify-center gap-2 shadow-sm transition-all duration-150">
+        <i data-lucide="file-down" class="w-4 h-4"></i>
+        <span>Exportar Auditoría SIEM</span>
+      </button>
+    </div>
+
+    <!-- Navegación con Secciones -->
+    <div class="flex-1 overflow-y-auto custom-scrollbar py-3 px-3 space-y-6">
+      
+      <!-- Grupo 1: Supervisión Global -->
+      <div>
+        <p class="px-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Supervisión Global</p>
+        <nav class="space-y-0.5">
+          <a href="#" class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800/70 transition-colors">
+            <i data-lucide="layout-dashboard" class="w-4 h-4 text-slate-400"></i>
+            <span>Dashboard Maestro</span>
+          </a>
+          <a href="#" class="flex items-center justify-between px-3 py-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800/70 transition-colors">
+            <div class="flex items-center gap-3">
+              <i data-lucide="building-2" class="w-4 h-4 text-slate-400"></i>
+              <span>Tenants (Empresas)</span>
+            </div>
+            <span class="text-[11px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 font-mono">1,482</span>
+          </a>
+          <a href="#" class="flex items-center justify-between px-3 py-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800/70 transition-colors">
+            <div class="flex items-center gap-3">
+              <i data-lucide="activity" class="w-4 h-4 text-slate-400"></i>
+              <span>Salud OSE / SUNAT</span>
+            </div>
+            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+          </a>
+        </nav>
+      </div>
+
+      <!-- Grupo 2: Soporte & Incidentes -->
+      <div>
+        <p class="px-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Mesa de Ayuda</p>
+        <nav class="space-y-0.5">
+          <a href="#" class="flex items-center justify-between px-3 py-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800/70 transition-colors">
+            <div class="flex items-center gap-3">
+              <i data-lucide="headphones" class="w-4 h-4 text-slate-400"></i>
+              <span>Tickets & SLA Global</span>
+            </div>
+            <span class="text-[11px] px-1.5 py-0.5 rounded-full bg-indigo-900/60 text-indigo-300 font-bold font-mono">14 act.</span>
+          </a>
+          <a href="#" class="flex items-center justify-between px-3 py-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800/70 transition-colors">
+            <div class="flex items-center gap-3">
+              <i data-lucide="alert-octagon" class="w-4 h-4 text-slate-400"></i>
+              <span>Incidentes Críticos</span>
+            </div>
+            <span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30">3 P1</span>
+          </a>
+        </nav>
+      </div>
+
+      <!-- Grupo 3: Gobernanza & Seguridad (Activo) -->
+      <div>
+        <p class="px-3 text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Gobernanza & Seguridad</p>
+        <nav class="space-y-0.5">
+          <a href="#" class="flex items-center justify-between px-3 py-2 rounded-lg bg-indigo-600 text-white font-medium shadow-sm transition-colors">
+            <div class="flex items-center gap-3">
+              <i data-lucide="file-text" class="w-4 h-4 text-white"></i>
+              <span>Auditoría SIEM & Logs</span>
+            </div>
+            <span class="text-[10px] uppercase tracking-wider bg-white/20 text-white px-1.5 py-0.2 rounded font-mono">ACTIVO</span>
+          </a>
+          <a href="#" class="flex items-center justify-between px-3 py-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800/70 transition-colors">
+            <div class="flex items-center gap-3">
+              <i data-lucide="users" class="w-4 h-4 text-slate-400"></i>
+              <span>Staff & Roles Internos</span>
+            </div>
+            <span class="text-[11px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 font-mono">38 staff</span>
+          </a>
+          <a href="#" class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800/70 transition-colors">
+            <i data-lucide="key" class="w-4 h-4 text-slate-400"></i>
+            <span>Bóveda Certificados PFX</span>
+          </a>
+          <a href="#" class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800/70 transition-colors">
+            <i data-lucide="layers" class="w-4 h-4 text-slate-400"></i>
+            <span>Planes & Suscripciones</span>
+          </a>
+          <a href="#" class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800/70 transition-colors">
+            <i data-lucide="receipt" class="w-4 h-4 text-slate-400"></i>
+            <span>Comprobantes SaaS</span>
+          </a>
+          <a href="#" class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800/70 transition-colors">
+            <i data-lucide="settings" class="w-4 h-4 text-slate-400"></i>
+            <span>Configuración Global</span>
+          </a>
+        </nav>
+      </div>
+
+    </div>
+
+    <!-- Footer Usuario Autenticado -->
+    <div class="p-3 border-t border-slate-800 bg-[#0B1120] flex items-center justify-between">
+      <div class="flex items-center gap-2.5 overflow-hidden">
+        <div class="w-8 h-8 rounded-full bg-indigo-500/20 text-indigo-400 font-bold text-xs flex items-center justify-center shrink-0 border border-indigo-500/30">
+          CB
+        </div>
+        <div class="truncate">
+          <p class="text-xs font-semibold text-white truncate">Carlos M. Benavides</p>
+          <p class="text-[11px] text-slate-400 font-mono truncate">SRE / SuperAdmin N3</p>
+        </div>
+      </div>
+      <button title="Cerrar sesión" class="p-1.5 text-slate-400 hover:text-white rounded hover:bg-slate-800 transition-colors">
+        <i data-lucide="log-out" class="w-4 h-4"></i>
+      </button>
+    </div>
+  </aside>
+
+  <!-- CONTENEDOR PRINCIPAL DERECHA -->
+  <div class="flex-1 flex flex-col min-w-0 h-full overflow-hidden bg-surface">
+
+    <!-- TOPBAR BLANCA (#FFFFFF) -->
+    <header class="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between shrink-0 z-20 shadow-sm">
+      <!-- Breadcrumbs & Status -->
+      <div class="flex items-center gap-2 text-xs">
+        <span class="text-slate-500 font-medium">Plataforma</span>
+        <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-slate-400"></i>
+        <span class="text-slate-500 font-medium">Gobernanza & Seguridad</span>
+        <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-slate-400"></i>
+        <span class="text-body font-semibold text-indigo-900 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200/60">
+          Auditoría SIEM & Eventos Críticos
+        </span>
+      </div>
+
+      <!-- Quick Metrics & Acciones Topbar -->
+      <div class="flex items-center gap-3">
+        <!-- Indicador de Sincronización SIEM con animación dinámica -->
+        <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-600">
+          <i id="sync-icon" data-lucide="refresh-cw" class="w-3.5 h-3.5 text-indigo-600 animate-spin-slow"></i>
+          <span>En vivo: <strong class="font-mono text-slate-800" id="clock-display">15:44:12</strong></span>
+          <span class="text-slate-300">|</span>
+          <span class="text-[11px] text-emerald-600 font-semibold flex items-center gap-1">
+            <i id="network-icon" data-lucide="wifi" class="w-3.5 h-3.5 text-emerald-600"></i>
+            SIEM Socket OK
+          </span>
+        </div>
+
+        <!-- Indicador Moneda & Región -->
+        <div class="px-2.5 py-1.5 rounded-lg bg-slate-100 border border-slate-200 text-xs font-mono font-medium text-slate-700 flex items-center gap-1.5">
+          <span class="inline-block w-2 h-2 rounded-full bg-red-500"></span>
+          <span>Perú (S/ - PEN) · UTC-5</span>
+        </div>
+
+        <!-- Notificaciones de Seguridad con micro-animación de pulso -->
+        <button class="relative p-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors" title="Alertas de Seguridad">
+          <i data-lucide="bell" class="w-5 h-5"></i>
+          <span class="absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-danger pulse-danger"></span>
+        </button>
+
+        <!-- Botón de Acción Rápida: Bloqueo de Emergencia -->
+        <button onclick="toggleEmergencyLockModal()" class="control-40 px-3.5 bg-rose-50 hover:bg-rose-100 text-danger border border-rose-200 rounded-lg text-xs font-semibold flex items-center gap-2 transition-colors">
+          <i id="lock-state-icon" data-lucide="lock" class="w-4 h-4 text-danger"></i>
+          <span>Bloqueo Emergencia</span>
+        </button>
+
+        <!-- Consola SRE / Terminal -->
+        <button class="control-40 px-3.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-medium flex items-center gap-2 shadow-sm transition-colors">
+          <i data-lucide="terminal" class="w-4 h-4"></i>
+          <span>Consola SRE</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- ÁREA DE CONTENIDO CON SCROLL -->
+    <main class="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-6">
+      
+      <!-- TITULAR Y ACCIONES SUPERIORES -->
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-3">
+            <h1 class="text-2xl font-bold text-body tracking-tight">Auditoría Global de Seguridad & Línea de Tiempo Multi-Tenant</h1>
+            <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300">
+              Certificación ISO/IEC 27001
+            </span>
+          </div>
+          <p class="text-slate-500 text-sm mt-1">
+            Registro criptográfico inmutable de eventos de alto impacto para 1,482 tenants: impersonaciones, exportaciones masivas, alteraciones de cuotas y bloqueos preventivos.
+          </p>
+        </div>
+
+        <div class="flex items-center gap-2 shrink-0">
+          <button onclick="refreshAuditFeed()" class="control-40 px-3.5 bg-white hover:bg-slate-50 border border-slate-300 rounded-lg text-xs font-medium text-slate-700 flex items-center gap-2 shadow-sm transition-colors">
+            <i id="manual-refresh-icon" data-lucide="refresh-cw" class="w-4 h-4 text-slate-500"></i>
+            <span>Sincronizar Ahora</span>
+          </button>
+          <button onclick="toggleRetentionModal()" class="control-40 px-3.5 bg-white hover:bg-slate-50 border border-slate-300 rounded-lg text-xs font-medium text-slate-700 flex items-center gap-2 shadow-sm transition-colors">
+            <i data-lucide="archive" class="w-4 h-4 text-slate-500"></i>
+            <span>Retención SIEM (365d)</span>
+          </button>
+          <button onclick="toggleExportModal()" class="control-40 px-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-medium flex items-center gap-2 shadow-sm transition-colors">
+            <i data-lucide="download" class="w-4 h-4"></i>
+            <span>Exportar Bitácora Completa</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- TARJETAS DE RIESGO & INDICADORES CRÍTICOS (RISK METRICS) -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        
+        <!-- Tarjeta 1: Impersonaciones de SuperAdmin -->
+        <div class="bg-white p-4 rounded-lg border border-slate-200 shadow-sm relative overflow-hidden group hover:border-indigo-300 transition-all">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Sesiones Impersonadas (24h)</span>
+            <div class="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+              <i data-lucide="user-check" class="w-4 h-4"></i>
+            </div>
+          </div>
+          <div class="flex items-baseline gap-2">
+            <span class="text-2xl font-bold text-body font-mono">12</span>
+            <span class="text-xs font-medium text-emerald-600 flex items-center gap-0.5">
+              <i data-lucide="shield-check" class="w-3.5 h-3.5"></i>
+              100% con MFA & Ticket
+            </span>
+          </div>
+          <div class="mt-2.5 pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+            <span>Última: hace 8 min (TEN-104)</span>
+            <span class="font-mono text-indigo-600 font-medium">Carlos B.</span>
+          </div>
+        </div>
+
+        <!-- Tarjeta 2: Exportaciones Masivas de Datos -->
+        <div class="bg-white p-4 rounded-lg border border-slate-200 shadow-sm relative overflow-hidden group hover:border-amber-300 transition-all">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Exportaciones Masivas (>5k)</span>
+            <div class="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
+              <i data-lucide="file-output" class="w-4 h-4"></i>
+            </div>
+          </div>
+          <div class="flex items-baseline gap-2">
+            <span class="text-2xl font-bold text-body font-mono">4</span>
+            <span class="text-xs font-medium text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+              1 en revisión DLP
+            </span>
+          </div>
+          <div class="mt-2.5 pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+            <span>Volumen: 184,200 registros</span>
+            <span class="font-mono text-slate-700">RUC 20601984211</span>
+          </div>
+        </div>
+
+        <!-- Tarjeta 3: Intentos de Acceso Fallidos / Anomalías -->
+        <div class="bg-white p-4 rounded-lg border border-slate-200 shadow-sm relative overflow-hidden group hover:border-rose-300 transition-all">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Intentos Fallidos (24h)</span>
+            <div class="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center">
+              <i data-lucide="shield-alert" class="w-4 h-4 pulse-danger"></i>
+            </div>
+          </div>
+          <div class="flex items-baseline gap-2">
+            <span class="text-2xl font-bold text-danger font-mono">27</span>
+            <span class="text-xs font-semibold text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200">
+              3 IPs bloq. auto WAF
+            </span>
+          </div>
+          <div class="mt-2.5 pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+            <span>Fuerza bruta mitigada</span>
+            <span class="font-mono text-danger font-medium">181.224.241.89</span>
+          </div>
+        </div>
+
+        <!-- Tarjeta 4: Alteraciones de Cuotas y Planes SUNAT -->
+        <div class="bg-white p-4 rounded-lg border border-slate-200 shadow-sm relative overflow-hidden group hover:border-indigo-300 transition-all">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Cambios de Plan / Cuota CPE</span>
+            <div class="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center">
+              <i data-lucide="sliders" class="w-4 h-4"></i>
+            </div>
+          </div>
+          <div class="flex items-baseline gap-2">
+            <span class="text-2xl font-bold text-body font-mono">9</span>
+            <span class="text-xs font-medium text-slate-500">
+              Impacto: +S/ 4,280 MRR
+            </span>
+          </div>
+          <div class="mt-2.5 pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+            <span>Autorizado por Finanzas</span>
+            <span class="font-mono text-purple-700 font-medium">9 aprobados</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- BANNER DE ALERTA DINÁMICA DE SEGURIDAD -->
+      <div class="p-3.5 bg-amber-50/90 border border-amber-200 rounded-lg flex items-start justify-between gap-3 text-amber-900 shadow-xs">
+        <div class="flex items-start gap-3">
+          <div class="p-1 rounded bg-amber-100 text-amber-700 shrink-0 mt-0.5">
+            <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="font-bold text-xs">POLÍTICA DE RETENCIÓN AUDITORÍA SIEM LEY 29733 (PERÚ):</span>
+              <span class="text-xs font-medium">Los registros de impersonación y exportación de comprobantes XML/CDR se firman con timestamp TSA y se almacenan inmutables por 5 años.</span>
+            </div>
+            <p class="text-[11px] text-amber-700 mt-0.5">
+              Cualquier exportación de más de 10,000 registros de clientes genera una notificación automática a <code class="font-mono bg-amber-100/60 px-1 py-0.2 rounded">oficial-cumplimiento@perusaas.pe</code>.
+            </p>
+          </div>
+        </div>
+        <button class="text-xs font-semibold text-amber-800 hover:text-amber-950 underline shrink-0 mt-0.5" onclick="alert('Descargando manifiesto criptográfico de integridad SHA-256')">
+          Ver Hash SHA-256
+        </button>
+      </div>
+
+      <!-- SECCIÓN PRINCIPAL: FILTROS UNIFORMES 40px Y BARRA DE HERRAMIENTAS -->
+      <div class="bg-white rounded-lg border border-slate-200 shadow-sm p-4 space-y-3">
+        
+        <!-- Fila 1: Filtros de Selección de 40px con Radio 8px -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+          
+          <!-- Filtro 1: Tenant (Empresa) Combobox -->
+          <div class="relative">
+            <label class="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Empresa / Tenant</label>
+            <div class="relative flex items-center">
+              <i data-lucide="building" class="w-4 h-4 text-slate-400 absolute left-3 pointer-events-none"></i>
+              <select id="filter-tenant" onchange="applyFilters()" class="control-40 w-full pl-9 pr-8 bg-slate-50 hover:bg-white focus:bg-white border border-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg text-xs text-slate-800 appearance-none transition-colors cursor-pointer">
+                <option value="all">Todos los Tenants (1,482)</option>
+                <option value="TEN-104">Clínica OdontoSalud (TEN-104)</option>
+                <option value="TEN-205">Hospital Vet PetMed (TEN-205)</option>
+                <option value="TEN-312">Cevicherías La Mar (TEN-312)</option>
+                <option value="TEN-409">Textil Gamarra Perú (TEN-409)</option>
+                <option value="TEN-189">Veterinaria Los Andes (TEN-189)</option>
+                <option value="TEN-298">Dental Especialistas (TEN-298)</option>
+              </select>
+              <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400 absolute right-3 pointer-events-none"></i>
+            </div>
+          </div>
+
+          <!-- Filtro 2: Usuario / Staff Ejecutor -->
+          <div class="relative">
+            <label class="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Operador / Usuario</label>
+            <div class="relative flex items-center">
+              <i data-lucide="user" class="w-4 h-4 text-slate-400 absolute left-3 pointer-events-none"></i>
+              <select id="filter-user" onchange="applyFilters()" class="control-40 w-full pl-9 pr-8 bg-slate-50 hover:bg-white focus:bg-white border border-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg text-xs text-slate-800 appearance-none transition-colors cursor-pointer">
+                <option value="all">Todos los Operadores</option>
+                <option value="carlos.benavides">Carlos M. Benavides (SuperAdmin)</option>
+                <option value="lucia.paredes">Lucía Alva Paredes (Soporte L3)</option>
+                <option value="miguel.torres">Miguel Torres (DevOps)</option>
+                <option value="sistema.cron">SYSTEM_AUTOPROCESS (Daemon)</option>
+                <option value="tenant.admin">Administrador Local Tenant</option>
+              </select>
+              <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400 absolute right-3 pointer-events-none"></i>
+            </div>
+          </div>
+
+          <!-- Filtro 3: Tipo de Evento Crítico -->
+          <div class="relative">
+            <label class="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Tipo de Evento</label>
+            <div class="relative flex items-center">
+              <i data-lucide="filter" class="w-4 h-4 text-slate-400 absolute left-3 pointer-events-none"></i>
+              <select id="filter-type" onchange="applyFilters()" class="control-40 w-full pl-9 pr-8 bg-slate-50 hover:bg-white focus:bg-white border border-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg text-xs text-slate-800 appearance-none transition-colors cursor-pointer">
+                <option value="all">Todos los Eventos Críticos</option>
+                <option value="IMPERSONATION">Impersonación de Consola</option>
+                <option value="MASS_EXPORT">Exportación Masiva de Datos</option>
+                <option value="PLAN_OVERRIDE">Modificación de Cuota / Plan</option>
+                <option value="FAILED_AUTH">Acceso Fallido / Fuerza Bruta</option>
+                <option value="CERT_REVOCATION">Revocación Certificado PFX</option>
+                <option value="TENANT_BLOCK">Suspensión / Bloqueo Tenant</option>
+              </select>
+              <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400 absolute right-3 pointer-events-none"></i>
+            </div>
+          </div>
+
+          <!-- Filtro 4: IP / Origen de Conexión -->
+          <div class="relative">
+            <label class="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Dirección IP / Host</label>
+            <div class="relative flex items-center">
+              <i data-lucide="globe" class="w-4 h-4 text-slate-400 absolute left-3 pointer-events-none"></i>
+              <input type="text" id="filter-ip" placeholder="Ej. 190.237.45.12 o VPN" oninput="applyFilters()" class="control-40 w-full pl-9 pr-3 bg-slate-50 hover:bg-white focus:bg-white border border-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg text-xs font-mono text-slate-800 transition-colors">
+            </div>
+          </div>
+
+          <!-- Filtro 5: Selector Rango de Fechas (dd/mm/aaaa) -->
+          <div class="relative">
+            <label class="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Rango de Fechas (dd/mm/aaaa)</label>
+            <div class="relative flex items-center">
+              <i data-lucide="calendar" class="w-4 h-4 text-slate-400 absolute left-3 pointer-events-none"></i>
+              <input type="text" id="filter-date" value="24/10/2024 - 24/10/2024" class="control-40 w-full pl-9 pr-8 bg-slate-50 hover:bg-white focus:bg-white border border-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg text-xs font-mono text-slate-800 transition-colors">
+              <button onclick="alert('Selector de calendario: Últimas 24h, 7 días, 30 días o personalizado')" class="absolute right-2.5 text-slate-400 hover:text-slate-600">
+                <i data-lucide="chevron-down" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Fila 2: Chips de Filtro Rápido (40px) y Búsqueda General -->
+        <div class="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-100">
+          
+          <!-- Chips Rápidos (Categorías Clave) -->
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="text-xs text-slate-500 font-medium mr-1">Vistas rápidas:</span>
+            
+            <button onclick="setQuickFilter('ALL')" id="chip-all" class="control-40 px-3 rounded-lg text-xs font-medium border bg-indigo-50 text-indigo-700 border-indigo-300 flex items-center gap-1.5 transition-all">
+              <i data-lucide="layers" class="w-3.5 h-3.5"></i>
+              <span>Todos (1,842)</span>
+            </button>
+            
+            <button onclick="setQuickFilter('IMPERSONATION')" id="chip-impersonation" class="control-40 px-3 rounded-lg text-xs font-medium border bg-white text-slate-600 border-slate-300 hover:bg-slate-50 flex items-center gap-1.5 transition-all">
+              <i data-lucide="user-x" class="w-3.5 h-3.5 text-indigo-600"></i>
+              <span>Impersonaciones (12)</span>
+            </button>
+
+            <button onclick="setQuickFilter('MASS_EXPORT')" id="chip-exports" class="control-40 px-3 rounded-lg text-xs font-medium border bg-white text-slate-600 border-slate-300 hover:bg-slate-50 flex items-center gap-1.5 transition-all">
+              <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5 text-amber-600"></i>
+              <span>Exportaciones Masivas (4)</span>
+            </button>
+
+            <button onclick="setQuickFilter('FAILED_AUTH')" id="chip-failed" class="control-40 px-3 rounded-lg text-xs font-medium border bg-white text-slate-600 border-slate-300 hover:bg-slate-50 flex items-center gap-1.5 transition-all">
+              <i data-lucide="alert-circle" class="w-3.5 h-3.5 text-danger"></i>
+              <span>Accesos Fallidos / Bloqueos (27)</span>
+            </button>
+
+            <button onclick="setQuickFilter('PLAN_OVERRIDE')" id="chip-plans" class="control-40 px-3 rounded-lg text-xs font-medium border bg-white text-slate-600 border-slate-300 hover:bg-slate-50 flex items-center gap-1.5 transition-all">
+              <i data-lucide="sliders" class="w-3.5 h-3.5 text-purple-600"></i>
+              <span>Cambios de Plan (9)</span>
+            </button>
+          </div>
+
+          <!-- Búsqueda por Texto Libre (ID evento, ticket, RUC, hash) -->
+          <div class="w-full sm:w-72 relative">
+            <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-3 pointer-events-none"></i>
+            <input type="text" id="free-search" oninput="applyFilters()" placeholder="Buscar por RUC, Ticket, Hash..." class="control-40 w-full pl-9 pr-8 bg-slate-50 hover:bg-white focus:bg-white border border-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg text-xs text-slate-800 transition-colors">
+            <button onclick="clearSearch()" class="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600" title="Limpiar búsqueda">
+              <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- CONTENEDOR TABLA SIEM Y LÍNEA DE TIEMPO INTERACTIVA -->
+      <div class="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden flex flex-col">
+        
+        <!-- BARRA DE CONTROL DE TABLA: COLUMNAS, RESTABLECER, DENSIDAD -->
+        <div class="px-5 py-3 border-b border-slate-200 bg-slate-50/70 flex flex-wrap items-center justify-between gap-3">
+          
+          <div class="flex items-center gap-3">
+            <span class="text-xs font-semibold text-slate-700 uppercase tracking-wider">Bitácora de Auditoría SIEM</span>
+            <span class="text-xs font-mono px-2 py-0.5 rounded bg-slate-200 text-slate-700" id="counter-display">Mostrando 6 de 1,842 eventos</span>
+          </div>
+
+          <!-- Controles estándar solicitados: Menú Columnas, Restablecer, Selector Densidad -->
+          <div class="flex items-center gap-2">
+            
+            <!-- Menú Desplegable 'Columnas' (columns-3) -->
+            <div class="relative">
+              <button onclick="toggleColumnsMenu()" id="btn-columns" class="control-40 px-3 bg-white hover:bg-slate-50 border border-slate-300 rounded-lg text-xs font-medium text-slate-700 flex items-center gap-2 shadow-xs transition-colors">
+                <i data-lucide="columns-3" class="w-4 h-4 text-slate-500"></i>
+                <span>Columnas</span>
+                <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400"></i>
+              </button>
+
+              <!-- Panel de Casillas Mostrar/Ocultar Columnas -->
+              <div id="columns-dropdown" class="hidden absolute right-0 mt-1 w-56 bg-white border border-slate-200 rounded-lg shadow-xl p-3 z-30 space-y-2">
+                <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider pb-1 border-b border-slate-100">Visibilidad de Columnas</p>
+                <label class="flex items-center gap-2 text-xs text-slate-700 cursor-pointer hover:text-indigo-600">
+                  <input type="checkbox" checked onchange="toggleCol('col-timestamp')" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                  <span>Marca de Tiempo & ID</span>
+                </label>
+                <label class="flex items-center gap-2 text-xs text-slate-700 cursor-pointer hover:text-indigo-600">
+                  <input type="checkbox" checked onchange="toggleCol('col-type')" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                  <span>Tipo de Evento & Severidad</span>
+                </label>
+                <label class="flex items-center gap-2 text-xs text-slate-700 cursor-pointer hover:text-indigo-600">
+                  <input type="checkbox" checked onchange="toggleCol('col-tenant')" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                  <span>Tenant Afectado / RUC</span>
+                </label>
+                <label class="flex items-center gap-2 text-xs text-slate-700 cursor-pointer hover:text-indigo-600">
+                  <input type="checkbox" checked onchange="toggleCol('col-actor')" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                  <span>Operador & IP Origen</span>
+                </label>
+                <label class="flex items-center gap-2 text-xs text-slate-700 cursor-pointer hover:text-indigo-600">
+                  <input type="checkbox" checked onchange="toggleCol('col-details')" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                  <span>Detalle Técnico & Impacto</span>
+                </label>
+                <label class="flex items-center gap-2 text-xs text-slate-700 cursor-pointer hover:text-indigo-600">
+                  <input type="checkbox" checked onchange="toggleCol('col-integrity')" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                  <span>Integridad SHA-256</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Botón 'Restablecer' que vuelve a la vista por defecto -->
+            <button onclick="resetTableView()" title="Vuelve a la vista por defecto" class="control-40 px-3 bg-white hover:bg-slate-50 border border-slate-300 rounded-lg text-xs font-medium text-slate-700 flex items-center gap-2 shadow-xs transition-colors">
+              <i data-lucide="rotate-ccw" class="w-4 h-4 text-slate-500"></i>
+              <span>Restablecer</span>
+            </button>
+
+            <!-- Selector de Densidad (Compacta / Cómoda) -->
+            <div class="flex items-center bg-slate-200/80 p-0.5 rounded-lg">
+              <button onclick="setDensity('comfortable')" id="density-comfortable" class="control-40 px-3 bg-white text-indigo-700 rounded-md text-xs font-semibold shadow-xs flex items-center gap-1.5 transition-all">
+                <i data-lucide="align-justify" class="w-3.5 h-3.5"></i>
+                <span>Cómoda</span>
+              </button>
+              <button onclick="setDensity('compact')" id="density-compact" class="control-40 px-3 text-slate-600 hover:text-slate-900 rounded-md text-xs font-medium flex items-center gap-1.5 transition-all">
+                <i data-lucide="menu" class="w-3.5 h-3.5"></i>
+                <span>Compacta</span>
+              </button>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- TABLA PRINCIPAL CON RESPONSIVE (DESKTOP TABLA / MÓVIL TARJETAS) -->
+        <div class="overflow-x-auto custom-scrollbar">
+          <table id="audit-table" class="w-full text-left border-collapse text-xs">
+            
+            <!-- Cabecera con ordenamiento (Sortable) -->
+            <thead class="bg-slate-100/90 text-slate-700 font-semibold border-b border-slate-200 uppercase tracking-wider text-[11px]">
+              <tr>
+                <th class="py-3.5 px-4 w-10 text-center">
+                  <input type="checkbox" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                </th>
+                <th onclick="sortTable(1)" class="col-timestamp py-3.5 px-4 cursor-pointer hover:bg-slate-200/60 select-none">
+                  <div class="flex items-center gap-1.5">
+                    <span>Marca de Tiempo & ID</span>
+                    <i data-lucide="arrow-up-down" class="w-3.5 h-3.5 text-slate-400"></i>
+                  </div>
+                </th>
+                <th onclick="sortTable(2)" class="col-type py-3.5 px-4 cursor-pointer hover:bg-slate-200/60 select-none">
+                  <div class="flex items-center gap-1.5">
+                    <span>Tipo Evento & Riesgo</span>
+                    <i data-lucide="arrow-up-down" class="w-3.5 h-3.5 text-slate-400"></i>
+                  </div>
+                </th>
+                <th onclick="sortTable(3)" class="col-tenant py-3.5 px-4 cursor-pointer hover:bg-slate-200/60 select-none">
+                  <div class="flex items-center gap-1.5">
+                    <span>Tenant Afectado</span>
+                    <i data-lucide="arrow-up-down" class="w-3.5 h-3.5 text-slate-400"></i>
+                  </div>
+                </th>
+                <th onclick="sortTable(4)" class="col-actor py-3.5 px-4 cursor-pointer hover:bg-slate-200/60 select-none">
+                  <div class="flex items-center gap-1.5">
+                    <span>Operador & IP Origen</span>
+                    <i data-lucide="arrow-up-down" class="w-3.5 h-3.5 text-slate-400"></i>
+                  </div>
+                </th>
+                <th class="col-details py-3.5 px-4">Detalle Técnico & Impacto</th>
+                <th class="col-integrity py-3.5 px-4 text-center">Integridad SIEM</th>
+                <th class="py-3.5 px-4 text-right">Acción</th>
+              </tr>
+            </thead>
+
+            <!-- Cuerpo de Filas -->
+            <tbody id="audit-tbody" class="divide-y divide-slate-200 font-normal">
+              
+              <!-- FILA 1: Impersonación de Tenant (Crítica) -->
+              <tr class="audit-row hover:bg-slate-50/80 transition-colors" data-type="IMPERSONATION" data-tenant="TEN-104">
+                <td class="py-4 px-4 text-center">
+                  <input type="checkbox" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                </td>
+                <td class="col-timestamp py-4 px-4">
+                  <div class="font-mono text-indigo-950 font-semibold">24/10/2024 15:38:10</div>
+                  <div class="font-mono text-[10px] text-slate-400 flex items-center gap-1 mt-0.5">
+                    <span class="text-indigo-600 font-bold">#EVT-9042</span> · Sesión 44min
+                  </div>
+                </td>
+                <td class="col-type py-4 px-4">
+                  <div class="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-indigo-50 text-indigo-700 border border-indigo-200 font-semibold">
+                    <i data-lucide="user-x" class="w-3.5 h-3.5 text-indigo-600"></i>
+                    <span>Impersonación SuperAdmin</span>
+                  </div>
+                  <div class="text-[11px] text-slate-500 mt-1 flex items-center gap-1">
+                    <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                    <span>Ticket Soporte: <strong class="font-mono text-slate-700">#TCK-9402</strong></span>
+                  </div>
+                </td>
+                <td class="col-tenant py-4 px-4">
+                  <div class="flex items-center gap-2">
+                    <div class="w-7 h-7 rounded bg-indigo-600 text-white font-bold text-xs flex items-center justify-center shrink-0">
+                      OD
+                    </div>
+                    <div>
+                      <div class="font-semibold text-slate-900">Clínica OdontoSalud S.A.C.</div>
+                      <div class="font-mono text-[11px] text-slate-500">RUC: 20601984211 · TEN-104</div>
+                    </div>
+                  </div>
+                </td>
+                <td class="col-actor py-4 px-4">
+                  <div class="font-medium text-slate-900">Carlos M. Benavides</div>
+                  <div class="text-[11px] font-mono text-slate-500 flex items-center gap-1 mt-0.5">
+                    <i data-lucide="shield-check" class="w-3 h-3 text-emerald-600"></i>
+                    <span>IP: 190.237.45.12 (Miraflores, PE)</span>
+                  </div>
+                  <span class="text-[10px] text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">MFA FIDO2 Válido</span>
+                </td>
+                <td class="col-details py-4 px-4">
+                  <p class="text-slate-800 line-clamp-2">
+                    Acceso autorizado a módulo de facturación para resolución de rechazo masivo de boletas B001 en conector Bizlinks OSE.
+                  </p>
+                  <div class="text-[11px] text-slate-500 mt-1 font-mono">
+                    Token duración: <span class="text-slate-700 font-semibold">60 minutos (expira 16:38:10)</span>
+                  </div>
+                </td>
+                <td class="col-integrity py-4 px-4 text-center">
+                  <div class="inline-flex items-center gap-1 px-2 py-1 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 font-mono text-[10px]">
+                    <i data-lucide="check-circle" class="w-3 h-3 text-emerald-600"></i>
+                    <span>SHA: 8f4b...3a91</span>
+                  </div>
+                </td>
+                <td class="py-4 px-4 text-right">
+                  <div class="flex items-center justify-end gap-1.5">
+                    <button onclick="openInspectDrawer('#EVT-9042')" title="Inspeccionar Traza Completa" class="control-40 px-2.5 bg-white hover:bg-slate-100 border border-slate-300 rounded-lg text-slate-700 transition-colors">
+                      <i data-lucide="eye" class="w-4 h-4"></i>
+                    </button>
+                    <button onclick="terminateSession('#EVT-9042')" title="Revocar Sesión Inmediatamente" class="control-40 px-2.5 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg text-danger transition-colors">
+                      <i data-lucide="shield-off" class="w-4 h-4"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+
+              <!-- FILA 2: Exportación Masiva de Datos -->
+              <tr class="audit-row hover:bg-slate-50/80 transition-colors" data-type="MASS_EXPORT" data-tenant="TEN-312">
+                <td class="py-4 px-4 text-center">
+                  <input type="checkbox" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                </td>
+                <td class="col-timestamp py-4 px-4">
+                  <div class="font-mono text-indigo-950 font-semibold">24/10/2024 15:12:44</div>
+                  <div class="font-mono text-[10px] text-slate-400 flex items-center gap-1 mt-0.5">
+                    <span class="text-indigo-600 font-bold">#EVT-9039</span> · Descarga CSV
+                  </div>
+                </td>
+                <td class="col-type py-4 px-4">
+                  <div class="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-amber-50 text-amber-800 border border-amber-200 font-semibold">
+                    <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5 text-amber-600"></i>
+                    <span>Exportación Masiva Clientes</span>
+                  </div>
+                  <div class="text-[11px] text-amber-700 mt-1 flex items-center gap-1">
+                    <i data-lucide="alert-triangle" class="w-3 h-3"></i>
+                    <span>Volumen: 52,400 registros</span>
+                  </div>
+                </td>
+                <td class="col-tenant py-4 px-4">
+                  <div class="flex items-center gap-2">
+                    <div class="w-7 h-7 rounded bg-emerald-600 text-white font-bold text-xs flex items-center justify-center shrink-0">
+                      RS
+                    </div>
+                    <div>
+                      <div class="font-semibold text-slate-900">Grupo Cevicheras La Mar S.A.</div>
+                      <div class="font-mono text-[11px] text-slate-500">RUC: 20498112349 · TEN-312</div>
+                    </div>
+                  </div>
+                </td>
+                <td class="col-actor py-4 px-4">
+                  <div class="font-medium text-slate-900">gerencia@lamar.pe (Tenant Admin)</div>
+                  <div class="text-[11px] font-mono text-slate-500 flex items-center gap-1 mt-0.5">
+                    <i data-lucide="globe" class="w-3 h-3 text-slate-400"></i>
+                    <span>IP: 200.48.112.5 (San Isidro, PE)</span>
+                  </div>
+                  <span class="text-[10px] text-slate-600 bg-slate-100 px-1.5 py-0.2 rounded">Rol: Administrador Tenant</span>
+                </td>
+                <td class="col-details py-4 px-4">
+                  <p class="text-slate-800 line-clamp-2">
+                    Exportación total de bitácora de comprobantes electrónicos 2024 para auditoría externa tributaria SUNAT SIRE.
+                  </p>
+                  <div class="text-[11px] text-slate-500 mt-1 font-mono">
+                    Filtro: <span class="text-slate-700">F001/B001 todos los locales (18.4 MB)</span>
+                  </div>
+                </td>
+                <td class="col-integrity py-4 px-4 text-center">
+                  <div class="inline-flex items-center gap-1 px-2 py-1 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 font-mono text-[10px]">
+                    <i data-lucide="check-circle" class="w-3 h-3 text-emerald-600"></i>
+                    <span>SHA: 4d2e...b109</span>
+                  </div>
+                </td>
+                <td class="py-4 px-4 text-right">
+                  <div class="flex items-center justify-end gap-1.5">
+                    <button onclick="openInspectDrawer('#EVT-9039')" title="Inspeccionar Traza Completa" class="control-40 px-2.5 bg-white hover:bg-slate-100 border border-slate-300 rounded-lg text-slate-700 transition-colors">
+                      <i data-lucide="eye" class="w-4 h-4"></i>
+                    </button>
+                    <button onclick="requestDLPCheck('#EVT-9039')" title="Solicitar Verificación Oficial de Cumplimiento" class="control-40 px-2.5 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-lg text-amber-700 transition-colors">
+                      <i data-lucide="file-check" class="w-4 h-4"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+
+              <!-- FILA 3: Intento de Acceso Fallido / Fuerza Bruta (DANGER) -->
+              <tr class="audit-row hover:bg-slate-50/80 transition-colors bg-rose-50/20" data-type="FAILED_AUTH" data-tenant="TEN-409">
+                <td class="py-4 px-4 text-center">
+                  <input type="checkbox" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                </td>
+                <td class="col-timestamp py-4 px-4">
+                  <div class="font-mono text-danger font-semibold">24/10/2024 14:55:02</div>
+                  <div class="font-mono text-[10px] text-slate-400 flex items-center gap-1 mt-0.5">
+                    <span class="text-danger font-bold">#EVT-9031</span> · 5 intentos fallidos
+                  </div>
+                </td>
+                <td class="col-type py-4 px-4">
+                  <div class="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-rose-100 text-danger border border-rose-200 font-semibold">
+                    <i data-lucide="alert-octagon" class="w-3.5 h-3.5 text-danger"></i>
+                    <span>Acceso Fallido Anómalo</span>
+                  </div>
+                  <div class="text-[11px] text-danger mt-1 flex items-center gap-1 font-semibold">
+                    <i data-lucide="shield-x" class="w-3 h-3"></i>
+                    <span>IP Bloqueada en WAF Cloudflare</span>
+                  </div>
+                </td>
+                <td class="col-tenant py-4 px-4">
+                  <div class="flex items-center gap-2">
+                    <div class="w-7 h-7 rounded bg-rose-600 text-white font-bold text-xs flex items-center justify-center shrink-0">
+                      TG
+                    </div>
+                    <div>
+                      <div class="font-semibold text-slate-900">Comercializadora Textil Gamarra</div>
+                      <div class="font-mono text-[11px] text-slate-500">RUC: 20114092812 · TEN-409</div>
+                    </div>
+                  </div>
+                </td>
+                <td class="col-actor py-4 px-4">
+                  <div class="font-medium text-danger">Intento: admin@gamarra.pe</div>
+                  <div class="text-[11px] font-mono text-slate-500 flex items-center gap-1 mt-0.5">
+                    <i data-lucide="map-pin" class="w-3 h-3 text-rose-500"></i>
+                    <span>IP: 181.224.241.89 (Huancayo, PE)</span>
+                  </div>
+                  <span class="text-[10px] text-rose-700 bg-rose-100 px-1.5 py-0.2 rounded font-mono">Geolocalización Inusual</span>
+                </td>
+                <td class="col-details py-4 px-4">
+                  <p class="text-slate-800 line-clamp-2">
+                    Contraseña errónea consecutiva + bypass de token 2FA no reconocido. WAF activó Drop Rule tras superar umbral de 5 req/min.
+                  </p>
+                  <div class="text-[11px] text-danger mt-1 font-mono font-medium">
+                    Regla disparada: SEC-RATE-LIMIT-SUPERADMIN
+                  </div>
+                </td>
+                <td class="col-integrity py-4 px-4 text-center">
+                  <div class="inline-flex items-center gap-1 px-2 py-1 rounded bg-slate-100 text-slate-700 border border-slate-200 font-mono text-[10px]">
+                    <i data-lucide="lock" class="w-3 h-3 text-slate-500"></i>
+                    <span>SHA: e3b0...c442</span>
+                  </div>
+                </td>
+                <td class="py-4 px-4 text-right">
+                  <div class="flex items-center justify-end gap-1.5">
+                    <button onclick="openInspectDrawer('#EVT-9031')" title="Inspeccionar Traza Completa" class="control-40 px-2.5 bg-white hover:bg-slate-100 border border-slate-300 rounded-lg text-slate-700 transition-colors">
+                      <i data-lucide="eye" class="w-4 h-4"></i>
+                    </button>
+                    <button onclick="unblockIP('181.224.241.89')" title="Gestionar Regla IP en WAF" class="control-40 px-2.5 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-lg text-slate-700 transition-colors">
+                      <i data-lucide="ban" class="w-4 h-4"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+
+              <!-- FILA 4: Modificación de Plan / Cuota CPE -->
+              <tr class="audit-row hover:bg-slate-50/80 transition-colors" data-type="PLAN_OVERRIDE" data-tenant="TEN-205">
+                <td class="py-4 px-4 text-center">
+                  <input type="checkbox" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                </td>
+                <td class="col-timestamp py-4 px-4">
+                  <div class="font-mono text-indigo-950 font-semibold">24/10/2024 13:40:18</div>
+                  <div class="font-mono text-[10px] text-slate-400 flex items-center gap-1 mt-0.5">
+                    <span class="text-indigo-600 font-bold">#EVT-9022</span> · Cambio de Cuota
+                  </div>
+                </td>
+                <td class="col-type py-4 px-4">
+                  <div class="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-purple-50 text-purple-700 border border-purple-200 font-semibold">
+                    <i data-lucide="sliders" class="w-3.5 h-3.5 text-purple-600"></i>
+                    <span>Ampliación Cuota CPE</span>
+                  </div>
+                  <div class="text-[11px] text-purple-700 mt-1 flex items-center gap-1">
+                    <i data-lucide="trending-up" class="w-3 h-3"></i>
+                    <span>+5,000 Comprobantes / Mes</span>
+                  </div>
+                </td>
+                <td class="col-tenant py-4 px-4">
+                  <div class="flex items-center gap-2">
+                    <div class="w-7 h-7 rounded bg-amber-500 text-white font-bold text-xs flex items-center justify-center shrink-0">
+                      VT
+                    </div>
+                    <div>
+                      <div class="font-semibold text-slate-900">Hospital Veterinario PetMed Sur</div>
+                      <div class="font-mono text-[11px] text-slate-500">RUC: 20554819230 · TEN-205</div>
+                    </div>
+                  </div>
+                </td>
+                <td class="col-actor py-4 px-4">
+                  <div class="font-medium text-slate-900">Lucía Alva Paredes</div>
+                  <div class="text-[11px] font-mono text-slate-500 flex items-center gap-1 mt-0.5">
+                    <i data-lucide="shield-check" class="w-3 h-3 text-emerald-600"></i>
+                    <span>IP: 190.237.45.14 (Miraflores, PE)</span>
+                  </div>
+                  <span class="text-[10px] text-indigo-700 bg-indigo-50 px-1.5 py-0.2 rounded">Rol: Soporte Nivel 3</span>
+                </td>
+                <td class="col-details py-4 px-4">
+                  <p class="text-slate-800 line-clamp-2">
+                    Ampliación extraordinaria de cuota mensual de 5,000 a 10,000 CPE ante alerta de 94.2% de consumo. Facturación pactada S/ 120 + IGV.
+                  </p>
+                  <div class="text-[11px] text-slate-500 mt-1 font-mono">
+                    Autorización: <span class="text-slate-700">Ticket #TCK-9401 / Aprobó Finanzas</span>
+                  </div>
+                </td>
+                <td class="col-integrity py-4 px-4 text-center">
+                  <div class="inline-flex items-center gap-1 px-2 py-1 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 font-mono text-[10px]">
+                    <i data-lucide="check-circle" class="w-3 h-3 text-emerald-600"></i>
+                    <span>SHA: a92c...e182</span>
+                  </div>
+                </td>
+                <td class="py-4 px-4 text-right">
+                  <div class="flex items-center justify-end gap-1.5">
+                    <button onclick="openInspectDrawer('#EVT-9022')" title="Inspeccionar Traza Completa" class="control-40 px-2.5 bg-white hover:bg-slate-100 border border-slate-300 rounded-lg text-slate-700 transition-colors">
+                      <i data-lucide="eye" class="w-4 h-4"></i>
+                    </button>
+                    <button onclick="viewBillingDiff('#EVT-9022')" title="Ver Comparativa Contractual" class="control-40 px-2.5 bg-white hover:bg-slate-100 border border-slate-300 rounded-lg text-slate-700 transition-colors">
+                      <i data-lucide="receipt" class="w-4 h-4"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+
+              <!-- FILA 5: Renovación / Subida de Certificado Tributario PFX -->
+              <tr class="audit-row hover:bg-slate-50/80 transition-colors" data-type="CERT_REVOCATION" data-tenant="TEN-189">
+                <td class="py-4 px-4 text-center">
+                  <input type="checkbox" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                </td>
+                <td class="col-timestamp py-4 px-4">
+                  <div class="font-mono text-indigo-950 font-semibold">24/10/2024 11:20:05</div>
+                  <div class="font-mono text-[10px] text-slate-400 flex items-center gap-1 mt-0.5">
+                    <span class="text-indigo-600 font-bold">#EVT-8994</span> · Bóveda HSM
+                  </div>
+                </td>
+                <td class="col-type py-4 px-4">
+                  <div class="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-slate-100 text-slate-800 border border-slate-200 font-semibold">
+                    <i data-lucide="key" class="w-3.5 h-3.5 text-indigo-600"></i>
+                    <span>Carga Certificado Digital PFX</span>
+                  </div>
+                  <div class="text-[11px] text-slate-600 mt-1 flex items-center gap-1">
+                    <i data-lucide="check" class="w-3 h-3 text-emerald-600"></i>
+                    <span>Firma Validada con Reniec/Llamagas</span>
+                  </div>
+                </td>
+                <td class="col-tenant py-4 px-4">
+                  <div class="flex items-center gap-2">
+                    <div class="w-7 h-7 rounded bg-teal-600 text-white font-bold text-xs flex items-center justify-center shrink-0">
+                      VA
+                    </div>
+                    <div>
+                      <div class="font-semibold text-slate-900">Cadena Veterinaria Los Andes</div>
+                      <div class="font-mono text-[11px] text-slate-500">RUC: 20603349182 · TEN-189</div>
+                    </div>
+                  </div>
+                </td>
+                <td class="col-actor py-4 px-4">
+                  <div class="font-medium text-slate-900">Miguel Torres (DevOps)</div>
+                  <div class="text-[11px] font-mono text-slate-500 flex items-center gap-1 mt-0.5">
+                    <i data-lucide="shield-check" class="w-3 h-3 text-emerald-600"></i>
+                    <span>IP: 190.237.45.18 (Lima, PE)</span>
+                  </div>
+                  <span class="text-[10px] text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded">Certificado Vigente 2026</span>
+                </td>
+                <td class="col-details py-4 px-4">
+                  <p class="text-slate-800 line-clamp-2">
+                    Reemplazo preventivo de archivo .pfx antes del vencimiento a 15 días. Test timbrado OSE exitoso en endpoint Bizlinks.
+                  </p>
+                  <div class="text-[11px] text-slate-500 mt-1 font-mono">
+                    Hash Cert: <span class="text-slate-700">cert_20603349182_v2.pfx</span>
+                  </div>
+                </td>
+                <td class="col-integrity py-4 px-4 text-center">
+                  <div class="inline-flex items-center gap-1 px-2 py-1 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 font-mono text-[10px]">
+                    <i data-lucide="check-circle" class="w-3 h-3 text-emerald-600"></i>
+                    <span>SHA: 77bc...19fa</span>
+                  </div>
+                </td>
+                <td class="py-4 px-4 text-right">
+                  <div class="flex items-center justify-end gap-1.5">
+                    <button onclick="openInspectDrawer('#EVT-8994')" title="Inspeccionar Traza Completa" class="control-40 px-2.5 bg-white hover:bg-slate-100 border border-slate-300 rounded-lg text-slate-700 transition-colors">
+                      <i data-lucide="eye" class="w-4 h-4"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+
+              <!-- FILA 6: Bloqueo de Tenant por Morosidad Crítica (>30d) -->
+              <tr class="audit-row hover:bg-slate-50/80 transition-colors" data-type="TENANT_BLOCK" data-tenant="TEN-409">
+                <td class="py-4 px-4 text-center">
+                  <input type="checkbox" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500">
+                </td>
+                <td class="col-timestamp py-4 px-4">
+                  <div class="font-mono text-indigo-950 font-semibold">24/10/2024 09:15:30</div>
+                  <div class="font-mono text-[10px] text-slate-400 flex items-center gap-1 mt-0.5">
+                    <span class="text-indigo-600 font-bold">#EVT-8940</span> · Daemon Automático
+                  </div>
+                </td>
+                <td class="col-type py-4 px-4">
+                  <div class="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-rose-50 text-danger border border-rose-200 font-semibold">
+                    <i data-lucide="lock" class="w-3.5 h-3.5 text-danger"></i>
+                    <span>Suspensión Acceso OSE</span>
+                  </div>
+                  <div class="text-[11px] text-danger mt-1 flex items-center gap-1">
+                    <i data-lucide="alert-triangle" class="w-3 h-3"></i>
+                    <span>Mora 32 días (S/ 560.00)</span>
+                  </div>
+                </td>
+                <td class="col-tenant py-4 px-4">
+                  <div class="flex items-center gap-2">
+                    <div class="w-7 h-7 rounded bg-rose-600 text-white font-bold text-xs flex items-center justify-center shrink-0">
+                      TG
+                    </div>
+                    <div>
+                      <div class="font-semibold text-slate-900">Comercializadora Textil Gamarra</div>
+                      <div class="font-mono text-[11px] text-slate-500">RUC: 20114092812 · TEN-409</div>
+                    </div>
+                  </div>
+                </td>
+                <td class="col-actor py-4 px-4">
+                  <div class="font-medium text-slate-900">SYSTEM_AUTOPROCESS</div>
+                  <div class="text-[11px] font-mono text-slate-500 flex items-center gap-1 mt-0.5">
+                    <i data-lucide="cpu" class="w-3 h-3 text-slate-400"></i>
+                    <span>Cronjob Cluster PE-01</span>
+                  </div>
+                  <span class="text-[10px] text-slate-600 bg-slate-100 px-1.5 py-0.2 rounded font-mono">Regla Cobranzas R-15D</span>
+                </td>
+                <td class="col-details py-4 px-4">
+                  <p class="text-slate-800 line-clamp-2">
+                    Bloqueo de emisión de nuevas facturas en conector OSE tras vencer 2 cuotas impagas. Consultas históricas permanecen en modo solo lectura.
+                  </p>
+                  <div class="text-[11px] text-slate-500 mt-1 font-mono">
+                    Notificación enviada: <span class="text-slate-700">cobranzas@gamarra.pe + WhatsApp</span>
+                  </div>
+                </td>
+                <td class="col-integrity py-4 px-4 text-center">
+                  <div class="inline-flex items-center gap-1 px-2 py-1 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 font-mono text-[10px]">
+                    <i data-lucide="check-circle" class="w-3 h-3 text-emerald-600"></i>
+                    <span>SHA: 31cc...9921</span>
+                  </div>
+                </td>
+                <td class="py-4 px-4 text-right">
+                  <div class="flex items-center justify-end gap-1.5">
+                    <button onclick="openInspectDrawer('#EVT-8940')" title="Inspeccionar Traza Completa" class="control-40 px-2.5 bg-white hover:bg-slate-100 border border-slate-300 rounded-lg text-slate-700 transition-colors">
+                      <i data-lucide="eye" class="w-4 h-4"></i>
+                    </button>
+                    <button onclick="reactivateTenant('#EVT-8940')" title="Desbloqueo de Gracia Extraordinario" class="control-40 px-2.5 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-lg text-indigo-700 transition-colors">
+                      <i data-lucide="unlock" class="w-4 h-4"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+
+            </tbody>
+          </table>
+        </div>
+
+        <!-- ESTADO VACÍO (EMPTY STATE) - OCULTO POR DEFECTO -->
+        <div id="empty-state" class="hidden p-12 text-center flex flex-col items-center justify-center">
+          <div class="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mb-3">
+            <i data-lucide="search-x" class="w-6 h-6"></i>
+          </div>
+          <h3 class="text-base font-semibold text-slate-800">No se encontraron eventos coincidentes</h3>
+          <p class="text-xs text-slate-500 max-w-sm mt-1">
+            No existen registros en la bitácora que coincidan con los filtros aplicados (tenant, rango o severidad).
+          </p>
+          <button onclick="resetTableView()" class="mt-4 control-40 px-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-medium flex items-center gap-2">
+            <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+            <span>Limpiar todos los filtros</span>
+          </button>
+        </div>
+
+        <!-- ESTADO DE CARGA (LOADING OVERLAY) -->
+        <div id="loading-state" class="hidden p-12 text-center flex flex-col items-center justify-center bg-white/80">
+          <i data-lucide="loader-2" class="w-8 h-8 text-indigo-600 animate-spin mb-2"></i>
+          <p class="text-xs font-semibold text-slate-700">Consultando clúster SIEM inmutable...</p>
+          <p class="text-[11px] text-slate-400">Verificando firma criptográfica de bloques...</p>
+        </div>
+
+        <!-- PIE DE TABLA: PAGINACIÓN NUMERADA Y FILAS POR PÁGINA -->
+        <div class="px-5 py-3 border-t border-slate-200 bg-white flex flex-wrap items-center justify-between gap-3 text-xs text-slate-600">
+          
+          <div class="flex items-center gap-2">
+            <span>Mostrar</span>
+            <select id="rows-per-page" onchange="changePageSize()" class="control-40 px-3 bg-slate-50 hover:bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-700 appearance-none pr-8 relative cursor-pointer">
+              <option value="10">10 eventos</option>
+              <option value="25" selected>25 eventos</option>
+              <option value="50">50 eventos</option>
+              <option value="100">100 eventos</option>
+            </select>
+            <span class="text-slate-400">de 1,842 eventos auditados</span>
+          </div>
+
+          <!-- Paginación numerada requerida -->
+          <div class="flex items-center gap-1">
+            <button class="control-40 px-3 rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 disabled:opacity-40 flex items-center gap-1" disabled>
+              <i data-lucide="chevron-left" class="w-4 h-4"></i>
+              <span>Anterior</span>
+            </button>
+            <button class="control-40 w-10 rounded-lg bg-indigo-600 text-white font-semibold flex items-center justify-center">1</button>
+            <button class="control-40 w-10 rounded-lg hover:bg-slate-100 text-slate-700 flex items-center justify-center font-medium">2</button>
+            <button class="control-40 w-10 rounded-lg hover:bg-slate-100 text-slate-700 flex items-center justify-center font-medium">3</button>
+            <span class="px-1 text-slate-400">...</span>
+            <button class="control-40 w-10 rounded-lg hover:bg-slate-100 text-slate-700 flex items-center justify-center font-medium">74</button>
+            <button class="control-40 px-3 rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 flex items-center gap-1">
+              <span>Siguiente</span>
+              <i data-lucide="chevron-right" class="w-4 h-4"></i>
+            </button>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- FOOTER DE CONFORMIDAD & NORMATIVA TRIBUTARIA -->
+      <footer class="pt-2 pb-6 border-t border-slate-200 flex flex-wrap items-center justify-between gap-4 text-xs text-slate-500">
+        <div class="flex items-center gap-4">
+          <span class="font-semibold text-slate-700">PerúSaaS Admin Console v4.12.0-prod</span>
+          <span>·</span>
+          <span>Zona horaria: America/Lima (UTC-5)</span>
+          <span>·</span>
+          <span>Moneda Base: Soles (PEN S/)</span>
+          <span>·</span>
+          <span class="flex items-center gap-1 text-emerald-600 font-medium">
+            <i data-lucide="shield-check" class="w-3.5 h-3.5"></i>
+            Normativa SUNAT RS 000193-2020 / SIEM Activo
+          </span>
+        </div>
+        <div class="flex items-center gap-4">
+          <a href="#" class="hover:text-indigo-600 transition-colors">Manual SRE</a>
+          <a href="#" class="hover:text-indigo-600 transition-colors">Descargar Llave Pública PGP</a>
+          <a href="#" class="hover:text-indigo-600 transition-colors">Oficial de Datos Personales</a>
+        </div>
+      </footer>
+
+    </main>
+
+  </div>
+
+  <!-- MODAL / DRAWER LATERAL: INSPECTOR DE TRAZA TÉCNICA CRIPTOGRÁFICA -->
+  <div id="inspect-drawer" class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 hidden flex justify-end transition-opacity">
+    <div class="w-full max-w-xl bg-white h-full shadow-2xl flex flex-col border-l border-slate-200 animate-slide-in">
+      
+      <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold">
+            <i data-lucide="file-code" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-slate-900" id="drawer-event-id">Detalle de Traza #EVT-9042</h3>
+            <p class="text-[11px] text-slate-500 font-mono">Timestamp TSA Certificado: 24/10/2024 15:38:10.842 UTC-5</p>
+          </div>
+        </div>
+        <button onclick="closeInspectDrawer()" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-200/60">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="flex-1 overflow-y-auto p-6 space-y-5 text-xs custom-scrollbar">
+        
+        <!-- Estado de Validación Criptográfica -->
+        <div class="p-3 bg-emerald-50 border border-emerald-200 rounded-lg flex items-center gap-3 text-emerald-800">
+          <i data-lucide="check-circle" class="w-5 h-5 text-emerald-600 shrink-0"></i>
+          <div>
+            <span class="font-bold">Firma Criptográfica Verificada:</span>
+            <p class="text-[11px] text-emerald-700 mt-0.5">El bloque no ha sufrido alteraciones. Verificado contra la cadena central del clúster PE-Lima.</p>
+          </div>
+        </div>
+
+        <!-- Ficha Técnica Resumen -->
+        <div class="grid grid-cols-2 gap-3 bg-slate-50 p-3.5 rounded-lg border border-slate-200">
+          <div>
+            <span class="text-slate-400 font-mono uppercase text-[10px]">Tipo de Operación</span>
+            <p class="font-semibold text-slate-900 mt-0.5" id="drawer-type">SUPERADMIN_IMPERSONATION</p>
+          </div>
+          <div>
+            <span class="text-slate-400 font-mono uppercase text-[10px]">Tenant Afectado</span>
+            <p class="font-semibold text-slate-900 mt-0.5" id="drawer-tenant">Clínica OdontoSalud S.A.C. (TEN-104)</p>
+          </div>
+          <div>
+            <span class="text-slate-400 font-mono uppercase text-[10px]">Actor / Operador</span>
+            <p class="font-semibold text-slate-900 mt-0.5">carlos.benavides@perusaas.pe</p>
+          </div>
+          <div>
+            <span class="text-slate-400 font-mono uppercase text-[10px]">Método Auth</span>
+            <p class="font-semibold text-indigo-600 mt-0.5">YubiKey FIDO2 (WebAuthn)</p>
+          </div>
+        </div>
+
+        <!-- Payload JSON Crudo de Auditoría -->
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <span class="text-slate-500 font-semibold uppercase text-[10px] tracking-wider">Payload JSON Canónico (SIEM Raw Event)</span>
+            <button onclick="copyPayload()" class="text-[11px] text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1">
+              <i data-lucide="copy" class="w-3 h-3"></i>
+              <span>Copiar JSON</span>
+            </button>
+          </div>
+          <pre id="raw-payload" class="p-3.5 bg-slate-900 text-slate-100 rounded-lg font-mono text-[11px] overflow-x-auto leading-relaxed border border-slate-800">
+{
+  "event_id": "EVT-9042",
+  "timestamp_iso": "2024-10-24T15:38:10.842-05:00",
+  "action": "CONSOLE_IMPERSONATE_START",
+  "severity": "CRITICAL",
+  "actor": {
+    "user_id": "USR-SUPER-01",
+    "email": "carlos.benavides@perusaas.pe",
+    "role": "SUPERADMIN_N3",
+    "ip": "190.237.45.12",
+    "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",
+    "mfa_verified": true,
+    "mfa_type": "FIDO2_HARDWARE_KEY"
+  },
+  "target": {
+    "tenant_id": "TEN-104",
+    "tenant_ruc": "20601984211",
+    "tenant_name": "Clínica Dental OdontoSalud S.A.C.",
+    "plan": "Pro Multi-Sede (S/ 490.00/mes)",
+    "reason_ticket": "TCK-9402"
+  },
+  "session_grant": {
+    "token_ttl_seconds": 3600,
+    "scopes": ["invoicing:read", "invoicing:retry_cdr", "tenant:read"],
+    "ip_lock": true
+  },
+  "signature_sha256": "8f4b12c8e31a98097b6d192ac804b47120e29bca01e6790b4e05b3a91c890123"
+}
+          </pre>
+        </div>
+
+        <!-- Bitácora de Acciones dentro de la Sesión Impersonada -->
+        <div>
+          <span class="text-slate-500 font-semibold uppercase text-[10px] tracking-wider block mb-2">Comandos Ejecutados en la Sesión</span>
+          <div class="border border-slate-200 rounded-lg divide-y divide-slate-100 bg-white">
+            <div class="p-2.5 flex items-start gap-2.5">
+              <span class="font-mono text-[11px] text-slate-400">15:38:12</span>
+              <div>
+                <p class="font-mono text-slate-800 text-[11px]">GET /api/v1/tenants/TEN-104/comprobantes?status=RECHAZADO</p>
+                <p class="text-[10px] text-slate-500">Listó 14 comprobantes en estado de contingencia.</p>
+              </div>
+            </div>
+            <div class="p-2.5 flex items-start gap-2.5">
+              <span class="font-mono text-[11px] text-slate-400">15:39:40</span>
+              <div>
+                <p class="font-mono text-indigo-700 text-[11px] font-semibold">POST /api/v1/tenants/TEN-104/retry-ose-batch</p>
+                <p class="text-[10px] text-slate-500">Reenvío exitoso de 14 CDR hacia servidor Bizlinks OSE.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="p-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between">
+        <button onclick="closeInspectDrawer()" class="control-40 px-4 rounded-lg border border-slate-300 bg-white text-slate-700 font-medium hover:bg-slate-100 text-xs">
+          Cerrar Inspector
+        </button>
+        <button onclick="alert('Descargando paquete de auditoría firmado con clave pública de PerúSaaS')" class="control-40 px-4 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs flex items-center gap-2">
+          <i data-lucide="file-check-2" class="w-4 h-4"></i>
+          <span>Descargar Evidencia PGP</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- MODAL DE EXPORTACIÓN PERSONALIZADA (CSV / SIEM JSON / PDF OFICIAL) -->
+  <div id="export-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-2xl max-w-md w-full border border-slate-200 overflow-hidden animate-scale-up">
+      
+      <div class="px-6 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center">
+            <i data-lucide="download" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-slate-900">Exportar Bitácora de Auditoría</h3>
+            <p class="text-[11px] text-slate-500">Generación de reporte forense inmutable</p>
+          </div>
+        </div>
+        <button onclick="toggleExportModal()" class="text-slate-400 hover:text-slate-600">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="p-6 space-y-4 text-xs">
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Formato de Exportación</label>
+          <div class="grid grid-cols-3 gap-2">
+            <label class="border border-indigo-600 bg-indigo-50/50 p-2.5 rounded-lg flex flex-col items-center gap-1 cursor-pointer">
+              <input type="radio" name="export-format" checked class="text-indigo-600">
+              <span class="font-bold text-slate-900">CSV Estándar</span>
+              <span class="text-[10px] text-slate-500">Excel / SIRE</span>
+            </label>
+            <label class="border border-slate-200 hover:border-slate-300 p-2.5 rounded-lg flex flex-col items-center gap-1 cursor-pointer">
+              <input type="radio" name="export-format" class="text-indigo-600">
+              <span class="font-bold text-slate-900">JSON SIEM</span>
+              <span class="text-[10px] text-slate-500">Splunk / Datadog</span>
+            </label>
+            <label class="border border-slate-200 hover:border-slate-300 p-2.5 rounded-lg flex flex-col items-center gap-1 cursor-pointer">
+              <input type="radio" name="export-format" class="text-indigo-600">
+              <span class="font-bold text-slate-900">PDF Oficial</span>
+              <span class="text-[10px] text-slate-500">Firma TSA</span>
+            </label>
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Rango a Incluir</label>
+          <select class="control-40 w-full px-3 border border-slate-300 rounded-lg text-xs bg-slate-50">
+            <option>Eventos filtrados en pantalla (6 registros)</option>
+            <option>Todo el día de hoy (24/10/2024 - 1,842 registros)</option>
+            <option>Últimos 30 días (42,800 registros)</option>
+            <option>Año Fiscal 2024 Completo (Auditoría SUNAT)</option>
+          </select>
+        </div>
+
+        <div class="p-3 bg-slate-50 rounded-lg border border-slate-200 space-y-1.5">
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" checked class="rounded border-slate-300 text-indigo-600">
+            <span class="text-slate-700">Incluir hashes SHA-256 de integridad</span>
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" checked class="rounded border-slate-300 text-indigo-600">
+            <span class="text-slate-700">Ocultar datos sensibles (enmascarar tokens y claves PFX)</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="px-6 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-end gap-2">
+        <button onclick="toggleExportModal()" class="control-40 px-4 rounded-lg border border-slate-300 bg-white text-slate-700 font-medium hover:bg-slate-100 text-xs">
+          Cancelar
+        </button>
+        <button onclick="downloadExport()" class="control-40 px-4 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs flex items-center gap-2 shadow-sm">
+          <i data-lucide="download-cloud" class="w-4 h-4"></i>
+          <span>Generar y Descargar Archivo</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT DINÁMICO E INTERACTIVO -->
+  <script>
+    // Inicializar Iconos Lucide
+    lucide.createIcons();
+
+    // Actualización de reloj en tiempo real
+    function updateClock() {
+      const now = new Date();
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      const seconds = String(now.getSeconds()).padStart(2, '0');
+      const clockEl = document.getElementById('clock-display');
+      if (clockEl) {
+        clockEl.textContent = `${hours}:${minutes}:${seconds}`;
+      }
+    }
+    setInterval(updateClock, 1000);
+
+    // Micro-animación al refrescar
+    function refreshAuditFeed() {
+      const icon = document.getElementById('manual-refresh-icon');
+      const syncIcon = document.getElementById('sync-icon');
+      const loading = document.getElementById('loading-state');
+      const tbody = document.getElementById('audit-tbody');
+      
+      if (icon) icon.classList.add('animate-spin');
+      if (syncIcon) syncIcon.classList.add('animate-spin');
+      
+      tbody.style.opacity = '0.3';
+      
+      setTimeout(() => {
+        if (icon) icon.classList.remove('animate-spin');
+        tbody.style.opacity = '1';
+        alert('Bitácora sincronizada con éxito con clúster SRE PE-Lima. 0 anomalías nuevas detectadas.');
+      }, 700);
+    }
+
+    // Toggle de Drawer de Inspección
+    function openInspectDrawer(eventId) {
+      const drawer = document.getElementById('inspect-drawer');
+      const titleEl = document.getElementById('drawer-event-id');
+      if (titleEl) titleEl.textContent = `Detalle de Traza ${eventId}`;
+      drawer.classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeInspectDrawer() {
+      document.getElementById('inspect-drawer').classList.add('hidden');
+    }
+
+    // Modal de Exportar
+    function toggleExportModal() {
+      const modal = document.getElementById('export-modal');
+      modal.classList.toggle('hidden');
+      lucide.createIcons();
+    }
+
+    function downloadExport() {
+      toggleExportModal();
+      alert('Reporte generado exitosamente con firma digital. Iniciando descarga: audit_perusaas_20241024.csv');
+    }
+
+    // Menú de Columnas
+    function toggleColumnsMenu() {
+      const menu = document.getElementById('columns-dropdown');
+      menu.classList.toggle('hidden');
+    }
+
+    // Ocultar / Mostrar columnas
+    function toggleCol(colClass) {
+      const elements = document.querySelectorAll(`.${colClass}`);
+      elements.forEach(el => {
+        el.classList.toggle('hidden');
+      });
+    }
+
+    // Densidad Cómoda / Compacta
+    function setDensity(density) {
+      const rows = document.querySelectorAll('.audit-row td');
+      const btnComf = document.getElementById('density-comfortable');
+      const btnComp = document.getElementById('density-compact');
+
+      if (density === 'compact') {
+        rows.forEach(td => {
+          td.classList.remove('py-4');
+          td.classList.add('py-2');
+        });
+        btnComp.className = 'control-40 px-3 bg-white text-indigo-700 rounded-md text-xs font-semibold shadow-xs flex items-center gap-1.5 transition-all';
+        btnComf.className = 'control-40 px-3 text-slate-600 hover:text-slate-900 rounded-md text-xs font-medium flex items-center gap-1.5 transition-all';
+      } else {
+        rows.forEach(td => {
+          td.classList.remove('py-2');
+          td.classList.add('py-4');
+        });
+        btnComf.className = 'control-40 px-3 bg-white text-indigo-700 rounded-md text-xs font-semibold shadow-xs flex items-center gap-1.5 transition-all';
+        btnComp.className = 'control-40 px-3 text-slate-600 hover:text-slate-900 rounded-md text-xs font-medium flex items-center gap-1.5 transition-all';
+      }
+    }
+
+    // Restablecer vista por defecto
+    function resetTableView() {
+      document.getElementById('filter-tenant').value = 'all';
+      document.getElementById('filter-user').value = 'all';
+      document.getElementById('filter-type').value = 'all';
+      document.getElementById('filter-ip').value = '';
+      document.getElementById('free-search').value = '';
+      
+      setQuickFilter('ALL');
+      setDensity('comfortable');
+
+      // Restaurar todas las columnas
+      const checkboxes = document.querySelectorAll('#columns-dropdown input[type="checkbox"]');
+      checkboxes.forEach(cb => {
+        if (!cb.checked) {
+          cb.checked = true;
+          cb.dispatchEvent(new Event('change'));
+        }
+      });
+
+      const menu = document.getElementById('columns-dropdown');
+      if (!menu.classList.contains('hidden')) {
+        menu.classList.add('hidden');
+      }
+
+      applyFilters();
+    }
+
+    // Chips de Filtrado Rápido
+    function setQuickFilter(type) {
+      const chips = ['chip-all', 'chip-impersonation', 'chip-exports', 'chip-failed', 'chip-plans'];
+      chips.forEach(id => {
+        const btn = document.getElementById(id);
+        if (btn) {
+          btn.className = 'control-40 px-3 rounded-lg text-xs font-medium border bg-white text-slate-600 border-slate-300 hover:bg-slate-50 flex items-center gap-1.5 transition-all';
+        }
+      });
+
+      const activeMap = {
+        'ALL': 'chip-all',
+        'IMPERSONATION': 'chip-impersonation',
+        'MASS_EXPORT': 'chip-exports',
+        'FAILED_AUTH': 'chip-failed',
+        'PLAN_OVERRIDE': 'chip-plans'
+      };
+
+      const activeBtn = document.getElementById(activeMap[type]);
+      if (activeBtn) {
+        activeBtn.className = 'control-40 px-3 rounded-lg text-xs font-medium border bg-indigo-50 text-indigo-700 border-indigo-300 flex items-center gap-1.5 transition-all';
+      }
+
+      const typeSelect = document.getElementById('filter-type');
+      if (type === 'ALL') {
+        typeSelect.value = 'all';
+      } else {
+        typeSelect.value = type;
+      }
+
+      applyFilters();
+    }
+
+    // Motor de filtrado en cliente
+    function applyFilters() {
+      const tenantVal = document.getElementById('filter-tenant').value;
+      const typeVal = document.getElementById('filter-type').value;
+      const searchVal = document.getElementById('free-search').value.toLowerCase();
+      const ipVal = document.getElementById('filter-ip').value.toLowerCase();
+
+      const rows = document.querySelectorAll('.audit-row');
+      let visibleCount = 0;
+
+      rows.forEach(row => {
+        const rowType = row.getAttribute('data-type');
+        const rowTenant = row.getAttribute('data-tenant');
+        const rowText = row.innerText.toLowerCase();
+
+        let matchesTenant = (tenantVal === 'all' || rowTenant === tenantVal);
+        let matchesType = (typeVal === 'all' || rowType === typeVal);
+        let matchesSearch = (!searchVal || rowText.includes(searchVal));
+        let matchesIp = (!ipVal || rowText.includes(ipVal));
+
+        if (matchesTenant && matchesType && matchesSearch && matchesIp) {
+          row.classList.remove('hidden');
+          visibleCount++;
+        } else {
+          row.classList.add('hidden');
+        }
+      });
+
+      const emptyEl = document.getElementById('empty-state');
+      const counterEl = document.getElementById('counter-display');
+      
+      if (counterEl) {
+        counterEl.textContent = `Mostrando ${visibleCount} de 1,842 eventos`;
+      }
+
+      if (visibleCount === 0) {
+        emptyEl.classList.remove('hidden');
+      } else {
+        emptyEl.classList.add('hidden');
+      }
+    }
+
+    function clearSearch() {
+      document.getElementById('free-search').value = '';
+      applyFilters();
+    }
+
+    function copyPayload() {
+      const text = document.getElementById('raw-payload').innerText;
+      navigator.clipboard.writeText(text);
+      alert('Payload JSON copiado al portapapeles.');
+    }
+
+    // Acciones de Seguridad
+    function terminateSession(evtId) {
+      if (confirm(`¿Revocar inmediatamente la sesión de impersonación ${evtId}? El operador será desconectado en el acto.`)) {
+        alert(`Sesión ${evtId} revocada con éxito en el clúster de autenticación.`);
+      }
+    }
+
+    function unblockIP(ip) {
+      alert(`Abriendo consola de reglas WAF para gestionar la dirección ${ip}.`);
+    }
+
+    function requestDLPCheck(evtId) {
+      alert(`Se ha despachado ticket preventivo a Oficial de Datos para validar el archivo asociado a ${evtId}.`);
+    }
+
+    function reactivateTenant(evtId) {
+      if (confirm('¿Autorizar desbloqueo temporal de gracia por 48 horas para emisión OSE?')) {
+        alert('Desbloqueo de gracia aplicado. Notificado a cobranzas.');
+      }
+    }
+
+    function toggleEmergencyLockModal() {
+      const lockIcon = document.getElementById('lock-state-icon');
+      if (confirm('ATENCIÓN SRE: ¿Desea activar el modo de BLOQUEO DE EMERGENCIA GLOBAL? Bloqueará impersonaciones y exportaciones masivas temporalmente en toda la plataforma.')) {
+        lockIcon.setAttribute('data-lucide', 'lock-keyhole');
+        alert('MODO DE BLOQUEO DE EMERGENCIA ACTIVADO. Se han deshabilitado sesiones no esenciales.');
+        lucide.createIcons();
+      }
+    }
+
+    function toggleRetentionModal() {
+      alert('Políticas de retención SIEM vigentes: 365 días en caliente (SSD Clúster Lima) + 5 años en bóveda inmutable AWS S3 Glacier WORM (Compliance SUNAT).');
+    }
+
+    function changePageSize() {
+      const size = document.getElementById('rows-per-page').value;
+      alert(`Ajustando visualización a ${size} registros por página.`);
+    }
+
+    function sortTable(colIndex) {
+      alert(`Ordenando columna ${colIndex} por orden cronológico/alfabético.`);
+    }
+
+    // Cerrar con Escape
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeInspectDrawer();
+        const exportModal = document.getElementById('export-modal');
+        if (!exportModal.classList.contains('hidden')) {
+          exportModal.classList.add('hidden');
+        }
+      }
+    });
+  </script>
+</body>
+</html>

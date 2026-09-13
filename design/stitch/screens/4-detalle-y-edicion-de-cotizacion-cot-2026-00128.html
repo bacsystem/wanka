@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+
+<html lang="es"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/><title>PerúSaaS Gestión Empresarial</title><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap&family=Geist+Mono:wght@400;500;600" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{width:100%;margin:0;padding:0;background-color:#faf8ff;}body{overscroll-behavior:none;-webkit-tap-highlight-color:transparent;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{colors:{"inverse-primary":"#80d5cb","on-tertiary-fixed":"#001d32","surface-container-lowest":"#ffffff","secondary-fixed":"#abefe8","inverse-surface":"#283044","surface-container-low":"#f2f3ff","tertiary":"#005584","primary":"#005c55","on-primary-fixed-variant":"#00504a","secondary-container":"#a8ece5","surface-tint":"#006a63","surface-container-highest":"#dae2fd","on-tertiary":"#ffffff","on-background":"#131b2e","secondary-fixed-dim":"#8fd3cc","on-tertiary-fixed-variant":"#004b74","surface-container":"#eaedff","surface-variant":"#dae2fd","tertiary-fixed-dim":"#94ccff","on-secondary-fixed-variant":"#00504b","on-surface-variant":"#3e4947","on-secondary":"#ffffff","error":"#ba1a1a","tertiary-container":"#136ea6","error-container":"#ffdad6","primary-fixed-dim":"#80d5cb","on-primary":"#ffffff","on-primary-container":"#a3faef","primary-container":"#0f766e","surface-bright":"#faf8ff","outline-variant":"#bdc9c6","on-error":"#ffffff","inverse-on-surface":"#eef0ff","on-primary-fixed":"#00201d","on-error-container":"#93000a","outline":"#6e7977","on-secondary-fixed":"#00201e","on-secondary-container":"#266d68","on-surface":"#131b2e","secondary":"#216963","surface-container-high":"#e2e7ff","on-tertiary-container":"#daebff","surface":"#faf8ff","surface-dim":"#d2d9f4","primary-fixed":"#9cf2e8","tertiary-fixed":"#cde5ff","background":"#faf8ff"},borderRadius:{"DEFAULT":"0.25rem","lg":"0.5rem","xl":"0.75rem","full":"9999px"},spacing:{"space-sm":"0.5rem","space-lg":"1rem","space-md":"0.75rem","margin":"1rem","gutter":"1rem","space-xs":"0.25rem","space-xl":"1.5rem"},fontFamily:{"body-sm":["Geist"],"label-md":["Geist"],"headline-sm":["Geist"],"body-lg":["Geist"],"body-md":["Geist"],"headline-lg":["Geist"],"label-sm":["Geist"],"headline-xl":["Geist"],"code-dense":["Geist"],"headline-md":["Geist"]},fontSize:{"body-sm":["12px",{lineHeight:"16px",fontWeight:"400"}],"label-md":["13px",{lineHeight:"18px",fontWeight:"600"}],"headline-sm":["15px",{lineHeight:"20px",fontWeight:"600"}],"body-lg":["15px",{lineHeight:"22px",fontWeight:"400"}],"body-md":["13px",{lineHeight:"18px",fontWeight:"400"}],"headline-lg":["22px",{lineHeight:"28px",letterSpacing:"-0.015em",fontWeight:"700"}],"label-sm":["11px",{lineHeight:"14px",letterSpacing:"0.02em",fontWeight:"600"}],"headline-xl":["28px",{lineHeight:"34px",letterSpacing:"-0.02em",fontWeight:"700"}],"code-dense":["12px",{lineHeight:"16px",fontWeight:"500"}],"headline-md":["18px",{lineHeight:"24px",letterSpacing:"-0.01em",fontWeight:"600"}]}}}};</script></head><body class="bg-surface font-body-md text-body-md text-on-surface min-h-screen flex flex-col antialiased"><header class="fixed top-0 w-full z-50 bg-surface/90 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)] pt-safe"><div class="h-16 px-space-md flex items-center justify-between gap-space-sm"><div class="flex items-center gap-space-xs min-w-0 flex-1"><button aria-label="Cambiar tenant" class="flex items-center gap-space-xs text-left px-space-xs py-1 rounded-lg hover:bg-surface-container-low transition-colors max-w-[190px] min-h-[44px]" type="button"><div class="flex flex-col min-w-0"><div class="flex items-center gap-1.5"><span class="material-symbols-outlined text-[18px] text-primary shrink-0">domain</span><span class="font-label-md text-label-md text-on-surface truncate leading-tight">Clínica Dental Sonrisa</span><span class="material-symbols-outlined text-[16px] text-on-surface-variant shrink-0">expand_more</span></div><div class="flex items-center gap-1.5 mt-0.5"><span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-secondary-container text-on-secondary-container tracking-wide">Odontología</span><span class="inline-flex items-center gap-1 text-[10px] text-secondary font-medium"><span class="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse"></span>SUNAT OK</span></div></div></button></div><div class="flex items-center gap-1 shrink-0"><div class="hidden sm:flex items-center bg-surface-container-lowest rounded-lg p-0.5 shadow-[0_1px_4px_rgba(0,0,0,0.04)]"><button class="w-8 h-8 flex items-center justify-center rounded text-on-surface-variant hover:text-primary transition-colors" title="Vista Desktop" type="button"><span class="material-symbols-outlined text-[18px]">desktop_windows</span></button><button class="w-8 h-8 flex items-center justify-center rounded text-on-surface-variant hover:text-primary transition-colors" title="Vista Tablet" type="button"><span class="material-symbols-outlined text-[18px]">tablet_mac</span></button><button class="w-8 h-8 flex items-center justify-center rounded bg-primary-container text-on-primary" title="Vista Móvil" type="button"><span class="material-symbols-outlined text-[18px]">phone_iphone</span></button></div><button aria-label="Buscar (Ctrl+K)" class="w-11 h-11 flex items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-container-low transition-colors" type="button"><span class="material-symbols-outlined text-[20px]">search</span></button><button aria-label="Notificaciones operativas" class="relative w-11 h-11 flex items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-container-low transition-colors" type="button"><span class="material-symbols-outlined text-[20px]">notifications</span><span class="absolute top-2 right-2 w-4 h-4 bg-error text-on-error font-label-sm text-[10px] leading-none rounded-full flex items-center justify-center">3</span></button><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center shrink-0 ml-1"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></div></header><main class="flex-1 flex flex-col relative w-full pt-16 pb-28 bg-surface px-margin"><div class="flex flex-col w-full">
+<!-- Top Navigation Context / Breadcrumbs & Theme Switcher Bar -->
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-space-sm pb-space-sm">
+<nav aria-label="Migas de pan" class="flex items-center gap-1.5 font-code-dense text-code-dense text-on-surface-variant flex-wrap">
+<a class="hover:text-primary transition-colors flex items-center gap-1" href="#">
+<span class="material-symbols-outlined text-[15px]">point_of_sale</span>
+<span>Ventas</span>
+</a>
+<span class="material-symbols-outlined text-[13px] text-outline">chevron_right</span>
+<a class="hover:text-primary transition-colors" href="#">Cotizaciones y Proformas</a>
+<span class="material-symbols-outlined text-[13px] text-outline">chevron_right</span>
+<span class="font-label-md text-on-surface bg-surface-container px-2 py-0.5 rounded text-[11px] tracking-wide text-primary">COT-2026-00128</span>
+</nav>
+<!-- Theme mode switchers & quick shortcuts -->
+<div class="flex items-center gap-2 self-start sm:self-auto">
+<div class="inline-flex items-center bg-surface-container-high p-0.5 rounded-lg text-on-surface-variant shadow-sm" id="theme-switch-group">
+<button class="px-2 py-1 rounded flex items-center gap-1 text-[11px] font-label-sm bg-surface-container-lowest text-primary shadow-sm transition-all" id="btn-theme-light" onclick="setAppTheme('light')" title="Modo Claro" type="button">
+<span class="material-symbols-outlined text-[14px]">light_mode</span>
+<span class="hidden md:inline">Claro</span>
+</button>
+<button class="px-2 py-1 rounded flex items-center gap-1 text-[11px] font-label-sm hover:text-on-surface transition-all" id="btn-theme-dark" onclick="setAppTheme('dark')" title="Modo Oscuro" type="button">
+<span class="material-symbols-outlined text-[14px]">dark_mode</span>
+<span class="hidden md:inline">Oscuro</span>
+</button>
+<button class="px-2 py-1 rounded flex items-center gap-1 text-[11px] font-label-sm hover:text-on-surface transition-all" id="btn-theme-sys" onclick="setAppTheme('system')" title="Sistema" type="button">
+<span class="material-symbols-outlined text-[14px]">settings_brightness</span>
+<span class="hidden md:inline">Auto</span>
+</button>
+</div>
+<div class="h-4 w-px bg-outline-variant/40 hidden sm:block"></div>
+<span class="hidden lg:inline-flex items-center gap-1 font-code-dense text-[11px] text-secondary bg-secondary-container/40 px-2 py-1 rounded-md">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+        TC SUNAT: Venta S/ 3.750
+      </span>
+</div>
+</div>
+<!-- Document Master Header -->
+<section class="bg-surface-container-lowest rounded-xl shadow-sm p-space-md sm:p-space-lg mb-space-lg">
+<div class="flex flex-col lg:flex-row lg:items-center justify-between gap-space-md">
+<!-- Title & Customer Identity Card -->
+<div class="space-y-1.5 min-w-0">
+<div class="flex items-center gap-space-sm flex-wrap">
+<h1 class="font-headline-lg text-headline-lg text-on-surface tracking-tight">Cotización COT-2026-00128</h1>
+<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-secondary-container/60 text-on-secondary-container font-label-sm text-label-sm">
+<span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+            Aprobada por cliente
+          </span>
+<span class="inline-flex items-center gap-1 text-[11px] font-label-sm text-tertiary bg-tertiary-fixed/60 px-2 py-0.5 rounded">
+<span class="material-symbols-outlined text-[13px]">verified_user</span>
+            Convenio Corporativo EPS
+          </span>
+</div>
+<div class="flex flex-wrap items-center gap-x-space-md gap-y-1 text-on-surface-variant font-body-sm text-body-sm pt-0.5">
+<div class="flex items-center gap-1.5 text-on-surface font-label-md">
+<span class="material-symbols-outlined text-[16px] text-primary">apartment</span>
+<span>Rimac Seguros y Reaseguros S.A.</span>
+</div>
+<span class="text-outline-variant">/</span>
+<span class="font-code-dense">RUC 20100041953</span>
+<span class="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-label-sm bg-surface-container text-on-surface-variant">
+            Habido · Agente Retención
+          </span>
+<span class="text-outline-variant hidden sm:inline">/</span>
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[15px]">location_on</span>
+            Sede Central Lima
+          </span>
+<span class="text-outline-variant hidden sm:inline">/</span>
+<span class="flex items-center gap-1 text-on-surface">
+<span class="material-symbols-outlined text-[15px] text-primary">medical_services</span>
+            Dr. Carlos Mendoza
+          </span>
+</div>
+</div>
+<!-- Action Toolbars -->
+<div class="flex items-center flex-wrap gap-2 shrink-0">
+<button class="inline-flex items-center gap-1.5 px-3 h-9 rounded-lg bg-surface-container-low text-on-surface hover:bg-surface-container font-label-md text-label-md transition-colors" title="Enviar cotización por email" type="button">
+<span class="material-symbols-outlined text-[17px] text-tertiary">mail</span>
+<span class="hidden sm:inline">Correo</span>
+</button>
+<button class="inline-flex items-center gap-1.5 px-3 h-9 rounded-lg bg-surface-container-low text-on-surface hover:bg-surface-container font-label-md text-label-md transition-colors" title="Compartir enlace por WhatsApp" type="button">
+<span class="material-symbols-outlined text-[17px] text-primary">chat</span>
+<span class="hidden sm:inline">WhatsApp</span>
+</button>
+<button class="inline-flex items-center gap-1.5 px-3 h-9 rounded-lg bg-surface-container-low text-on-surface hover:bg-surface-container font-label-md text-label-md transition-colors" title="Descargar proforma en PDF oficial" type="button">
+<span class="material-symbols-outlined text-[17px]">picture_as_pdf</span>
+<span class="hidden sm:inline">PDF</span>
+</button>
+<button class="inline-flex items-center gap-1.5 px-2.5 h-9 rounded-lg bg-surface-container-low text-on-surface hover:bg-surface-container font-label-md text-label-md transition-colors" title="Duplicar como nueva proforma" type="button">
+<span class="material-symbols-outlined text-[17px]">content_copy</span>
+</button>
+<!-- Main primary CTA -->
+<button class="inline-flex items-center gap-2 px-4 h-9 rounded-lg bg-primary text-on-primary font-label-md text-label-md shadow-sm hover:bg-primary-container active:scale-[0.98] transition-all" onclick="emitInvoiceModal()" type="button">
+<span class="material-symbols-outlined text-[18px]">receipt_long</span>
+<span>Aprobar y emitir factura F001</span>
+</button>
+</div>
+</div>
+<!-- Quick Meta strip -->
+<div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-space-sm mt-space-md pt-space-md border-0 bg-surface-container-low/70 p-3 rounded-lg">
+<div class="flex flex-col">
+<span class="font-label-sm text-[10px] text-outline uppercase tracking-wider">Fecha Emisión</span>
+<span class="font-label-md text-label-md text-on-surface">10/09/2026 <span class="font-normal text-[11px] text-on-surface-variant">09:15 AM</span></span>
+</div>
+<div class="flex flex-col">
+<span class="font-label-sm text-[10px] text-outline uppercase tracking-wider">Vencimiento</span>
+<div class="flex items-center gap-1">
+<span class="font-label-md text-label-md text-on-surface">25/09/2026</span>
+<span class="inline-flex px-1.5 py-0.2 rounded text-[10px] font-semibold bg-error-container text-on-error-container">Vence en 3 días</span>
+</div>
+</div>
+<div class="flex flex-col">
+<span class="font-label-sm text-[10px] text-outline uppercase tracking-wider">Moneda &amp; IGV</span>
+<span class="font-label-md text-label-md text-on-surface">PEN (Soles - S/) · IGV 18%</span>
+</div>
+<div class="flex flex-col">
+<span class="font-label-sm text-[10px] text-outline uppercase tracking-wider">Forma de Pago</span>
+<span class="font-label-md text-label-md text-on-surface">Crédito 30 días</span>
+</div>
+<div class="col-span-2 sm:col-span-4 lg:col-span-1 flex flex-col justify-center sm:items-end">
+<span class="font-label-sm text-[10px] text-outline uppercase tracking-wider">Total Cotizado</span>
+<span class="font-headline-md text-headline-md text-primary font-bold">S/ 15,930.00</span>
+</div>
+</div>
+</section>
+<!-- Horizontal Timeline Stepper -->
+<section class="bg-surface-container-lowest rounded-xl shadow-sm p-space-md mb-space-lg overflow-x-auto">
+<div class="min-w-[680px]">
+<div class="flex items-center justify-between relative px-2">
+<!-- Connecting line track -->
+<div class="absolute left-6 right-6 top-4 h-0.5 bg-surface-container-high -z-0"></div>
+<div class="absolute left-6 w-[75%] top-4 h-0.5 bg-primary -z-0"></div>
+<!-- Step 1 -->
+<div class="flex flex-col items-center text-center relative z-10 w-36">
+<div class="w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center text-[16px] shadow-sm mb-1.5">
+<span class="material-symbols-outlined text-[16px]">check</span>
+</div>
+<span class="font-label-md text-label-md text-on-surface leading-tight">Borrador</span>
+<span class="font-body-sm text-[11px] text-on-surface-variant">10/09 09:15 AM</span>
+</div>
+<!-- Step 2 -->
+<div class="flex flex-col items-center text-center relative z-10 w-36">
+<div class="w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center text-[16px] shadow-sm mb-1.5">
+<span class="material-symbols-outlined text-[16px]">check</span>
+</div>
+<span class="font-label-md text-label-md text-on-surface leading-tight">Enviada</span>
+<span class="font-body-sm text-[11px] text-on-surface-variant">10/09 11:30 AM · Mail/WA</span>
+</div>
+<!-- Step 3 -->
+<div class="flex flex-col items-center text-center relative z-10 w-36">
+<div class="w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center text-[16px] shadow-sm mb-1.5">
+<span class="material-symbols-outlined text-[16px]">check</span>
+</div>
+<span class="font-label-md text-label-md text-on-surface leading-tight">Vista por cliente</span>
+<span class="font-body-sm text-[11px] text-on-surface-variant">11/09 16:45 PM · 3 vistas</span>
+</div>
+<!-- Step 4 (Current / Active) -->
+<div class="flex flex-col items-center text-center relative z-10 w-44">
+<div class="w-8 h-8 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center shadow-md mb-1.5 ring-4 ring-primary/20">
+<span class="material-symbols-outlined text-[18px] text-primary font-bold">task_alt</span>
+</div>
+<div class="flex items-center gap-1">
+<span class="font-label-md text-label-md text-primary font-bold">Aprobada</span>
+<span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+</div>
+<span class="font-body-sm text-[11px] text-on-surface-variant">12/09 10:20 AM · J. Rojas</span>
+</div>
+<!-- Step 5 (Pending) -->
+<div class="flex flex-col items-center text-center relative z-10 w-36 opacity-60">
+<div class="w-8 h-8 rounded-full bg-surface-container text-outline flex items-center justify-center text-[15px] mb-1.5">
+<span class="material-symbols-outlined text-[16px]">receipt</span>
+</div>
+<span class="font-label-md text-label-md text-on-surface leading-tight">Facturada</span>
+<span class="font-body-sm text-[11px] text-outline">Emisión F001</span>
+</div>
+</div>
+</div>
+</section>
+<!-- 2-Column Responsive Body (Desktop 8 col / 4 col split) -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-space-lg items-start">
+<!-- LEFT COLUMN: Line Items & Fiscal Settlement (8 Cols) -->
+<div class="lg:col-span-8 space-y-space-lg flex flex-col">
+<!-- Line Items Section -->
+<section class="bg-surface-container-lowest rounded-xl shadow-sm p-space-md sm:p-space-lg">
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-space-md">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[20px]">dentistry</span>
+<h2 class="font-headline-md text-headline-md text-on-surface">Ítems de la Cotización</h2>
+<span class="bg-surface-container text-on-surface-variant px-2 py-0.5 rounded-full font-label-sm text-[11px]">4 servicios / insumos</span>
+</div>
+<div class="flex items-center gap-2 text-xs">
+<span class="text-on-surface-variant font-code-dense text-[11px] hidden sm:inline">Precios en Soles con IGV desglosado</span>
+<button class="inline-flex items-center gap-1 text-primary hover:text-primary-container font-label-sm text-label-sm" type="button">
+<span class="material-symbols-outlined text-[15px]">tune</span>
+<span>Reordenar</span>
+</button>
+</div>
+</div>
+<!-- Table Desktop / Tablet -->
+<div class="overflow-x-auto -mx-space-md sm:-mx-space-lg px-space-md sm:px-space-lg">
+<table class="w-full text-left font-body-sm text-body-sm min-w-[760px]">
+<thead>
+<tr class="bg-surface-container-low text-outline text-[11px] font-label-sm uppercase tracking-wider">
+<th class="py-2.5 px-2 text-center w-8">N°</th>
+<th class="py-2.5 px-3">Código / SKU</th>
+<th class="py-2.5 px-3">Descripción Odontológica / Tratamiento</th>
+<th class="py-2.5 px-2 text-center w-14">Cant.</th>
+<th class="py-2.5 px-2 text-center w-14">U.M.</th>
+<th class="py-2.5 px-3 text-right">V. Unitario</th>
+<th class="py-2.5 px-2 text-center w-16">Desc.</th>
+<th class="py-2.5 px-3 text-center">Afectación</th>
+<th class="py-2.5 px-3 text-right font-bold text-on-surface">Total (S/)</th>
+<th class="py-2.5 px-2 text-center w-12">Acción</th>
+</tr>
+</thead>
+<tbody class="text-on-surface">
+<!-- Item 1 -->
+<tr class="hover:bg-surface-container-low/50 transition-colors group">
+<td class="py-3 px-2 text-center font-code-dense text-outline">01</td>
+<td class="py-3 px-3 font-code-dense text-[12px] text-primary font-medium">TRAT-0089</td>
+<td class="py-3 px-3">
+<div class="font-label-md text-on-surface">Endodoncia Mecanizada Multirradicular</div>
+<div class="text-[11px] text-on-surface-variant">Piezas 1.6, 2.6 con obturación termoplástica y sellador biocerámico</div>
+</td>
+<td class="py-3 px-2 text-center font-code-dense">2</td>
+<td class="py-3 px-2 text-center">
+<span class="inline-block px-1.5 py-0.5 rounded bg-surface-container font-code-dense text-[10px]">ZZ</span>
+</td>
+<td class="py-3 px-3 text-right font-code-dense">450.00</td>
+<td class="py-3 px-2 text-center font-code-dense text-outline">0%</td>
+<td class="py-3 px-3 text-center">
+<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-label-sm bg-secondary-container/40 text-on-secondary-container">
+<span class="w-1 h-1 rounded-full bg-secondary"></span> 10 Gravado
+                  </span>
+</td>
+<td class="py-3 px-3 text-right font-code-dense font-bold text-on-surface">1,062.00</td>
+<td class="py-3 px-2 text-center">
+<div class="flex items-center justify-center opacity-40 group-hover:opacity-100 transition-opacity">
+<button class="p-1 text-on-surface-variant hover:text-primary" title="Editar" type="button"><span class="material-symbols-outlined text-[16px]">edit</span></button>
+</div>
+</td>
+</tr>
+<!-- Item 2 -->
+<tr class="hover:bg-surface-container-low/50 transition-colors group">
+<td class="py-3 px-2 text-center font-code-dense text-outline">02</td>
+<td class="py-3 px-3 font-code-dense text-[12px] text-primary font-medium">TRAT-0042</td>
+<td class="py-3 px-3">
+<div class="font-label-md text-on-surface">Restauración Estética Resina Nanohíbrida 3M Z350 XT</div>
+<div class="text-[11px] text-on-surface-variant">Reconstrucción anatómica en 3 superficies posteriores con garantía</div>
+</td>
+<td class="py-3 px-2 text-center font-code-dense">8</td>
+<td class="py-3 px-2 text-center">
+<span class="inline-block px-1.5 py-0.5 rounded bg-surface-container font-code-dense text-[10px]">ZZ</span>
+</td>
+<td class="py-3 px-3 text-right font-code-dense">120.00</td>
+<td class="py-3 px-2 text-center font-code-dense text-secondary font-semibold">5%</td>
+<td class="py-3 px-3 text-center">
+<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-label-sm bg-secondary-container/40 text-on-secondary-container">
+<span class="w-1 h-1 rounded-full bg-secondary"></span> 10 Gravado
+                  </span>
+</td>
+<td class="py-3 px-3 text-right font-code-dense font-bold text-on-surface">1,075.68</td>
+<td class="py-3 px-2 text-center">
+<div class="flex items-center justify-center opacity-40 group-hover:opacity-100 transition-opacity">
+<button class="p-1 text-on-surface-variant hover:text-primary" title="Editar" type="button"><span class="material-symbols-outlined text-[16px]">edit</span></button>
+</div>
+</td>
+</tr>
+<!-- Item 3 -->
+<tr class="hover:bg-surface-container-low/50 transition-colors group">
+<td class="py-3 px-2 text-center font-code-dense text-outline">03</td>
+<td class="py-3 px-3 font-code-dense text-[12px] text-primary font-medium">MAT-0104</td>
+<td class="py-3 px-3">
+<div class="font-label-md text-on-surface">Perno de Fibra de Vidrio + Reconstrucción de Muñón</div>
+<div class="text-[11px] text-on-surface-variant">Poste anatómico radiopaco y cementación dual autograbante</div>
+</td>
+<td class="py-3 px-2 text-center font-code-dense">2</td>
+<td class="py-3 px-2 text-center">
+<span class="inline-block px-1.5 py-0.5 rounded bg-surface-container font-code-dense text-[10px]">NIU</span>
+</td>
+<td class="py-3 px-3 text-right font-code-dense">280.00</td>
+<td class="py-3 px-2 text-center font-code-dense text-outline">0%</td>
+<td class="py-3 px-3 text-center">
+<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-label-sm bg-secondary-container/40 text-on-secondary-container">
+<span class="w-1 h-1 rounded-full bg-secondary"></span> 10 Gravado
+                  </span>
+</td>
+<td class="py-3 px-3 text-right font-code-dense font-bold text-on-surface">660.80</td>
+<td class="py-3 px-2 text-center">
+<div class="flex items-center justify-center opacity-40 group-hover:opacity-100 transition-opacity">
+<button class="p-1 text-on-surface-variant hover:text-primary" title="Editar" type="button"><span class="material-symbols-outlined text-[16px]">edit</span></button>
+</div>
+</td>
+</tr>
+<!-- Item 4 (Bulk Corporate) -->
+<tr class="hover:bg-surface-container-low/50 transition-colors group">
+<td class="py-3 px-2 text-center font-code-dense text-outline">04</td>
+<td class="py-3 px-3 font-code-dense text-[12px] text-primary font-medium">SERV-0012</td>
+<td class="py-3 px-3">
+<div class="font-label-md text-on-surface">Paquete Corporativo Odontograma y Profilaxis Ultrasónica</div>
+<div class="text-[11px] text-on-surface-variant">Atención dental preventiva para 40 colaboradores de Rimac Seguros S.A.</div>
+</td>
+<td class="py-3 px-2 text-center font-code-dense font-bold text-primary">40</td>
+<td class="py-3 px-2 text-center">
+<span class="inline-block px-1.5 py-0.5 rounded bg-surface-container font-code-dense text-[10px]">ZZ</span>
+</td>
+<td class="py-3 px-3 text-right font-code-dense">280.00</td>
+<td class="py-3 px-2 text-center font-code-dense text-secondary font-semibold">10%</td>
+<td class="py-3 px-3 text-center">
+<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-label-sm bg-secondary-container/40 text-on-secondary-container">
+<span class="w-1 h-1 rounded-full bg-secondary"></span> 10 Gravado
+                  </span>
+</td>
+<td class="py-3 px-3 text-right font-code-dense font-bold text-on-surface">11,944.80</td>
+<td class="py-3 px-2 text-center">
+<div class="flex items-center justify-center opacity-40 group-hover:opacity-100 transition-opacity">
+<button class="p-1 text-on-surface-variant hover:text-primary" title="Editar" type="button"><span class="material-symbols-outlined text-[16px]">edit</span></button>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Add Item Quick Action Bar -->
+<div class="pt-space-md flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
+<button class="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-surface-container-low text-primary hover:bg-surface-container font-label-md text-label-md transition-all group" type="button">
+<span class="material-symbols-outlined text-[18px] group-hover:scale-110 transition-transform">add_circle</span>
+<span>Agregar ítem del catálogo dental</span>
+<span class="hidden md:inline text-[10px] bg-surface-container px-1.5 py-0.5 rounded text-outline font-code-dense">F2</span>
+</button>
+<div class="flex items-center justify-end gap-2 text-on-surface-variant text-[11px] font-code-dense">
+<span class="material-symbols-outlined text-[14px]">shield</span>
+<span>Validación de catálogos odontológicos DIGEMID / SUNAT activa</span>
+</div>
+</div>
+</section>
+<!-- Tax Calculations & SUNAT Spot Settlement Block -->
+<section class="bg-surface-container-lowest rounded-xl shadow-sm p-space-md sm:p-space-lg">
+<div class="grid grid-cols-1 md:grid-cols-12 gap-space-md items-start">
+<!-- SPOT Detraction Banner (Left half of total card) -->
+<div class="md:col-span-6 space-y-space-sm">
+<div class="bg-surface-container-low p-3.5 rounded-lg space-y-2">
+<div class="flex items-center gap-1.5 text-tertiary font-label-md text-label-md">
+<span class="material-symbols-outlined text-[18px]">account_balance</span>
+<span>Sujeto a Detracción SPOT - SUNAT (12%)</span>
+</div>
+<p class="text-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+                Operación sujeta al Sistema de Pago de Obligaciones Tributarias con el Gobierno Central. Código de servicio: <strong class="text-on-surface">022 "Otros servicios empresariales"</strong>.
+              </p>
+<div class="bg-surface-container-lowest p-2.5 rounded text-[11px] font-code-dense text-on-surface space-y-1">
+<div class="flex justify-between">
+<span class="text-outline">Monto Detracción (12%):</span>
+<span class="font-bold text-tertiary">S/ 1,911.60</span>
+</div>
+<div class="flex justify-between">
+<span class="text-outline">Saldo Neto a Pagar Clínica:</span>
+<span class="font-bold text-on-surface">S/ 14,018.40</span>
+</div>
+<div class="flex justify-between pt-1 border-0">
+<span class="text-outline">Cta. Banco de la Nación:</span>
+<span class="text-primary font-bold">00-068-124859</span>
+</div>
+</div>
+</div>
+<!-- Additional Clinical Note Badge -->
+<div class="flex items-center gap-2 p-2.5 rounded-lg bg-secondary-container/30 text-on-secondary-container text-body-sm">
+<span class="material-symbols-outlined text-[17px] text-secondary">verified</span>
+<span>Incluye garantía clínica de 12 meses en restauraciones de resina.</span>
+</div>
+</div>
+<!-- Fiscal Breakdown Table (Right half of total card) -->
+<div class="md:col-span-6 flex flex-col justify-between">
+<div class="space-y-2 font-body-sm text-body-sm">
+<div class="flex justify-between items-center py-1">
+<span class="text-on-surface-variant">Operación Gravada</span>
+<span class="font-code-dense text-on-surface font-medium">S/ 13,500.00</span>
+</div>
+<div class="flex justify-between items-center py-1">
+<span class="text-on-surface-variant">Operación Inafecta / Exonerada</span>
+<span class="font-code-dense text-outline">S/ 0.00</span>
+</div>
+<div class="flex justify-between items-center py-1">
+<div class="flex items-center gap-1">
+<span class="text-secondary font-medium">Descuento Global (Convenio)</span>
+<span class="text-[10px] bg-secondary-container/60 text-on-secondary-container px-1 rounded">Promo</span>
+</div>
+<span class="font-code-dense text-secondary font-bold">- S/ 1,350.00</span>
+</div>
+<div class="flex justify-between items-center py-1 bg-surface-container-low px-2 rounded">
+<span class="text-on-surface font-label-sm">Base Imponible Neta</span>
+<span class="font-code-dense text-on-surface font-bold">S/ 13,500.00</span>
+</div>
+<div class="flex justify-between items-center py-1">
+<div class="flex items-center gap-1">
+<span class="text-on-surface-variant">I.G.V. Oficial (18%)</span>
+<span class="text-[10px] text-outline font-code-dense">Ley 29215</span>
+</div>
+<span class="font-code-dense text-on-surface font-medium">S/ 2,430.00</span>
+</div>
+<!-- Grand Total Accentuated -->
+<div class="pt-2">
+<div class="flex justify-between items-center bg-primary text-on-primary p-3 rounded-lg shadow-sm">
+<div>
+<div class="font-label-sm text-[11px] uppercase tracking-wider text-on-primary-container">Importe Total Cotizado</div>
+<div class="text-[10px] text-on-primary/80 font-code-dense">Incluye impuestos de ley</div>
+</div>
+<div class="text-right">
+<div class="font-headline-lg text-headline-lg font-bold">S/ 15,930.00</div>
+<div class="text-[10px] text-on-primary-container font-code-dense">QUINCE MIL NOVECIENTOS TREINTA Y 00/100 SOLES</div>
+</div>
+</div>
+</div>
+<!-- Retención 3% reminder -->
+<div class="text-right text-[11px] text-outline font-code-dense pt-1">
+                Retención 3% Agente: - S/ 477.90 (Neto a percibir: S/ 15,452.10)
+              </div>
+</div>
+</div>
+</div>
+</section>
+</div>
+<!-- RIGHT COLUMN: Operational Management Cards (4 Cols) -->
+<div class="lg:col-span-4 space-y-space-lg flex flex-col">
+<!-- Card 1: Commercial & Payment Terms -->
+<section class="bg-surface-container-lowest rounded-xl shadow-sm p-space-md">
+<div class="flex items-center justify-between pb-space-sm mb-space-sm">
+<div class="flex items-center gap-1.5 text-on-surface font-headline-sm text-headline-sm">
+<span class="material-symbols-outlined text-primary text-[18px]">gavel</span>
+<h3>Condiciones Comerciales</h3>
+</div>
+<span class="text-[10px] font-label-sm bg-surface-container px-2 py-0.5 rounded text-on-surface-variant">Contrato Marco</span>
+</div>
+<dl class="space-y-2.5 font-body-sm text-body-sm">
+<div class="flex justify-between items-center py-1">
+<dt class="text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[15px] text-outline">schedule</span>
+              Validez Oferta
+            </dt>
+<dd class="font-label-md text-on-surface">15 días (al 25/09/2026)</dd>
+</div>
+<div class="flex justify-between items-center py-1">
+<dt class="text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[15px] text-outline">credit_card</span>
+              Forma de Pago
+            </dt>
+<dd class="font-label-md text-primary">Crédito a 30 días</dd>
+</div>
+<div class="flex justify-between items-center py-1">
+<dt class="text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[15px] text-outline">currency_exchange</span>
+              Moneda Pago
+            </dt>
+<dd class="font-code-dense text-on-surface">Soles (PEN - S/)</dd>
+</div>
+<div class="flex justify-between items-center py-1">
+<dt class="text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[15px] text-outline">trending_up</span>
+              Tipo de Cambio
+            </dt>
+<dd class="font-code-dense text-on-surface-variant">C: 3.742 · V: 3.750</dd>
+</div>
+<div class="flex justify-between items-start py-1">
+<dt class="text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[15px] text-outline">storefront</span>
+              Sedes Válidas
+            </dt>
+<dd class="font-body-sm text-right text-on-surface">
+<div>Miraflores (Principal)</div>
+<div class="text-[11px] text-outline">San Isidro (Consultorios)</div>
+</dd>
+</div>
+<div class="p-2.5 rounded-lg bg-surface-container-low space-y-1 mt-1">
+<div class="flex items-center justify-between text-[11px] font-label-md text-on-surface">
+<span class="flex items-center gap-1 text-tertiary">
+<span class="material-symbols-outlined text-[14px]">shield_person</span>
+                Régimen de Retención
+              </span>
+<span class="text-secondary font-bold">Aplica 3%</span>
+</div>
+<p class="text-[11px] text-on-surface-variant leading-tight">
+              Rimac emitirá Comprobante de Retención Electrónico (CRE) por <span class="font-code-dense font-medium text-on-surface">S/ 477.90</span> al vencimiento.
+            </p>
+</div>
+</dl>
+</section>
+<!-- Card 2: Activity History & Audit Trail -->
+<section class="bg-surface-container-lowest rounded-xl shadow-sm p-space-md">
+<div class="flex items-center justify-between pb-space-sm mb-space-sm">
+<div class="flex items-center gap-1.5 text-on-surface font-headline-sm text-headline-sm">
+<span class="material-symbols-outlined text-primary text-[18px]">history</span>
+<h3>Historial de Seguimiento</h3>
+</div>
+<span class="font-code-dense text-[10px] text-outline">4 eventos</span>
+</div>
+<ol class="relative pl-4 space-y-3.5 before:absolute before:left-1.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-surface-container-high">
+<!-- Event 1 (Most recent) -->
+<li class="relative pl-3">
+<span class="absolute -left-[18px] top-0.5 w-3 h-3 rounded-full bg-primary ring-4 ring-surface-container-lowest"></span>
+<div class="flex items-center justify-between">
+<span class="font-label-md text-label-md text-primary">Cotización Aprobada</span>
+<span class="font-code-dense text-[10px] text-outline">12/09 10:20</span>
+</div>
+<p class="text-[11px] text-on-surface mt-0.5">
+              Aprobada por <strong>Juan Rojas</strong> (Jefe Compras Rimac EPS).
+            </p>
+<div class="inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded bg-surface-container text-on-surface font-code-dense text-[10px]">
+<span class="material-symbols-outlined text-[12px]">attachment</span>
+              O/C Interna: OC-RIMAC-8841.pdf
+            </div>
+</li>
+<!-- Event 2 -->
+<li class="relative pl-3">
+<span class="absolute -left-[18px] top-0.5 w-3 h-3 rounded-full bg-tertiary ring-4 ring-surface-container-lowest"></span>
+<div class="flex items-center justify-between">
+<span class="font-label-md text-label-md text-on-surface">Visualizada por cliente</span>
+<span class="font-code-dense text-[10px] text-outline">11/09 16:45</span>
+</div>
+<p class="text-[11px] text-on-surface-variant mt-0.5">
+              Abierta por 3ra vez desde IP corporativa Rimac (Lima, San Isidro).
+            </p>
+</li>
+<!-- Event 3 -->
+<li class="relative pl-3">
+<span class="absolute -left-[18px] top-0.5 w-3 h-3 rounded-full bg-outline-variant ring-4 ring-surface-container-lowest"></span>
+<div class="flex items-center justify-between">
+<span class="font-label-md text-label-md text-on-surface">Envío Multicanal</span>
+<span class="font-code-dense text-[10px] text-outline">10/09 11:30</span>
+</div>
+<p class="text-[11px] text-on-surface-variant mt-0.5">
+              Enviado a <span class="font-code-dense">compras@rimac.com.pe</span> y WhatsApp corporativo.
+            </p>
+</li>
+<!-- Event 4 -->
+<li class="relative pl-3">
+<span class="absolute -left-[18px] top-0.5 w-3 h-3 rounded-full bg-outline-variant ring-4 ring-surface-container-lowest"></span>
+<div class="flex items-center justify-between">
+<span class="font-label-md text-label-md text-on-surface">Creación Proforma</span>
+<span class="font-code-dense text-[10px] text-outline">10/09 09:15</span>
+</div>
+<p class="text-[11px] text-on-surface-variant mt-0.5">
+              Elaborada por Dr. Carlos Mendoza (Especialista en Rehabilitación).
+            </p>
+</li>
+</ol>
+</section>
+<!-- Card 3: Internal Notes & Instructions -->
+<section class="bg-surface-container-lowest rounded-xl shadow-sm p-space-md">
+<div class="flex items-center justify-between pb-space-sm mb-space-sm">
+<div class="flex items-center gap-1.5 text-on-surface font-headline-sm text-headline-sm">
+<span class="material-symbols-outlined text-primary text-[18px]">sticky_note_2</span>
+<h3>Notas y Observaciones</h3>
+</div>
+<span class="text-[10px] font-label-sm text-secondary flex items-center gap-0.5">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span> Guardado
+          </span>
+</div>
+<form class="space-y-space-sm" id="notes-form" onsubmit="event.preventDefault(); showSavedToast();">
+<label class="block font-label-sm text-[11px] text-on-surface-variant" for="internal-notes">
+            Instrucciones para Facturación y Admisión Clínica:
+          </label>
+<textarea class="w-full text-body-sm font-body-sm text-on-surface bg-surface-container-low rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all resize-none" id="internal-notes" placeholder="Ingrese notas internas..." rows="4">Convenio corporativo 2026. Pacientes derivados deben presentar fotocheck y carnet digital de asegurado. Facturar con O/C N° 8841 a fin de mes.</textarea>
+<div class="flex items-center justify-between pt-1">
+<span class="text-[10px] text-outline font-code-dense">Visible solo para personal clínico</span>
+<button class="inline-flex items-center gap-1 px-3 py-1.5 rounded bg-surface-container text-primary hover:bg-primary hover:text-on-primary font-label-md text-label-md transition-all" type="submit">
+<span class="material-symbols-outlined text-[15px]">save</span>
+<span>Guardar notas</span>
+</button>
+</div>
+</form>
+</section>
+<!-- Audit Meta Footer -->
+<div class="p-3 bg-surface-container-low/60 rounded-lg flex items-center justify-between font-code-dense text-[11px] text-outline">
+<span>Hash de Integridad: SHA256:4b91...de3a</span>
+<span>v1.2</span>
+</div>
+</div>
+</div>
+<!-- Mobile Sticky Bottom Conversion Bar (Visible only on < 768px screens) -->
+<div class="md:hidden fixed bottom-16 left-0 right-0 z-40 bg-surface/95 backdrop-blur-md px-margin py-2.5 shadow-lg flex items-center justify-between gap-3">
+<div class="flex flex-col">
+<span class="text-[10px] uppercase font-label-sm text-outline">Total Aprobado</span>
+<span class="font-headline-sm text-headline-sm text-primary font-bold">S/ 15,930.00</span>
+</div>
+<button class="flex-1 max-w-[210px] h-10 rounded-lg bg-primary text-on-primary font-label-md text-label-md flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all" onclick="emitInvoiceModal()" type="button">
+<span class="material-symbols-outlined text-[18px]">receipt_long</span>
+<span>Emitir Factura F001</span>
+</button>
+</div>
+<!-- Toast Notification Simulator -->
+<div class="fixed top-20 right-4 z-50 transform translate-y-4 opacity-0 pointer-events-none transition-all duration-300 flex items-center gap-2 bg-inverse-surface text-inverse-on-surface px-4 py-2.5 rounded-lg shadow-xl font-body-sm text-body-sm" id="save-toast">
+<span class="material-symbols-outlined text-inverse-primary text-[20px]">check_circle</span>
+<span id="toast-message">Notas internas actualizadas correctamente.</span>
+</div>
+<!-- Micro Modal Simulation for Electronic Invoicing Approval -->
+<dialog class="rounded-xl p-0 bg-transparent backdrop:bg-on-surface/40 max-w-md w-full mx-auto my-auto shadow-2xl" id="invoice-modal">
+<div class="bg-surface-container-lowest p-space-lg rounded-xl text-on-surface space-y-space-md">
+<div class="flex items-center justify-between pb-2">
+<div class="flex items-center gap-2 text-primary font-headline-sm text-headline-sm">
+<span class="material-symbols-outlined text-[24px]">verified</span>
+<h4>Emisión de Factura Electrónica</h4>
+</div>
+<button class="text-on-surface-variant hover:text-on-surface" onclick="closeInvoiceModal()" type="button">
+<span class="material-symbols-outlined text-[20px]">close</span>
+</button>
+</div>
+<p class="text-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+        Se generará el Comprobante de Pago Electrónico con la siguiente serie para <strong class="text-on-surface">Rimac Seguros y Reaseguros S.A.</strong>:
+      </p>
+<div class="bg-surface-container-low p-3 rounded-lg space-y-1.5 font-code-dense text-body-sm">
+<div class="flex justify-between">
+<span class="text-outline">Serie correlativa:</span>
+<span class="font-bold text-primary">F001-0004928</span>
+</div>
+<div class="flex justify-between">
+<span class="text-outline">RUC Receptor:</span>
+<span>20100041953</span>
+</div>
+<div class="flex justify-between">
+<span class="text-outline">Monto Total:</span>
+<span class="font-bold text-on-surface">S/ 15,930.00</span>
+</div>
+<div class="flex justify-between">
+<span class="text-outline">Envío SUNAT:</span>
+<span class="text-secondary font-bold">Sincronización Inmediata OSE</span>
+</div>
+</div>
+<div class="flex justify-end gap-2 pt-2">
+<button class="px-3.5 py-2 rounded-lg bg-surface-container text-on-surface font-label-md text-label-md hover:bg-surface-container-high transition-colors" onclick="closeInvoiceModal()" type="button">
+          Cancelar
+        </button>
+<button class="px-4 py-2 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:bg-primary-container transition-all flex items-center gap-1.5" onclick="confirmEmission()" type="button">
+<span class="material-symbols-outlined text-[17px]">send</span>
+<span>Emitir a SUNAT</span>
+</button>
+</div>
+</div>
+</dialog>
+</div>
+<script>
+  // Quick theme switcher logic honoring CSS classes
+  function setAppTheme(mode) {
+    const htmlEl = document.documentElement;
+    const btnLight = document.getElementById('btn-theme-light');
+    const btnDark = document.getElementById('btn-theme-dark');
+    const btnSys = document.getElementById('btn-theme-sys');
+
+    const resetBtns = () => {
+      [btnLight, btnDark, btnSys].forEach(btn => {
+        btn.classList.remove('bg-surface-container-lowest', 'text-primary', 'shadow-sm');
+        btn.classList.add('text-on-surface-variant');
+      });
+    };
+
+    resetBtns();
+
+    if (mode === 'dark') {
+      htmlEl.classList.add('dark');
+      btnDark.classList.add('bg-surface-container-lowest', 'text-primary', 'shadow-sm');
+      btnDark.classList.remove('text-on-surface-variant');
+    } else if (mode === 'light') {
+      htmlEl.classList.remove('dark');
+      btnLight.classList.add('bg-surface-container-lowest', 'text-primary', 'shadow-sm');
+      btnLight.classList.remove('text-on-surface-variant');
+    } else {
+      // System mode
+      btnSys.classList.add('bg-surface-container-lowest', 'text-primary', 'shadow-sm');
+      btnSys.classList.remove('text-on-surface-variant');
+      if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        htmlEl.classList.add('dark');
+      } else {
+        htmlEl.classList.remove('dark');
+      }
+    }
+  }
+
+  // Toast feedback micro-interaction
+  function showSavedToast(msg) {
+    const toast = document.getElementById('save-toast');
+    const toastText = document.getElementById('toast-message');
+    if (msg) toastText.textContent = msg;
+    toast.classList.remove('translate-y-4', 'opacity-0', 'pointer-events-none');
+    toast.classList.add('translate-y-0', 'opacity-100');
+
+    setTimeout(() => {
+      toast.classList.add('translate-y-4', 'opacity-0', 'pointer-events-none');
+      toast.classList.remove('translate-y-0', 'opacity-100');
+    }, 2800);
+  }
+
+  // Modal interactions
+  const modal = document.getElementById('invoice-modal');
+
+  function emitInvoiceModal() {
+    if (modal) {
+      modal.showModal();
+    }
+  }
+
+  function closeInvoiceModal() {
+    if (modal) {
+      modal.close();
+    }
+  }
+
+  function confirmEmission() {
+    closeInvoiceModal();
+    showSavedToast('¡Factura F001-0004928 emitida exitosamente a SUNAT!');
+  }
+</script></main><div class="fixed bottom-20 right-4 z-50"><a aria-label="Nueva Venta POS" class="flex items-center justify-center w-14 h-14 rounded-full bg-primary-container text-on-primary shadow-lg hover:opacity-95 active:scale-95 transition-all" data-path="nueva-venta-pos" href="#"><span class="material-symbols-outlined text-[26px]">add</span></a></div><nav class="fixed bottom-0 w-full z-50 pb-safe bg-surface/90 backdrop-blur-xl shadow-[0_-2px_12px_rgba(0,0,0,0.06)]" data-active-classes="text-primary font-bold"><div class="flex justify-around items-center h-16 px-space-xs"><a aria-current="page" class="flex flex-col items-center justify-center gap-0.5 w-16 h-12 transition-colors text-primary font-bold" data-path="inicio" href="#"><span class="material-symbols-outlined text-[20px]">home</span><span class="font-label-sm text-label-sm">Inicio</span></a><a class="flex flex-col items-center justify-center gap-0.5 w-16 h-12 text-on-surface-variant hover:text-on-surface transition-colors" data-path="ventas" href="#"><span class="material-symbols-outlined text-[20px]">point_of_sale</span><span class="font-label-sm text-label-sm">Ventas</span></a><a class="flex flex-col items-center justify-center gap-0.5 w-16 h-12 text-on-surface-variant hover:text-on-surface transition-colors" data-path="clientes" href="#"><span class="material-symbols-outlined text-[20px]">group</span><span class="font-label-sm text-label-sm">Clientes</span></a><a class="flex flex-col items-center justify-center gap-0.5 w-16 h-12 text-on-surface-variant hover:text-on-surface transition-colors" data-path="inventario" href="#"><span class="material-symbols-outlined text-[20px]">inventory_2</span><span class="font-label-sm text-label-sm">Inventario</span></a><a class="flex flex-col items-center justify-center gap-0.5 w-16 h-12 text-on-surface-variant hover:text-on-surface transition-colors" data-path="mas-opciones" href="#"><span class="material-symbols-outlined text-[20px]">more_horiz</span><span class="font-label-sm text-label-sm">Más</span></a></div></nav></body></html>

@@ -1,0 +1,1127 @@
+<!DOCTYPE html>
+
+<html class="h-full bg-[#F5F6FA]" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>PerúSaaS Admin | Detalle de Empresa Cliente - OdontoSalud</title>
+<!-- Google Font Inter -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap&family=Geist+Mono:wght@400;500;600" rel="stylesheet"/>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Lucide Icons -->
+<script src="https://unpkg.com/lucide@latest"></script>
+<!-- Tailwind CSS v3 -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "surface": "#faf8ff",
+            "primary": "#3525cd",
+            "on-primary-fixed": "#0f0069",
+            "inverse-primary": "#c3c0ff",
+            "surface-container-highest": "#dae2fd",
+            "on-primary": "#ffffff",
+            "outline-variant": "#c7c4d8",
+            "background": "#faf8ff",
+            "secondary-fixed-dim": "#d2bbff",
+            "primary-fixed-dim": "#c3c0ff",
+            "on-primary-container": "#dad7ff",
+            "surface-tint": "#4d44e3",
+            "surface-bright": "#faf8ff",
+            "surface-dim": "#d2d9f4",
+            "on-secondary-fixed-variant": "#5a00c6",
+            "outline": "#777587",
+            "secondary-container": "#8a4cfc",
+            "on-tertiary-fixed-variant": "#005137",
+            "on-tertiary-fixed": "#002114",
+            "error-container": "#ffdad6",
+            "inverse-on-surface": "#eef0ff",
+            "primary-container": "#4f46e5",
+            "surface-container-lowest": "#ffffff",
+            "on-secondary": "#ffffff",
+            "surface-container-low": "#f2f3ff",
+            "secondary": "#712ae2",
+            "error": "#ba1a1a",
+            "surface-variant": "#dae2fd",
+            "on-background": "#131b2e",
+            "surface-container": "#eaedff",
+            "tertiary-container": "#006e4c",
+            "tertiary-fixed-dim": "#68dba9",
+            "inverse-surface": "#283044",
+            "on-error": "#ffffff",
+            "surface-container-high": "#e2e7ff",
+            "primary-fixed": "#e2dfff",
+            "on-tertiary-container": "#7df1bd",
+            "on-primary-fixed-variant": "#3323cc",
+            "on-surface": "#131b2e",
+            "secondary-fixed": "#eaddff",
+            "tertiary-fixed": "#85f8c4",
+            "on-secondary-container": "#fffbff",
+            "on-tertiary": "#ffffff",
+            "tertiary": "#005338",
+            "on-secondary-fixed": "#25005a",
+            "on-error-container": "#93000a",
+            "on-surface-variant": "#464555"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "spacing": {
+            "space-md": "1rem",
+            "margin": "2rem",
+            "space-sm": "0.5rem",
+            "space-xl": "2rem",
+            "space-xs": "0.25rem",
+            "space-lg": "1.5rem",
+            "gutter": "1.5rem"
+          },
+          "fontFamily": {
+            "label-lg": ["Geist"],
+            "headline-sm": ["Geist"],
+            "mono-data": ["Geist"],
+            "display-lg": ["Geist"],
+            "label-md": ["Geist"],
+            "label-sm": ["Geist"],
+            "body-lg": ["Geist"],
+            "body-sm": ["Geist"],
+            "display-sm": ["Geist"],
+            "headline-lg": ["Geist"],
+            "headline-md": ["Geist"],
+            "body-md": ["Geist"]
+          },
+          "fontSize": {
+            "label-lg": ["14px", { "lineHeight": "20px", "fontWeight": "500" }],
+            "headline-sm": ["16px", { "lineHeight": "24px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+            "mono-data": ["13px", { "lineHeight": "18px", "letterSpacing": "-0.01em", "fontWeight": "500" }],
+            "display-lg": ["36px", { "lineHeight": "44px", "letterSpacing": "-0.025em", "fontWeight": "700" }],
+            "label-md": ["13px", { "lineHeight": "18px", "fontWeight": "500" }],
+            "label-sm": ["11px", { "lineHeight": "14px", "letterSpacing": "0.04em", "fontWeight": "600" }],
+            "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+            "body-sm": ["12px", { "lineHeight": "16px", "fontWeight": "400" }],
+            "display-sm": ["28px", { "lineHeight": "36px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+            "headline-lg": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+            "headline-md": ["20px", { "lineHeight": "28px", "letterSpacing": "-0.015em", "fontWeight": "600" }],
+            "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-family: 'Material Symbols Outlined';
+      font-weight: normal;
+      font-style: normal;
+      font-size: 20px;
+      line-height: 1;
+      letter-spacing: normal;
+      text-transform: none;
+      display: inline-block;
+      white-space: nowrap;
+      word-wrap: normal;
+      direction: ltr;
+      -webkit-font-smoothing: antialiased;
+    }
+    @keyframes spin-slow {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .animate-spin-slow {
+      animation: spin-slow 8s linear infinite;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #F1F5F9;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #CBD5E1;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body class="bg-[#F5F6FA] text-on-surface antialiased font-body-md text-body-md min-h-screen flex flex-col">
+<!-- =====================================================================
+       SHARED COMPONENT: SideNavBar (Strict implementation from JSON & Blueprint)
+       ===================================================================== -->
+<aside class="fixed inset-y-0 left-0 flex flex-col justify-between w-64 h-full bg-inverse-surface border-r border-outline-variant p-4 z-40">
+<!-- Brand Header -->
+<div class="flex flex-col gap-3">
+<div class="flex items-center gap-3 px-2 py-1">
+<div class="w-10 h-10 rounded-lg bg-primary-container flex items-center justify-center text-surface shadow-md">
+<span class="material-symbols-outlined">domain</span>
+</div>
+<div class="overflow-hidden">
+<div class="text-headline-sm font-headline-sm font-bold text-surface truncate">PerúSaaS Admin</div>
+<div class="text-[11px] text-emerald-400 font-medium flex items-center gap-1.5 truncate">
+<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            Cluster Región PE-Lima (Saludable)
+          </div>
+</div>
+</div>
+<!-- Quick Action CTA -->
+<button class="w-full h-10 px-4 mt-1 bg-primary-container hover:bg-[#4338CA] text-surface rounded-lg font-label-md text-label-md flex items-center justify-center gap-2 transition-colors shadow-sm">
+<i class="w-4 h-4" data-lucide="plus-circle"></i>
+<span>Nuevo Tenant</span>
+</button>
+<!-- Main Navigation -->
+<nav class="mt-4 flex flex-col gap-1">
+<!-- 1. Panel General -->
+<a class="text-outline-variant hover:text-surface hover:bg-surface-variant/10 px-4 py-2.5 flex items-center gap-3 transition-colors duration-150 rounded-lg" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-label-md text-label-md">Panel General</span>
+</a>
+<!-- 2. Tenants y Sedes (ACTIVE - Intent match with Empresa Cliente Detalle) -->
+<a class="bg-surface-variant/20 text-surface border-l-4 border-primary-container font-medium px-4 py-2.5 flex items-center justify-between transition-colors duration-150 rounded-r-lg" href="#">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined">domain</span>
+<span class="font-label-md text-label-md">Tenants y Sedes</span>
+</div>
+<span class="bg-[#1E293B] text-primary-fixed-dim text-label-sm font-label-sm px-2 py-0.5 rounded-full border border-slate-700">1,482</span>
+</a>
+<!-- 3. Facturación y Núcleo -->
+<a class="text-outline-variant hover:text-surface hover:bg-surface-variant/10 px-4 py-2.5 flex items-center gap-3 transition-colors duration-150 rounded-lg" href="#">
+<span class="material-symbols-outlined">receipt_long</span>
+<span class="font-label-md text-label-md">Facturación y Núcleo</span>
+</a>
+<!-- 4. Certificados y OSE -->
+<a class="text-outline-variant hover:text-surface hover:bg-surface-variant/10 px-4 py-2.5 flex items-center gap-3 transition-colors duration-150 rounded-lg" href="#">
+<span class="material-symbols-outlined">verified_user</span>
+<span class="font-label-md text-label-md">Certificados y OSE</span>
+</a>
+<!-- 5. Auditoría de Acciones -->
+<a class="text-outline-variant hover:text-surface hover:bg-surface-variant/10 px-4 py-2.5 flex items-center gap-3 transition-colors duration-150 rounded-lg" href="#">
+<span class="material-symbols-outlined">history</span>
+<span class="font-label-md text-label-md">Auditoría de Acciones</span>
+</a>
+<!-- 6. Configuración Global -->
+<a class="text-outline-variant hover:text-surface hover:bg-surface-variant/10 px-4 py-2.5 flex items-center gap-3 transition-colors duration-150 rounded-lg" href="#">
+<span class="material-symbols-outlined">tune</span>
+<span class="font-label-md text-label-md">Configuración Global</span>
+</a>
+</nav>
+</div>
+<!-- Navigation Footer -->
+<div class="pt-4 border-t border-slate-700/60 flex flex-col gap-1">
+<a class="text-outline-variant hover:text-surface hover:bg-surface-variant/10 px-4 py-2.5 flex items-center gap-3 transition-colors duration-150 rounded-lg" href="#">
+<span class="material-symbols-outlined">support_agent</span>
+<span class="font-label-md text-label-md">Soporte Nivel 3</span>
+</a>
+<a class="text-outline-variant hover:text-surface hover:bg-surface-variant/10 px-4 py-2.5 flex items-center gap-3 transition-colors duration-150 rounded-lg" href="#">
+<span class="material-symbols-outlined">admin_panel_settings</span>
+<span class="font-label-md text-label-md">Ajustes SuperAdmin</span>
+</a>
+<div class="px-4 py-2 mt-2 bg-slate-900/50 rounded-lg border border-slate-800 text-[11px] text-slate-400">
+<div class="font-medium text-slate-300">Cluster PE-01 (Lima)</div>
+<div>Uptime: 99.98% SLA</div>
+</div>
+</div>
+</aside>
+<!-- =====================================================================
+       SHARED COMPONENT: TopNavBar (Exact mapping from Blueprint & JSON)
+       ===================================================================== -->
+<header class="fixed top-0 left-0 right-0 h-16 bg-surface-container-lowest border-b border-outline-variant z-30 pl-64 flex items-center justify-between px-8 shadow-sm">
+<!-- Left Cluster: Search & Breadcrumbs -->
+<div class="flex items-center gap-6 flex-1 max-w-2xl">
+<!-- Breadcrumb Navigation -->
+<div class="flex items-center gap-2 text-body-sm font-body-sm text-slate-500 whitespace-nowrap hidden lg:flex">
+<span>Plataforma</span>
+<i class="w-3.5 h-3.5 text-slate-400" data-lucide="chevron-right"></i>
+<a class="text-on-surface hover:text-primary-container font-medium" href="#">Empresas (Tenants)</a>
+<i class="w-3.5 h-3.5 text-slate-400" data-lucide="chevron-right"></i>
+<span class="text-primary-container font-semibold truncate max-w-[200px]">Clínica Dental OdontoSalud</span>
+</div>
+<!-- Quick Platform Search Field (Strict 40px height) -->
+<div class="relative flex-1 max-w-sm">
+<div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+<i class="w-4 h-4" data-lucide="search"></i>
+</div>
+<input class="w-full h-10 pl-9 pr-10 text-body-md font-body-md rounded-lg border border-slate-300 bg-white placeholder:text-slate-400 focus:outline-none focus:border-primary-container focus:ring-2 focus:ring-primary-container/20 transition-all" placeholder="Buscar por RUC, ID o razón social..." type="text"/>
+<div class="absolute inset-y-0 right-0 pr-2.5 flex items-center pointer-events-none">
+<kbd class="px-1.5 py-0.5 text-[10px] font-mono text-slate-400 bg-slate-100 rounded border border-slate-200">⌘K</kbd>
+</div>
+</div>
+</div>
+<!-- Right Cluster: Telemetry & Actions -->
+<div class="flex items-center gap-3">
+<!-- SUNAT Sync Live Pill -->
+<div class="hidden xl:flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-body-sm font-medium">
+<i class="w-3.5 h-3.5 animate-spin-slow text-emerald-600" data-lucide="refresh-cw"></i>
+<span>Sincronizado SUNAT: 15:44:12</span>
+</div>
+<!-- Currency Metric Pill -->
+<div class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 text-body-sm font-medium border border-slate-200">
+<i class="w-3.5 h-3.5 text-slate-500" data-lucide="coins"></i>
+<span>Moneda: Soles (S/)</span>
+</div>
+<div class="h-6 w-px bg-slate-200 mx-1 hidden sm:block"></div>
+<!-- Primary & Secondary Trailing Actions from JSON -->
+<button class="h-10 px-4 bg-primary-container hover:bg-[#4338CA] text-white rounded-lg font-label-md text-label-md flex items-center gap-2 transition-all shadow-sm">
+<i class="w-4 h-4" data-lucide="user-check"></i>
+<span>Impersonar Tenant</span>
+</button>
+<button class="h-10 px-3.5 bg-white hover:bg-rose-50 border border-rose-200 text-rose-600 hover:border-rose-300 rounded-lg font-label-md text-label-md flex items-center gap-1.5 transition-all">
+<i class="w-4 h-4 text-rose-600" data-lucide="ban"></i>
+<span>Suspender Cuenta</span>
+</button>
+<!-- Trailing Icon Actions -->
+<button class="h-10 w-10 flex items-center justify-center rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 transition-colors" title="Sincronizar Datos">
+<span class="material-symbols-outlined text-[18px]">sync</span>
+</button>
+<button class="h-10 w-10 relative flex items-center justify-center rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 transition-colors" title="Notificaciones del Sistema">
+<span class="material-symbols-outlined text-[18px]">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 rounded-full bg-rose-500"></span>
+</button>
+<!-- Super Admin Profile -->
+<div class="flex items-center gap-2 pl-2 border-l border-slate-200">
+<div class="w-9 h-9 rounded-full bg-slate-900 flex items-center justify-center text-white font-semibold text-xs ring-2 ring-indigo-500/20">
+          SA
+        </div>
+</div>
+</div>
+</header>
+<!-- =====================================================================
+       MAIN OPERATIONAL CANVAS (Plataforma Super-Admin 1440px Optimization)
+       ===================================================================== -->
+<main class="pl-64 pt-16 flex-1 flex flex-col min-w-0">
+<div class="w-full max-w-[1440px] mx-auto p-6 md:p-8 flex flex-col gap-6">
+<!-- ===================================================================
+           1. TENANT HEADER (Cabecera de Empresa Cliente)
+           =================================================================== -->
+<section class="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
+<div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+<!-- Entity Identity Cluster -->
+<div class="flex items-start gap-4">
+<!-- Monogram Avatar -->
+<div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#4F46E5] to-[#7C3AED] flex items-center justify-center text-white font-bold text-2xl tracking-tight shadow-md flex-shrink-0">
+              OD
+            </div>
+<div class="flex flex-col gap-1.5">
+<div class="flex flex-wrap items-center gap-3">
+<h1 class="text-headline-lg font-headline-lg text-slate-900 tracking-tight">Clínica Dental OdontoSalud S.A.C.</h1>
+<!-- Tenant ID Pill -->
+<span class="px-2.5 py-0.5 rounded bg-slate-100 border border-slate-300 text-slate-600 text-mono-data font-mono-data">
+                  TEN-104
+                </span>
+<!-- Status Badge (Active with Pulse) -->
+<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                  Activa
+                </span>
+<!-- OSE Connector Status -->
+<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200">
+<i class="w-3.5 h-3.5 text-indigo-600" data-lucide="wifi"></i>
+                  Bizlinks OSE (Certificado Activo)
+                </span>
+</div>
+<!-- Secondary Metas -->
+<div class="flex flex-wrap items-center gap-y-1 gap-x-4 text-body-sm font-body-sm text-slate-500">
+<!-- RUC with Interactive Copy -->
+<div class="flex items-center gap-1 bg-slate-50 px-2 py-0.5 rounded border border-slate-200">
+<span class="font-medium text-slate-700">RUC:</span>
+<span class="font-mono-data font-mono" id="ruc-value">20601984211</span>
+<button class="hover:text-primary ml-1 text-slate-400 hover:text-slate-700" onclick="navigator.clipboard.writeText('20601984211'); alert('RUC copiado al portapapeles');" title="Copiar RUC">
+<i class="w-3.5 h-3.5" data-lucide="copy"></i>
+</button>
+</div>
+<!-- Sede Matriz -->
+<div class="flex items-center gap-1 text-slate-600">
+<i class="w-4 h-4 text-slate-400" data-lucide="map-pin"></i>
+<span>Av. José Pardo 601, Miraflores, Lima</span>
+</div>
+<!-- Rubro Pill -->
+<div class="flex items-center gap-1 bg-violet-50 text-violet-700 px-2.5 py-0.5 rounded-full border border-violet-200 text-xs font-medium">
+<i class="w-3.5 h-3.5" data-lucide="smile"></i>
+<span>Odontología</span>
+</div>
+<!-- Plan Tier -->
+<div class="flex items-center gap-1 bg-indigo-50 text-indigo-800 px-2.5 py-0.5 rounded-full border border-indigo-200 text-xs font-semibold">
+<i class="w-3.5 h-3.5 text-indigo-600" data-lucide="sparkles"></i>
+<span>Plan Pro Multi-Sede (S/ 490.00 /mes)</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Quick Actions Cluster (All 40px Height) -->
+<div class="flex items-center flex-wrap gap-2.5">
+<button class="h-10 px-4 bg-primary-container hover:bg-[#4338CA] text-white rounded-lg font-label-md text-label-md flex items-center gap-2 shadow-sm transition-all">
+<i class="w-4 h-4" data-lucide="external-link"></i>
+<span>Impersonar Consola</span>
+</button>
+<button class="h-10 px-4 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 rounded-lg font-label-md text-label-md flex items-center gap-2 transition-all">
+<i class="w-4 h-4 text-indigo-600" data-lucide="zap"></i>
+<span>Cambiar Plan</span>
+</button>
+<button class="h-10 px-3.5 bg-white hover:bg-rose-50 border border-rose-200 text-rose-600 rounded-lg font-label-md text-label-md flex items-center gap-2 transition-all">
+<i class="w-4 h-4" data-lucide="lock"></i>
+<span>Suspender</span>
+</button>
+<!-- Dropdown More Actions -->
+<div class="relative inline-block text-left">
+<button class="h-10 w-10 flex items-center justify-center rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 transition-colors" title="Más opciones">
+<i class="w-4 h-4" data-lucide="more-vertical"></i>
+</button>
+</div>
+</div>
+</div>
+<!-- ===================================================================
+             2. TABS NAVIGATION (Subnavegación contextual)
+             =================================================================== -->
+<div class="mt-6 pt-2 border-t border-slate-100 flex items-center gap-1 overflow-x-auto custom-scrollbar">
+<!-- Tab 1: Resumen (ACTIVA) -->
+<button class="h-10 px-4 flex items-center gap-2 font-label-md text-label-md text-primary-container border-b-2 border-primary-container font-semibold whitespace-nowrap bg-indigo-50/50 rounded-t-lg">
+<i class="w-4 h-4" data-lucide="layout-grid"></i>
+<span>Resumen</span>
+</button>
+<!-- Tab 2: Suscripción y facturación -->
+<button class="h-10 px-4 flex items-center gap-2 font-label-md text-label-md text-slate-500 hover:text-slate-800 hover:bg-slate-50 rounded-t-lg transition-colors whitespace-nowrap">
+<i class="w-4 h-4" data-lucide="credit-card"></i>
+<span>Suscripción y Facturación</span>
+</button>
+<!-- Tab 3: Sedes y cajas -->
+<button class="h-10 px-4 flex items-center gap-2 font-label-md text-label-md text-slate-500 hover:text-slate-800 hover:bg-slate-50 rounded-t-lg transition-colors whitespace-nowrap">
+<i class="w-4 h-4" data-lucide="store"></i>
+<span>Sedes y Cajas</span>
+<span class="px-1.5 py-0.5 text-[11px] rounded bg-slate-100 text-slate-600 font-medium">3 / 12</span>
+</button>
+<!-- Tab 4: Usuarios -->
+<button class="h-10 px-4 flex items-center gap-2 font-label-md text-label-md text-slate-500 hover:text-slate-800 hover:bg-slate-50 rounded-t-lg transition-colors whitespace-nowrap">
+<i class="w-4 h-4" data-lucide="users"></i>
+<span>Usuarios</span>
+<span class="px-1.5 py-0.5 text-[11px] rounded bg-slate-100 text-slate-600 font-medium">12</span>
+</button>
+<!-- Tab 5: Certificado y OSE -->
+<button class="h-10 px-4 flex items-center gap-2 font-label-md text-label-md text-slate-500 hover:text-slate-800 hover:bg-slate-50 rounded-t-lg transition-colors whitespace-nowrap">
+<i class="w-4 h-4" data-lucide="shield-check"></i>
+<span>Certificado y OSE</span>
+<span class="w-2 h-2 rounded-full bg-amber-500"></span>
+</button>
+<!-- Tab 6: Consumo y Cuotas -->
+<button class="h-10 px-4 flex items-center gap-2 font-label-md text-label-md text-slate-500 hover:text-slate-800 hover:bg-slate-50 rounded-t-lg transition-colors whitespace-nowrap">
+<i class="w-4 h-4" data-lucide="bar-chart-3"></i>
+<span>Consumo y Cuotas</span>
+</button>
+<!-- Tab 7: Auditoría & Logs -->
+<button class="h-10 px-4 flex items-center gap-2 font-label-md text-label-md text-slate-500 hover:text-slate-800 hover:bg-slate-50 rounded-t-lg transition-colors whitespace-nowrap">
+<i class="w-4 h-4" data-lucide="file-text"></i>
+<span>Auditoría &amp; Logs</span>
+</button>
+<!-- Tab 8: Soporte y Tickets -->
+<button class="h-10 px-4 flex items-center gap-2 font-label-md text-label-md text-slate-500 hover:text-slate-800 hover:bg-slate-50 rounded-t-lg transition-colors whitespace-nowrap">
+<i class="w-4 h-4" data-lucide="life-buoy"></i>
+<span>Soporte y Tickets</span>
+<span class="px-1.5 py-0.5 text-[11px] rounded bg-emerald-100 text-emerald-800 font-medium">1 resuelto</span>
+</button>
+</div>
+</section>
+<!-- ===================================================================
+           3. BANNER DE ALERTA CRÍTICA (Certificado Digital Tributario)
+           =================================================================== -->
+<section class="bg-amber-50 border-l-4 border-amber-500 border border-amber-200 rounded-xl p-4 shadow-sm">
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+<div class="flex items-start gap-3.5">
+<div class="w-10 h-10 rounded-lg bg-amber-100 border border-amber-200 flex items-center justify-center text-amber-700 flex-shrink-0">
+<i class="w-5 h-5 animate-pulse text-amber-600" data-lucide="alert-triangle"></i>
+</div>
+<div>
+<div class="flex items-center gap-2">
+<h2 class="text-label-lg font-label-lg text-amber-950 font-bold">Certificado Digital Tributario SUNAT próximo a vencer en 18 días</h2>
+<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-200 text-amber-900">Urgencia Media</span>
+</div>
+<p class="text-body-sm font-body-sm text-amber-900/90 mt-0.5">
+                Fecha de expiración: <strong>12/11/2024</strong>. Notificación automática enviada al contacto legal registrado. Requiere subida de nuevo archivo <code>.pfx</code> con llave privada antes de la fecha límite para evitar rechazos en Bizlinks OSE.
+              </p>
+</div>
+</div>
+<!-- Action Triggers (Uniform 40px) -->
+<div class="flex items-center gap-2.5 flex-shrink-0">
+<button class="h-10 px-4 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-label-md text-label-md flex items-center gap-2 shadow-sm transition-all">
+<i class="w-4 h-4" data-lucide="upload-cloud"></i>
+<span>Gestionar Certificado</span>
+</button>
+<button class="h-10 px-4 bg-white hover:bg-amber-100/50 text-amber-900 border border-amber-300 rounded-lg font-label-md text-label-md flex items-center gap-2 transition-all">
+<i class="w-4 h-4" data-lucide="mail"></i>
+<span>Reenviar Recordatorio</span>
+</button>
+</div>
+</div>
+</section>
+<!-- ===================================================================
+           4. KPI METRIC CARDS (Bento Row de 4 Tarjetas Uniformes)
+           =================================================================== -->
+<section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+<!-- Card 1: Consumo CPE -->
+<div class="bg-white rounded-xl border border-slate-200 p-5 shadow-sm flex flex-col justify-between hover:border-slate-300 transition-all">
+<div class="flex items-start justify-between">
+<span class="text-label-md font-label-md text-slate-500 font-medium">Consumo CPE del Mes</span>
+<div class="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+<i class="w-4 h-4" data-lucide="file-check"></i>
+</div>
+</div>
+<div class="mt-3">
+<div class="flex items-baseline gap-2">
+<span class="text-headline-lg font-headline-lg text-slate-900 font-bold">4,820</span>
+<span class="text-body-sm font-body-sm text-slate-400 font-medium">/ 10,000 CPE</span>
+</div>
+<!-- Progress Bar -->
+<div class="w-full h-2 bg-slate-100 rounded-full mt-2 overflow-hidden">
+<div class="h-full bg-gradient-to-r from-primary-container to-indigo-400 rounded-full" style="width: 48.2%;"></div>
+</div>
+<div class="flex justify-between items-center mt-2 text-[11px] text-slate-500">
+<span class="font-medium text-indigo-600">48.2% consumido</span>
+<span class="truncate">3,410 F | 1,280 B | 130 NC</span>
+</div>
+</div>
+</div>
+<!-- Card 2: Facturación MRR -->
+<div class="bg-white rounded-xl border border-slate-200 p-5 shadow-sm flex flex-col justify-between hover:border-slate-300 transition-all">
+<div class="flex items-start justify-between">
+<span class="text-label-md font-label-md text-slate-500 font-medium">Facturación Recurrente (MRR)</span>
+<div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+<i class="w-4 h-4" data-lucide="circle-dollar-sign"></i>
+</div>
+</div>
+<div class="mt-3">
+<div class="flex items-baseline gap-1">
+<span class="text-headline-lg font-headline-lg text-slate-900 font-bold">S/ 490.00</span>
+<span class="text-body-sm font-body-sm text-slate-500">/ mes</span>
+</div>
+<div class="mt-2 text-[11px] text-slate-500 flex flex-col gap-0.5">
+<div class="flex items-center justify-between">
+<span>Próximo cobro:</span>
+<span class="font-semibold text-slate-700">15/11/2024</span>
+</div>
+<div class="flex items-center justify-between text-slate-400">
+<span>Método:</span>
+<span class="text-slate-600 font-medium">Débito Aut. Niubiz</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Card 3: Infraestructura & Sedes -->
+<div class="bg-white rounded-xl border border-slate-200 p-5 shadow-sm flex flex-col justify-between hover:border-slate-300 transition-all">
+<div class="flex items-start justify-between">
+<span class="text-label-md font-label-md text-slate-500 font-medium">Infraestructura &amp; Sedes</span>
+<div class="w-8 h-8 rounded-lg bg-violet-50 text-violet-600 flex items-center justify-center">
+<i class="w-4 h-4" data-lucide="network"></i>
+</div>
+</div>
+<div class="mt-3">
+<div class="flex items-baseline gap-2">
+<span class="text-headline-lg font-headline-lg text-slate-900 font-bold">3 Sedes</span>
+<span class="text-body-sm font-body-sm text-slate-500">· 12 Cajas POS</span>
+</div>
+<div class="mt-2 text-[11px] text-slate-500 flex flex-col gap-0.5">
+<div class="flex items-center justify-between">
+<span>Sedes activas:</span>
+<span class="font-medium text-slate-700 truncate">Miraflores, San Isidro, Surco</span>
+</div>
+<div class="flex items-center gap-1.5 text-emerald-600 font-medium mt-1">
+<i class="w-3.5 h-3.5" data-lucide="check-circle-2"></i>
+<span>0 incidentes en las últimas 24h</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Card 4: Salud Conector OSE -->
+<div class="bg-white rounded-xl border border-slate-200 p-5 shadow-sm flex flex-col justify-between hover:border-slate-300 transition-all">
+<div class="flex items-start justify-between">
+<span class="text-label-md font-label-md text-slate-500 font-medium">Salud Conector OSE</span>
+<div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+<i class="w-4 h-4 text-emerald-600" data-lucide="wifi"></i>
+</div>
+</div>
+<div class="mt-3">
+<div class="flex items-baseline gap-2">
+<span class="text-headline-lg font-headline-lg text-emerald-600 font-bold">99.85%</span>
+<span class="text-body-sm font-body-sm text-slate-500">éxito timbrado</span>
+</div>
+<div class="mt-2 text-[11px] text-slate-500 flex flex-col gap-0.5">
+<div class="flex items-center justify-between">
+<span>Operador OSE:</span>
+<span class="font-semibold text-slate-800">Bizlinks</span>
+</div>
+<div class="flex items-center justify-between">
+<span>Latencia promedio:</span>
+<span class="font-mono text-emerald-700 font-medium">280 ms</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- ===================================================================
+           5. INTERACTIVE ACTIVITY CHART (Emisión Diaria de Comprobantes)
+           =================================================================== -->
+<section class="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 border-b border-slate-100">
+<div>
+<h2 class="text-headline-sm font-headline-sm text-slate-900 font-bold">Emisión Diaria de Comprobantes</h2>
+<p class="text-body-sm font-body-sm text-slate-500">Comportamiento en los últimos 14 días (11/10/2024 - 24/10/2024)</p>
+</div>
+<!-- Chart Controls (Strict 40px Height) -->
+<div class="flex items-center gap-3">
+<!-- Legend Indicators -->
+<div class="hidden sm:flex items-center gap-4 text-body-sm font-medium mr-2">
+<div class="flex items-center gap-1.5 text-slate-600">
+<span class="w-3 h-3 rounded-sm bg-primary-container"></span>
+<span>Facturas</span>
+</div>
+<div class="flex items-center gap-1.5 text-slate-600">
+<span class="w-3 h-3 rounded-sm bg-[#8a4cfc]"></span>
+<span>Boletas</span>
+</div>
+<div class="flex items-center gap-1.5 text-slate-600">
+<span class="w-3 h-3 rounded-sm bg-amber-400"></span>
+<span>Notas</span>
+</div>
+</div>
+<!-- Date Selector Filter (40px) -->
+<select class="h-10 px-3 text-body-md font-body-md rounded-lg border border-slate-300 bg-white text-slate-700 focus:outline-none focus:border-primary-container focus:ring-2 focus:ring-primary-container/20">
+<option>Últimos 14 días</option>
+<option>Este Mes (Octubre)</option>
+<option>Mes Anterior</option>
+</select>
+<!-- Export Button (40px) -->
+<button class="h-10 px-3.5 bg-white hover:bg-slate-50 border border-slate-300 rounded-lg text-slate-700 font-label-md text-label-md flex items-center gap-2 transition-colors">
+<i class="w-4 h-4" data-lucide="download"></i>
+<span class="hidden sm:inline">Exportar CSV</span>
+</button>
+</div>
+</div>
+<!-- SVG High-Fidelity Multi-Metric Bar & Line Chart -->
+<div class="mt-6 w-full overflow-x-auto custom-scrollbar">
+<div class="min-w-[850px] h-64 flex flex-col justify-end relative pt-6 pb-2">
+<!-- Horizontal Grid lines -->
+<div class="absolute inset-0 flex flex-col justify-between pointer-events-none opacity-40">
+<div class="border-b border-dashed border-slate-200 w-full flex justify-end text-[10px] text-slate-400 pr-2">300 CPE</div>
+<div class="border-b border-dashed border-slate-200 w-full flex justify-end text-[10px] text-slate-400 pr-2">200 CPE</div>
+<div class="border-b border-dashed border-slate-200 w-full flex justify-end text-[10px] text-slate-400 pr-2">100 CPE</div>
+<div class="border-b border-slate-200 w-full flex justify-end text-[10px] text-slate-400 pr-2">0</div>
+</div>
+<!-- SVG Continuous Trendline Overlay -->
+<svg class="absolute inset-0 w-full h-full pointer-events-none" preserveaspectratio="none" viewbox="0 0 850 240">
+<path d="M 30 160 Q 90 120, 150 140 T 270 110 T 390 80 T 510 130 T 630 65 T 750 90 T 820 70" fill="none" opacity="0.4" stroke="#3525cd" stroke-dasharray="4 4" stroke-width="2"></path>
+</svg>
+<!-- 14 Days Stacked Bar Columns with Peak Tooltip Indicators -->
+<div class="grid grid-cols-14 gap-3 h-48 items-end relative z-10 px-4">
+<!-- 11 Oct -->
+<div class="group flex flex-col items-center gap-1.5 h-full justify-end cursor-pointer">
+<div class="w-full flex flex-col items-center justify-end rounded-t overflow-hidden bg-slate-100 hover:opacity-90 transition-all" style="height: 52%;">
+<div class="w-full bg-amber-400" style="height: 6%;"></div>
+<div class="w-full bg-[#8a4cfc]" style="height: 38%;"></div>
+<div class="w-full bg-primary-container" style="height: 56%;"></div>
+</div>
+<span class="text-[11px] font-medium text-slate-500">11/10</span>
+</div>
+<!-- 12 Oct -->
+<div class="group flex flex-col items-center gap-1.5 h-full justify-end cursor-pointer">
+<div class="w-full flex flex-col items-center justify-end rounded-t overflow-hidden bg-slate-100" style="height: 60%;">
+<div class="w-full bg-amber-400" style="height: 5%;"></div>
+<div class="w-full bg-[#8a4cfc]" style="height: 40%;"></div>
+<div class="w-full bg-primary-container" style="height: 55%;"></div>
+</div>
+<span class="text-[11px] font-medium text-slate-500">12/10</span>
+</div>
+<!-- 13 Oct (Weekend Peak) -->
+<div class="group flex flex-col items-center gap-1.5 h-full justify-end cursor-pointer relative">
+<div class="w-full flex flex-col items-center justify-end rounded-t overflow-hidden bg-slate-100 ring-2 ring-indigo-400/30" style="height: 82%;">
+<div class="w-full bg-amber-400" style="height: 4%;"></div>
+<div class="w-full bg-[#8a4cfc]" style="height: 46%;"></div>
+<div class="w-full bg-primary-container" style="height: 50%;"></div>
+</div>
+<span class="text-[11px] font-bold text-indigo-700">13/10</span>
+</div>
+<!-- 14 Oct -->
+<div class="group flex flex-col items-center gap-1.5 h-full justify-end cursor-pointer">
+<div class="w-full flex flex-col items-center justify-end rounded-t overflow-hidden bg-slate-100" style="height: 45%;">
+<div class="w-full bg-amber-400" style="height: 8%;"></div>
+<div class="w-full bg-[#8a4cfc]" style="height: 32%;"></div>
+<div class="w-full bg-primary-container" style="height: 60%;"></div>
+</div>
+<span class="text-[11px] font-medium text-slate-500">14/10</span>
+</div>
+<!-- 15 Oct -->
+<div class="group flex flex-col items-center gap-1.5 h-full justify-end cursor-pointer">
+<div class="w-full flex flex-col items-center justify-end rounded-t overflow-hidden bg-slate-100" style="height: 58%;">
+<div class="w-full bg-amber-400" style="height: 5%;"></div>
+<div class="w-full bg-[#8a4cfc]" style="height: 35%;"></div>
+<div class="w-full bg-primary-container" style="height: 60%;"></div>
+</div>
+<span class="text-[11px] font-medium text-slate-500">15/10</span>
+</div>
+<!-- 16 Oct -->
+<div class="group flex flex-col items-center gap-1.5 h-full justify-end cursor-pointer">
+<div class="w-full flex flex-col items-center justify-end rounded-t overflow-hidden bg-slate-100" style="height: 65%;">
+<div class="w-full bg-amber-400" style="height: 4%;"></div>
+<div class="w-full bg-[#8a4cfc]" style="height: 40%;"></div>
+<div class="w-full bg-primary-container" style="height: 56%;"></div>
+</div>
+<span class="text-[11px] font-medium text-slate-500">16/10</span>
+</div>
+<!-- 17 Oct -->
+<div class="group flex flex-col items-center gap-1.5 h-full justify-end cursor-pointer">
+<div class="w-full flex flex-col items-center justify-end rounded-t overflow-hidden bg-slate-100" style="height: 70%;">
+<div class="w-full bg-amber-400" style="height: 3%;"></div>
+<div class="w-full bg-[#8a4cfc]" style="height: 42%;"></div>
+<div class="w-full bg-primary-container" style="height: 55%;"></div>
+</div>
+<span class="text-[11px] font-medium text-slate-500">17/10</span>
+</div>
+<!-- 18 Oct -->
+<div class="group flex flex-col items-center gap-1.5 h-full justify-end cursor-pointer">
+<div class="w-full flex flex-col items-center justify-end rounded-t overflow-hidden bg-slate-100" style="height: 78%;">
+<div class="w-full bg-amber-400" style="height: 5%;"></div>
+<div class="w-full bg-[#8a4cfc]" style="height: 45%;"></div>
+<div class="w-full bg-primary-container" style="height: 50%;"></div>
+</div>
+<span class="text-[11px] font-medium text-slate-500">18/10</span>
+</div>
+<!-- 19 Oct (Saturday Peak with Tooltip) -->
+<div class="group flex flex-col items-center gap-1.5 h-full justify-end cursor-pointer relative">
+<!-- Floating Peak Tooltip -->
+<div class="absolute -top-10 bg-slate-900 text-white text-[10px] py-1 px-2 rounded font-medium pointer-events-none whitespace-nowrap shadow-md">
+                  Pico: 284 CPE
+                </div>
+<div class="w-full flex flex-col items-center justify-end rounded-t overflow-hidden bg-slate-100 ring-2 ring-primary-container" style="height: 94%;">
+<div class="w-full bg-amber-400" style="height: 4%;"></div>
+<div class="w-full bg-[#8a4cfc]" style="height: 48%;"></div>
+<div class="w-full bg-primary-container" style="height: 48%;"></div>
+</div>
+<span class="text-[11px] font-bold text-primary-container">19/10</span>
+</div>
+<!-- 20 Oct -->
+<div class="group flex flex-col items-center gap-1.5 h-full justify-end cursor-pointer">
+<div class="w-full flex flex-col items-center justify-end rounded-t overflow-hidden bg-slate-100" style="height: 40%;">
+<div class="w-full bg-amber-400" style="height: 6%;"></div>
+<div class="w-full bg-[#8a4cfc]" style="height: 34%;"></div>
+<div class="w-full bg-primary-container" style="height: 60%;"></div>
+</div>
+<span class="text-[11px] font-medium text-slate-500">20/10</span>
+</div>
+<!-- 21 Oct -->
+<div class="group flex flex-col items-center gap-1.5 h-full justify-end cursor-pointer">
+<div class="w-full flex flex-col items-center justify-end rounded-t overflow-hidden bg-slate-100" style="height: 62%;">
+<div class="w-full bg-amber-400" style="height: 4%;"></div>
+<div class="w-full bg-[#8a4cfc]" style="height: 38%;"></div>
+<div class="w-full bg-primary-container" style="height: 58%;"></div>
+</div>
+<span class="text-[11px] font-medium text-slate-500">21/10</span>
+</div>
+<!-- 22 Oct -->
+<div class="group flex flex-col items-center gap-1.5 h-full justify-end cursor-pointer">
+<div class="w-full flex flex-col items-center justify-end rounded-t overflow-hidden bg-slate-100" style="height: 68%;">
+<div class="w-full bg-amber-400" style="height: 5%;"></div>
+<div class="w-full bg-[#8a4cfc]" style="height: 40%;"></div>
+<div class="w-full bg-primary-container" style="height: 55%;"></div>
+</div>
+<span class="text-[11px] font-medium text-slate-500">22/10</span>
+</div>
+<!-- 23 Oct -->
+<div class="group flex flex-col items-center gap-1.5 h-full justify-end cursor-pointer">
+<div class="w-full flex flex-col items-center justify-end rounded-t overflow-hidden bg-slate-100" style="height: 74%;">
+<div class="w-full bg-amber-400" style="height: 3%;"></div>
+<div class="w-full bg-[#8a4cfc]" style="height: 42%;"></div>
+<div class="w-full bg-primary-container" style="height: 55%;"></div>
+</div>
+<span class="text-[11px] font-medium text-slate-500">23/10</span>
+</div>
+<!-- 24 Oct (Hoy) -->
+<div class="group flex flex-col items-center gap-1.5 h-full justify-end cursor-pointer">
+<div class="w-full flex flex-col items-center justify-end rounded-t overflow-hidden bg-slate-100 ring-1 ring-emerald-500" style="height: 72%;">
+<div class="w-full bg-amber-400" style="height: 4%;"></div>
+<div class="w-full bg-[#8a4cfc]" style="height: 41%;"></div>
+<div class="w-full bg-primary-container" style="height: 55%;"></div>
+</div>
+<span class="text-[11px] font-bold text-emerald-600">24/10*</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- ===================================================================
+           6. ENTERPRISE DATA TABLE: COMPROBANTES Y OPERACIONES SUNAT
+           =================================================================== -->
+<section class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+<!-- Table Control Toolbar (Strict 40px Height across all interactive triggers) -->
+<div class="p-5 border-b border-slate-200 flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white">
+<!-- Left Search & Status Filter -->
+<div class="flex items-center flex-wrap gap-3 flex-1">
+<!-- Search Control (40px) -->
+<div class="relative min-w-[280px] sm:min-w-[340px]">
+<div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+<i class="w-4 h-4" data-lucide="search"></i>
+</div>
+<input class="w-full h-10 pl-9 pr-3 text-body-md font-body-md rounded-lg border border-slate-300 bg-white placeholder:text-slate-400 focus:outline-none focus:border-primary-container focus:ring-2 focus:ring-primary-container/20" placeholder="Buscar por correlativo F001-..., RUC cliente..." type="text"/>
+</div>
+<!-- Tipo Comprobante Selector (40px) -->
+<select class="h-10 px-3 text-body-md font-body-md rounded-lg border border-slate-300 bg-white text-slate-700 focus:outline-none focus:border-primary-container focus:ring-2 focus:ring-primary-container/20">
+<option value="">Todos los Comprobantes</option>
+<option value="01">Facturas Electrónicas (01)</option>
+<option value="03">Boletas de Venta (03)</option>
+<option value="07">Notas de Crédito (07)</option>
+</select>
+<!-- Estado CDR Filter (40px) -->
+<select class="h-10 px-3 text-body-md font-body-md rounded-lg border border-slate-300 bg-white text-slate-700 focus:outline-none focus:border-primary-container focus:ring-2 focus:ring-primary-container/20">
+<option value="">Todos los Estados CDR</option>
+<option value="accepted">Aceptado CDR</option>
+<option value="queued">En Cola OSE</option>
+<option value="rejected">Rechazado SUNAT</option>
+</select>
+</div>
+<!-- Right Advanced Enterprise Table Actions -->
+<div class="flex items-center gap-2.5">
+<!-- Dynamic Column Selector Dropdown (40px) -->
+<div class="relative group">
+<button class="h-10 px-3 bg-white hover:bg-slate-50 border border-slate-300 rounded-lg text-slate-700 font-label-md text-label-md flex items-center gap-2 transition-all">
+<i class="w-4 h-4 text-slate-500" data-lucide="columns-3"></i>
+<span>Columnas</span>
+<i class="w-3.5 h-3.5 text-slate-400" data-lucide="chevron-down"></i>
+</button>
+<!-- Flyout Panel (Design System Level 2 Popover) -->
+<div class="hidden group-hover:block absolute right-0 mt-1 w-56 bg-white rounded-lg border border-slate-300 shadow-lg p-3 z-30 flex flex-col gap-2">
+<span class="text-xs font-bold text-slate-700 uppercase tracking-wider">Visibilidad de Columnas</span>
+<label class="flex items-center gap-2 text-xs text-slate-700 cursor-pointer">
+<input checked="" class="w-4 h-4 rounded text-primary-container focus:ring-primary-container" type="checkbox"/>
+<span>Fecha / Hora</span>
+</label>
+<label class="flex items-center gap-2 text-xs text-slate-700 cursor-pointer">
+<input checked="" class="w-4 h-4 rounded text-primary-container focus:ring-primary-container" type="checkbox"/>
+<span>Tipo &amp; Correlativo</span>
+</label>
+<label class="flex items-center gap-2 text-xs text-slate-700 cursor-pointer">
+<input checked="" class="w-4 h-4 rounded text-primary-container focus:ring-primary-container" type="checkbox"/>
+<span>Cliente / Receptor</span>
+</label>
+<label class="flex items-center gap-2 text-xs text-slate-700 cursor-pointer">
+<input checked="" class="w-4 h-4 rounded text-primary-container focus:ring-primary-container" type="checkbox"/>
+<span>Monto Total (S/)</span>
+</label>
+<label class="flex items-center gap-2 text-xs text-slate-700 cursor-pointer">
+<input checked="" class="w-4 h-4 rounded text-primary-container focus:ring-primary-container" type="checkbox"/>
+<span>Estado CDR SUNAT</span>
+</label>
+<label class="flex items-center gap-2 text-xs text-slate-700 cursor-pointer">
+<input checked="" class="w-4 h-4 rounded text-primary-container focus:ring-primary-container" type="checkbox"/>
+<span>Conector OSE</span>
+</label>
+</div>
+</div>
+<!-- Reset Filter Button (40px) -->
+<button class="h-10 w-10 flex items-center justify-center rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-600 transition-colors" title="Restablecer filtros">
+<i class="w-4 h-4" data-lucide="rotate-ccw"></i>
+</button>
+<!-- Table Density Segmented Selector (40px) -->
+<div class="h-10 p-1 bg-slate-100 rounded-lg border border-slate-200 flex items-center">
+<button class="px-2.5 h-8 rounded text-xs font-medium bg-white text-slate-800 shadow-xs">
+                Cómoda
+              </button>
+<button class="px-2.5 h-8 rounded text-xs font-medium text-slate-500 hover:text-slate-800 transition-colors">
+                Compacta
+              </button>
+</div>
+</div>
+</div>
+<!-- Table Data Container -->
+<div class="w-full overflow-x-auto custom-scrollbar">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-slate-50/80 border-b border-slate-200">
+<th class="py-3 px-4 text-slate-500 font-semibold text-xs uppercase tracking-wider">
+<div class="flex items-center gap-1.5 cursor-pointer hover:text-slate-800">
+<span>Fecha / Hora</span>
+<i class="w-3.5 h-3.5" data-lucide="arrow-up-down"></i>
+</div>
+</th>
+<th class="py-3 px-4 text-slate-500 font-semibold text-xs uppercase tracking-wider">
+<div class="flex items-center gap-1.5 cursor-pointer hover:text-slate-800">
+<span>Tipo Comprobante</span>
+<i class="w-3.5 h-3.5" data-lucide="arrow-up-down"></i>
+</div>
+</th>
+<th class="py-3 px-4 text-slate-500 font-semibold text-xs uppercase tracking-wider">
+<span>Correlativo</span>
+</th>
+<th class="py-3 px-4 text-slate-500 font-semibold text-xs uppercase tracking-wider">
+<span>Cliente / Receptor</span>
+</th>
+<th class="py-3 px-4 text-slate-500 font-semibold text-xs uppercase tracking-wider text-right">
+<div class="flex items-center justify-end gap-1.5 cursor-pointer hover:text-slate-800">
+<span>Monto Total</span>
+<i class="w-3.5 h-3.5" data-lucide="arrow-up-down"></i>
+</div>
+</th>
+<th class="py-3 px-4 text-slate-500 font-semibold text-xs uppercase tracking-wider">
+<span>Estado CDR SUNAT</span>
+</th>
+<th class="py-3 px-4 text-slate-500 font-semibold text-xs uppercase tracking-wider">
+<span>Conector</span>
+</th>
+<th class="py-3 px-4 text-slate-500 font-semibold text-xs uppercase tracking-wider text-right">
+<span>Acciones</span>
+</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-100 text-body-md font-body-md">
+<!-- Row 1: Factura Exitosa -->
+<tr class="hover:bg-slate-50/80 transition-colors">
+<td class="py-3.5 px-4 text-slate-600 whitespace-nowrap">
+<span class="font-mono text-slate-800">24/10/2024</span>
+<span class="text-xs text-slate-400 ml-1">15:38:12</span>
+</td>
+<td class="py-3.5 px-4 whitespace-nowrap">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                    Factura Electrónica
+                  </span>
+</td>
+<td class="py-3.5 px-4 font-mono font-medium text-slate-900 whitespace-nowrap">
+                  F001-0004182
+                </td>
+<td class="py-3.5 px-4 text-slate-700 whitespace-nowrap">
+<div class="font-medium text-slate-900">Dental Corp S.A.</div>
+<div class="text-xs font-mono text-slate-400">RUC: 20554918230</div>
+</td>
+<td class="py-3.5 px-4 text-right font-mono font-semibold text-slate-900 whitespace-nowrap">
+                  S/ 1,450.00
+                </td>
+<td class="py-3.5 px-4 whitespace-nowrap">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+<i class="w-3.5 h-3.5 text-emerald-600" data-lucide="check-circle"></i>
+                    Aceptado CDR
+                  </span>
+</td>
+<td class="py-3.5 px-4 text-slate-600 text-xs font-medium whitespace-nowrap">
+                  Bizlinks OSE
+                </td>
+<td class="py-3.5 px-4 text-right whitespace-nowrap">
+<div class="flex items-center justify-end gap-1.5">
+<button class="h-8 px-2.5 text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 rounded font-medium transition-colors" title="Descargar XML">XML</button>
+<button class="h-8 px-2.5 text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 rounded font-medium transition-colors" title="Ver Constancia CDR">CDR</button>
+<button class="h-8 px-2.5 text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded font-medium transition-colors" title="Descargar Representación Impresa PDF">PDF</button>
+</div>
+</td>
+</tr>
+<!-- Row 2: Boleta Exitosa -->
+<tr class="hover:bg-slate-50/80 transition-colors">
+<td class="py-3.5 px-4 text-slate-600 whitespace-nowrap">
+<span class="font-mono text-slate-800">24/10/2024</span>
+<span class="text-xs text-slate-400 ml-1">15:20:05</span>
+</td>
+<td class="py-3.5 px-4 whitespace-nowrap">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-xs font-semibold bg-violet-50 text-violet-700 border border-violet-200">
+                    Boleta de Venta
+                  </span>
+</td>
+<td class="py-3.5 px-4 font-mono font-medium text-slate-900 whitespace-nowrap">
+                  B001-0012940
+                </td>
+<td class="py-3.5 px-4 text-slate-700 whitespace-nowrap">
+<div class="font-medium text-slate-900">Carlos Mendoza Vargas</div>
+<div class="text-xs font-mono text-slate-400">DNI: 45892014</div>
+</td>
+<td class="py-3.5 px-4 text-right font-mono font-semibold text-slate-900 whitespace-nowrap">
+                  S/ 180.00
+                </td>
+<td class="py-3.5 px-4 whitespace-nowrap">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+<i class="w-3.5 h-3.5 text-emerald-600" data-lucide="check-circle"></i>
+                    Aceptado CDR
+                  </span>
+</td>
+<td class="py-3.5 px-4 text-slate-600 text-xs font-medium whitespace-nowrap">
+                  Bizlinks OSE
+                </td>
+<td class="py-3.5 px-4 text-right whitespace-nowrap">
+<div class="flex items-center justify-end gap-1.5">
+<button class="h-8 px-2.5 text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded font-medium transition-colors">Ver PDF</button>
+</div>
+</td>
+</tr>
+<!-- Row 3: Factura en Cola (Estado Pendiente / Reintento) -->
+<tr class="hover:bg-slate-50/80 transition-colors bg-amber-50/20">
+<td class="py-3.5 px-4 text-slate-600 whitespace-nowrap">
+<span class="font-mono text-slate-800">24/10/2024</span>
+<span class="text-xs text-slate-400 ml-1">14:15:33</span>
+</td>
+<td class="py-3.5 px-4 whitespace-nowrap">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                    Factura Electrónica
+                  </span>
+</td>
+<td class="py-3.5 px-4 font-mono font-medium text-slate-900 whitespace-nowrap">
+                  F001-0004181
+                </td>
+<td class="py-3.5 px-4 text-slate-700 whitespace-nowrap">
+<div class="font-medium text-slate-900">Consultores Médicos S.A.C.</div>
+<div class="text-xs font-mono text-slate-400">RUC: 20498112349</div>
+</td>
+<td class="py-3.5 px-4 text-right font-mono font-semibold text-slate-900 whitespace-nowrap">
+                  S/ 3,200.00
+                </td>
+<td class="py-3.5 px-4 whitespace-nowrap">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+<i class="w-3.5 h-3.5 text-amber-600 animate-spin" data-lucide="refresh-cw"></i>
+                    En Cola OSE
+                  </span>
+</td>
+<td class="py-3.5 px-4 text-slate-600 text-xs font-medium whitespace-nowrap">
+                  Bizlinks OSE
+                </td>
+<td class="py-3.5 px-4 text-right whitespace-nowrap">
+<div class="flex items-center justify-end gap-1.5">
+<button class="h-8 px-3 text-xs bg-amber-100 hover:bg-amber-200 text-amber-900 rounded font-semibold transition-colors flex items-center gap-1">
+<i class="w-3 h-3" data-lucide="rotate-cw"></i>
+<span>Reintentar</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 4: Nota de Crédito -->
+<tr class="hover:bg-slate-50/80 transition-colors">
+<td class="py-3.5 px-4 text-slate-600 whitespace-nowrap">
+<span class="font-mono text-slate-800">24/10/2024</span>
+<span class="text-xs text-slate-400 ml-1">12:44:19</span>
+</td>
+<td class="py-3.5 px-4 whitespace-nowrap">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                    Nota de Crédito
+                  </span>
+</td>
+<td class="py-3.5 px-4 font-mono font-medium text-slate-900 whitespace-nowrap">
+                  FC01-0000124
+                </td>
+<td class="py-3.5 px-4 text-slate-700 whitespace-nowrap">
+<div class="font-medium text-slate-900">Inversiones Lima Dental E.I.R.L.</div>
+<div class="text-xs font-mono text-slate-400">RUC: 20114092812</div>
+</td>
+<td class="py-3.5 px-4 text-right font-mono font-semibold text-slate-900 whitespace-nowrap">
+                  S/ 350.00
+                </td>
+<td class="py-3.5 px-4 whitespace-nowrap">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+<i class="w-3.5 h-3.5 text-emerald-600" data-lucide="check-circle"></i>
+                    Aceptado CDR
+                  </span>
+</td>
+<td class="py-3.5 px-4 text-slate-600 text-xs font-medium whitespace-nowrap">
+                  Bizlinks OSE
+                </td>
+<td class="py-3.5 px-4 text-right whitespace-nowrap">
+<div class="flex items-center justify-end gap-1.5">
+<button class="h-8 px-2.5 text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded font-medium transition-colors">Ver PDF</button>
+</div>
+</td>
+</tr>
+<!-- Row 5: Boleta Exitosa -->
+<tr class="hover:bg-slate-50/80 transition-colors">
+<td class="py-3.5 px-4 text-slate-600 whitespace-nowrap">
+<span class="font-mono text-slate-800">24/10/2024</span>
+<span class="text-xs text-slate-400 ml-1">11:02:50</span>
+</td>
+<td class="py-3.5 px-4 whitespace-nowrap">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-xs font-semibold bg-violet-50 text-violet-700 border border-violet-200">
+                    Boleta de Venta
+                  </span>
+</td>
+<td class="py-3.5 px-4 font-mono font-medium text-slate-900 whitespace-nowrap">
+                  B001-0012939
+                </td>
+<td class="py-3.5 px-4 text-slate-700 whitespace-nowrap">
+<div class="font-medium text-slate-900">Lucía Benavides Ríos</div>
+<div class="text-xs font-mono text-slate-400">DNI: 72109483</div>
+</td>
+<td class="py-3.5 px-4 text-right font-mono font-semibold text-slate-900 whitespace-nowrap">
+                  S/ 95.00
+                </td>
+<td class="py-3.5 px-4 whitespace-nowrap">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+<i class="w-3.5 h-3.5 text-emerald-600" data-lucide="check-circle"></i>
+                    Aceptado CDR
+                  </span>
+</td>
+<td class="py-3.5 px-4 text-slate-600 text-xs font-medium whitespace-nowrap">
+                  Bizlinks OSE
+                </td>
+<td class="py-3.5 px-4 text-right whitespace-nowrap">
+<div class="flex items-center justify-end gap-1.5">
+<button class="h-8 px-2.5 text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded font-medium transition-colors">Ver PDF</button>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Enterprise Pagination Footer -->
+<div class="p-4 border-t border-slate-200 bg-white flex flex-col sm:flex-row items-center justify-between gap-4">
+<!-- Rows per page selector (40px) -->
+<div class="flex items-center gap-3 text-body-sm text-slate-600">
+<span>Mostrar</span>
+<select class="h-10 px-2.5 text-body-sm font-body-sm rounded-lg border border-slate-300 bg-white text-slate-700 focus:outline-none focus:border-primary-container">
+<option>10 filas por página</option>
+<option>25 filas por página</option>
+<option>50 filas por página</option>
+</select>
+<span class="text-slate-400">|</span>
+<span>Mostrando <strong class="text-slate-800">1 a 5</strong> de <strong class="text-slate-800">4,820</strong> comprobantes</span>
+</div>
+<!-- Pagination Number Cluster (Strict 40px Height buttons) -->
+<div class="flex items-center gap-1">
+<button class="h-10 w-10 flex items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-400 hover:text-slate-700 hover:bg-slate-50 disabled:opacity-40 transition-colors" disabled="">
+<i class="w-4 h-4" data-lucide="chevron-left"></i>
+</button>
+<button class="h-10 w-10 flex items-center justify-center rounded-lg bg-primary-container text-white font-semibold text-sm shadow-sm">
+              1
+            </button>
+<button class="h-10 w-10 flex items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 font-medium text-sm transition-colors">
+              2
+            </button>
+<button class="h-10 w-10 flex items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 font-medium text-sm transition-colors">
+              3
+            </button>
+<span class="px-2 text-slate-400 font-mono text-sm">...</span>
+<button class="h-10 px-3 flex items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 font-medium text-sm transition-colors">
+              482
+            </button>
+<button class="h-10 w-10 flex items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 transition-colors">
+<i class="w-4 h-4" data-lucide="chevron-right"></i>
+</button>
+</div>
+</div>
+</section>
+<!-- Technical Footer Details -->
+<footer class="mt-2 py-4 border-t border-slate-200 text-xs text-slate-500 flex flex-col sm:flex-row justify-between items-center gap-2">
+<div class="flex items-center gap-2">
+<span class="font-semibold text-slate-700">PerúSaaS Admin Console</span>
+<span>v4.12.0-prod</span>
+<span class="text-slate-300">·</span>
+<span>Cluster ID: pe-lima-node-03</span>
+</div>
+<div class="flex items-center gap-3">
+<span>Zona horaria: America/Lima (UTC-5)</span>
+<span class="text-slate-300">·</span>
+<span>Moneda Base: PEN (S/)</span>
+<span class="text-slate-300">·</span>
+<span class="text-emerald-600 font-medium">OSE Latency 280ms OK</span>
+</div>
+</footer>
+</div>
+</main>
+<!-- Initialize Lucide Icons -->
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+      if (window.lucide) {
+        window.lucide.createIcons();
+      }
+    });
+  </script>
+</body></html>

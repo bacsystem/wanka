@@ -1,0 +1,906 @@
+<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"><title>PerúSaaS Gestión Empresarial</title><link href="https://fonts.googleapis.com" rel="preconnect"><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"><link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap&family=Geist+Mono:wght@400;500;600" rel="stylesheet"><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"><style>@layer base{html,body{width:100%;margin:0;padding:0;background-color:#faf8ff;}body{overscroll-behavior:none;-webkit-tap-highlight-color:transparent;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{colors:{"inverse-primary":"#80d5cb","on-tertiary-fixed":"#001d32","surface-container-lowest":"#ffffff","secondary-fixed":"#abefe8","inverse-surface":"#283044","surface-container-low":"#f2f3ff","tertiary":"#005584","primary":"#005c55","on-primary-fixed-variant":"#00504a","secondary-container":"#a8ece5","surface-tint":"#006a63","surface-container-highest":"#dae2fd","on-tertiary":"#ffffff","on-background":"#131b2e","secondary-fixed-dim":"#8fd3cc","on-tertiary-fixed-variant":"#004b74","surface-container":"#eaedff","surface-variant":"#dae2fd","tertiary-fixed-dim":"#94ccff","on-secondary-fixed-variant":"#00504b","on-surface-variant":"#3e4947","on-secondary":"#ffffff","error":"#ba1a1a","tertiary-container":"#136ea6","error-container":"#ffdad6","primary-fixed-dim":"#80d5cb","on-primary":"#ffffff","on-primary-container":"#a3faef","primary-container":"#0f766e","surface-bright":"#faf8ff","outline-variant":"#bdc9c6","on-error":"#ffffff","inverse-on-surface":"#eef0ff","on-primary-fixed":"#00201d","on-error-container":"#93000a","outline":"#6e7977","on-secondary-fixed":"#00201e","on-secondary-container":"#266d68","on-surface":"#131b2e","secondary":"#216963","surface-container-high":"#e2e7ff","on-tertiary-container":"#daebff","surface":"#faf8ff","surface-dim":"#d2d9f4","primary-fixed":"#9cf2e8","tertiary-fixed":"#cde5ff","background":"#faf8ff"},borderRadius:{"DEFAULT":"0.25rem","lg":"0.5rem","xl":"0.75rem","full":"9999px"},spacing:{"space-sm":"0.5rem","space-lg":"1rem","space-md":"0.75rem","margin":"1rem","gutter":"1rem","space-xs":"0.25rem","space-xl":"1.5rem"},fontFamily:{"body-sm":["Geist"],"label-md":["Geist"],"headline-sm":["Geist"],"body-lg":["Geist"],"body-md":["Geist"],"headline-lg":["Geist"],"label-sm":["Geist"],"headline-xl":["Geist"],"code-dense":["Geist"],"headline-md":["Geist"]},fontSize:{"body-sm":["12px",{lineHeight:"16px",fontWeight:"400"}],"label-md":["13px",{lineHeight:"18px",fontWeight:"600"}],"headline-sm":["15px",{lineHeight:"20px",fontWeight:"600"}],"body-lg":["15px",{lineHeight:"22px",fontWeight:"400"}],"body-md":["13px",{lineHeight:"18px",fontWeight:"400"}],"headline-lg":["22px",{lineHeight:"28px",letterSpacing:"-0.015em",fontWeight:"700"}],"label-sm":["11px",{lineHeight:"14px",letterSpacing:"0.02em",fontWeight:"600"}],"headline-xl":["28px",{lineHeight:"34px",letterSpacing:"-0.02em",fontWeight:"700"}],"code-dense":["12px",{lineHeight:"16px",fontWeight:"500"}],"headline-md":["18px",{lineHeight:"24px",letterSpacing:"-0.01em",fontWeight:"600"}]}}}};</script></head><body class="bg-surface font-body-md text-body-md text-on-surface min-h-screen flex flex-col antialiased"><header class="fixed top-0 w-full z-50 bg-surface/90 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)] pt-safe"><div class="h-16 px-space-md flex items-center justify-between gap-space-sm"><div class="flex items-center gap-space-xs min-w-0 flex-1"><button aria-label="Cambiar tenant" class="flex items-center gap-space-xs text-left px-space-xs py-1 rounded-lg hover:bg-surface-container-low transition-colors max-w-[190px] min-h-[44px]" type="button"><div class="flex flex-col min-w-0"><div class="flex items-center gap-1.5"><span class="material-symbols-outlined text-[18px] text-primary shrink-0">domain</span><span class="font-label-md text-label-md text-on-surface truncate leading-tight">Clínica Dental Sonrisa</span><span class="material-symbols-outlined text-[16px] text-on-surface-variant shrink-0">expand_more</span></div><div class="flex items-center gap-1.5 mt-0.5"><span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-secondary-container text-on-secondary-container tracking-wide">Odontología</span><span class="inline-flex items-center gap-1 text-[10px] text-secondary font-medium"><span class="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse"></span>SUNAT OK</span></div></div></button></div><div class="flex items-center gap-1 shrink-0"><div class="hidden sm:flex items-center bg-surface-container-lowest rounded-lg p-0.5 shadow-[0_1px_4px_rgba(0,0,0,0.04)]"><button class="w-8 h-8 flex items-center justify-center rounded text-on-surface-variant hover:text-primary transition-colors" title="Vista Desktop" type="button"><span class="material-symbols-outlined text-[18px]">desktop_windows</span></button><button class="w-8 h-8 flex items-center justify-center rounded text-on-surface-variant hover:text-primary transition-colors" title="Vista Tablet" type="button"><span class="material-symbols-outlined text-[18px]">tablet_mac</span></button><button class="w-8 h-8 flex items-center justify-center rounded bg-primary-container text-on-primary" title="Vista Móvil" type="button"><span class="material-symbols-outlined text-[18px]">phone_iphone</span></button></div><button aria-label="Buscar (Ctrl+K)" class="w-11 h-11 flex items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-container-low transition-colors" type="button"><span class="material-symbols-outlined text-[20px]">search</span></button><button aria-label="Notificaciones operativas" class="relative w-11 h-11 flex items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-container-low transition-colors" type="button"><span class="material-symbols-outlined text-[20px]">notifications</span><span class="absolute top-2 right-2 w-4 h-4 bg-error text-on-error font-label-sm text-[10px] leading-none rounded-full flex items-center justify-center">3</span></button><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center shrink-0 ml-1"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></div></header><main class="flex-1 flex flex-col relative w-full pt-16 pb-28 bg-surface px-margin"><div class="flex flex-col w-full gap-space-lg">
+<!-- Operational Context Header (Sub-bar) -->
+<div class="flex flex-col lg:flex-row lg:items-center justify-between gap-space-md bg-surface-container-lowest p-space-md rounded-xl shadow-sm">
+<div class="flex flex-col gap-0.5">
+<div class="flex items-center gap-space-sm flex-wrap">
+<div class="flex items-center gap-1.5 font-label-sm text-label-sm tracking-wider uppercase text-primary font-bold"><span class="text-on-surface-variant">Catálogo</span><span class="text-outline text-[12px]">&gt;</span><span class="text-primary">Servicios, Productos &amp; Categorías</span></div>
+<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium bg-secondary-container text-on-secondary-container">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span> Catálogo SUNAT v2024.2
+        </span>
+</div>
+<h1 class="font-headline-lg text-headline-lg text-on-surface tracking-tight">Catálogo de Productos y Servicios</h1>
+<p class="font-body-sm text-body-sm text-on-surface-variant max-w-3xl">
+        Gestión unificada de procedimientos clínicos, fármacos e insumos. Configure códigos UNSPSC, regímenes de afectación al IGV (Catálogo 07) y aranceles por convenio EPS o tarifas particulares.
+      </p>
+</div>
+<!-- Action Toolbar -->
+<div class="flex items-center gap-space-sm self-start lg:self-center flex-wrap">
+<button class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-surface-container-low hover:bg-surface-container text-on-surface font-label-md text-label-md transition-colors shadow-sm" type="button">
+<span class="material-symbols-outlined text-[18px]">upload_file</span>
+<span class="">Importar Excel</span>
+</button>
+<button class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-surface-container-low hover:bg-surface-container text-on-surface font-label-md text-label-md transition-colors shadow-sm" type="button">
+<span class="material-symbols-outlined text-[18px]">download</span>
+<span class="">Exportar</span>
+</button>
+<button class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-secondary-container text-on-secondary-container hover:bg-secondary-container/60 transition-colors font-label-md text-label-md shadow-sm" type="button" title="Administrar árbol de categorías y especialidades"><span class="material-symbols-outlined text-[18px]">category</span><span class="">+ Nueva Categoría</span></button><button class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-primary-container text-on-primary hover:opacity-95 active:scale-95 transition-all font-label-md text-label-md shadow-sm" id="btn-open-drawer" onclick="toggleDrawer(true)" type="button"><span class="material-symbols-outlined text-[18px]">add_circle</span><span class="">+ Nuevo Servicio / Producto</span></button>
+</div>
+</div><div class="bg-surface-container-lowest rounded-xl p-1.5 shadow-sm flex items-center justify-between flex-wrap gap-2"><nav aria-label="Submenús de Catálogo" class="flex items-center gap-1 flex-wrap"><button class="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg bg-primary text-on-primary font-label-md text-label-md transition-all shadow-sm" type="button"><span class="material-symbols-outlined text-[18px]">list_alt</span><span class="">Todos los Ítems</span><span class="px-1.5 py-0.5 rounded-full text-[11px] font-bold bg-white/20 text-white leading-none">184</span></button><button class="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-all font-label-md text-label-md" type="button"><span class="material-symbols-outlined text-[18px] text-secondary">medical_services</span><span class="">Servicios</span><span class="px-1.5 py-0.5 rounded-full text-[11px] font-bold bg-secondary-container text-on-secondary-container leading-none">112</span></button><button class="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-all font-label-md text-label-md" type="button"><span class="material-symbols-outlined text-[18px] text-tertiary">medication</span><span class="">Productos (Kardex)</span><span class="px-1.5 py-0.5 rounded-full text-[11px] font-bold bg-tertiary-fixed text-on-tertiary-fixed-variant leading-none">72</span></button><button class="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-all font-label-md text-label-md" type="button"><span class="material-symbols-outlined text-[18px] text-primary">account_tree</span><span class="">Categorías &amp; Especialidades</span><span class="px-1.5 py-0.5 rounded-full text-[11px] font-bold bg-surface-container text-on-surface-variant leading-none">14 activas</span></button></nav><div class="flex items-center gap-2 pr-2"><span class="font-label-sm text-label-sm text-on-surface-variant hidden sm:inline">Submenú Activo:</span><span class="inline-flex items-center gap-1 font-code-dense text-code-dense font-semibold text-primary"><span class="w-2 h-2 rounded-full bg-primary"></span>Vista Consolidada</span></div></div>
+<!-- KPI Cards Grid -->
+<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-space-md">
+<!-- KPI 1: Total Ítems -->
+<div class="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex flex-col justify-between">
+<div class="flex items-start justify-between">
+<div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">ÍTEMS REGISTRADOS</span>
+<div class="font-headline-xl text-headline-xl text-on-surface mt-1">184</div>
+</div>
+<div class="w-10 h-10 rounded-lg bg-surface-container-low flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[22px]">inventory_2</span>
+</div>
+</div>
+<div class="mt-3 flex items-center gap-2">
+<span class="font-code-dense text-code-dense text-on-surface-variant">112 tratamientos • 72 fármacos</span>
+<span class="ml-auto font-label-sm text-label-sm text-secondary font-bold">100% Sincronizado</span>
+</div>
+</div>
+<!-- KPI 2: Servicios Clínicos -->
+<div class="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex flex-col justify-between">
+<div class="flex items-start justify-between">
+<div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">SERVICIOS Y ARANCELES</span>
+<div class="font-headline-xl text-headline-xl text-primary mt-1">112</div>
+</div>
+<div class="w-10 h-10 rounded-lg bg-secondary-container/40 flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined text-[22px]">medical_services</span>
+</div>
+</div>
+<div class="mt-3 flex items-center justify-between">
+<span class="font-code-dense text-code-dense text-on-surface-variant">Honorarios médicos odontológicos</span>
+<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-surface-container text-on-surface-variant">Tarifas Válidas</span>
+</div>
+</div>
+<!-- KPI 3: Insumos / Medicamentos -->
+<div class="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex flex-col justify-between">
+<div class="flex items-start justify-between">
+<div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">PRODUCTOS CON KARDEX</span>
+<div class="font-headline-xl text-headline-xl text-tertiary mt-1">72</div>
+</div>
+<div class="w-10 h-10 rounded-lg bg-tertiary-fixed flex items-center justify-center text-tertiary">
+<span class="material-symbols-outlined text-[22px]">medication</span>
+</div>
+</div>
+<div class="mt-3 flex items-center justify-between">
+<span class="font-code-dense text-code-dense text-on-surface-variant">4 alertas por stock mínimo</span>
+<span class="font-label-sm text-label-sm text-error font-medium flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-error animate-ping"></span> Reposición
+        </span>
+</div>
+</div>
+<!-- KPI 4: Afectación Tributaria -->
+<div class="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex flex-col justify-between">
+<div class="flex items-start justify-between">
+<div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">REGIMEN TRIBUTARIO SUNAT</span>
+<div class="flex items-baseline gap-2 mt-1">
+<span class="font-headline-lg text-headline-lg text-on-surface">82%</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Gravado 18%</span>
+</div>
+</div>
+<div class="w-10 h-10 rounded-lg bg-surface-container-low flex items-center justify-center text-primary-container">
+<span class="material-symbols-outlined text-[22px]">receipt_long</span>
+</div>
+</div>
+<div class="mt-3">
+<!-- Progress mini bar -->
+<div class="w-full bg-surface-container h-2 rounded-full overflow-hidden flex">
+<div class="bg-primary-container h-full" style="width: 82%"></div>
+<div class="bg-secondary-fixed h-full" style="width: 18%"></div>
+</div>
+<div class="flex justify-between items-center mt-1 text-[11px] font-code-dense text-on-surface-variant">
+<span class="">82% Op. Gravada (10)</span>
+<span class="">18% Exonerado (20)</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Search & Advanced Filter Workbench -->
+<div class="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex flex-col gap-space-sm">
+<div class="grid grid-cols-1 md:grid-cols-12 gap-space-sm">
+<!-- Search input with prefix icon -->
+<div class="md:col-span-4 relative flex items-center">
+<span class="material-symbols-outlined absolute left-3 text-outline text-[18px]">search</span>
+<input class="w-full h-10 pl-9 pr-3 rounded-lg bg-surface-container-low text-on-surface font-body-md text-body-md placeholder:text-outline focus:outline-none focus:bg-surface-container-lowest shadow-inner transition-colors" id="catalog-search" placeholder="Buscar por nombre, SKU, UNSPSC..." type="text">
+</div>
+<!-- Type Filter -->
+<div class="md:col-span-2">
+<select class="w-full h-10 px-3 rounded-lg bg-surface-container-low text-on-surface font-body-md text-body-md focus:outline-none focus:bg-surface-container-lowest shadow-inner cursor-pointer">
+<option value="all">Tipo: Todos</option>
+<option selected="" value="service">Servicios / Clínicos</option>
+<option value="product">Insumos y Fármacos</option>
+<option value="pack">Paquetes / Tratamiento</option>
+</select>
+</div>
+<!-- Category Filter -->
+<div class="md:col-span-2">
+<select class="w-full h-10 px-3 rounded-lg bg-surface-container-low text-on-surface font-body-md text-body-md focus:outline-none focus:bg-surface-container-lowest shadow-inner cursor-pointer">
+<option value="all">Categoría: Todas</option>
+<option value="general">Odontología General</option>
+<option value="ortodoncia">Ortodoncia</option>
+<option value="periodoncia">Periodoncia</option>
+<option value="cirugia">Cirugía Máxilofacial</option>
+<option value="estetica">Estética y Blanqueamiento</option>
+<option value="farmacia">Farmacia e Insumos</option>
+</select>
+</div>
+<!-- IGV Tax Filter -->
+<div class="md:col-span-2">
+<select class="w-full h-10 px-3 rounded-lg bg-surface-container-low text-on-surface font-body-md text-body-md focus:outline-none focus:bg-surface-container-lowest shadow-inner cursor-pointer">
+<option value="all">Afectación: Todas</option>
+<option value="10">Gravado 18% (10)</option>
+<option value="20">Exonerado (20)</option>
+<option value="30">Inafecto (30)</option>
+</select>
+</div>
+<!-- Price List Filter -->
+<div class="md:col-span-2">
+<select class="w-full h-10 px-3 rounded-lg bg-surface-container-low text-on-surface font-body-md text-body-md focus:outline-none focus:bg-surface-container-lowest shadow-inner cursor-pointer">
+<option value="all">Tarifario: Todos</option>
+<option value="particular">Particular Estándar</option>
+<option value="eps_rimac">EPS Rímac (-15%)</option>
+<option value="eps_pacifico">Pacífico Salud (-12%)</option>
+<option value="corporativo">Convenio Corporativo</option>
+</select>
+</div>
+</div>
+<!-- Active Filter Badges & Batch Options -->
+<div class="flex items-center justify-between flex-wrap gap-2 pt-1">
+<div class="flex items-center gap-2 flex-wrap">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Filtros aplicados:</span>
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-surface-container text-on-surface">
+          Tipo: Clínico • Tratamientos
+          <button class="hover:text-error ml-0.5" type="button"><span class="material-symbols-outlined text-[14px]">close</span></button>
+</span>
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-surface-container text-on-surface">
+          Estado: Activo
+          <button class="hover:text-error ml-0.5" type="button"><span class="material-symbols-outlined text-[14px]">close</span></button>
+</span>
+<button class="font-label-sm text-label-sm text-primary hover:underline ml-2" type="button">Restablecer filtros</button>
+</div>
+<div class="text-right">
+<span class="font-code-dense text-code-dense text-on-surface-variant">Mostrando 1 - 5 de 184 resultados</span>
+</div>
+</div>
+</div>
+<!-- Main Catalog Data Grid Container -->
+<div class="bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden flex flex-col">
+<!-- Batch Action Toolbar (Conditionally Visible on Row Select) -->
+<div class="hidden bg-secondary-container/60 px-space-md py-2 flex items-center justify-between transition-all" id="batch-toolbar">
+<div class="flex items-center gap-space-sm">
+<span class="material-symbols-outlined text-primary text-[20px]">checklist</span>
+<span class="font-label-md text-label-md text-on-secondary-container"><span id="selected-count" class="">2</span> ítems seleccionados</span>
+</div>
+<div class="flex items-center gap-2">
+<button class="px-2.5 py-1 rounded bg-surface-container-lowest text-on-surface font-label-sm text-label-sm hover:bg-surface-container transition-colors shadow-sm" type="button">
+          Ajustar Margen (%)
+        </button>
+<button class="px-2.5 py-1 rounded bg-surface-container-lowest text-on-surface font-label-sm text-label-sm hover:bg-surface-container transition-colors shadow-sm" type="button">
+          Cambiar Afectación IGV
+        </button>
+<button class="px-2.5 py-1 rounded bg-error text-on-error font-label-sm text-label-sm hover:opacity-90 transition-colors shadow-sm" type="button">
+          Desactivar Ítems
+        </button>
+</div>
+</div>
+<!-- Responsive Table -->
+<div class="w-full overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-low text-on-surface-variant font-label-sm text-label-sm uppercase tracking-wider">
+<th class="py-3 px-space-md w-10 text-center">
+<input class="w-4 h-4 accent-primary rounded cursor-pointer" id="select-all" type="checkbox">
+</th>
+<th class="py-3 px-space-sm">Código / SKU</th>
+<th class="py-3 px-space-sm min-w-[240px]">Descripción del Ítem</th>
+<th class="py-3 px-space-sm">Tipo • Categoría</th>
+<th class="py-3 px-space-sm">Código SUNAT (UNSPSC)</th>
+<th class="py-3 px-space-sm text-right">Precio Venta (Inc. IGV)</th>
+<th class="py-3 px-space-sm text-center">Afectación IGV</th>
+<th class="py-3 px-space-sm">Kardex / Stock</th>
+<th class="py-3 px-space-sm">Tarifario EPS</th>
+<th class="py-3 px-space-md text-center">Acciones</th>
+</tr>
+</thead>
+<tbody class="divide-y-0 text-on-surface font-body-sm text-body-sm">
+<!-- Row 1: Servicio Curación Resina -->
+<tr class="hover:bg-surface-container-low/60 transition-colors">
+<td class="py-2.5 px-space-md text-center">
+<input class="row-selector w-4 h-4 accent-primary rounded cursor-pointer" type="checkbox">
+</td>
+<td class="py-2.5 px-space-sm">
+<span class="font-code-dense text-code-dense font-bold text-primary">SRV-0012</span>
+</td>
+<td class="py-2.5 px-space-sm">
+<div class="flex flex-col">
+<span class="font-label-md text-label-md text-on-surface font-semibold">Curación con Resina Fotocurable 3M Z350</span>
+<span class="text-[11px] text-on-surface-variant line-clamp-1">Restauración estética por pieza dental anterior/posterior, incluye pulido</span>
+</div>
+</td>
+<td class="py-2.5 px-space-sm">
+<div class="flex flex-col gap-0.5">
+<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-primary-container text-on-primary w-max">PROCEDIMIENTO</span>
+<span class="text-[11px] text-on-surface-variant">Odontología General</span>
+</div>
+</td>
+<td class="py-2.5 px-space-sm">
+<div class="flex items-center gap-1 font-code-dense text-code-dense text-on-surface-variant">
+<span class="">85122001</span>
+<span class="material-symbols-outlined text-[14px] text-outline" title="Servicios dentales profesionales">verified</span>
+</div>
+</td>
+<td class="py-2.5 px-space-sm text-right">
+<span class="font-label-md text-label-md font-bold text-on-surface">S/ 85.00</span>
+<div class="text-[10px] text-on-surface-variant">V.V: S/ 72.03</div>
+</td>
+<td class="py-2.5 px-space-sm text-center">
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-secondary-container text-on-secondary-container">
+                10 Gravado (18%)
+              </span>
+</td>
+<td class="py-2.5 px-space-sm">
+<span class="font-body-sm text-body-sm text-on-surface-variant">No aplica (Servicio)</span>
+</td>
+<td class="py-2.5 px-space-sm">
+<div class="flex flex-col">
+<span class="font-code-dense text-code-dense text-secondary font-semibold">Rimac: S/ 72.25</span>
+<span class="text-[10px] text-on-surface-variant">Copago S/ 15.00</span>
+</div>
+</td>
+<td class="py-2.5 px-space-md text-center">
+<div class="flex items-center justify-center gap-1">
+<button class="w-7 h-7 rounded flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors" onclick="editItem('SRV-0012', 'Curación con Resina Fotocurable 3M Z350', 85)" title="Editar" type="button">
+<span class="material-symbols-outlined text-[16px]">edit</span>
+</button>
+<button class="w-7 h-7 rounded flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors" title="Duplicar" type="button">
+<span class="material-symbols-outlined text-[16px]">content_copy</span>
+</button>
+<button class="w-7 h-7 rounded flex items-center justify-center text-on-surface-variant hover:text-error hover:bg-surface-container transition-colors" title="Más opciones" type="button">
+<span class="material-symbols-outlined text-[16px]">more_vert</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 2: Insumo Anestesia Lidocaína -->
+<tr class="bg-surface-container-low/20 hover:bg-surface-container-low/60 transition-colors">
+<td class="py-2.5 px-space-md text-center">
+<input class="row-selector w-4 h-4 accent-primary rounded cursor-pointer" type="checkbox">
+</td>
+<td class="py-2.5 px-space-sm">
+<span class="font-code-dense text-code-dense font-bold text-tertiary">MED-0441</span>
+</td>
+<td class="py-2.5 px-space-sm">
+<div class="flex flex-col">
+<span class="font-label-md text-label-md text-on-surface font-semibold">Lidocaína 2% con Epinefrina 1:100,000 (Caja x 50 cárpules)</span>
+<span class="text-[11px] text-on-surface-variant line-clamp-1">Anestésico local dental inyectable cartucho de vidrio 1.8 ml</span>
+</div>
+</td>
+<td class="py-2.5 px-space-sm">
+<div class="flex flex-col gap-0.5">
+<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-tertiary-fixed text-on-tertiary-fixed-variant w-max">FÁRMACO / INSUMO</span>
+<span class="text-[11px] text-on-surface-variant">Farmacia Clínica</span>
+</div>
+</td>
+<td class="py-2.5 px-space-sm">
+<div class="flex items-center gap-1 font-code-dense text-code-dense text-on-surface-variant">
+<span class="">51101500</span>
+<span class="material-symbols-outlined text-[14px] text-outline" title="Anestésicos terapéuticos">verified</span>
+</div>
+</td>
+<td class="py-2.5 px-space-sm text-right">
+<span class="font-label-md text-label-md font-bold text-on-surface">S/ 115.00</span>
+<div class="text-[10px] text-on-surface-variant">Costo: S/ 78.50</div>
+</td>
+<td class="py-2.5 px-space-sm text-center">
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-secondary-container text-on-secondary-container">
+                10 Gravado (18%)
+              </span>
+</td>
+<td class="py-2.5 px-space-sm">
+<div class="flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-secondary"></span>
+<span class="font-code-dense text-code-dense font-bold text-on-surface">34 cajas</span>
+<span class="text-[10px] text-on-surface-variant">(Almacén Central)</span>
+</div>
+</td>
+<td class="py-2.5 px-space-sm">
+<span class="text-[11px] text-on-surface-variant">Tarifa Directa Farmacia</span>
+</td>
+<td class="py-2.5 px-space-md text-center">
+<div class="flex items-center justify-center gap-1">
+<button class="w-7 h-7 rounded flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors" onclick="editItem('MED-0441', 'Lidocaína 2% con Epinefrina', 115)" title="Editar" type="button">
+<span class="material-symbols-outlined text-[16px]">edit</span>
+</button>
+<button class="w-7 h-7 rounded flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors" title="Duplicar" type="button">
+<span class="material-symbols-outlined text-[16px]">content_copy</span>
+</button>
+<button class="w-7 h-7 rounded flex items-center justify-center text-on-surface-variant hover:text-error hover:bg-surface-container transition-colors" title="Más opciones" type="button">
+<span class="material-symbols-outlined text-[16px]">more_vert</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 3: Profilaxis Dental Profunda -->
+<tr class="hover:bg-surface-container-low/60 transition-colors">
+<td class="py-2.5 px-space-md text-center">
+<input class="row-selector w-4 h-4 accent-primary rounded cursor-pointer" type="checkbox">
+</td>
+<td class="py-2.5 px-space-sm">
+<span class="font-code-dense text-code-dense font-bold text-primary">SRV-0008</span>
+</td>
+<td class="py-2.5 px-space-sm">
+<div class="flex flex-col">
+<span class="font-label-md text-label-md text-on-surface font-semibold">Profilaxis Dental Profunda con Ultrasonido Cavitrón</span>
+<span class="text-[11px] text-on-surface-variant line-clamp-1">Destartraje supragingival, remoción de placa y fluorización en gel</span>
+</div>
+</td>
+<td class="py-2.5 px-space-sm">
+<div class="flex flex-col gap-0.5">
+<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-primary-container text-on-primary w-max">PROCEDIMIENTO</span>
+<span class="text-[11px] text-on-surface-variant">Periodoncia y Prevención</span>
+</div>
+</td>
+<td class="py-2.5 px-space-sm">
+<div class="flex items-center gap-1 font-code-dense text-code-dense text-on-surface-variant">
+<span class="">85122002</span>
+<span class="material-symbols-outlined text-[14px] text-outline" title="Profilaxis bucal">verified</span>
+</div>
+</td>
+<td class="py-2.5 px-space-sm text-right">
+<span class="font-label-md text-label-md font-bold text-on-surface">S/ 70.00</span>
+<div class="text-[10px] text-on-surface-variant">Exonerado IGV</div>
+</td>
+<td class="py-2.5 px-space-sm text-center">
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-surface-container text-on-surface-variant">
+                20 Exonerado
+              </span>
+</td>
+<td class="py-2.5 px-space-sm">
+<span class="font-body-sm text-body-sm text-on-surface-variant">No aplica (Servicio)</span>
+</td>
+<td class="py-2.5 px-space-sm">
+<div class="flex flex-col">
+<span class="font-code-dense text-code-dense text-secondary font-semibold">Rimac: S/ 55.00</span>
+<span class="text-[10px] text-on-surface-variant">Pacífico: S/ 58.00</span>
+</div>
+</td>
+<td class="py-2.5 px-space-md text-center">
+<div class="flex items-center justify-center gap-1">
+<button class="w-7 h-7 rounded flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors" onclick="editItem('SRV-0008', 'Profilaxis Dental Profunda', 70)" title="Editar" type="button">
+<span class="material-symbols-outlined text-[16px]">edit</span>
+</button>
+<button class="w-7 h-7 rounded flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors" title="Duplicar" type="button">
+<span class="material-symbols-outlined text-[16px]">content_copy</span>
+</button>
+<button class="w-7 h-7 rounded flex items-center justify-center text-on-surface-variant hover:text-error hover:bg-surface-container transition-colors" title="Más opciones" type="button">
+<span class="material-symbols-outlined text-[16px]">more_vert</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 4: Brackets Metálicos Set -->
+<tr class="bg-surface-container-low/20 hover:bg-surface-container-low/60 transition-colors">
+<td class="py-2.5 px-space-md text-center">
+<input class="row-selector w-4 h-4 accent-primary rounded cursor-pointer" type="checkbox">
+</td>
+<td class="py-2.5 px-space-sm">
+<span class="font-code-dense text-code-dense font-bold text-tertiary">INS-0102</span>
+</td>
+<td class="py-2.5 px-space-sm">
+<div class="flex flex-col">
+<span class="font-label-md text-label-md text-on-surface font-semibold">Brackets Metálicos Set Roth 0.022 con Ganchos 3-4-5</span>
+<span class="text-[11px] text-on-surface-variant line-clamp-1">Juego de 20 brackets prescripción Roth slot .022 Morelli</span>
+</div>
+</td>
+<td class="py-2.5 px-space-sm">
+<div class="flex flex-col gap-0.5">
+<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-tertiary-fixed text-on-tertiary-fixed-variant w-max">MATERIAL / BIEN</span>
+<span class="text-[11px] text-on-surface-variant">Ortodoncia Avanzada</span>
+</div>
+</td>
+<td class="py-2.5 px-space-sm">
+<div class="flex items-center gap-1 font-code-dense text-code-dense text-on-surface-variant">
+<span class="">42151600</span>
+<span class="material-symbols-outlined text-[14px] text-outline" title="Aparatos de ortodoncia">verified</span>
+</div>
+</td>
+<td class="py-2.5 px-space-sm text-right">
+<span class="font-label-md text-label-md font-bold text-on-surface">S/ 180.00</span>
+<div class="text-[10px] text-on-surface-variant">V.V: S/ 152.54</div>
+</td>
+<td class="py-2.5 px-space-sm text-center">
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-secondary-container text-on-secondary-container">
+                10 Gravado (18%)
+              </span>
+</td>
+<td class="py-2.5 px-space-sm">
+<div class="flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-error"></span>
+<span class="font-code-dense text-code-dense font-bold text-error">4 sets</span>
+<span class="text-[10px] text-error font-semibold">(Crítico)</span>
+</div>
+</td>
+<td class="py-2.5 px-space-sm">
+<span class="text-[11px] text-on-surface-variant">Particular / Paquete Orto</span>
+</td>
+<td class="py-2.5 px-space-md text-center">
+<div class="flex items-center justify-center gap-1">
+<button class="w-7 h-7 rounded flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors" onclick="editItem('INS-0102', 'Brackets Metálicos Set Roth', 180)" title="Editar" type="button">
+<span class="material-symbols-outlined text-[16px]">edit</span>
+</button>
+<button class="w-7 h-7 rounded flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors" title="Duplicar" type="button">
+<span class="material-symbols-outlined text-[16px]">content_copy</span>
+</button>
+<button class="w-7 h-7 rounded flex items-center justify-center text-on-surface-variant hover:text-error hover:bg-surface-container transition-colors" title="Más opciones" type="button">
+<span class="material-symbols-outlined text-[16px]">more_vert</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 5: Blanqueamiento Dental LED -->
+<tr class="hover:bg-surface-container-low/60 transition-colors">
+<td class="py-2.5 px-space-md text-center">
+<input class="row-selector w-4 h-4 accent-primary rounded cursor-pointer" type="checkbox">
+</td>
+<td class="py-2.5 px-space-sm">
+<span class="font-code-dense text-code-dense font-bold text-primary">SRV-0035</span>
+</td>
+<td class="py-2.5 px-space-sm">
+<div class="flex flex-col">
+<span class="font-label-md text-label-md text-on-surface font-semibold">Blanqueamiento Dental Láser LED en Consultorio (2 Sesiones)</span>
+<span class="text-[11px] text-on-surface-variant line-clamp-1">Peróxido de Hidrógeno al 35%, aislamiento gingival fotoactivado</span>
+</div>
+</td>
+<td class="py-2.5 px-space-sm">
+<div class="flex flex-col gap-0.5">
+<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-primary-container text-on-primary w-max">PROCEDIMIENTO</span>
+<span class="text-[11px] text-on-surface-variant">Estética Dental</span>
+</div>
+</td>
+<td class="py-2.5 px-space-sm">
+<div class="flex items-center gap-1 font-code-dense text-code-dense text-on-surface-variant">
+<span class="">85122003</span>
+<span class="material-symbols-outlined text-[14px] text-outline" title="Tratamientos estéticos odontológicos">verified</span>
+</div>
+</td>
+<td class="py-2.5 px-space-sm text-right">
+<span class="font-label-md text-label-md font-bold text-on-surface">S/ 380.00</span>
+<div class="text-[10px] text-on-surface-variant">V.V: S/ 322.03</div>
+</td>
+<td class="py-2.5 px-space-sm text-center">
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-secondary-container text-on-secondary-container">
+                10 Gravado (18%)
+              </span>
+</td>
+<td class="py-2.5 px-space-sm">
+<span class="font-body-sm text-body-sm text-on-surface-variant">No aplica (Servicio)</span>
+</td>
+<td class="py-2.5 px-space-sm">
+<div class="flex flex-col">
+<span class="font-code-dense text-code-dense text-primary font-semibold">Promo Web: S/ 320.00</span>
+<span class="text-[10px] text-on-surface-variant">Sin cobertura EPS</span>
+</div>
+</td>
+<td class="py-2.5 px-space-md text-center">
+<div class="flex items-center justify-center gap-1">
+<button class="w-7 h-7 rounded flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors" onclick="editItem('SRV-0035', 'Blanqueamiento Dental LED', 380)" title="Editar" type="button">
+<span class="material-symbols-outlined text-[16px]">edit</span>
+</button>
+<button class="w-7 h-7 rounded flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors" title="Duplicar" type="button">
+<span class="material-symbols-outlined text-[16px]">content_copy</span>
+</button>
+<button class="w-7 h-7 rounded flex items-center justify-center text-on-surface-variant hover:text-error hover:bg-surface-container transition-colors" title="Más opciones" type="button">
+<span class="material-symbols-outlined text-[16px]">more_vert</span>
+</button>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Table Footer with Pagination -->
+<div class="p-space-md bg-surface-container-low flex flex-col sm:flex-row items-center justify-between gap-space-sm">
+<div class="flex items-center gap-2">
+<span class="font-body-sm text-body-sm text-on-surface-variant">Registros por página:</span>
+<select class="h-8 px-2 rounded bg-surface-container-lowest text-on-surface font-code-dense text-code-dense shadow-sm">
+<option>10</option>
+<option selected="">25</option>
+<option>50</option>
+<option>100</option>
+</select>
+<span class="font-code-dense text-code-dense text-on-surface-variant ml-2">Total: 184 ítems</span>
+</div>
+<div class="flex items-center gap-1">
+<button class="w-8 h-8 rounded flex items-center justify-center bg-surface-container-lowest text-on-surface-variant hover:text-primary disabled:opacity-40 transition-colors shadow-sm" disabled="" type="button">
+<span class="material-symbols-outlined text-[18px]">chevron_left</span>
+</button>
+<button class="w-8 h-8 rounded flex items-center justify-center bg-primary-container text-on-primary font-label-sm text-label-sm shadow-sm" type="button">1</button>
+<button class="w-8 h-8 rounded flex items-center justify-center bg-surface-container-lowest text-on-surface font-label-sm text-label-sm hover:bg-surface-container transition-colors shadow-sm" type="button">2</button>
+<button class="w-8 h-8 rounded flex items-center justify-center bg-surface-container-lowest text-on-surface font-label-sm text-label-sm hover:bg-surface-container transition-colors shadow-sm" type="button">3</button>
+<span class="px-1 text-on-surface-variant">...</span>
+<button class="w-8 h-8 rounded flex items-center justify-center bg-surface-container-lowest text-on-surface font-label-sm text-label-sm hover:bg-surface-container transition-colors shadow-sm" type="button">8</button>
+<button class="w-8 h-8 rounded flex items-center justify-center bg-surface-container-lowest text-on-surface-variant hover:text-primary transition-colors shadow-sm" type="button">
+<span class="material-symbols-outlined text-[18px]">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Slide-over / Modal Lateral: Registrar o Editar Ítem de Catálogo -->
+<div class="fixed inset-0 z-50 overflow-hidden pointer-events-none transition-opacity duration-300 opacity-0" id="catalog-drawer">
+<!-- Backdrop -->
+<div class="absolute inset-0 bg-inverse-surface/40 backdrop-blur-sm pointer-events-auto transition-opacity" id="drawer-backdrop" onclick="toggleDrawer(false)"></div>
+<div class="absolute inset-y-0 right-0 max-w-full flex pl-10 pointer-events-auto">
+<div class="w-screen max-w-xl bg-surface-container-lowest shadow-2xl flex flex-col transform translate-x-full transition-transform duration-300" id="drawer-panel">
+<!-- Drawer Header -->
+<div class="px-space-lg py-4 bg-surface-container-low flex items-center justify-between">
+<div class="flex items-center gap-2">
+<div class="w-9 h-9 rounded-lg bg-primary-container flex items-center justify-center text-on-primary">
+<span class="material-symbols-outlined text-[20px]" id="drawer-icon">add_task</span>
+</div>
+<div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface" id="drawer-title">Nuevo Producto o Procedimiento</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Catálogo unificado y reglas de facturación SUNAT</p>
+</div>
+</div>
+<button class="w-8 h-8 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-container transition-colors" onclick="toggleDrawer(false)" type="button">
+<span class="material-symbols-outlined text-[20px]">close</span>
+</button>
+</div>
+<!-- Drawer Tab Navigation -->
+<div class="flex bg-surface-container px-space-lg pt-2 gap-2">
+<button class="pb-2 px-3 font-label-md text-label-md text-primary border-b-2 border-primary font-bold" id="tab-btn-general" onclick="switchDrawerTab('tab-general')" type="button">1. Datos Generales</button>
+<button class="pb-2 px-3 font-label-md text-label-md text-on-surface-variant hover:text-on-surface" id="tab-btn-pricing" onclick="switchDrawerTab('tab-pricing')" type="button">2. Precios &amp; SUNAT</button>
+<button class="pb-2 px-3 font-label-md text-label-md text-on-surface-variant hover:text-on-surface" id="tab-btn-inventory" onclick="switchDrawerTab('tab-inventory')" type="button">3. Kardex / Stock</button>
+</div>
+<!-- Drawer Body Forms -->
+<div class="flex-1 overflow-y-auto p-space-lg flex flex-col gap-space-md">
+<!-- TAB 1: General Info -->
+<div class="flex flex-col gap-space-md" id="tab-general">
+<!-- Tipo de Ítem -->
+<div class="flex flex-col gap-1.5">
+<label class="font-label-md text-label-md text-on-surface">Naturaleza del Ítem <span class="text-error">*</span></label>
+<div class="grid grid-cols-2 gap-2">
+<label class="flex items-center gap-2 p-3 rounded-lg bg-surface-container-low cursor-pointer hover:bg-surface-container transition-colors">
+<input checked="" class="w-4 h-4 accent-primary" name="item-type" type="radio" value="service">
+<div class="flex flex-col">
+<span class="font-label-md text-label-md text-on-surface">Servicio / Procedimiento</span>
+<span class="text-[11px] text-on-surface-variant">Honorarios, cirugías, atenciones</span>
+</div>
+</label>
+<label class="flex items-center gap-2 p-3 rounded-lg bg-surface-container-low cursor-pointer hover:bg-surface-container transition-colors">
+<input class="w-4 h-4 accent-primary" name="item-type" type="radio" value="goods">
+<div class="flex flex-col">
+<span class="font-label-md text-label-md text-on-surface">Bien / Producto Físico</span>
+<span class="text-[11px] text-on-surface-variant">Fármacos, brackets, consumibles</span>
+</div>
+</label>
+</div>
+</div>
+<!-- Nombre -->
+<div class="flex flex-col gap-1">
+<label class="font-label-md text-label-md text-on-surface" for="form-item-name">Nombre Comercial o Clínico <span class="text-error">*</span></label>
+<input class="h-10 px-3 rounded-lg bg-surface-container-low text-on-surface font-body-md text-body-md focus:bg-surface-container-lowest shadow-inner" id="form-item-name" placeholder="Ej: Curación con Resina Fotocurable..." type="text">
+</div>
+<!-- SKU & Código SUNAT -->
+<div class="grid grid-cols-2 gap-space-sm">
+<div class="flex flex-col gap-1">
+<label class="font-label-md text-label-md text-on-surface" for="form-item-sku">Código Interno (SKU)</label>
+<input class="h-10 px-3 rounded-lg bg-surface-container-low text-on-surface font-code-dense text-code-dense focus:bg-surface-container-lowest shadow-inner" id="form-item-sku" type="text" value="SRV-0113">
+</div>
+<div class="flex flex-col gap-1">
+<label class="font-label-md text-label-md text-on-surface" for="form-item-unspsc">Código SUNAT (UNSPSC) <span class="text-error">*</span></label>
+<div class="relative flex items-center">
+<input class="w-full h-10 px-3 rounded-lg bg-surface-container-low text-on-surface font-code-dense text-code-dense focus:bg-surface-container-lowest shadow-inner" id="form-item-unspsc" placeholder="Ej: 85122001" type="text" value="85122001">
+<span class="material-symbols-outlined absolute right-2 text-outline text-[18px]">policy</span>
+</div>
+</div>
+</div>
+<!-- Categoría & Especialidad -->
+<div class="grid grid-cols-2 gap-space-sm">
+<div class="flex flex-col gap-1">
+<label class="font-label-md text-label-md text-on-surface">Especialidad Odontológica</label>
+<select class="h-10 px-3 rounded-lg bg-surface-container-low text-on-surface font-body-md text-body-md focus:bg-surface-container-lowest shadow-inner">
+<option>Odontología General</option>
+<option>Ortodoncia y Ortopedia</option>
+<option>Periodoncia e Implantes</option>
+<option>Cirugía Bucal &amp; Maxilofacial</option>
+<option>Endodoncia</option>
+<option>Estética &amp; Blanqueamiento</option>
+<option>Odontopediatría</option>
+</select>
+</div>
+<div class="flex flex-col gap-1">
+<label class="font-label-md text-label-md text-on-surface">Unidad de Medida (Cat. 03)</label>
+<select class="h-10 px-3 rounded-lg bg-surface-container-low text-on-surface font-body-md text-body-md focus:bg-surface-container-lowest shadow-inner">
+<option selected="">ZZ - Unidad de Servicio</option>
+<option>NIU - Unidad (Bienes)</option>
+<option>BX - Caja</option>
+<option>DZN - Docena</option>
+<option>KT - Kit / Set</option>
+</select>
+</div>
+</div>
+<!-- Descripción Detallada para Comprobante -->
+<div class="flex flex-col gap-1">
+<label class="font-label-md text-label-md text-on-surface">Descripción Glosa para Boleta / Factura</label>
+<textarea class="p-3 rounded-lg bg-surface-container-low text-on-surface font-body-md text-body-md focus:bg-surface-container-lowest shadow-inner" placeholder="Información complementaria que aparecerá en el PDF y XML de la factura electrónica..." rows="3"></textarea>
+</div>
+</div>
+<!-- TAB 2: Precios y SUNAT -->
+<div class="hidden flex-col gap-space-md" id="tab-pricing">
+<div class="bg-secondary-container/30 p-space-md rounded-xl flex items-start gap-3">
+<span class="material-symbols-outlined text-secondary text-[22px] mt-0.5">verified_user</span>
+<div class="flex flex-col">
+<span class="font-label-md text-label-md text-on-secondary-container font-semibold">Cálculo Automático de Impuestos SUNAT</span>
+<span class="text-[11px] text-on-surface-variant">El sistema desglosa automáticamente el Valor Venta e IGV (18%) conforme a la Ley de Comprobantes de Pago del Perú.</span>
+</div>
+</div>
+<!-- Tipo de Afectación IGV (Catálogo 07) -->
+<div class="flex flex-col gap-1">
+<label class="font-label-md text-label-md text-on-surface">Tipo de Afectación al IGV (Catálogo 07) <span class="text-error">*</span></label>
+<select class="h-10 px-3 rounded-lg bg-surface-container-low text-on-surface font-body-md text-body-md focus:bg-surface-container-lowest shadow-inner" id="form-igv-type" onchange="calculatePrices()">
+<option selected="" value="10">10 - Gravado - Operación Onerosa (18%)</option>
+<option value="20">20 - Exonerado - Operación Onerosa (Ley Hospitalaria/Médica)</option>
+<option value="30">30 - Inafecto - Operación Onerosa</option>
+<option value="11">11 - Gravado - Retiro por Premio o Donación</option>
+</select>
+</div>
+<!-- Precios Breakdown Matrix -->
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-space-sm">
+<div class="flex flex-col gap-1">
+<label class="font-label-md text-label-md text-on-surface">Precio Venta (Inc. IGV)</label>
+<div class="relative flex items-center">
+<span class="absolute left-3 font-code-dense text-code-dense text-on-surface-variant font-bold">S/</span>
+<input class="w-full h-10 pl-8 pr-3 rounded-lg bg-surface-container-low text-on-surface font-code-dense text-code-dense font-bold focus:bg-surface-container-lowest shadow-inner" id="form-price-total" oninput="calculatePrices()" step="0.50" type="number" value="85.00">
+</div>
+</div>
+<div class="flex flex-col gap-1">
+<label class="font-label-md text-label-md text-on-surface-variant">Valor Venta (Neto)</label>
+<div class="relative flex items-center">
+<span class="absolute left-3 font-code-dense text-code-dense text-outline font-bold">S/</span>
+<input class="w-full h-10 pl-8 pr-3 rounded-lg bg-surface-container text-on-surface-variant font-code-dense text-code-dense cursor-not-allowed" id="form-price-net" readonly="" type="text" value="72.03">
+</div>
+</div>
+<div class="flex flex-col gap-1">
+<label class="font-label-md text-label-md text-on-surface-variant">Monto IGV (18%)</label>
+<div class="relative flex items-center">
+<span class="absolute left-3 font-code-dense text-code-dense text-outline font-bold">S/</span>
+<input class="w-full h-10 pl-8 pr-3 rounded-lg bg-surface-container text-on-surface-variant font-code-dense text-code-dense cursor-not-allowed" id="form-price-igv" readonly="" type="text" value="12.97">
+</div>
+</div>
+</div>
+<!-- Costo Referencial & Margen Bruto -->
+<div class="grid grid-cols-2 gap-space-sm p-space-md rounded-xl bg-surface-container-low">
+<div class="flex flex-col gap-1">
+<label class="font-label-sm text-label-sm text-on-surface">Costo Unitario Estimado (Insumos/HH)</label>
+<div class="relative flex items-center">
+<span class="absolute left-3 font-code-dense text-code-dense text-on-surface-variant">S/</span>
+<input class="w-full h-9 pl-8 pr-2 rounded bg-surface-container-lowest text-on-surface font-code-dense text-code-dense shadow-sm" id="form-cost" oninput="calculatePrices()" type="number" value="28.00">
+</div>
+</div>
+<div class="flex flex-col justify-end">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Margen Bruto Estimado:</span>
+<span class="font-code-dense text-code-dense font-bold text-secondary" id="form-margin">61.1 %</span>
+</div>
+<div class="w-full bg-surface-container h-1.5 rounded-full mt-2 overflow-hidden">
+<div class="bg-secondary h-full" style="width: 61%"></div>
+</div>
+</div>
+</div>
+<!-- Aranceles por Convenio / EPS -->
+<div class="flex flex-col gap-space-xs">
+<span class="font-label-md text-label-md text-on-surface font-semibold">Listas y Convenios Aseguradoras</span>
+<div class="flex flex-col gap-2">
+<div class="flex items-center justify-between p-2 rounded-lg bg-surface-container-low">
+<span class="font-body-sm text-body-sm text-on-surface">Rimac Seguros (-15%)</span>
+<div class="flex items-center gap-2">
+<span class="font-code-dense text-code-dense font-bold">S/ 72.25</span>
+<span class="text-[10px] bg-secondary-container px-1.5 py-0.5 rounded text-on-secondary-container">Copago 20%</span>
+</div>
+</div>
+<div class="flex items-center justify-between p-2 rounded-lg bg-surface-container-low">
+<span class="font-body-sm text-body-sm text-on-surface">Pacífico Salud (-12%)</span>
+<div class="flex items-center gap-2">
+<span class="font-code-dense text-code-dense font-bold">S/ 74.80</span>
+<span class="text-[10px] bg-secondary-container px-1.5 py-0.5 rounded text-on-secondary-container">Copago 15%</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- TAB 3: Kardex & Inventario -->
+<div class="hidden flex-col gap-space-md" id="tab-inventory">
+<div class="flex items-center justify-between p-space-md rounded-xl bg-surface-container-low">
+<div class="flex flex-col">
+<span class="font-label-md text-label-md text-on-surface font-semibold">Controlar Stock en Tiempo Real</span>
+<span class="text-[11px] text-on-surface-variant">Descuenta existencias con cada boleta/factura emitida</span>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input class="sr-only peer" id="toggle-stock" onchange="toggleStockFields(this.checked)" type="checkbox">
+<div class="w-11 h-6 bg-surface-container peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+<div class="opacity-40 pointer-events-none flex flex-col gap-space-md transition-opacity" id="stock-fields-container">
+<div class="grid grid-cols-2 gap-space-sm">
+<div class="flex flex-col gap-1">
+<label class="font-label-md text-label-md text-on-surface">Stock Inicial</label>
+<input class="h-10 px-3 rounded-lg bg-surface-container-low text-on-surface font-code-dense text-code-dense" type="number" value="50">
+</div>
+<div class="flex flex-col gap-1">
+<label class="font-label-md text-label-md text-on-surface">Alerta Stock Mínimo</label>
+<input class="h-10 px-3 rounded-lg bg-surface-container-low text-on-surface font-code-dense text-code-dense" type="number" value="10">
+</div>
+</div>
+<div class="flex flex-col gap-1">
+<label class="font-label-md text-label-md text-on-surface">Almacén Principal Asignado</label>
+<select class="h-10 px-3 rounded-lg bg-surface-container-low text-on-surface font-body-md text-body-md">
+<option>Almacén Central - Sede Miraflores</option>
+<option>Botiquín Consultorio 1 (Operatoria)</option>
+<option>Botiquín Consultorio 2 (Ortodoncia)</option>
+</select>
+</div>
+<div class="flex flex-col gap-1">
+<label class="font-label-md text-label-md text-on-surface">Código de Lote y Vencimiento</label>
+<div class="grid grid-cols-2 gap-2">
+<input class="h-10 px-3 rounded-lg bg-surface-container-low text-on-surface font-body-md text-body-md" placeholder="Lote: LOT-2024-B" type="text">
+<input class="h-10 px-3 rounded-lg bg-surface-container-low text-on-surface font-body-md text-body-md" type="date">
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Drawer Footer Actions -->
+<div class="p-space-lg bg-surface-container-low flex items-center justify-between">
+<button class="px-4 py-2 rounded-lg bg-surface-container text-on-surface font-label-md text-label-md hover:bg-surface-container-high transition-colors shadow-sm" onclick="toggleDrawer(false)" type="button">
+            Cancelar
+          </button>
+<div class="flex items-center gap-2">
+<button class="px-4 py-2 rounded-lg bg-surface-container text-primary font-label-md text-label-md hover:bg-surface-container-high transition-colors shadow-sm" type="button">
+              Guardar y Nuevo
+            </button>
+<button class="px-4 py-2 rounded-lg bg-primary text-on-primary font-label-md text-label-md hover:opacity-90 active:scale-95 transition-all shadow-sm" onclick="saveItem()" type="button">
+              Guardar en Catálogo
+            </button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Client Interaction Behavior -->
+<script>
+  function toggleDrawer(open) {
+    const drawer = document.getElementById('catalog-drawer');
+    const panel = document.getElementById('drawer-panel');
+    if (open) {
+      drawer.classList.remove('opacity-0', 'pointer-events-none');
+      drawer.classList.add('opacity-100');
+      panel.classList.remove('translate-x-full');
+      panel.classList.add('translate-x-0');
+    } else {
+      drawer.classList.add('opacity-0', 'pointer-events-none');
+      drawer.classList.remove('opacity-100');
+      panel.classList.add('translate-x-full');
+      panel.classList.remove('translate-x-0');
+    }
+  }
+
+  function switchDrawerTab(tabId) {
+    // Hide all tabs
+    document.getElementById('tab-general').classList.add('hidden');
+    document.getElementById('tab-pricing').classList.add('hidden');
+    document.getElementById('tab-inventory').classList.add('hidden');
+
+    // Show chosen tab
+    document.getElementById(tabId).classList.remove('hidden');
+
+    // Reset tab button states
+    ['general', 'pricing', 'inventory'].forEach(t => {
+      const btn = document.getElementById('tab-btn-' + t);
+      if ('tab-' + t === tabId) {
+        btn.classList.add('text-primary', 'border-b-2', 'border-primary', 'font-bold');
+        btn.classList.remove('text-on-surface-variant');
+      } else {
+        btn.classList.remove('text-primary', 'border-b-2', 'border-primary', 'font-bold');
+        btn.classList.add('text-on-surface-variant');
+      }
+    });
+  }
+
+  function calculatePrices() {
+    const igvType = document.getElementById('form-igv-type').value;
+    const totalInput = parseFloat(document.getElementById('form-price-total').value) || 0;
+    const costInput = parseFloat(document.getElementById('form-cost').value) || 0;
+    const netField = document.getElementById('form-price-net');
+    const igvField = document.getElementById('form-price-igv');
+    const marginField = document.getElementById('form-margin');
+
+    if (igvType === '10') {
+      const net = totalInput / 1.18;
+      const igv = totalInput - net;
+      netField.value = net.toFixed(2);
+      igvField.value = igv.toFixed(2);
+      
+      if (net > 0 && costInput > 0) {
+        const margin = ((net - costInput) / net) * 100;
+        marginField.innerText = margin.toFixed(1) + ' %';
+      }
+    } else {
+      // Exonerado or Inafecto
+      netField.value = totalInput.toFixed(2);
+      igvField.value = "0.00";
+      if (totalInput > 0 && costInput > 0) {
+        const margin = ((totalInput - costInput) / totalInput) * 100;
+        marginField.innerText = margin.toFixed(1) + ' %';
+      }
+    }
+  }
+
+  function toggleStockFields(enabled) {
+    const container = document.getElementById('stock-fields-container');
+    if (enabled) {
+      container.classList.remove('opacity-40', 'pointer-events-none');
+    } else {
+      container.classList.add('opacity-40', 'pointer-events-none');
+    }
+  }
+
+  function editItem(sku, name, price) {
+    document.getElementById('drawer-title').innerText = 'Editar: ' + sku;
+    document.getElementById('drawer-icon').innerText = 'edit_note';
+    document.getElementById('form-item-sku').value = sku;
+    document.getElementById('form-item-name').value = name;
+    document.getElementById('form-price-total').value = price.toFixed(2);
+    calculatePrices();
+    toggleDrawer(true);
+  }
+
+  function saveItem() {
+    toggleDrawer(false);
+  }
+
+  // Row selection toggles batch actions toolbar
+  document.addEventListener('DOMContentLoaded', () => {
+    const selectAll = document.getElementById('select-all');
+    const rowSelectors = document.querySelectorAll('.row-selector');
+    const batchToolbar = document.getElementById('batch-toolbar');
+    const selectedCount = document.getElementById('selected-count');
+
+    function updateBatchState() {
+      const checkedRows = document.querySelectorAll('.row-selector:checked');
+      if (checkedRows.length > 0) {
+        batchToolbar.classList.remove('hidden');
+        selectedCount.innerText = checkedRows.length;
+      } else {
+        batchToolbar.classList.add('hidden');
+      }
+    }
+
+    if (selectAll) {
+      selectAll.addEventListener('change', (e) => {
+        rowSelectors.forEach(cb => { cb.checked = e.target.checked; });
+        updateBatchState();
+      });
+    }
+
+    rowSelectors.forEach(cb => {
+      cb.addEventListener('change', () => {
+        updateBatchState();
+      });
+    });
+  });
+</script></main><div class="fixed bottom-20 right-4 z-50"><a aria-label="Nueva Venta POS" class="flex items-center justify-center w-14 h-14 rounded-full bg-primary-container text-on-primary shadow-lg hover:opacity-95 active:scale-95 transition-all" data-path="nueva-venta-pos" href="#"><span class="material-symbols-outlined text-[26px]">add</span></a></div><nav class="fixed bottom-0 w-full z-50 pb-safe bg-surface/90 backdrop-blur-xl shadow-[0_-2px_12px_rgba(0,0,0,0.06)]" data-active-classes="text-primary font-bold"><div class="flex justify-around items-center h-16 px-space-xs"><a aria-current="page" class="flex flex-col items-center justify-center gap-0.5 w-16 h-12 transition-colors text-primary font-bold" data-path="inicio" href="#"><span class="material-symbols-outlined text-[20px]">home</span><span class="font-label-sm text-label-sm">Inicio</span></a><a class="flex flex-col items-center justify-center gap-0.5 w-16 h-12 text-on-surface-variant hover:text-on-surface transition-colors" data-path="ventas" href="#"><span class="material-symbols-outlined text-[20px]">point_of_sale</span><span class="font-label-sm text-label-sm">Ventas</span></a><a class="flex flex-col items-center justify-center gap-0.5 w-16 h-12 text-on-surface-variant hover:text-on-surface transition-colors" data-path="clientes" href="#"><span class="material-symbols-outlined text-[20px]">group</span><span class="font-label-sm text-label-sm">Clientes</span></a><a class="flex flex-col items-center justify-center gap-0.5 w-16 h-12 text-on-surface-variant hover:text-on-surface transition-colors" data-path="inventario" href="#"><span class="material-symbols-outlined text-[20px]">inventory_2</span><span class="font-label-sm text-label-sm">Inventario</span></a><a class="flex flex-col items-center justify-center gap-0.5 w-16 h-12 text-on-surface-variant hover:text-on-surface transition-colors" data-path="mas-opciones" href="#"><span class="material-symbols-outlined text-[20px]">more_horiz</span><span class="font-label-sm text-label-sm">Más</span></a></div></nav>
+
+</body></html>
