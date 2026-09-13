@@ -5,12 +5,12 @@ import Link from "next/link";
 import * as React from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { NumberInput } from "@/components/shared/number-input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DataTable, TwoLine, type Column } from "@/components/shared/data-table";
 import { SectionCard } from "@/components/shared/section-card";
 import { StatusBadge, type BadgeTone } from "@/components/shared/status-badge";
-import { formatCurrency, parseNumber } from "@/lib/format";
+import { formatCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { CashMovement } from "../mocks/cash";
 import { shift } from "../mocks/cash";
@@ -73,9 +73,9 @@ export function CashScreen({ movements }: { movements: CashMovement[] }) {
               <li key={d.label} className="flex items-center gap-3 px-4 py-1.5 text-sm">
                 <span className="w-16 font-mono tabular-nums">{d.label}</span>
                 <span className="text-muted-foreground">×</span>
-                <Input
-                  size="sm" type="number" min={0} value={counts[i]} aria-label={`Cantidad de ${d.label}`}
-                  onChange={(e) => setCounts((c) => c.map((v, j) => (j === i ? parseNumber(e.target.value) : v)))}
+                <NumberInput
+                  size="sm" value={counts[i]} aria-label={`Cantidad de ${d.label}`}
+                  onValueChange={(n) => setCounts((c) => c.map((v, j) => (j === i ? n : v)))}
                   className="w-16 text-right font-mono"
                 />
                 <span className="ml-auto font-mono tabular-nums">{formatCurrency(d.value * counts[i])}</span>

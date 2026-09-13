@@ -11,13 +11,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { NumberInput } from "@/components/shared/number-input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Field } from "@/components/shared/field";
 import { PageHeader } from "@/components/shared/page-header";
 import { SectionCard } from "@/components/shared/section-card";
 import { StatusBadge } from "@/components/shared/status-badge";
-import { formatCurrency, formatDate, formatDocumentNumber, parseNumber } from "@/lib/format";
+import { formatCurrency, formatDate, formatDocumentNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { SalesDocumentDetail } from "@/types/domain";
 import { documentTypeLabel } from "../lib/document-type";
@@ -83,7 +84,7 @@ export function CreditNoteWizard({ doc }: { doc: SalesDocumentDetail }) {
           ) : step === 1 ? (
             <SectionCard title={`2. Ítems afectados de ${number}`} action={full ? <StatusBadge tone="info" label="Anulación total · todos los ítems" /> : <Button size="xs" variant="outline" onClick={() => setQty(Object.fromEntries(doc.lines.map((l) => [l.code, l.quantity])))}>Seleccionar todos</Button>} contentClassName="p-0">
               <div className="overflow-x-auto"><Table className="min-w-[720px]"><TableHeader><TableRow><TableHead className="pl-4">Código / descripción</TableHead><TableHead className="text-left">Unidad</TableHead><TableHead className="text-right">Cant. orig.</TableHead><TableHead className="text-right">Cant. anul.</TableHead><TableHead className="text-right">Valor unit.</TableHead><TableHead className="text-right">IGV</TableHead><TableHead className="text-right">Total (S/)</TableHead></TableRow></TableHeader><TableBody>
-                {affected.map((l) => (<TableRow key={l.code}><TableCell className="px-4 py-2"><p className="font-medium">{l.description}</p><p className="font-mono text-xs text-muted-foreground">{l.code}</p></TableCell><TableCell className="px-2 py-2">{l.unit}</TableCell><TableCell className="px-2 py-2 text-right font-mono">{l.quantity}</TableCell><TableCell className="px-2 py-2 text-right">{full ? <span className="font-mono">{l.quantity}</span> : <Input size="sm" type="number" min={0} max={l.quantity} value={l.sel} onChange={(e) => setQty({ ...qty, [l.code]: Math.min(l.quantity, parseNumber(e.target.value)) })} className="ml-auto w-16 text-right font-mono" aria-label={`Cantidad a anular ${l.code}`} />}</TableCell><TableCell className="px-2 py-2 text-right font-mono">{formatCurrency(l.unitValue)}</TableCell><TableCell className="px-2 py-2 text-right font-mono">{formatCurrency((l.total - l.total / 1.18) / l.quantity * l.sel)}</TableCell><TableCell className="px-4 py-2 text-right font-mono font-medium">{formatCurrency((l.total / l.quantity) * l.sel)}</TableCell></TableRow>))}
+                {affected.map((l) => (<TableRow key={l.code}><TableCell className="px-4 py-2"><p className="font-medium">{l.description}</p><p className="font-mono text-xs text-muted-foreground">{l.code}</p></TableCell><TableCell className="px-2 py-2">{l.unit}</TableCell><TableCell className="px-2 py-2 text-right font-mono">{l.quantity}</TableCell><TableCell className="px-2 py-2 text-right">{full ? <span className="font-mono">{l.quantity}</span> : <NumberInput size="sm" max={l.quantity} value={l.sel} onValueChange={(n) => setQty({ ...qty, [l.code]: Math.min(l.quantity, n) })} className="ml-auto w-16 text-right font-mono" aria-label={`Cantidad a anular ${l.code}`} />}</TableCell><TableCell className="px-2 py-2 text-right font-mono">{formatCurrency(l.unitValue)}</TableCell><TableCell className="px-2 py-2 text-right font-mono">{formatCurrency((l.total - l.total / 1.18) / l.quantity * l.sel)}</TableCell><TableCell className="px-4 py-2 text-right font-mono font-medium">{formatCurrency((l.total / l.quantity) * l.sel)}</TableCell></TableRow>))}
               </TableBody></Table></div>
               <div className="flex flex-col gap-2 border-t p-4 text-sm">
                 <label className="flex items-center gap-2"><Checkbox checked={restock} onCheckedChange={(v) => setRestock(Boolean(v))} /> Reingresar existencias al kardex de Almacén Miraflores</label>

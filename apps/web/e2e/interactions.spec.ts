@@ -89,7 +89,7 @@ test("caja: cash count drives the difference and gates the closing", async ({ pa
   await settle(page);
   const close = page.getByRole("button", { name: /Z-Report/ });
   await expect(close).toBeEnabled();
-  const input = page.getByRole("spinbutton", { name: "Cantidad de S/ 200" });
+  const input = page.getByRole("textbox", { name: "Cantidad de S/ 200" });
   await input.fill("3");
   await expect(page.getByTestId("cash-counted")).toHaveText("S/ 1,620.00");
   await expect(page.getByText(/\(sobrante\)/)).toBeVisible();

@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EntityHeader } from "@/components/shared/entity-header";
 import { Input } from "@/components/ui/input";
+import { NumberInput } from "@/components/shared/number-input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -16,7 +17,7 @@ import { SectionCard } from "@/components/shared/section-card";
 import { StatusBadge, Tag } from "@/components/shared/status-badge";
 import { stockMock } from "@/features/inventory/mocks/stock";
 import { SearchInput } from "@/components/shared/toolbar";
-import { formatCurrency, parseNumber } from "@/lib/format";
+import { formatCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { Supplier } from "../mocks/suppliers";
 import { FilterBar } from "@/components/shared/filter-bar";
@@ -98,10 +99,10 @@ export function PurchaseOrderEditor({ suppliers }: { suppliers: Supplier[] }) {
                     <TableRow key={l.id}>
                       <TableCell className="pl-4 font-mono text-xs">{l.sku}</TableCell>
                       <TableCell className="max-w-72 truncate font-medium">{l.name}</TableCell>
-                      <TableCell className="text-right">{ed ? <Input size="sm" value={l.qty} onChange={(e) => update(l.id, { qty: parseNumber(e.target.value) })} className="ml-auto w-16 text-right font-mono" aria-label={`Cantidad ${l.sku}`} /> : <span className="font-mono">{l.qty}</span>}</TableCell>
+                      <TableCell className="text-right">{ed ? <NumberInput size="sm" value={l.qty} onValueChange={(n) => update(l.id, { qty: n })} className="ml-auto w-16 text-right font-mono" aria-label={`Cantidad ${l.sku}`} /> : <span className="font-mono">{l.qty}</span>}</TableCell>
                       <TableCell>{l.unit}</TableCell>
-                      <TableCell className="text-right">{ed ? <Input size="sm" value={l.cost} onChange={(e) => update(l.id, { cost: parseNumber(e.target.value) })} className="ml-auto w-24 text-right font-mono" aria-label={`Costo ${l.sku}`} /> : <span className="font-mono">{l.cost.toFixed(2)}</span>}</TableCell>
-                      <TableCell className="text-right">{ed ? <Input size="sm" value={l.discount} onChange={(e) => update(l.id, { discount: parseNumber(e.target.value) })} className="ml-auto w-14 text-right font-mono" aria-label={`Descuento ${l.sku}`} /> : <span className="font-mono">{l.discount}%</span>}</TableCell>
+                      <TableCell className="text-right">{ed ? <NumberInput size="sm" value={l.cost} onValueChange={(n) => update(l.id, { cost: n })} className="ml-auto w-24 text-right font-mono" aria-label={`Costo ${l.sku}`} /> : <span className="font-mono">{l.cost.toFixed(2)}</span>}</TableCell>
+                      <TableCell className="text-right">{ed ? <NumberInput size="sm" value={l.discount} onValueChange={(n) => update(l.id, { discount: n })} className="ml-auto w-14 text-right font-mono" aria-label={`Descuento ${l.sku}`} /> : <span className="font-mono">{l.discount}%</span>}</TableCell>
                       <TableCell><Badge variant="outline">{l.taxable ? "Gravado" : "Inafecto"}</Badge></TableCell>
                       <TableCell className="text-right font-mono font-medium">{formatCurrency(r2(l.qty * l.cost * (1 - l.discount / 100)))}</TableCell>
                       <TableCell className="pr-3 text-right"><div className="flex justify-end gap-0.5"><Button variant="ghost" size="icon-sm" aria-label={ed ? "Guardar" : "Editar"} onClick={() => setEditing(ed ? null : l.id)}>{ed ? <Check /> : <Pencil />}</Button><Button variant="ghost" size="icon-sm" aria-label={`Quitar ${l.sku}`} onClick={() => setLines((ls) => ls.filter((x) => x.id !== l.id))}><Trash2 /></Button></div></TableCell>
@@ -110,7 +111,7 @@ export function PurchaseOrderEditor({ suppliers }: { suppliers: Supplier[] }) {
                 </TableBody>
               </Table>
             </div>
-            <ul className="divide-y md:hidden">{lines.map((l) => <li key={l.id} className="flex items-center gap-3 px-4 py-3"><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{l.name}</p><p className="font-mono text-xs text-muted-foreground">{l.sku} · {formatCurrency(l.cost)} × </p></div><Input size="sm" value={l.qty} onChange={(e) => update(l.id, { qty: parseNumber(e.target.value) })} className="w-16 text-center font-mono" aria-label={`Cantidad ${l.sku}`} /><span className="w-20 text-right font-mono text-sm font-medium">{formatCurrency(r2(l.qty * l.cost * (1 - l.discount / 100)))}</span></li>)}</ul>
+            <ul className="divide-y md:hidden">{lines.map((l) => <li key={l.id} className="flex items-center gap-3 px-4 py-3"><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{l.name}</p><p className="font-mono text-xs text-muted-foreground">{l.sku} · {formatCurrency(l.cost)} × </p></div><NumberInput size="sm" value={l.qty} onValueChange={(n) => update(l.id, { qty: n })} className="w-16 text-center font-mono" aria-label={`Cantidad ${l.sku}`} /><span className="w-20 text-right font-mono text-sm font-medium">{formatCurrency(r2(l.qty * l.cost * (1 - l.discount / 100)))}</span></li>)}</ul>
             <div className="border-t p-3"><Button variant="outline" size="sm" onClick={() => { setAdding(true); searchRef.current?.focus(); }}><Plus data-icon="inline-start" /> Agregar ítem del catálogo</Button>{adding && !q ? <span className="ml-2 text-xs text-muted-foreground">Escribe en el buscador superior.</span> : null}</div>
           </SectionCard>
         </div>

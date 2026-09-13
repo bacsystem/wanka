@@ -10,13 +10,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { NumberInput } from "@/components/shared/number-input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Field } from "@/components/shared/field";
 import { PageHeader } from "@/components/shared/page-header";
 import { SectionCard } from "@/components/shared/section-card";
 import { StatusBadge, type BadgeTone } from "@/components/shared/status-badge";
-import { formatDate, parseNumber } from "@/lib/format";
+import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { receptionMock } from "../mocks/reception";
 
@@ -72,7 +73,7 @@ export function ReceptionScreen({ data }: { data: Reception }) {
                   <TableCell className="px-4 py-2"><p className="font-medium">{l.name}</p><p className="font-mono text-xs text-muted-foreground">{l.sku}{l.note ? ` · ${l.note}` : ""}</p></TableCell>
                   <TableCell className="px-2 py-2"><p className="font-mono text-xs">{l.lot}</p><p className="text-xs text-muted-foreground">Venc. {l.expires}</p></TableCell>
                   <TableCell className="px-2 py-2 text-right font-mono">{l.sent}</TableCell>
-                  <TableCell className="px-2 py-2 text-right"><Input size="sm" type="number" min={0} value={l.received} onChange={(e) => { const v = parseNumber(e.target.value); setLines((ls) => ls.map((x) => (x.id === l.id ? { ...x, received: v } : x))); if (v < l.sent && st === "ok") setStates((s) => ({ ...s, [l.id]: "faltante" })); if (v >= l.sent && st === "faltante") setStates((s) => ({ ...s, [l.id]: "ok" })); }} className="ml-auto w-16 text-right font-mono" aria-label={`Recibido ${l.sku}`} /></TableCell>
+                  <TableCell className="px-2 py-2 text-right"><NumberInput size="sm" value={l.received} onValueChange={(n) => { const v = n; setLines((ls) => ls.map((x) => (x.id === l.id ? { ...x, received: v } : x))); if (v < l.sent && st === "ok") setStates((s) => ({ ...s, [l.id]: "faltante" })); if (v >= l.sent && st === "faltante") setStates((s) => ({ ...s, [l.id]: "ok" })); }} className="ml-auto w-16 text-right font-mono" aria-label={`Recibido ${l.sku}`} /></TableCell>
                   <TableCell className={cn("px-2 py-2 text-right font-mono font-semibold", diff < 0 && "text-destructive", diff > 0 && "text-warning")}>{diff === 0 ? "0" : diff}</TableCell>
                   <TableCell className="px-2 py-2"><Select value={l.location} onValueChange={(v) => setLines((ls) => ls.map((x) => (x.id === l.id ? { ...x, location: String(v) } : x)))} items={data.locations.map((x) => ({ value: x, label: x }))}><SelectTrigger className="w-44" aria-label={`Ubicación ${l.sku}`}><SelectValue /></SelectTrigger><SelectContent>{data.locations.map((x) => <SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent></Select></TableCell>
                   <TableCell className="px-4 py-2"><Select value={st} onValueChange={(v) => setStates((s) => ({ ...s, [l.id]: v as LineState }))} items={Object.entries(stateMeta).map(([v, m]) => ({ value: v, label: m.label }))}><SelectTrigger className="w-40" aria-label={`Estado ${l.sku}`}><SelectValue /></SelectTrigger><SelectContent>{Object.entries(stateMeta).map(([v, m]) => <SelectItem key={v} value={v}>{m.label}</SelectItem>)}</SelectContent></Select></TableCell>
@@ -83,7 +84,7 @@ export function ReceptionScreen({ data }: { data: Reception }) {
               {lines.map((l) => { const diff = l.received - l.sent; const st = stateOf(l.id); return (
                 <li key={l.id} className="flex flex-col gap-2 px-4 py-3">
                   <div className="flex items-start justify-between gap-2"><div className="min-w-0"><p className="text-sm font-medium">{l.name}</p><p className="font-mono text-xs text-muted-foreground">{l.sku} · {l.lot} · venc. {l.expires}</p></div><StatusBadge tone={stateMeta[st].tone} label={stateMeta[st].label} /></div>
-                  <div className="flex items-center gap-3"><span className="text-xs text-muted-foreground">Enviado <span className="font-mono font-medium text-foreground">{l.sent}</span></span><label className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">Recibido <Input type="number" min={0} value={l.received} onChange={(e) => { const v = parseNumber(e.target.value); setLines((ls) => ls.map((x) => (x.id === l.id ? { ...x, received: v } : x))); if (v < l.sent && st === "ok") setStates((s) => ({ ...s, [l.id]: "faltante" })); if (v >= l.sent && st === "faltante") setStates((s) => ({ ...s, [l.id]: "ok" })); }} className="h-11 w-20 text-center font-mono text-lg" aria-label={`Recibido ${l.sku}`} /></label><span className={cn("w-10 text-right font-mono font-semibold", diff < 0 && "text-destructive", diff > 0 && "text-warning")}>{diff === 0 ? "0" : diff}</span></div>
+                  <div className="flex items-center gap-3"><span className="text-xs text-muted-foreground">Enviado <span className="font-mono font-medium text-foreground">{l.sent}</span></span><label className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">Recibido <NumberInput value={l.received} onValueChange={(n) => { const v = n; setLines((ls) => ls.map((x) => (x.id === l.id ? { ...x, received: v } : x))); if (v < l.sent && st === "ok") setStates((s) => ({ ...s, [l.id]: "faltante" })); if (v >= l.sent && st === "faltante") setStates((s) => ({ ...s, [l.id]: "ok" })); }} className="h-11 w-20 text-center font-mono text-lg" aria-label={`Recibido ${l.sku}`} /></label><span className={cn("w-10 text-right font-mono font-semibold", diff < 0 && "text-destructive", diff > 0 && "text-warning")}>{diff === 0 ? "0" : diff}</span></div>
                   <Select value={l.location} onValueChange={(v) => setLines((ls) => ls.map((x) => (x.id === l.id ? { ...x, location: String(v) } : x)))} items={data.locations.map((x) => ({ value: x, label: x }))}><SelectTrigger className="w-full" aria-label={`Ubicación ${l.sku}`}><SelectValue /></SelectTrigger><SelectContent>{data.locations.map((x) => <SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent></Select>
                 </li>
               ); })}
