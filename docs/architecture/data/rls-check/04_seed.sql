@@ -1,4 +1,4 @@
--- Como wanka_migrator (NOBYPASSRLS, dueño con FORCE RLS): datos de prueba, con tenant fijado como haría la app
+-- Como wanka_migrator (NOBYPASSRLS, duenio con FORCE RLS): datos de prueba con el tenant fijado, como la app.
 \set ON_ERROR_STOP on
 BEGIN;
 SELECT set_config('app.tenant_id','aaaaaaaa-0000-0000-0000-000000000001', true);
@@ -8,10 +8,13 @@ INSERT INTO iam.users (id, email) VALUES ('eeeeeeee-0000-0000-0000-000000000002'
 INSERT INTO iam.memberships (id, tenant_id, user_id, role_id, status, authz_version)
   VALUES ('3e000000-0000-0000-0000-0000000000c1','aaaaaaaa-0000-0000-0000-000000000001','eeeeeeee-0000-0000-0000-000000000002','a0000000-0000-0000-0000-0000000000a2','activo', 1);
 COMMIT;
--- sesión de tenant del cajero, con la versión 1 guardada (iam.sessions no tiene RLS)
-INSERT INTO iam.sessions (id, user_id, tenant_id, membership_id, access_hash, access_expires_at, authz_version, mfa_satisfied, mfa_method)
+-- sesion de tenant del cajero (version 1, con sede y caja) y una sesion a medio login (mfa_satisfied = false)
+INSERT INTO iam.sessions (id, user_id, tenant_id, site_id, cash_register_id, membership_id, access_hash, access_expires_at, authz_version, mfa_satisfied, mfa_method)
   VALUES ('5e000000-0000-0000-0000-000000000001','eeeeeeee-0000-0000-0000-000000000002','aaaaaaaa-0000-0000-0000-000000000001',
-          '3e000000-0000-0000-0000-0000000000c1', sha256('tok-cajero'), now() + interval '15 minutes', 1, true, 'none');
+          'a5000000-0000-0000-0000-0000000000a1','ca000000-0000-0000-0000-0000000000a1','3e000000-0000-0000-0000-0000000000c1',
+          sha256('tok-cajero'), now() + interval '15 minutes', 1, true, 'none'),
+         ('5e000000-0000-0000-0000-000000000002','eeeeeeee-0000-0000-0000-000000000001', NULL, NULL, NULL, NULL,
+          sha256('tok-a-medio-login'), now() + interval '15 minutes', NULL, false, 'totp');
 -- ascenso del cajero: authz_version pasa a 2
 BEGIN;
 SELECT set_config('app.tenant_id','aaaaaaaa-0000-0000-0000-000000000001', true);

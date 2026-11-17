@@ -15,7 +15,7 @@ CREATE TABLE iam.roles (id uuid PRIMARY KEY, tenant_id uuid NOT NULL REFERENCES 
 CREATE TABLE iam.memberships (id uuid PRIMARY KEY, tenant_id uuid NOT NULL REFERENCES org.tenants, user_id uuid NOT NULL REFERENCES iam.users,
   role_id uuid NOT NULL REFERENCES iam.roles, all_sites boolean NOT NULL DEFAULT true, status text NOT NULL, authz_version bigint NOT NULL DEFAULT 1,
   UNIQUE (tenant_id, user_id));
-CREATE TABLE iam.sessions (id uuid PRIMARY KEY, user_id uuid NOT NULL, tenant_id uuid, membership_id uuid, access_hash bytea UNIQUE NOT NULL,
+CREATE TABLE iam.sessions (id uuid PRIMARY KEY, user_id uuid NOT NULL, tenant_id uuid, site_id uuid, cash_register_id uuid, membership_id uuid, access_hash bytea UNIQUE NOT NULL,
   access_expires_at timestamptz NOT NULL, authz_version bigint, mfa_satisfied boolean NOT NULL, mfa_method text NOT NULL
   CHECK (mfa_method IN ('totp','recovery_code','none','platform')), impersonator_id uuid, revoked_at timestamptz,
   CHECK ((mfa_method = 'platform') = (impersonator_id IS NOT NULL)),
@@ -60,21 +60,24 @@ CREATE VIEW iam.list_my_memberships WITH (security_invoker = true) AS
 --  'permission denied to set parameter app.tenant_id' en PG 16.)
 
 CREATE FUNCTION iam.session_lookup(p_access_hash bytea)
-  RETURNS TABLE (session_id uuid, user_id uuid, tenant_id uuid, membership_id uuid, session_authz_version bigint,
-                 mfa_method text, impersonator_id uuid, current_authz_version bigint, membership_status text)
+  RETURNS TABLE (session_id uuid, user_id uuid, tenant_id uuid, site_id uuid, cash_register_id uuid, membership_id uuid,
+                 session_authz_version bigint, mfa_satisfied boolean, mfa_method text, impersonator_id uuid,
+                 current_authz_version bigint, membership_status text)
   LANGUAGE plpgsql STABLE SECURITY DEFINER
   SET search_path = pg_catalog, pg_temp
 AS $$
 DECLARE s iam.sessions%ROWTYPE; v bigint; st text; prev text := current_setting('app.tenant_id', true);
 BEGIN
-  SELECT * INTO s FROM iam.sessions x WHERE x.access_hash = p_access_hash AND x.revoked_at IS NULL AND x.access_expires_at > now();
+  SELECT * INTO s FROM iam.sessions x
+   WHERE x.access_hash = p_access_hash AND x.revoked_at IS NULL AND x.access_expires_at > now() AND x.mfa_satisfied;
   IF NOT FOUND THEN RETURN; END IF;
   IF s.membership_id IS NOT NULL THEN
     PERFORM set_config('app.tenant_id', s.tenant_id::text, true);
     SELECT m.authz_version, m.status INTO v, st FROM iam.memberships m WHERE m.id = s.membership_id;  -- via tenant_isolation
     PERFORM set_config('app.tenant_id', coalesce(prev, ''), true);   -- restaura el valor del llamador
   END IF;
-  RETURN QUERY SELECT s.id, s.user_id, s.tenant_id, s.membership_id, s.authz_version, s.mfa_method, s.impersonator_id, v, st;
+  RETURN QUERY SELECT s.id, s.user_id, s.tenant_id, s.site_id, s.cash_register_id, s.membership_id, s.authz_version,
+                      s.mfa_satisfied, s.mfa_method, s.impersonator_id, v, st;
 END $$;
 
 CREATE FUNCTION ops.resolve_webhook_route(p_route_id text)
@@ -186,7 +189,9 @@ BEGIN
 END $$;
 
 -- Dueño explícito de cada función. ALTER ... OWNER exige que el nuevo dueño tenga CREATE en el esquema:
--- se concede solo para el cambio de dueño y se revoca enseguida.
+-- se concede solo para el cambio de dueño y se revoca enseguida, en UNA transacción (si algo falla, el
+-- GRANT CREATE no queda aplicado). Por eso esta migración nunca usa `-- +goose NO TRANSACTION`.
+BEGIN;
 GRANT CREATE ON SCHEMA iam, ops, platform_fn TO wanka_definer;
 DO $$ DECLARE f text; BEGIN
   FOREACH f IN ARRAY ARRAY['iam.session_lookup(bytea)','ops.resolve_webhook_route(text)','iam.list_support_requests()',
@@ -197,6 +202,7 @@ DO $$ DECLARE f text; BEGIN
     EXECUTE format('REVOKE ALL ON FUNCTION %s FROM PUBLIC', f);
   END LOOP; END $$;
 REVOKE CREATE ON SCHEMA iam, ops, platform_fn FROM wanka_definer;
+COMMIT;
 GRANT USAGE ON SCHEMA app, iam, org, audit, ops, platform TO wanka_definer;
 GRANT EXECUTE ON FUNCTION app.current_tenant(), app.current_user_id() TO wanka_definer, wanka_app, wanka_platform, wanka_worker, wanka_webhooks;
 GRANT SELECT, INSERT ON iam.sessions TO wanka_definer;
@@ -224,3 +230,26 @@ GRANT EXECUTE ON FUNCTION platform_fn.purge_closed_tenant(uuid) TO wanka_worker;
 
 -- wanka_platform lee y suspende tenants por la politica platform_rw
 GRANT SELECT, UPDATE ON org.tenants TO wanka_platform;
+
+-- ===== Ayudas de prueba (solo en esta verificación; no forman parte de la migración real) =====
+CREATE SCHEMA test;
+CREATE FUNCTION test.assert(p_ok boolean, p_msg text) RETURNS text LANGUAGE plpgsql AS $$
+BEGIN
+  IF p_ok IS NOT TRUE THEN RAISE EXCEPTION 'ASSERT FAILED: %', p_msg; END IF;
+  RETURN 'ok: ' || p_msg;
+END $$;
+-- Ejecuta p_sql con los privilegios de quien llama y exige que falle con p_sqlstate (sin efectos: subtransacción).
+CREATE FUNCTION test.expect_error(p_sql text, p_sqlstate text, p_msg text) RETURNS text LANGUAGE plpgsql AS $$
+DECLARE failed boolean := false; got text;
+BEGIN
+  BEGIN
+    EXECUTE p_sql;
+  EXCEPTION WHEN OTHERS THEN
+    failed := true; got := SQLSTATE;
+  END;
+  IF NOT failed THEN RAISE EXCEPTION 'ASSERT FAILED: % (se esperaba error %, no fallo)', p_msg, p_sqlstate; END IF;
+  IF got <> p_sqlstate THEN RAISE EXCEPTION 'ASSERT FAILED: % (se esperaba %, llego %)', p_msg, p_sqlstate, got; END IF;
+  RETURN 'ok: ' || p_msg || ' -> ' || got;
+END $$;
+GRANT USAGE ON SCHEMA test TO wanka_app, wanka_platform, wanka_webhooks, wanka_worker;
+GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA test TO wanka_app, wanka_platform, wanka_webhooks, wanka_worker;
