@@ -30,8 +30,8 @@
   --color-border: var(--border);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
-  --color-destructive-suave: var(--destructive-suave);
-  --color-destructive-texto: var(--destructive-texto);
+  --color-destructive-soft: var(--destructive-soft);
+  --color-destructive-text: var(--destructive-text);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -58,25 +58,25 @@
   --color-overlay: var(--overlay);
   --color-brand: var(--brand);
   --color-brand-foreground: var(--brand-foreground);
-  --color-codigo: var(--codigo);
-  --color-codigo-foreground: var(--codigo-foreground);
-  --color-acento: var(--acento);
-  --color-acento-texto: var(--acento-texto);
-  --color-acento-2: var(--acento-2);
-  --color-acento-2-texto: var(--acento-2-texto);
-  --color-acento-3: var(--acento-3);
-  --color-acento-suave: var(--acento-suave);
-  --color-acento-2-suave: var(--acento-2-suave);
-  --color-acento-3-suave: var(--acento-3-suave);
-  --color-acento-superficie: var(--acento-superficie);
-  --color-acento-superficie-texto: var(--acento-superficie-texto);
-  --color-acento-borde: var(--acento-borde);
-  --color-texto-terciario: var(--texto-terciario);
+  --color-code: var(--code);
+  --color-code-foreground: var(--code-foreground);
+  --color-accent-base: var(--accent-base);
+  --color-accent-text: var(--accent-text);
+  --color-accent-2: var(--accent-2);
+  --color-accent-2-text: var(--accent-2-text);
+  --color-accent-3: var(--accent-3);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-2-soft: var(--accent-2-soft);
+  --color-accent-3-suave: var(--accent-3-suave);
+  --color-accent-surface: var(--accent-surface);
+  --color-accent-surface-text: var(--accent-surface-text);
+  --color-accent-border: var(--accent-border);
+  --color-text-tertiary: var(--text-tertiary);
   --color-info: var(--info);
   --color-info-foreground: var(--info-foreground);
   --color-chart-base: var(--chart-base);
-  --color-chart-destacado: var(--chart-destacado);
-  --color-borde-tarjeta: var(--borde-tarjeta);
+  --color-chart-highlight: var(--chart-highlight);
+  --color-card-border: var(--card-border);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -85,54 +85,54 @@
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
   /* Sombras en capas: cambian con el modo (en oscuro llevan un brillo interior de 1 px arriba). */
-  --shadow-xs: var(--sombra-xs);
-  --shadow-sm: var(--sombra-sm);
-  --shadow-md: var(--sombra-md);
-  --shadow-lg: var(--sombra-lg);
-  --shadow-tarjeta: var(--brillo-tarjeta);
-  --shadow-elevada: var(--sombra-elevada);
+  --shadow-xs: var(--shadow-xs);
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+  --shadow-card: var(--card-glow);
+  --shadow-elevada: var(--shadow-elevada);
   /* Altura única de control (docs/design-system.md §4): 32 px. `h-control`, `size-control`, `min-h-control`. */
-  --spacing-control: 2rem;
+  --spacing-control: 2.25rem;
   /* Objetivo táctil (docs/design-system.md §4): 44 px, el área mínima de toque con el dedo (WCAG 2.5.5). La usa la receta `OBJETIVO_TACTIL`. */
-  --spacing-objetivo-tactil: 2.75rem;
+  --spacing-touch-target: 2.75rem;
   /* Escala tipográfica con nombre (docs/design-system.md §3). `npm run check:tipografia` prohíbe los tamaños sueltos. */
-  --text-etiqueta: 0.71875rem;
-  --text-etiqueta--line-height: 1rem;
+  --text-label: 0.71875rem;
+  --text-label--line-height: 1rem;
   --text-control: 0.8125rem;
   --text-control--line-height: 1.25rem;
   /* Letra de un campo de texto en pantallas táctiles: iOS Safari amplía la página al enfocar un campo de menos de 16 px y la deja ampliada. Desde `md`, `text-control`. */
   --text-campo: 1rem;
   --text-campo--line-height: 1.25rem;
-  --text-cuerpo: 0.8125rem;
-  --text-cuerpo--line-height: 1.25rem;
-  --text-titulo: 0.90625rem;
-  --text-titulo--line-height: 1.25rem;
-  --text-titulo--letter-spacing: -0.014em;
-  --text-titulo--font-weight: 620;
-  --text-titulo-pagina: 1.3125rem;
-  --text-titulo-pagina--line-height: 1.5rem;
-  --text-titulo-pagina--letter-spacing: -0.028em;
-  --text-titulo-pagina--font-weight: 650;
-  --text-metrica: 1.375rem;
-  --text-metrica--line-height: 1.625rem;
-  --text-metrica--letter-spacing: -0.035em;
-  --text-metrica--font-weight: 650;
+  --text-body: 0.8125rem;
+  --text-body--line-height: 1.25rem;
+  --text-title: 0.90625rem;
+  --text-title--line-height: 1.25rem;
+  --text-title--letter-spacing: -0.014em;
+  --text-title--font-weight: 620;
+  --text-page-title: 1.3125rem;
+  --text-page-title--line-height: 1.5rem;
+  --text-page-title--letter-spacing: -0.028em;
+  --text-page-title--font-weight: 650;
+  --text-metric: 1.375rem;
+  --text-metric--line-height: 1.625rem;
+  --text-metric--letter-spacing: -0.035em;
+  --text-metric--font-weight: 650;
   /* Valor de métrica que es una palabra (un estado, un código) y no un número: 18 px. */
-  --text-metrica-texto: 1.125rem;
-  --text-metrica-texto--line-height: 1.625rem;
-  --text-metrica-texto--letter-spacing: -0.02em;
-  --text-metrica-texto--font-weight: 620;
+  --text-metric-text: 1.125rem;
+  --text-metric-text--line-height: 1.625rem;
+  --text-metric-text--letter-spacing: -0.02em;
+  --text-metric-text--font-weight: 620;
   /* Curva de salida única. Debe coincidir con CURVA_SALIDA de src/lib/movimiento.ts. */
-  --ease-salida: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out-smooth: cubic-bezier(0.16, 1, 0.3, 1);
   /* Barrido de la barra de progreso indeterminada (`ProgresoLineal` sin `valor`). */
   --animate-progreso-indeterminado: progreso-indeterminado 1.4s ease-in-out infinite;
   /* Entrada de contenido: fundido + 8 px hacia arriba. Se usa con `ENTRADA` (lib/estilos.ts), que la protege con `motion-safe:`. */
   /* El retraso (40 ms por posición `--i`) va dentro del atajo: un `animation-delay` aparte lo pisaría este mismo atajo. */
   /* `backwards` y no `both`: al terminar suelta el transform, que si no dejaría un contexto de apilamiento permanente. */
-  --animate-entrada: entrada 240ms cubic-bezier(0.16, 1, 0.3, 1) calc(var(--i, 0) * 40ms) backwards;
+  --animate-entrance: entrada 240ms cubic-bezier(0.16, 1, 0.3, 1) calc(var(--i, 0) * 40ms) backwards;
 }
 
-@keyframes entrada {
+@keyframes entrance {
   from {
     opacity: 0;
     transform: translateY(8px);
@@ -158,15 +158,15 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-cuerpo text-foreground;
+    @apply bg-background text-body text-foreground;
     /* Inter: 1 con base, a de un piso y dígitos abiertos (los rasgos que usa IntelliJ). */
     font-feature-settings: "cv11", "ss01", "ss03";
   }
   /* Oscuro: dos resplandores tenues de la paleta desde arriba; el lienzo deja de ser un negro plano. */
   html:root.dark body {
     background-image:
-      radial-gradient(900px 380px at 55% -160px, color-mix(in srgb, var(--acento) 9%, transparent), transparent 70%),
-      radial-gradient(700px 300px at 100% 0, color-mix(in srgb, var(--acento-2) 6%, transparent), transparent 70%);
+      radial-gradient(900px 380px at 55% -160px, color-mix(in srgb, var(--accent-base) 9%, transparent), transparent 70%),
+      radial-gradient(700px 300px at 100% 0, color-mix(in srgb, var(--accent-2) 6%, transparent), transparent 70%);
     background-attachment: fixed;
   }
   html {

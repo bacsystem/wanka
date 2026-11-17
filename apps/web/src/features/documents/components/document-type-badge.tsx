@@ -1,12 +1,12 @@
-﻿import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import type { DocumentType } from "@/types/domain";
 import { documentTypeLabel } from "../lib/document-type";
 
 const short: Record<DocumentType, string> = { boleta: "Boleta", factura: "Factura", nota_credito: "N. Crédito", proforma: "Proforma", guia_remision: "GRE" };
 const cls: Record<DocumentType, string> = {
-  boleta: "bg-acento-suave text-acento-texto",
+  boleta: "bg-accent-soft text-accent-surface-text",
   factura: "bg-info text-info-foreground",
-  nota_credito: "bg-destructive-suave text-destructive-texto",
+  nota_credito: "bg-destructive-soft text-destructive-text",
   proforma: "bg-secondary text-foreground/80",
   guia_remision: "bg-warning text-warning-foreground",
 };

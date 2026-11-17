@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 import { supportSummary as s, tickets, type Ticket } from "../mocks/ops";
 
 const statusMeta: Record<Ticket["status"], { label: string; tone: BadgeTone }> = { abierto: { label: "Abierto", tone: "danger" }, en_progreso: { label: "En progreso", tone: "info" }, esperando: { label: "Esperando cliente", tone: "warning" }, resuelto: { label: "Resuelto", tone: "success" } };
-const prioCls = { P1: "bg-destructive-suave text-destructive-texto ", P2: "bg-warning text-warning-foreground ", P3: "bg-muted text-muted-foreground" };
+const prioCls = { P1: "bg-destructive-soft text-destructive-text ", P2: "bg-warning text-warning-foreground ", P3: "bg-muted text-muted-foreground" };
 const macros = ["Bypass a Bizlinks OSE", "Reintento de cobro Niubiz", "Guía renovación .pfx", "Ampliación de cuota CPE"];
 
 export function SupportScreen() {

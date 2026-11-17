@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/sheet";
 import { getBottomNavHrefs, getNavigation, isActivePath, type NavItem } from "@/config/navigation";
 import { useOptionalTenant } from "./tenant-context";
-import { PESO_ICONO, PESO_ICONO_ACTIVO } from "@/lib/iconos";
+import { ICON_WEIGHT, ICON_WEIGHT_ACTIVE } from "@/lib/icons";
 import { cn } from "@/lib/utils";
 
 const itemClass =
@@ -65,7 +65,7 @@ export function BottomNav(props: BottomNavProps) {
               aria-current={isOn ? "page" : undefined}
               className={cn(itemClass, isOn && activeClass)}
             >
-              <item.icon className="size-5" weight={isOn ? PESO_ICONO_ACTIVO : PESO_ICONO} />
+              <item.icon className="size-5" weight={isOn ? ICON_WEIGHT_ACTIVE : ICON_WEIGHT} />
               {item.label}
             </Link>
           );
@@ -86,7 +86,7 @@ export function BottomNav(props: BottomNavProps) {
                     href={item.href}
                     className="flex items-center gap-2 rounded-md border px-3 py-2.5 text-sm hover:bg-accent hover:text-accent-foreground"
                   >
-                    <item.icon className="size-4" weight={PESO_ICONO} />
+                    <item.icon className="size-4" weight={ICON_WEIGHT} />
                     {item.label}
                   </Link>
                 </li>

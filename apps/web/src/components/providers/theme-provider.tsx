@@ -1,25 +1,22 @@
-﻿"use client";
+"use client";
 
 import { IconContext, type IconProps } from "@phosphor-icons/react";
 import { ThemeProvider as NextThemesProvider } from "next-themes";
 import type { ComponentProps } from "react";
-import { AparienciaProvider } from "@/components/apariencia";
-import { DisenoProvider } from "@/components/diseno";
-import { ProveedorMovimiento } from "@/components/movimiento";
-import { PESO_ICONO } from "@/lib/iconos";
+import { AppearanceProvider } from "@/components/providers/appearance-provider";
+import { MotionProvider } from "@/components/providers/motion-provider";
+import { ICON_WEIGHT } from "@/lib/icons";
 
-const ICONOS: IconProps = { weight: PESO_ICONO };
+const ICONS: IconProps = { weight: ICON_WEIGHT };
 
 export function ThemeProvider({ children, ...props }: ComponentProps<typeof NextThemesProvider>) {
   return (
     <NextThemesProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange {...props}>
-      <DisenoProvider>
-        <AparienciaProvider>
-          <IconContext.Provider value={ICONOS}>
-            <ProveedorMovimiento>{children}</ProveedorMovimiento>
-          </IconContext.Provider>
-        </AparienciaProvider>
-      </DisenoProvider>
+      <AppearanceProvider>
+        <IconContext.Provider value={ICONS}>
+          <MotionProvider>{children}</MotionProvider>
+        </IconContext.Provider>
+      </AppearanceProvider>
     </NextThemesProvider>
   );
 }

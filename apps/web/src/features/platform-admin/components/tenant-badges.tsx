@@ -5,10 +5,10 @@ import { tenantStatusLabel, verticalLabel, type TenantStatus, type Vertical } fr
 
 export const verticalIcon = { odontologia: Stethoscope, veterinaria: PawPrint, restaurante: UtensilsCrossed, retail: ShoppingBag } as const;
 const verticalTone: Record<Vertical, string> = {
-  odontologia: "border-sky-200 bg-sky-50 text-sky-800 dark:border-sky-900 dark:bg-sky-950/60 dark:text-sky-300",
+  odontologia: "border-info-foreground/20 bg-info text-info-foreground dark:border-info-foreground/20 dark:bg-info dark:text-info-foreground",
   veterinaria: "border-transparent bg-warning text-warning-foreground",
   restaurante: "border-transparent bg-success text-success-foreground",
-  retail: "border-fuchsia-200 bg-fuchsia-50 text-fuchsia-800 dark:border-fuchsia-900 dark:bg-fuchsia-950/60 dark:text-fuchsia-300",
+  retail: "border-accent-border bg-accent-soft text-accent-surface-text dark:border-accent-border dark:bg-accent-soft dark:text-accent-surface-text",
 };
 const statusTone: Record<TenantStatus, BadgeTone> = { activa: "success", trial: "info", suspendida: "danger", cuota: "warning" };
 

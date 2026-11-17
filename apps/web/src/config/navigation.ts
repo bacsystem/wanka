@@ -1,4 +1,4 @@
-﻿import {
+import {
   ArrowsLeftRightIcon,
   BankIcon,
   BedIcon,
@@ -32,13 +32,13 @@
   WalletIcon,
   WarehouseIcon,
 } from "@phosphor-icons/react/ssr";
-import type { IconoComponente } from "@/lib/iconos";
+import type { IconComponent } from "@/lib/icons";
 import type { Industry } from "@/types/domain";
 
 export interface NavItem {
   label: string;
   href: string;
-  icon: IconoComponente;
+  icon: IconComponent;
   children?: NavItem[];
   /** Sidebar section; defaults to "core". */
   section?: NavSection;

@@ -59,7 +59,7 @@ export function ReceptionScreen({ data }: { data: Reception }) {
             <div><p className="text-xs text-muted-foreground">Fecha de despacho</p><p className="font-medium">{formatDate(data.dispatchedAt)}</p><StatusBadge className="mt-1" tone="success" icon={QrCode} label="QR GRE validado" /></div>
           </SectionCard>
 
-          <form onSubmit={doScan} className="flex flex-wrap items-center gap-2 rounded-xl border border-borde-tarjeta bg-card shadow-tarjeta p-3">
+          <form onSubmit={doScan} className="flex flex-wrap items-center gap-2 rounded-xl border border-card-border bg-card shadow-card p-3">
             <div className="relative min-w-0 flex-1"><ScanLine className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-primary" /><Input value={scan} onChange={(e) => setScan(e.target.value)} placeholder="Escanear código QR / barras o escribir SKU / lote…" aria-label="Escanear código" className="pl-8" /></div>
             <Button type="submit" variant="outline"><QrCode data-icon="inline-start" /> Foco activo</Button>
             <Button type="button" variant="outline" onClick={() => toast.info("Cámara no disponible en esta demo")}><Camera data-icon="inline-start" /> Cámara</Button>

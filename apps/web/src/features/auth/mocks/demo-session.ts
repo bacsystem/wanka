@@ -1,4 +1,3 @@
-﻿/** Datos de sesión y entorno simulados hasta conectar el backend real. */
 export const DEMO_TENANT_USER = {
   email: "carlos.mendoza@clinicasonrisa.pe",
   name: "Carlos Mendoza",

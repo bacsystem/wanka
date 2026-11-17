@@ -58,7 +58,7 @@ export function CompanySelectScreen({ tenants, currentId }: { tenants: TenantOpt
             const active = t.id === tenantId;
             return (
               <li key={t.id}>
-                <button type="button" onClick={() => pick(t.id)} aria-pressed={active} className={cn("flex h-full w-full flex-col gap-3 rounded-xl border border-borde-tarjeta bg-card shadow-tarjeta p-4 text-left transition-colors hover:border-primary/50", active && "border-primary ring-2 ring-primary/20")}>
+                <button type="button" onClick={() => pick(t.id)} aria-pressed={active} className={cn("flex h-full w-full flex-col gap-3 rounded-xl border border-card-border bg-card shadow-card p-4 text-left transition-colors hover:border-primary/50", active && "border-primary ring-2 ring-primary/20")}>
                   <div className="flex items-start justify-between gap-2">
                     <span className="flex size-12 items-center justify-center rounded-xl bg-primary text-sm font-bold text-primary-foreground">{initials(t.name)}</span>
                     {active ? <StatusBadge tone="success" icon={Check} label="Seleccionada" /> : <StatusBadge tone="success" dot label="Activa" />}
@@ -77,7 +77,7 @@ export function CompanySelectScreen({ tenants, currentId }: { tenants: TenantOpt
         </ul>
       </section>
 
-      <section ref={step2} aria-labelledby="step2" className="rounded-xl border border-borde-tarjeta bg-card shadow-tarjeta p-5">
+      <section ref={step2} aria-labelledby="step2" className="rounded-xl border border-card-border bg-card shadow-card p-5">
         <p className="text-xs font-medium text-primary uppercase">Paso 2 de 2 · Terminal de acceso</p>
         <div className="flex flex-wrap items-center justify-between gap-2"><h2 id="step2" className="text-lg font-semibold">Configura tu terminal en {tenants.find((t) => t.id === tenantId)?.name}</h2><span className="inline-flex items-center gap-1 text-xs text-muted-foreground"><Wifi className="size-3.5" /> Red privada · IP 190.237.45.12</span></div>
         <div className="mt-4 grid gap-5 lg:grid-cols-2">

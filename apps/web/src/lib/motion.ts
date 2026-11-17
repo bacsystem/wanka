@@ -1,0 +1,1 @@
+export const SPRING = { type: "spring", stiffness: 500, damping: 40, mass: 0.8 } as const;

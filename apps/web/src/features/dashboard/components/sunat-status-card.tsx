@@ -33,9 +33,9 @@ export function SunatStatusCard({ queue }: { queue: SunatQueueItem[] }) {
         </div>
       ) : null}
       {failed.map((f) => (
-        <div key={f.id} className="flex flex-col gap-2 rounded-lg border border-transparent bg-destructive-suave p-3">
-          <div className="flex items-center justify-between gap-2 text-xs font-semibold text-destructive-texto"><span className="font-mono">{f.documentLabel}</span><span>Rechazado</span></div>
-          <p className="text-xs text-destructive-texto ">{f.message}</p>
+        <div key={f.id} className="flex flex-col gap-2 rounded-lg border border-transparent bg-destructive-soft p-3">
+          <div className="flex items-center justify-between gap-2 text-xs font-semibold text-destructive-text"><span className="font-mono">{f.documentLabel}</span><span>Rechazado</span></div>
+          <p className="text-xs text-destructive-text ">{f.message}</p>
           <Button size="xs" variant="outline" className="w-fit" onClick={() => toast.info(`Corrige ${f.documentLabel} y reintenta`)}><RefreshCw data-icon="inline-start" /> Reintentar</Button>
         </div>
       ))}

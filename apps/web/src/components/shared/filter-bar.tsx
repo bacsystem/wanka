@@ -12,7 +12,7 @@ interface FilterBarProps {
 /** Standalone filter container above a table/board: card surface, 12 px padding, 40 px controls inside. */
 export function FilterBar({ children, className, stack = false, ...rest }: FilterBarProps) {
   return (
-    <div className={cn("rounded-xl border border-borde-tarjeta bg-card shadow-tarjeta p-3 shadow-xs", stack ? "flex flex-col gap-3" : "flex flex-wrap items-center gap-2", className)} {...rest}>
+    <div className={cn("rounded-xl border border-card-border bg-card shadow-card p-3 shadow-xs", stack ? "flex flex-col gap-3" : "flex flex-wrap items-center gap-2", className)} {...rest}>
       {children}
     </div>
   );

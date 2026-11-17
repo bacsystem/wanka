@@ -11,8 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Field } from "@/components/shared/field";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { cn } from "@/lib/utils";
-import { DEMO_TENANT_USER } from "@/config/demo-session";
-import { ENTRADA } from "@/lib/estilos";
+import { DEMO_TENANT_USER } from "@/features/auth/mocks/demo-session";
+import { ENTRANCE } from "@/lib/styles";
 import { BrandPanel } from "./brand-panel";
 
 type Step = "login" | "2fa" | "recover";
@@ -45,13 +45,13 @@ export function LoginScreen() {
         </div>
         <ol className="mb-4 flex gap-2 text-xs" aria-label="Pasos de acceso">
           {(["login", "2fa", "recover"] as Step[]).map((s, i) => (
-            <li key={s} className={cn("rounded-full border px-2.5 py-0.5", step === s ? "border-transparent bg-acento text-acento-texto font-semibold" : "border-transparent bg-card text-muted-foreground")}>{i + 1}. {s === "login" ? "Ingreso" : s === "2fa" ? "2FA" : "Recuperar"}</li>
+            <li key={s} className={cn("rounded-full border px-2.5 py-0.5", step === s ? "border-transparent bg-accent-surface text-accent-surface-text font-semibold" : "border-transparent bg-card text-muted-foreground")}>{i + 1}. {s === "login" ? "Ingreso" : s === "2fa" ? "2FA" : "Recuperar"}</li>
           ))}
         </ol>
-        <div className={cn("w-full max-w-md rounded-xl border border-borde-tarjeta bg-card p-6 shadow-tarjeta", ENTRADA)}>
+        <div className={cn("w-full max-w-md rounded-xl border border-card-border bg-card p-6 shadow-card", ENTRANCE)}>
           {step === "login" ? (
             <form onSubmit={submitLogin} className="flex flex-col gap-4" noValidate>
-              <div className="rounded-xl bg-secondary px-3 py-2.5 text-etiqueta"><span className="text-muted-foreground">Espacio de trabajo asignado</span><p className="font-medium">{DEMO_TENANT_USER.defaultWorkspaceLabel} <StatusBadge className="ml-1" tone="success" dot label="Activo" /></p></div>
+              <div className="rounded-xl bg-secondary px-3 py-2.5 text-label"><span className="text-muted-foreground">Espacio de trabajo asignado</span><p className="font-medium">{DEMO_TENANT_USER.defaultWorkspaceLabel} <StatusBadge className="ml-1" tone="success" dot label="Activo" /></p></div>
               <div><h1 className="text-xl font-semibold">Bienvenido de nuevo</h1><p className="text-sm text-muted-foreground">Ingresa tus credenciales corporativas para abrir la terminal POS y el módulo clínico.</p></div>
               <Field label="Correo electrónico o usuario" htmlFor="email"><div className="relative"><Mail className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" /><Input id="email" type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} className="pl-8" /></div></Field>
               <Field label="Contraseña" htmlFor="password">

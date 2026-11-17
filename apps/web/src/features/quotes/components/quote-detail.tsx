@@ -67,11 +67,11 @@ export function QuoteDetail({ quote }: { quote: Quote }) {
 
       <div className="grid grid-cols-2 gap-3 xl:grid-cols-5">
         {[["Fecha de emisión", `${formatDate(quote.issuedAt)} ${quote.issuedAt.slice(11, 16)}`], ["Vencimiento", `${formatDate(quote.expiresAt)} · ${daysLeft > 0 ? `vence en ${daysLeft} días` : "vencida"}`], ["Moneda e IGV", "PEN (S/) · IGV 18%"], ["Forma de pago", quote.paymentTerms], ["Total cotizado", formatCurrency(total)]].map(([k, v], i) => (
-          <div key={k} className={cn("rounded-xl border border-borde-tarjeta bg-card shadow-tarjeta p-3", i === 4 && "col-span-2 border-primary/50 xl:col-span-1")}><p className="text-[11px] text-muted-foreground uppercase">{k}</p><p className={cn("mt-0.5 text-sm font-medium", i === 4 && "font-mono text-xl font-semibold tabular-nums")}>{v}</p></div>
+          <div key={k} className={cn("rounded-xl border border-card-border bg-card shadow-card p-3", i === 4 && "col-span-2 border-primary/50 xl:col-span-1")}><p className="text-[11px] text-muted-foreground uppercase">{k}</p><p className={cn("mt-0.5 text-sm font-medium", i === 4 && "font-mono text-xl font-semibold tabular-nums")}>{v}</p></div>
         ))}
       </div>
 
-      <ol className="flex items-center gap-2 overflow-x-auto rounded-xl border border-borde-tarjeta bg-card shadow-tarjeta px-4 py-3">
+      <ol className="flex items-center gap-2 overflow-x-auto rounded-xl border border-card-border bg-card shadow-card px-4 py-3">
         {quote.timeline.map((t, i) => {
           const done = t.done || (status === "facturada"); const current = status === "facturada" ? i === 4 : t.current;
           return (

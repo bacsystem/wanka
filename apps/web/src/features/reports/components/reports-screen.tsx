@@ -43,7 +43,7 @@ export function ReportsScreen({ types, rows: all, schedule }: Props) {
   const columns: Column<SalesRegisterRow>[] = [
     { key: "cuo", header: "N° CUO", cell: (r) => <span className="font-mono text-xs tabular-nums">{r.cuo}</span> },
     { key: "date", header: "Fecha emis.", cell: (r) => <span className="font-mono tabular-nums">{formatDate(r.issuedAt)}</span> },
-    { key: "type", header: "Tipo", cell: (r) => <span className={cn("rounded px-1.5 py-0.5 font-mono text-[11px] font-semibold", r.type === "07" ? "bg-destructive-suave text-destructive-texto " : "bg-info text-info-foreground")}>{r.type}</span> },
+    { key: "type", header: "Tipo", cell: (r) => <span className={cn("rounded px-1.5 py-0.5 font-mono text-[11px] font-semibold", r.type === "07" ? "bg-destructive-soft text-destructive-text " : "bg-info text-info-foreground")}>{r.type}</span> },
     { key: "number", header: "Serie - N°", cell: (r) => <span className={cn("font-mono text-xs font-bold tabular-nums", r.total < 0 && "text-destructive")}>{r.number}</span> },
     { key: "doc", header: "Doc. identidad", cell: (r) => <span className="text-xs"><span className="mr-1 text-[10px] text-muted-foreground uppercase">{r.docType}</span><span className="font-mono">{r.docNumber}</span></span> },
     { key: "customer", header: "Razón social / cliente", cell: (r) => <span className="font-medium">{r.customer}</span>, className: "max-w-56 truncate" },
@@ -107,7 +107,7 @@ export function ReportsScreen({ types, rows: all, schedule }: Props) {
             <span className="font-mono font-bold text-primary">{formatCurrency(totals.base)}</span>
             <span className="font-mono font-bold text-primary">{formatCurrency(totals.igv)}</span>
             <span className="font-mono text-muted-foreground">{formatCurrency(totals.exempt)}</span>
-            <span className="rounded-md bg-acento-suave px-2 py-1 font-mono text-sm font-bold text-acento-texto dark:text-acento-texto">{formatCurrency(totals.total)}</span>
+            <span className="rounded-md bg-accent-soft px-2 py-1 font-mono text-sm font-bold text-accent-surface-text dark:text-accent-surface-text">{formatCurrency(totals.total)}</span>
             <span className="font-semibold text-primary">100% conciliado SIRE</span>
           </span>
         </div>

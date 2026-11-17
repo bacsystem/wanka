@@ -23,7 +23,7 @@ interface SectionNavProps {
 /** Route-based pill navigation between sibling screens (compras, inventario…). Uses Link so each tab is a real page. */
 export function SectionNav({ items, active, className, ...rest }: SectionNavProps) {
   return (
-    <nav className={cn("no-scrollbar flex max-w-full gap-1 overflow-x-auto rounded-xl border border-borde-tarjeta bg-card shadow-tarjeta p-1.5 shadow-xs", className)} {...rest}>
+    <nav className={cn("no-scrollbar flex max-w-full gap-1 overflow-x-auto rounded-xl border border-card-border bg-card shadow-card p-1.5 shadow-xs", className)} {...rest}>
       {items.map((t) => {
         const isActive = t.href === active;
         return (

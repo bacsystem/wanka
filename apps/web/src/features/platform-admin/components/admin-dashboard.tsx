@@ -17,7 +17,7 @@ import { incidents, mrrSeries, oseProviders, platformSummary as s, platformTenan
 import { TenantsTable } from "./tenants-table";
 
 const chartConfig = { mrr: { label: "MRR facturado", color: "var(--primary)" }, goal: { label: "Proyección meta", color: "var(--chart-2)" } } satisfies ChartConfig;
-const priorityMeta = { alta: { label: "Prioridad alta", cls: "border-transparent bg-warning text-warning-foreground", icon: "warning" as const }, bloqueante: { label: "Bloqueante", cls: "border-transparent bg-destructive-suave text-destructive-texto", icon: "error" as const }, moderada: { label: "Moderada", cls: "border-transparent bg-info text-info-foreground", icon: "pending" as const } };
+const priorityMeta = { alta: { label: "Prioridad alta", cls: "border-transparent bg-warning text-warning-foreground", icon: "warning" as const }, bloqueante: { label: "Bloqueante", cls: "border-transparent bg-destructive-soft text-destructive-text", icon: "error" as const }, moderada: { label: "Moderada", cls: "border-transparent bg-info text-info-foreground", icon: "pending" as const } };
 
 export function AdminDashboard() {
   const last = mrrSeries.at(-1)!;

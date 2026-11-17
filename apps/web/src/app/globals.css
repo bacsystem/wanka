@@ -1,6 +1,6 @@
-﻿@import "tailwindcss";
+@import "tailwindcss";
 @import "tw-animate-css";
-@import "../styles/shadcn.css";
+@import "shadcn/tailwind.css";
 @import "../styles/tokens.css";
 @import "../styles/theme.css";
 
@@ -24,27 +24,60 @@
   80% { transform: rotate(6deg); }
 }
 
-/* Consola de Administración (super-admin de la plataforma): variante pastel Lavanda sobre el mismo sistema khipu 0.5 */
+/* Consola de Administración (super-admin de la plataforma): variante pastel Lavanda sobre khipu 0.5 */
 .theme-admin {
   --brand-panel: #16181d;
-  --acento: #ddd4fb;
-  --acento-texto: #3d2a7e;
-  --acento-2: #cfe2fb;
-  --acento-2-texto: #1d4f91;
-  --acento-3: #f5ccde;
-  --acento-suave: color-mix(in srgb, var(--acento) 30%, #ffffff);
-  --acento-2-suave: color-mix(in srgb, var(--acento-2) 30%, #ffffff);
-  --acento-3-suave: color-mix(in srgb, var(--acento-3) 30%, #ffffff);
-  --acento-superficie: var(--acento);
-  --acento-superficie-texto: var(--acento-texto);
+  --accent-base: #ddd4fb;
+  --accent-text: #3d2a7e;
+  --accent-2: #cfe2fb;
+  --accent-2-text: #1d4f91;
+  --accent-3: #f5ccde;
+  --accent-soft: color-mix(in srgb, var(--accent-base) 30%, #ffffff);
+  --accent-2-soft: color-mix(in srgb, var(--accent-2) 30%, #ffffff);
+  --accent-3-soft: color-mix(in srgb, var(--accent-3) 30%, #ffffff);
+  --accent-surface: var(--accent-base);
+  --accent-surface-text: var(--accent-text);
+  --accent-border: color-mix(in srgb, var(--accent-text) 20%, transparent);
+  --accent: var(--accent-soft);
+  --accent-foreground: var(--accent-text);
+  --ring: var(--accent-text);
+  --sidebar-primary: var(--accent-surface);
+  --sidebar-primary-foreground: var(--accent-surface-text);
+  --sidebar-ring: var(--ring);
+  --brand: var(--accent-base);
+  --brand-foreground: var(--accent-text);
+  --chart-1: var(--accent-2-text);
+  --chart-base: var(--accent-2);
+  --chart-highlight: var(--accent-base);
+  --chart-stroke-base: var(--accent-2-text);
+  --chart-stroke-highlight: var(--accent-text);
 }
 
 .dark .theme-admin {
-  --acento: #3d2a7e;
-  --acento-texto: #e4ddfc;
-  --acento-2: #1d4f91;
-  --acento-2-texto: #d9e9fc;
-  --acento-3: #7f2954;
+  --accent-base: #3d2a7e;
+  --accent-text: #e4ddfc;
+  --accent-2: #1d4f91;
+  --accent-2-text: #d9e9fc;
+  --accent-3: #7f2954;
+  --accent-soft: color-mix(in srgb, var(--accent-base) 45%, #121317);
+  --accent-2-soft: color-mix(in srgb, var(--accent-2) 45%, #121317);
+  --accent-3-soft: color-mix(in srgb, var(--accent-3) 45%, #121317);
+  --accent-surface: var(--accent-soft);
+  --accent-surface-text: var(--accent-text);
+  --accent-border: color-mix(in srgb, var(--accent-text) 25%, transparent);
+  --accent: var(--accent-soft);
+  --accent-foreground: var(--accent-text);
+  --ring: var(--accent-text);
+  --sidebar-primary: var(--accent-surface);
+  --sidebar-primary-foreground: var(--accent-surface-text);
+  --sidebar-ring: var(--ring);
+  --brand: var(--accent-base);
+  --brand-foreground: var(--accent-text);
+  --chart-1: var(--accent-2-text);
+  --chart-base: var(--accent-2);
+  --chart-highlight: var(--accent-base);
+  --chart-stroke-base: var(--accent-2-text);
+  --chart-stroke-highlight: var(--accent-text);
 }
 
 @media print {

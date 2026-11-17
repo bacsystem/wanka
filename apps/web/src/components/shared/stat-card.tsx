@@ -2,7 +2,7 @@ import type { LucideIcon } from "lucide-react";
 import { TrendingDown, TrendingUp } from "lucide-react";
 import type { ReactNode } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { ENTRADA } from "@/lib/estilos";
+import { ENTRANCE } from "@/lib/styles";
 import { formatPercent } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -24,19 +24,19 @@ interface StatCardProps {
 }
 
 export const toneBox: Record<StatTone, string> = {
-  default: "bg-acento-suave text-acento-texto",
+  default: "bg-accent-soft text-accent-surface-text",
   success: "bg-success text-success-foreground",
   info: "bg-info text-info-foreground",
   warning: "bg-warning text-warning-foreground",
-  danger: "bg-destructive-suave text-destructive-texto",
+  danger: "bg-destructive-soft text-destructive-text",
 };
 
 export const toneText: Record<StatTone, string> = {
-  default: "text-acento-texto",
+  default: "text-accent-surface-text",
   success: "text-success-foreground",
   info: "text-info-foreground",
   warning: "text-warning-foreground",
-  danger: "text-destructive-texto",
+  danger: "text-destructive-text",
 };
 
 export function StatCard({ label, value, suffix, icon: Icon, deltaPercent, deltaLabel, hint, footer, tone = "default", emphasizeValue, highlight, className }: StatCardProps) {
@@ -46,27 +46,27 @@ export function StatCard({ label, value, suffix, icon: Icon, deltaPercent, delta
     <Card
       className={cn(
         "gap-0 py-0 transition-colors",
-        ENTRADA,
-        highlight && "border-acento-borde bg-acento-superficie text-acento-superficie-texto [&_.border-t]:border-acento-superficie-texto/15 [&_.text-muted-foreground]:text-acento-superficie-texto/80",
+        ENTRANCE,
+        highlight && "border-accent-border bg-accent-surface text-accent-surface-text [&_.border-t]:border-acento-superficie-texto/15 [&_.text-muted-foreground]:text-accent-surface-text/80",
         className,
       )}
     >
       <CardContent className="flex h-full flex-col p-4">
         <div className="flex items-center justify-between gap-2 text-muted-foreground">
-          <span className="text-etiqueta font-medium">{label}</span>
-          <span className={cn("flex size-7 shrink-0 items-center justify-center rounded-lg", highlight ? "bg-acento-superficie-texto/10 text-acento-superficie-texto" : toneBox[tone])}>
+          <span className="text-label font-medium">{label}</span>
+          <span className={cn("flex size-7 shrink-0 items-center justify-center rounded-lg", highlight ? "bg-accent-surface-texto/10 text-accent-surface-text" : toneBox[tone])}>
             <Icon className="size-4" strokeWidth={2} aria-hidden />
           </span>
         </div>
         <div className="mt-2 mb-1">
-          <div className={cn("text-metrica font-semibold tracking-tight tabular-nums", emphasizeValue && toneText[tone])} data-testid="kpi-value">
+          <div className={cn("text-metric font-semibold tracking-tight tabular-nums", emphasizeValue && toneText[tone])} data-testid="kpi-value">
             {value}
-            {suffix ? <span className="ml-1.5 font-sans text-etiqueta font-normal text-muted-foreground">{suffix}</span> : null}
+            {suffix ? <span className="ml-1.5 font-sans text-label font-normal text-muted-foreground">{suffix}</span> : null}
           </div>
           {hasDelta || hint ? (
-            <div className="mt-1 flex flex-wrap items-center gap-1.5 text-etiqueta">
+            <div className="mt-1 flex flex-wrap items-center gap-1.5 text-label">
               {hasDelta ? (
-                <span className={cn("inline-flex items-center gap-0.5 font-semibold", positive ? "text-success-foreground" : "text-destructive-texto")}>
+                <span className={cn("inline-flex items-center gap-0.5 font-semibold", positive ? "text-success-foreground" : "text-destructive-text")}>
                   {positive ? <TrendingUp className="size-3.5" /> : <TrendingDown className="size-3.5" />}
                   {formatPercent(deltaPercent)}
                 </span>
@@ -112,8 +112,8 @@ export function StatCompact({ label, value, icon: Icon, tone = "default", emphas
           <Icon className="size-4" strokeWidth={2} aria-hidden />
         </span>
         <div className="min-w-0">
-          <p className="truncate text-etiqueta font-medium text-muted-foreground">{label}</p>
-          <p className={cn("font-mono text-titulo font-bold tracking-tight tabular-nums", emphasizeValue && toneText[tone])}>{value}</p>
+          <p className="truncate text-label font-medium text-muted-foreground">{label}</p>
+          <p className={cn("font-mono text-title font-bold tracking-tight tabular-nums", emphasizeValue && toneText[tone])}>{value}</p>
         </div>
       </CardContent>
     </Card>

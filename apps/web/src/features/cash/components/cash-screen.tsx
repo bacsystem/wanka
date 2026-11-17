@@ -130,8 +130,8 @@ export function CashScreen({ movements }: { movements: CashMovement[] }) {
 export function ShiftBadge() {
   return (
     <div className="flex flex-wrap gap-2">
-      <span className="flex items-center gap-2 rounded-xl border border-borde-tarjeta bg-card shadow-tarjeta px-3 py-1.5 text-xs shadow-xs"><Store className="size-4 text-muted-foreground" /><span className="flex flex-col leading-tight"><span className="text-[10px] font-semibold tracking-wide text-muted-foreground uppercase">Sede</span><span className="font-semibold">{shift.site}</span></span></span>
-      <span className="flex items-center gap-2 rounded-xl border border-borde-tarjeta bg-card shadow-tarjeta px-3 py-1.5 text-xs shadow-xs"><Clock className="size-4 text-muted-foreground" /><span className="flex flex-col leading-tight"><span className="text-[10px] font-semibold tracking-wide text-muted-foreground uppercase">Turno y terminal</span><span className="font-semibold">{shift.terminal}</span></span></span>
+      <span className="flex items-center gap-2 rounded-xl border border-card-border bg-card shadow-card px-3 py-1.5 text-xs shadow-xs"><Store className="size-4 text-muted-foreground" /><span className="flex flex-col leading-tight"><span className="text-[10px] font-semibold tracking-wide text-muted-foreground uppercase">Sede</span><span className="font-semibold">{shift.site}</span></span></span>
+      <span className="flex items-center gap-2 rounded-xl border border-card-border bg-card shadow-card px-3 py-1.5 text-xs shadow-xs"><Clock className="size-4 text-muted-foreground" /><span className="flex flex-col leading-tight"><span className="text-[10px] font-semibold tracking-wide text-muted-foreground uppercase">Turno y terminal</span><span className="font-semibold">{shift.terminal}</span></span></span>
     </div>
   );
 }

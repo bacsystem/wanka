@@ -11,7 +11,7 @@ import { BottomNav } from "@/components/layout/bottom-nav";
 import { SidebarBrand, SidebarContextCard, SidebarSections, SidebarUserFooter, StatusPill } from "@/components/layout/shell-parts";
 import { SidebarAutoCollapse } from "@/components/layout/sidebar-auto-collapse";
 import { Topbar } from "@/components/layout/topbar";
-import { DEMO_ADMIN_USER } from "@/config/demo-session";
+import { DEMO_ADMIN_USER } from "@/features/auth/mocks/demo-session";
 import { ConnectionIcon } from "@/components/shared/dynamic-icon";
 import { adminNavigation, adminSectionLabel, isAdminActive } from "@/config/admin-navigation";
 import { AdminSidebarUser, AdminUserMenu } from "./admin-user-menu";
