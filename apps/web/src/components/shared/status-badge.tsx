@@ -40,8 +40,8 @@ export function Tag({ tone = "neutral", label, className, solid }: { tone?: Badg
         : "bg-acento-suave text-acento-superficie-texto"
       : solid
         ? {
-            success: "bg-success-solid text-white",
-            warning: "bg-warning-solid text-white",
+            success: "bg-success-solid text-[#0a0b0e]",
+            warning: "bg-warning-solid text-[#0a0b0e]",
             danger: "bg-destructive text-destructive-foreground",
             info: "bg-acento-2-texto text-white",
             neutral: "bg-foreground text-background",

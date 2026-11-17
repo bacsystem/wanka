@@ -18,8 +18,8 @@ import { areas, menu, orderM7, type DiningTable, type OrderItem, type TableStatu
 import { TARJETA } from "@/lib/estilos";
 
 const statusMeta: Record<TableStatus, { label: string; tone: BadgeTone; card: string; dot: string; chip: string }> = {
-  libre: { label: "Libre", tone: "success", card: "border-transparent bg-success hover:bg-success", dot: "bg-success-solid text-white", chip: "bg-success text-success-foreground " },
-  ocupada: { label: "Ocupada", tone: "warning", card: "border-transparent bg-warning hover:bg-warning", dot: "bg-warning-solid text-white", chip: "bg-warning text-warning-foreground " },
+  libre: { label: "Libre", tone: "success", card: "border-transparent bg-success hover:bg-success", dot: "bg-success-solid text-[#0a0b0e]", chip: "bg-success text-success-foreground " },
+  ocupada: { label: "Ocupada", tone: "warning", card: "border-transparent bg-warning hover:bg-warning", dot: "bg-warning-solid text-[#0a0b0e]", chip: "bg-warning text-warning-foreground " },
   por_cobrar: { label: "Por cobrar", tone: "info", card: "border-primary/50 bg-accent/60 hover:bg-accent dark:bg-accent/20", dot: "bg-primary text-primary-foreground", chip: "bg-acento-suave text-acento-superficie-texto dark:text-acento-superficie-texto" },
   reservada: { label: "Reservada", tone: "neutral", card: "border-accent-border bg-acento-suave hover:bg-acento-suave dark:border-accent-border dark:bg-acento-suave", dot: "bg-acento-suave text-white", chip: "bg-acento-suave text-acento-superficie-texto dark:bg-acento-suave dark:text-acento-superficie-texto" },
   sucia: { label: "Sucia / limpieza", tone: "neutral", card: "border-border bg-muted/60 hover:bg-muted", dot: "bg-secondary text-white", chip: "bg-muted text-muted-foreground" },
