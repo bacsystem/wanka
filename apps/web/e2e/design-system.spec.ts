@@ -53,7 +53,7 @@ test.describe("palette", () => {
     expect(await page.evaluate(() => localStorage.getItem("khipu-paleta"))).toBe("oceano");
   });
 
-  test("leaving the console gives the user's palette back (client-side navigation)", async ({ page }, testInfo) => {
+  test("leaving the console gives the user's palette back (full page load)", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name === "mobile", "the link to the tenant app is hidden on mobile");
     await page.addInitScript(() => localStorage.setItem("khipu-paleta", "oceano"));
     await page.goto("/admin");
@@ -86,7 +86,7 @@ test("the mobile 'Nueva venta' FAB has its elevation (shadow-lg)", async ({ page
 });
 
 test.describe("admin console palette", () => {
-  test("client-side navigation between the tenant app and the console raises no console error (no <script> in the React tree)", async ({ page }, testInfo) => {
+  test("navigating between the tenant app and the console raises no console error", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name === "mobile", "the link to the tenant app is hidden on mobile");
     const errors: string[] = [];
     page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
@@ -113,4 +113,35 @@ test.describe("admin console palette", () => {
     await expect(page.getByRole("menuitemradio", { name: "Inter" })).toBeVisible();
     await expect(page.getByRole("menuitemradio", { name: "Océano" })).toHaveCount(0);
   });
+});
+
+test.describe("no flash of the wrong palette on a hard load", () => {
+  // Records data-paleta on every animation frame; the first frame with a populated <body> is what the user sees first.
+  const cases: { path: string; expected: string }[] = [
+    { path: "/admin", expected: "indigo" },
+    { path: "/admin/login", expected: "indigo" },
+    { path: "/", expected: "coral" },
+  ];
+  for (const { path, expected } of cases) {
+    test(`${path}: every painted frame uses ${expected} (saved palette: coral)`, async ({ page }) => {
+      await page.addInitScript(() => {
+        localStorage.setItem("khipu-paleta", "coral");
+        const w = window as unknown as { __frames: string[] };
+        w.__frames = [];
+        const tick = () => {
+          const body = document.body;
+          if (body && body.childElementCount > 0) w.__frames.push(document.documentElement.dataset.paleta ?? "");
+          requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+      });
+      await page.goto(path);
+      await expect(page.getByRole("heading").first()).toBeVisible();
+      await page.waitForTimeout(500);
+      const frames = await page.evaluate(() => (window as unknown as { __frames: string[] }).__frames);
+      expect(frames.length).toBeGreaterThan(0);
+      expect(frames[0]).toBe(expected);
+      expect(new Set(frames)).toEqual(new Set([expected]));
+    });
+  }
 });

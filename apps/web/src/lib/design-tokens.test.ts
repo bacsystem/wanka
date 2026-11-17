@@ -23,7 +23,7 @@ const themeCss = stripComments([themeBlocks(theme), themeBlocks(globals)].join("
 const declarations = (css: string) =>
   [...css.matchAll(/(--[a-z0-9-]+)\s*:\s*([^;]+);/g)].map((m) => ({ name: m[1], value: m[2] }));
 
-// Set by next/font in app/layout.tsx or by html[data-font]; not declared as plain tokens.
+// Set by next/font in app/fonts.ts or by html[data-font]; not declared as plain tokens.
 const RUNTIME_VARS = new Set(["--i", "--font-sans", "--font-mono", "--fuente-jakarta", "--fuente-manrope", "--fuente-dmsans", "--fuente-figtree"]);
 const declared = new Set([...declarations(plainCss).map((d) => d.name), ...RUNTIME_VARS]);
 

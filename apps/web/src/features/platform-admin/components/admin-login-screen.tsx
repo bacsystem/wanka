@@ -1,6 +1,5 @@
 "use client";
 
-import { AdminPalette } from "./admin-palette";
 import { ArrowRight, Fingerprint, KeyRound, Layers, Lock, ShieldAlert, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -19,7 +18,6 @@ export function AdminLoginScreen() {
   const [code, setCode] = React.useState("");
   return (
     <div className="grid min-h-svh bg-background text-foreground lg:grid-cols-2">
-      <AdminPalette />
       <aside className="relative hidden flex-col justify-between overflow-hidden border-borde-tarjeta bg-card text-foreground shadow-tarjeta rounded-xl border p-10 lg:flex">
         <div className="pointer-events-none absolute -top-24 -right-24 size-96 rounded-full bg-acento-superficie/40 blur-3xl" />
         <div>

@@ -52,10 +52,11 @@ describe("khipu design system adoption", () => {
 describe("admin console palette", () => {
   const options = readFileSync(resolve(PKG, "components/apariencia-opciones.js"), "utf8");
   const tokens = readFileSync(resolve(PKG, "styles/tokens.css"), "utf8");
-  const palette = readFileSync(resolve(SRC, "features/platform-admin/components/admin-palette.tsx"), "utf8");
+  const read = (rel: string) => readFileSync(resolve(SRC, rel), "utf8");
+  const id = read("features/platform-admin/components/admin-palette-id.ts");
 
   it("is the design system's indigo palette, which defines the five accents", () => {
-    expect(palette).toContain('ADMIN_PALETTE = "indigo"');
+    expect(id).toContain('ADMIN_PALETTE = "indigo"');
     expect(options).toContain('valor: "indigo"');
     const block = tokens.match(/html:root\[data-paleta="indigo"\]\s*\{([^}]*)\}/)?.[1] ?? "";
     for (const token of ["--acento", "--acento-texto", "--acento-2", "--acento-2-texto", "--acento-3"]) {
@@ -63,15 +64,22 @@ describe("admin console palette", () => {
     }
   });
 
-  it("is applied by the console only, without writing the user's saved palette", () => {
-    expect(palette).not.toContain("setItem");
-    expect(palette).toContain("savedPalette()");
-    expect(palette).toContain("lockPalette()");
-    const files = collectTsx(resolve(SRC, "features/platform-admin")).filter((f) => readFileSync(f, "utf8").includes("<AdminPalette />"));
-    expect(files.map((f) => relative(SRC, f)).sort()).toEqual([
-      "features/platform-admin/components/admin-login-screen.tsx",
-      "features/platform-admin/components/admin-shell.tsx",
-    ]);
+  it("the console and its login are their own root layouts with the palette in the server HTML", () => {
+    for (const file of ["app/(admin)/layout.tsx", "app/(admin-auth)/layout.tsx"]) {
+      const layout = read(file);
+      expect(layout, file).toContain("<AppDocument palette={ADMIN_PALETTE}>");
+      expect(layout, file).toContain("<AdminPalette />");
+    }
+    expect(read("components/providers/app-document.tsx")).toContain("data-paleta={palette}");
+    // The tenant app and its auth pages have another root layout; there is no top-level app/layout.tsx.
+    expect(read("app/(tenant)/layout.tsx")).toContain("<AppDocument>");
+    expect(() => readFileSync(resolve(SRC, "app/layout.tsx"))).toThrow();
+  });
+
+  it("forcing the palette never writes the user's saved one", () => {
+    for (const file of ["features/platform-admin/components/admin-palette.tsx", "components/providers/app-document.tsx"]) {
+      expect(read(file), file).not.toContain("setItem");
+    }
   });
 
   it("renders no <script>: React 19 reports one created during client-side navigation", () => {

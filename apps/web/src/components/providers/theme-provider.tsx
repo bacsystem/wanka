@@ -10,11 +10,16 @@ import { PESO_ICONO } from "@/lib/iconos";
 
 const ICONS: IconProps = { weight: PESO_ICONO };
 
-export function ThemeProvider({ children, ...props }: ComponentProps<typeof NextThemesProvider>) {
+type ThemeProviderProps = ComponentProps<typeof NextThemesProvider> & {
+  /** Appearance preferences that win over the saved ones (the admin console forces its palette). */
+  initialAppearance?: ComponentProps<typeof AparienciaProvider>["inicial"];
+};
+
+export function ThemeProvider({ children, initialAppearance, ...props }: ThemeProviderProps) {
   return (
     <NextThemesProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange {...props}>
       <DisenoProvider>
-        <AparienciaProvider>
+        <AparienciaProvider inicial={initialAppearance}>
           <IconContext.Provider value={ICONS}>
             <ProveedorMovimiento>{children}</ProveedorMovimiento>
           </IconContext.Provider>
