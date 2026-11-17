@@ -59,7 +59,7 @@ CREATE POLICY tenant_isolation ON x
 
 ### Roles de base de datos y permisos (GRANT)
 
-Ningún rol de aplicación tiene `BYPASSRLS` ni es dueño de tablas. Todos son `NOLOGIN` salvo por su usuario de conexión.
+Ningún rol de aplicación tiene `BYPASSRLS` ni es dueño de tablas. Todos son `NOLOGIN` salvo por su usuario de conexión. Las funciones `SECURITY DEFINER` tienen su propio dueño, `wanka_definer` (`NOLOGIN`, `NOBYPASSRLS`, sin tablas propias), descrito en la sección «Funciones `SECURITY DEFINER`: dueño y patrón».
 
 | Esquema / objeto | `wanka_migrator` | `wanka_app` (api) | `wanka_worker` | `wanka_webhooks` | `wanka_platform` (platform-api) |
 |---|---|---|---|---|---|
@@ -73,7 +73,7 @@ Ningún rol de aplicación tiene `BYPASSRLS` ni es dueño de tablas. Todos son `
 | `ops.webhook_routes` (sin RLS; guarda el `whsec_` cifrado con `WEBHOOK_SECRET_ENC_KEY`) | dueño | INSERT/UPDATE al conectar Khipu | — | solo a través de `ops.resolve_webhook_route` (sin SELECT directo) | SELECT de `route_id`, `tenant_id`, `revoked_at` (GRANT por columna, sin el secreto) |
 | `ops.idempotency_keys` (con RLS), `ops.exchange_rates` (global) | dueño | DML / SELECT | DELETE (limpieza) / INSERT (tipo de cambio) | — | SELECT |
 | Tablas de River (`ops`) | dueño | INSERT (encolar) | todo | INSERT (encolar) | INSERT (encolar) |
-| Funciones `SECURITY DEFINER` (`platform_fn.*`, `iam.*`) | dueño | EXECUTE de `iam.session_lookup` (búsqueda de sesión antes de conocer el tenant, ADR 0004), `iam.redeem_impersonation`, `iam.decide_impersonation`, `iam.list_support_requests` (sin GRANT sobre el esquema `platform`) | EXECUTE de `platform_fn.purge_closed_tenant` | EXECUTE de `ops.resolve_webhook_route` | EXECUTE de `platform_fn.provision_tenant`, `suspend_tenant`, `request_impersonation` |
+| Funciones `SECURITY DEFINER` (`platform_fn.*`, `iam.*`, `ops.*`) | las crea; **dueño: `wanka_definer`** | EXECUTE de `iam.session_lookup` (búsqueda de sesión antes de conocer el tenant, ADR 0004), `iam.redeem_impersonation`, `iam.decide_impersonation`, `iam.list_support_requests` (sin GRANT sobre el esquema `platform`) | EXECUTE de `platform_fn.purge_closed_tenant` | EXECUTE de `ops.resolve_webhook_route` | EXECUTE de `platform_fn.provision_tenant`, `suspend_tenant`, `request_impersonation` |
 
 \* `org.tenants` tiene la fila propia del tenant y se trata aparte (siguiente sección).
 
@@ -119,7 +119,7 @@ La revisión los reprodujo en PG16 (cero filas o `new row violates row-level sec
    - Cuando una acción del staff afecta a un tenant (alta, suspensión, impersonación), la función `SECURITY DEFINER` que la ejecuta escribe **además** una fila en `audit.events` con el `tenant_id` destino y `actor_type = platform_staff`. Así la empresa ve quién entró.
 4. **Uso por tenant para la consola.** `wanka_worker` tiene GRANT `INSERT, UPDATE` solo en `platform.tenant_usage`. El job que cuenta los CPE de cada tenant escribe ahí en una transacción aparte, sin datos de negocio.
 5. **Alta de tenant desde la consola.** `wanka_platform` no tiene DML en `iam` ni en `org`.
-   - Todo el alta ocurre en `platform_fn.provision_tenant(ruc, razon_social, rubro, plan, owner_email)`: `SECURITY DEFINER`, `SET search_path = pg_catalog, platform_fn`, nombres cualificados, validación de argumentos y una sola transacción.
+   - Todo el alta ocurre en `platform_fn.provision_tenant(ruc, razon_social, rubro, plan, owner_email)`: `SECURITY DEFINER` con dueño `wanka_definer`, `SET search_path = pg_catalog, pg_temp`, nombres cualificados, validación de argumentos y una sola transacción. Usa el patrón de «Funciones `SECURITY DEFINER`»: fija y restaura `app.tenant_id`.
    - La función fija `app.tenant_id` al tenant nuevo y crea: `org.tenants`, la sede, el almacén, la caja, las series, los roles plantilla con sus permisos, `iam.users` (si el email no existe), la membresía del propietario en estado `invitado` y las dos filas de auditoría.
    - Devuelve el `tenant_id` y un token de invitación.
 6. **Impersonación de soporte, con consentimiento de la empresa** (issue #90: «solo con consentimiento de la empresa y queda auditado»).
@@ -144,6 +144,7 @@ La revisión los reprodujo en PG16 (cero filas o `new row violates row-level sec
         ORDER BY g.created_at DESC
         LIMIT 200
      $$;
+     ALTER FUNCTION iam.list_support_requests() OWNER TO wanka_definer;
      REVOKE ALL ON FUNCTION iam.list_support_requests() FROM PUBLIC;
      GRANT EXECUTE ON FUNCTION iam.list_support_requests() TO wanka_app;
      ```
@@ -165,7 +166,33 @@ La revisión los reprodujo en PG16 (cero filas o `new row violates row-level sec
    - **Pregunta abierta al PO (no decidida):** si se admite una excepción para incidentes P1 sin consentimiento previo (por ejemplo con doble firma de staff y aviso inmediato a la empresa). Mientras no se decida, no hay excepción.
 7. **Purga de empresas cerradas** (5 años): la hace `platform_fn.purge_closed_tenant(tenant_id)`, que el worker ejecuta por lotes y con auditoría en plataforma.
 
-Cada función `SECURITY DEFINER` tiene su prueba de integración, que también verifica que no hace nada fuera de su tenant.
+### Funciones `SECURITY DEFINER`: dueño y patrón (verificado en PostgreSQL 16)
+
+**El problema.** Una función `SECURITY DEFINER` corre con los privilegios de su dueño, pero **RLS se le sigue aplicando**: ningún rol tiene `BYPASSRLS`, y las tablas de tenant tienen `FORCE ROW LEVEL SECURITY`, que alcanza incluso al dueño de la tabla. Por eso, si la función lee o escribe una tabla con RLS sin un tenant fijado, ve 0 filas o recibe `new row violates row-level security policy`. La revisión lo reprodujo con `iam.session_lookup` en su versión `LANGUAGE sql`. Que el dueño sea superusuario lo "arreglaría", pero eso es justamente lo que este ADR prohíbe.
+
+**Decisión.**
+- Todas las funciones `SECURITY DEFINER` tienen un dueño único y explícito: **`wanka_definer`**. Es `NOLOGIN` y `NOBYPASSRLS`, no es dueño de ninguna tabla, y solo tiene los `GRANT` de tabla que sus funciones necesitan.
+- La migración, que corre como `wanka_migrator` (miembro de `wanka_definer`), crea la función y hace `ALTER FUNCTION ... OWNER TO wanka_definer`. PostgreSQL exige que el nuevo dueño tenga `CREATE` en el esquema, así que la migración se lo concede solo durante ese cambio y lo revoca enseguida.
+- Toda función lleva `SET search_path = pg_catalog, pg_temp`, nombres cualificados y `REVOKE ALL ... FROM PUBLIC`.
+- Las funciones que tocan tablas con RLS **para un tenant que el llamador no fijó** siguen siempre el mismo patrón: guardan `current_setting('app.tenant_id', true)`, fijan el tenant **que sale de sus propios datos** (la sesión, el grant, el argumento validado) con `set_config(..., true)`, operan a través de `tenant_isolation` y **restauran** el valor del llamador antes de salir. Si fallan, la transacción o el savepoint revierten el `set_config`. No se usa la cláusula `SET app.tenant_id = ''` de `CREATE FUNCTION`, porque un rol no superusuario recibe `permission denied to set parameter` en PostgreSQL 16.
+- La prueba de CI (a) agrega una comprobación: toda función con `prosecdef` tiene como dueño a `wanka_definer` y `proconfig` con `search_path`.
+
+**Auditoría de todas las funciones del diseño**:
+
+| Función | Dueño | Quién la ejecuta | Tablas con RLS que toca | Cómo obtiene el tenant |
+|---|---|---|---|---|
+| `iam.session_lookup(bytea)` | `wanka_definer` | `wanka_app` (antes de `InTenantTx`) | lee `iam.memberships` | `set_config` con el `tenant_id` de la sesión encontrada; restaura |
+| `iam.list_my_memberships` | *no es función: vista `security_invoker`* | `wanka_app` con solo `app.user_id` | `iam.memberships`, `iam.roles`, `org.sites`, `org.tenants` | políticas `own_memberships`/`member_read` del llamador (sin tenant) |
+| `iam.list_support_requests()` | `wanka_definer` | `wanka_app` dentro de `InTenantTx` | ninguna (`platform.impersonation_grants` no tiene RLS) | filtra por `app.current_tenant()` del llamador; sin tenant, 0 filas |
+| `iam.decide_impersonation(uuid, boolean)` | `wanka_definer` | `wanka_app` dentro de `InTenantTx`, `session_kind = user` | escribe `audit.events` | el del llamador; falla cerrada sin `session_kind = user` |
+| `iam.redeem_impersonation(bytea, uuid, bytea)` | `wanka_definer` | `wanka_app` sin tenant | escribe `audit.events` (y `iam.sessions`, sin RLS) | `set_config` con el `tenant_id` del grant aprobado; restaura |
+| `ops.resolve_webhook_route(text)` | `wanka_definer` | `wanka_webhooks` | ninguna (`ops.webhook_routes` no tiene RLS) | devuelve el tenant de la ruta |
+| `platform_fn.provision_tenant(...)` | `wanka_definer` | `wanka_platform` | escribe `org.tenants`, `org.sites`, `iam.roles`, `iam.memberships`, `audit.events` | `set_config` con el tenant nuevo; restaura |
+| `platform_fn.request_impersonation(...)` | `wanka_definer` | `wanka_platform` | escribe `audit.events` | `set_config` con el tenant del argumento; restaura |
+| `platform_fn.suspend_tenant(uuid)` | `wanka_definer` | `wanka_platform` | actualiza `org.tenants` (la política `platform_rw` es `TO wanka_platform` y no alcanza al dueño de la función) | `set_config` con el tenant del argumento; restaura |
+| `platform_fn.purge_closed_tenant(uuid)` | `wanka_definer` | `wanka_worker` | borra en todas las tablas del tenant | `set_config` con el tenant del argumento; restaura |
+
+**Verificación.** `data/rls-check/` contiene el SQL de estas funciones (versión reducida del esquema, con las mismas políticas, `FORCE RLS` y roles) y un `run.sh` que lo ejecuta en un contenedor desechable de PostgreSQL 16 con los roles reales. La salida está en el PR #124. Cada función tiene además su prueba de integración, que también verifica que no hace nada fuera de su tenant.
 
 ### Workers
 

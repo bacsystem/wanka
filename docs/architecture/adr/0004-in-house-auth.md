@@ -39,27 +39,34 @@ Opción 2, con el BFF de Next.js como único cliente.
 - **Obligatorio** (decisión del usuario) para propietario, administrador y contador (`iam.roles.requires_mfa = true` en esas plantillas) y para todo el staff de plataforma. Para los demás roles es opcional, y la empresa puede volverlo obligatorio marcando `requires_mfa` en sus roles. **Se decide en un solo punto: después de validar la contraseña y antes de emitir tokens** (`sequences/01-login-2fa-tenant.mmd`). La API lee las membresías propias con `iam.list_my_memberships()`. Si el usuario tiene TOTP, se le pide el código. Si no lo tiene y algún rol lo exige, se le pide enrolarse con un token que solo sirve para eso. Si no lo tiene y ningún rol lo exige, entra sin 2FA. `POST /v1/auth/session/tenant` solo hace de guarda: responde `403 mfa_required` cuando la membresía se creó después del login. La sesión guarda `mfa_satisfied` (verdadero si pasó la 2FA **o si no se le exigía**) y `mfa_method` (`totp`, `recovery_code`, `none`). El middleware de cada petición exige `mfa_satisfied = true`, así que el cajero sin 2FA opcional entra; la guarda de `session/tenant` compara `requires_mfa` del rol elegido con `mfa_method`. Prueba e2e: un cajero sin TOTP inicia sesión y `GET /v1/me` responde 200.
 - **`requires_mfa` se comprueba en cada petición, no solo al elegir empresa.** **De dónde sale la versión vigente:** la búsqueda de la sesión ocurre **antes** de conocer el tenant y el usuario, así que corre como `wanka_app` **sin** `app.tenant_id` ni `app.user_id`. Un `JOIN` directo contra `iam.memberships`, que tiene RLS, devolvería NULL: lo reprodujo la revisión. Por eso la búsqueda es una función acotada:
   ```sql
+  -- Dueño: wanka_definer (NOLOGIN, NOBYPASSRLS, no es dueño de tablas). Ver ADR 0001, "Funciones SECURITY DEFINER".
   CREATE FUNCTION iam.session_lookup(p_access_hash bytea)
-    RETURNS TABLE (session_id uuid, user_id uuid, tenant_id uuid, site_id uuid, cash_register_id uuid,
-                   membership_id uuid, session_authz_version bigint, mfa_satisfied boolean, mfa_method text,
-                   impersonator_id uuid, current_authz_version bigint, membership_status text)
-    LANGUAGE sql STABLE SECURITY DEFINER
+    RETURNS TABLE (session_id uuid, user_id uuid, tenant_id uuid, membership_id uuid, session_authz_version bigint,
+                   mfa_method text, impersonator_id uuid, current_authz_version bigint, membership_status text)
+    LANGUAGE plpgsql STABLE SECURITY DEFINER
     SET search_path = pg_catalog, pg_temp
   AS $$
-    SELECT s.id, s.user_id, s.tenant_id, s.site_id, s.cash_register_id, s.membership_id, s.authz_version,
-           s.mfa_satisfied, s.mfa_method, s.impersonator_id, m.authz_version, m.status
-      FROM iam.sessions s
-      LEFT JOIN iam.memberships m ON m.id = s.membership_id AND m.tenant_id = s.tenant_id
-     WHERE s.access_hash = p_access_hash
-       AND s.revoked_at IS NULL AND s.access_expires_at > now()
-  $$;
+  DECLARE s iam.sessions%ROWTYPE; v bigint; st text; prev text := current_setting('app.tenant_id', true);
+  BEGIN
+    SELECT * INTO s FROM iam.sessions x
+     WHERE x.access_hash = p_access_hash AND x.revoked_at IS NULL AND x.access_expires_at > now();
+    IF NOT FOUND THEN RETURN; END IF;
+    IF s.membership_id IS NOT NULL THEN
+      PERFORM set_config('app.tenant_id', s.tenant_id::text, true);   -- el tenant de ESA sesion
+      SELECT m.authz_version, m.status INTO v, st FROM iam.memberships m WHERE m.id = s.membership_id;  -- via tenant_isolation
+      PERFORM set_config('app.tenant_id', coalesce(prev, ''), true);  -- restaura el valor del llamador
+    END IF;
+    RETURN QUERY SELECT s.id, s.user_id, s.tenant_id, s.membership_id, s.authz_version, s.mfa_method, s.impersonator_id, v, st;
+  END $$;
+  ALTER FUNCTION iam.session_lookup(bytea) OWNER TO wanka_definer;
   REVOKE ALL ON FUNCTION iam.session_lookup(bytea) FROM PUBLIC;
   GRANT EXECUTE ON FUNCTION iam.session_lookup(bytea) TO wanka_app;
   ```
+  **Por qué así:** el dueño de la función no tiene `BYPASSRLS` e `iam.memberships` tiene `FORCE ROW LEVEL SECURITY`. Una versión `LANGUAGE sql` con `JOIN` directo ve la membresía con RLS y sin tenant, así que devuelve `NULL` y revocaría todas las sesiones en su primera petición (lo reprodujo la revisión). La función lee primero la sesión (`iam.sessions` no tiene RLS), fija **el tenant de esa sesión** con `set_config(..., true)`, lee la membresía por `tenant_isolation` y restaura el valor del llamador. La cláusula `SET app.tenant_id = ''` en `CREATE FUNCTION`, que restauraría sola, no sirve: con un rol no superusuario, PostgreSQL 16 responde `permission denied to set parameter "app.tenant_id"`. Si la función falla, la transacción o el savepoint se revierten, y con ellos el `set_config`. **Verificado en PostgreSQL 16** con los roles reales: `data/rls-check/`.
   Solo encuentra la fila cuyo hash coincide, y quien llama necesita el token para calcularlo. Devuelve la versión **actual** de la membresía. No hay caché antes de esa lectura. **Si una sesión de tenant no impersonada (con `membership_id`) no tiene versión actual** (membresía borrada) **o la membresía no está activa, se revoca y se responde 401** (las sesiones impersonadas no tienen membresía: se validan contra su grant, que debe seguir vigente y sin revocar): una versión ausente nunca se trata como "sin cambios", así que nunca se escribe NULL en la sesión. Si la versión actual difiere de la guardada en la sesión (`iam.sessions.authz_version`), el middleware re-resuelve el rol y los permisos (ya dentro de `InTenantTx`), aplica el control de 2FA y actualiza la versión de la sesión. La caché de permisos se consulta con la clave `membership_id + versión actual`, así que una entrada caliente con la versión vieja nunca se usa. Con ese rol compara: si `requires_mfa = true` y la sesión tiene `mfa_method = none`, responde `403 mfa_required` y **revoca esa sesión de tenant**. El BFF manda al usuario a `/login`, donde se le pide enrolarse.
   - Esto cubre el cajero ascendido a administrador y el rol que pasa a exigir 2FA.
   - Como cambiar el rol incrementa `authz_version`, el efecto es inmediato: no espera a la caché ni al vencimiento del refresh.
-  - Las pruebas corren **contra PostgreSQL con RLS activo y con el rol real `wanka_app`**, nunca con un superusuario ni con el dueño de las tablas.
+  - Las pruebas corren **contra PostgreSQL con RLS activo y con el rol real `wanka_app`**, nunca con un superusuario ni con el dueño de las tablas. `data/rls-check/run.sh` lo hace en un contenedor desechable de PostgreSQL 16.
   - Prueba de integración: borrar o suspender la membresía hace que la siguiente petición responda 401 y revoque la sesión.
   - Prueba e2e **con la caché caliente** (dos peticiones previas del cajero, que llenan la caché con la versión vieja): ascenderlo a administrador sin TOTP; su siguiente petición responde 403 y la sesión queda revocada.
 - **Sesiones impersonadas** (ADR 0001, camino 6): los permisos salen del alcance del grant (`read_only` o `full`), nunca de un rol del tenant. `full` excluye `identidad.support_access:*`, `identidad.users:*`, `identidad.roles:*`, `identidad.sessions:*` y `empresas.einvoicing:update`. El staff no tiene TOTP en el plano tenant: su 2FA ya se cumplió en el plano plataforma, y la sesión lleva `mfa_method = platform`. Como se exige por rol, quien es cajero en una empresa y administrador en otra debe tener 2FA para entrar a la segunda. El mock muestra `sms`: **SMS no se propone** como segundo factor (SIM swapping); pregunta abierta al PO.
