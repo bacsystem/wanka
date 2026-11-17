@@ -10,7 +10,7 @@ sequenceDiagram
   participant H as handler del modulo
 
   W->>MW: POST /v1/lubricentro/service-orders Bearer wk_at_...
-  MW->>DB: SELECT sesion por sha256(token) (no revocada, no expirada, mfa_satisfied = true, tenant_id)
+  MW->>DB: SELECT s.*, m.authz_version AS current_version FROM iam.sessions s LEFT JOIN iam.memberships m ON m.id = s.membership_id WHERE s.access_hash = sha256(token) (no revocada, no expirada, mfa_satisfied = true). Lectura por PK: siempre de la base, nunca de cache
   alt sesion invalida o token de otro plano (prefijo wka_)
     MW-->>W: 401 unauthenticated
   end
@@ -26,7 +26,11 @@ sequenceDiagram
   else limite de plan alcanzado (ej. CPE del mes, usuarios, sedes)
     MW-->>W: 403 plan_limit_reached {limit, used}
   else ok
-    MW->>DB: rol y permisos del membership (cache por membership_id + authz_version)
+    alt current_version distinta de s.authz_version (rol cambiado desde la ultima peticion)
+      MW->>DB: re-resuelve el rol (requires_mfa) y los permisos, UPDATE sessions SET authz_version = current_version
+    else igual
+      MW->>MW: rol y permisos de la cache, clave membership_id + current_version (una cache caliente con la version vieja no se usa)
+    end
     alt rol vigente con requires_mfa y sesion con mfa_method = none (ej. cajero ascendido)
       MW->>DB: revoca la sesion de tenant
       MW-->>W: 403 mfa_required (el BFF lleva a /login para enrolarse)
