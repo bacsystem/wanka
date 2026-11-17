@@ -21,6 +21,7 @@ Opción 2.
 - Extensiones obligatorias por operación: `x-module` (ADR 0005) y `x-permission` (ADR 0004); una prueba recorre el router y falla si alguna ruta no las tiene o si existe una ruta no declarada.
 - CI: lint del spec (Redocly), generación de código sin diff, y detección de cambios incompatibles contra `main` (`oasdiff breaking`) que bloquea el merge salvo nueva versión.
 - Los tipos generados reemplazan gradualmente a `types/domain.ts` y a los tipos de `features/*/mocks`; los mocks pueden seguir existiendo como fixtures validados contra el esquema.
+- **Clientes del frontend: funciones a mano, tipos generados.** El portal de Khipu (`bacsystem/khipu`, `portal/src/lib/api/*.ts`) usa tipos escritos a mano y solo usa los generados como guarda de contrato (`contrato-openapi.ts`). Lo hace porque su spec sale de springdoc, que marca todos los campos como opcionales, y los tipos generados "dirían menos". En Wanka el spec es la fuente (spec-first) y declara `required` y `nullable` explícitamente, así que los tipos generados por `openapi-typescript` son exactos y se usan **directamente**. Se mantiene la forma del portal: una función a mano por operación en `lib/api/*.ts`, que fija URL, cabeceras, errores y reintentos, tipada con `components["schemas"]`. Mismo patrón, sin la duplicación de tipos. Si el spec perdiera precisión, se volvería a la guarda de tipos del portal.
 
 ## Consecuencias
 

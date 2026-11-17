@@ -17,7 +17,7 @@ Estado: propuesto (2026-11-17). Aplica a `api` (plano tenant, `/v1`) y `platform
 | Servicio | `api` | `platform-api` |
 | Prefijo de ruta | `/v1` | `/platform/v1` |
 | Token | `Authorization: Bearer wk_at_<random>` | `Authorization: Bearer wka_at_<random>` |
-| Cookie en el navegador (las pone el BFF) | `wk_at`, `wk_rt` | `wka_at`, `wka_rt` (`Path=/admin`) |
+| Cookie en el navegador (las pone el BFF) | `wk_at`, `wk_rt`, `wk_at_exp` (`Path=/`) | `wka_at`, `wka_rt`, `wka_at_exp` (`Path=/`; los nombres separan los planos, porque los route handlers `/api/admin/*` están fuera de `/admin`) |
 | Tabla de sesiones | `iam.sessions` | `platform.platform_sessions` |
 | Rol de base de datos | `wanka_app` (sujeto a RLS) | `wanka_platform` |
 

@@ -24,10 +24,15 @@ Opción 2, con el BFF de Next.js como único cliente.
 
 **Tokens y sesiones**
 - Acceso `wk_at_` (15 min) y refresh `wk_rt_` (rotativo; 30 días de inactividad, 90 días absolutos; en cajas compartidas la empresa puede acortarlo). Opacos, 256 bits, solo `sha256` en `iam.sessions`.
-- Rotación del refresh en cada uso; reuso de un refresh ya rotado ⇒ se revoca toda la familia (`refresh_family`) y se avisa al usuario.
+- Rotación del refresh en cada uso; reuso de un refresh ya rotado ⇒ se revoca toda la familia (`refresh_family`) y se avisa al usuario, **salvo dentro de la gracia de 10 s**: si llega el refresh inmediatamente anterior (`prev_refresh_hash`) antes de 10 s desde `rotated_at`, la API devuelve el par vigente en vez de revocar. Esto cubre dos pestañas o dos peticiones que refrescan a la vez.
+- **Dónde se refresca en el BFF (Next 16).** Los Server Components **no pueden escribir cookies**: si refrescaran durante el render, el token nuevo se perdería y el siguiente render reusaría el viejo, lo que revocaría la familia. Por eso hay solo dos lugares que refrescan, igual que el portal de Khipu (`bacsystem/khipu`, `portal/`: `middleware.ts` + `app/api/proxy/[...path]/route.ts` con `refrescarUnaVez`):
+  1. `proxy.ts` (antes `middleware.ts`) refresca **de forma proactiva antes del render** cuando `wk_at_exp` (cookie no secreta con el vencimiento del acceso, porque el token es opaco) indica menos de 60 s. Escribe las cookies en la respuesta y en la petición que sigue al render.
+  2. El route handler proxy (`app/api/proxy/[...path]`) y los route handlers de mutación reintentan **una vez** ante un 401, refrescando con **single-flight**: un candado por sesión a nivel de módulo, para que dos peticiones concurrentes compartan una sola rotación.
+
+  La gracia de 10 s cubre lo que el single-flight no ve, como dos instancias de `web` o dos pestañas. Los Server Components solo leen la cookie, y un 401 a mitad del render redirige a `/login?next=`.
 - Revocación: cerrar sesión, "cerrar otras sesiones", cambio de contraseña, suspensión de usuario o de membresía ⇒ `revoked_at`, efecto inmediato.
 - `authz_version` en la membresía: cambiar el rol invalida la caché de permisos de esa membresía.
-- Cookies (las pone el BFF): `httpOnly`, `Secure`, `SameSite=Lax`; `wk_rt` con `Path` restringido a la ruta de refresh del BFF. CSRF: SameSite + comprobación de `Origin` en mutaciones del BFF.
+- Cookies (las pone el BFF, solo en `proxy.ts` y route handlers): `wk_at`, `wk_rt`, `wk_at_exp`, con `httpOnly`, `Secure` y `SameSite=Lax`. `wk_rt` lleva `Path=/`, porque `proxy.ts` lo necesita en cualquier ruta para refrescar antes del render. El riesgo de enviarlo en cada petición se acota con `httpOnly`, la rotación y la detección de reuso. CSRF: SameSite + comprobación de `Origin` en mutaciones del BFF.
 
 **2FA**
 - TOTP (RFC 6238, 30 s, ventana ±1, rechazo de código reutilizado), secreto cifrado con AES-GCM (`TOTP_ENC_KEY`), 10 códigos de recuperación de un uso (hash).

@@ -10,7 +10,7 @@ Decisiones fijadas por el usuario, que este diseño no reabre:
 - Autenticación propia.
 - Todos los módulos del producto, con prioridad para los rubros **lubricentro** y **librería**.
 
-> **Dos "khipu" distintos.** *Khipu* es el **proveedor de facturación electrónica** (ADR 0003). *khipu* es también el nombre del **sistema de diseño** que adopta el frontend. No tienen relación entre sí. En estos documentos, "Khipu" siempre es el proveedor.
+> **Khipu y khipu-design-system.** *Khipu* es la **API del proveedor de facturación electrónica** (ADR 0003). *khipu-design-system* es el **sistema de diseño** que adopta el frontend de Wanka (PR #2, fijado en `github:bacsystem/khipu-design-system#v0.5.23`). Son la misma familia de productos: el portal web de Khipu (`bacsystem/khipu`, `portal/`) está construido sobre ese mismo paquete. En estos documentos, "Khipu" a secas es la API de facturación, y "khipu-design-system" es el paquete de UI.
 
 Los diagramas son archivos Mermaid (`.mmd`). GitHub los renderiza al abrirlos y también se pueden previsualizar con la extensión de Mermaid. Todos se validaron con `@mermaid-js/mermaid-cli`; ver [Validación](#validación).
 
@@ -60,7 +60,7 @@ Los dos cambios de frontera (variantes y consignación al core) ya se comunicaro
 
 **Por qué un monolito modular y no microservicios.** La operación central, cobrar en el POS, tiene que ser atómica a través de cinco módulos. Con servicios separados haría falta una saga para algo que en una base es un `COMMIT`. El equipo es chico y no hay ninguna necesidad medida de escalar un módulo por separado. Las fronteras se verifican en CI, así que extraer un módulo más adelante sigue siendo posible. Detalle y librerías en el [ADR 0002](adr/0002-modular-monolith-go.md).
 
-**Frontend.** El navegador nunca llama a la API. Las páginas (Server Components) y las mutaciones (Server Actions o route handlers) llaman a la API desde el servidor con el token guardado en cookies httpOnly. Este flujo reemplaza la cookie `tenant_id` actual (`apps/web/src/features/auth/lib/tenant-cookie.ts`), que hoy elige la empresa sin autorización. En Next 16 el middleware se llama `proxy.ts`; antes de implementarlo hay que revisar la documentación local en `node_modules/next/dist/docs/` (lo indica `apps/web/AGENTS.md`).
+**Frontend.** La UI viene del paquete `khipu-design-system`, fijado por tag: shell, navegación, componentes, tokens, apariencia y `Providers`, con iconos Phosphor (la migración de los restantes de Lucide es el issue #123). El patrón del BFF se alinea con el portal de Khipu: refresco en `proxy.ts` y en el route handler proxy con single-flight, y clientes `lib/api/*.ts` escritos a mano (ADR 0004 y ADR 0009). El navegador nunca llama a la API. Las páginas (Server Components) y las mutaciones (Server Actions o route handlers) llaman a la API desde el servidor con el token guardado en cookies httpOnly. Este flujo reemplaza la cookie `tenant_id` actual (`apps/web/src/features/auth/lib/tenant-cookie.ts`), que hoy elige la empresa sin autorización. En Next 16 el middleware se llama `proxy.ts`; antes de implementarlo hay que revisar la documentación local en `node_modules/next/dist/docs/` (lo indica `apps/web/AGENTS.md`).
 
 ## 4. Datos
 
