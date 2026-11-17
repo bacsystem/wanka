@@ -83,15 +83,15 @@ Never nest a `Button` inside a clickable tile rendered as `<button>` (hydration 
 
 The backend is not built yet. Its design lives in `docs/architecture/`; `README.md` there is the index. Follow these rules when you design or implement backend work, and read the linked doc before changing anything in its area.
 
-- **Stack**: Go modular monolith (hexagonal, one package per bounded context, facades between modules) on PostgreSQL 16. One image runs as `serve --plane=tenant|platform|webhooks`, `worker` and `migrate`. Libraries — River (jobs/outbox), sqlc, goose, oapi-codegen, shopspring/decimal, pquerna/otp, OpenTelemetry, AWS S3 SDK — are **pending owner approval**: do not add them before that (ADR 0002).
-- **Decisions are ADRs** in `docs/architecture/adr/NNNN-kebab-title.md`, numbered in sequence. Each has context, options, decision, consequences (the bad ones too), status and date. Add a new ADR instead of rewriting an accepted one; a reversal is a new ADR that supersedes the old one.
+- **Stack**: Go modular monolith (hexagonal, one package per bounded context, facades between modules) on PostgreSQL 16 (version fixed in ADR 0002). One image runs as `serve --plane=tenant|platform|webhooks`, `worker` and `migrate`. Libraries — River (jobs/outbox), sqlc, goose, oapi-codegen, shopspring/decimal, pquerna/otp, OpenTelemetry, AWS S3 SDK — are **pending owner approval**: do not add them before that (ADR 0002).
+- **Decisions are ADRs** in `docs/architecture/adr/NNNN-kebab-title.md`, numbered in sequence. Each has context, options, decision, consequences (the bad ones too), status and date. To add, change or supersede one, follow the process in `docs/architecture/README.md` §9.
 - **Multi-tenancy** (ADR 0001):
   - every tenant table has `tenant_id`, `ENABLE` + `FORCE ROW LEVEL SECURITY` and the policy `tenant_id = app.current_tenant()`, where `app.current_tenant()` is `NULLIF(current_setting('app.tenant_id', true), '')::uuid`;
   - every natural `UNIQUE`/PK starts with `tenant_id`, and FKs are composite with `tenant_id`;
   - all tenant data access goes through `InTenantTx(ctx, Actor{TenantID, UserID, Kind, ImpersonatorID})`, which always sets `app.tenant_id`, `app.user_id` and `app.session_kind`; the tenant comes from the session, never from body, URL or header;
   - no role has `BYPASSRLS`, and application roles own no tables;
   - `SECURITY DEFINER` functions are owned only by `wanka_definer`, have `SET search_path = pg_catalog, pg_temp` and `REVOKE ALL ... FROM PUBLIC`; when they touch RLS tables for a tenant the caller did not set, they set it from their own data and restore the caller's value;
-  - the only extra policies allowed are the named, read-only ones listed in ADR 0001.
+  - the only extra policies allowed are the named read-only ones listed in ADR 0001, plus `platform_rw` on `org.tenants`, limited to `wanka_platform`.
 - **RLS check**: `sh docs/architecture/data/rls-check/run.sh` runs the policies and functions on a disposable PostgreSQL 16 container (needs Docker) with the real roles. Any change to policies, roles, grants or `SECURITY DEFINER` functions must update that SQL and pass with **exit 0**. `MUTATION=naive_session_lookup` shows a failing run.
 - **API contract**:
   - `docs/architecture/api/openapi.yaml` is the spec-first source (ADR 0009); `api/conventions.md` gives REST `/v1`, `camelCase`, RFC 9457 errors with `code`, cursor pagination, a required `Idempotency-Key` on creating `POST`s, and money as decimal strings;
@@ -108,3 +108,17 @@ The backend is not built yet. Its design lives in `docs/architecture/`; `README.
   - Railway services `web`, `api`, `platform-api`, `worker` and `webhooks`; only `web` and `webhooks` have public domains, and `/v1` is reachable only over the private network;
   - config is 12-factor; write secret **names** only, never values, in docs, code or issues.
 - **Diagrams**: Mermaid `.mmd` files only, validated before committing (`npx -y @mermaid-js/mermaid-cli -i file.mmd -o /tmp/x.svg`), following `.github/instructions/mermaid.instructions.md`.
+
+## Agent context files
+
+`CLAUDE.md` (this file) is the **single source of truth** for project context. Every other agent context file only imports it, so edit `CLAUDE.md` and never copy its content elsewhere.
+
+- **Claude Code** loads `CLAUDE.md` at the root, plus `apps/web/CLAUDE.md` when it works under `apps/web` (that file only contains `@AGENTS.md`).
+- **Gemini CLI**:
+  - loads the root `GEMINI.md`, which imports this file with `@./CLAUDE.md`;
+  - `.gemini/settings.json` sets `context.fileName` to `["GEMINI.md", "AGENTS.md"]`, so it also picks up `apps/web/AGENTS.md` when a tool touches that folder.
+- **Antigravity**:
+  - loads the root `GEMINI.md`, where `@[CLAUDE.md](./CLAUDE.md)` inlines this file (Antigravity's `@./path` only inserts a reference, and Gemini CLI ignores the `@[label](path)` form);
+  - it reads `AGENTS.md` and `GEMINI.md` from the workspace folder and its parents, never from subfolders, so `apps/web/AGENTS.md` only applies when the workspace is opened at `apps/web`;
+  - keep each rule file under 24 000 bytes after includes, or it gets truncated.
+- `apps/web/AGENTS.md` is generated and re-added by `next dev`; do not edit it by hand. There is no root `AGENTS.md`, to avoid confusing it with that file.
