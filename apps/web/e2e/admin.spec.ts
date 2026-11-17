@@ -44,6 +44,31 @@ test("admin login: SSO → 2FA → dashboard; console is themed and separate fro
   await expect(page.getByRole("heading", { level: 1, name: /Mi perfil y seguridad/ })).toBeVisible();
 });
 
+test("admin 404: unknown /admin/* URL shows the console 404, not the tenant one", async ({ page }) => {
+  const response = await page.goto("/admin/no-existe");
+  // The console has no loading.js, so the body is not streamed and Next answers a real 404
+  // (the tenant app streams behind its loading.js and keeps answering 200; out of scope here).
+  expect(response?.status()).toBe(404);
+  await expect(page.getByRole("heading", { name: "No encontramos esta página de la consola" })).toBeVisible();
+  await expect(page.locator("html")).toHaveAttribute("data-paleta", "indigo");
+  await expect(page.locator("meta[name=robots][content*=noindex]")).toHaveCount(1);
+  // admin shell (its own layout), not the tenant one
+  await expect(page).toHaveTitle(/Consola de administración/);
+  await expect(page.getByText("Ir al panel", { exact: true })).toHaveCount(0);
+  await waitForHydration(page);
+  await page.getByRole("link", { name: "Ir al dashboard de la consola" }).click();
+  await page.waitForURL(/\/admin$/);
+  await expect(page.getByRole("heading", { level: 1, name: /Panel maestro de operaciones/ })).toBeVisible();
+});
+
+test("tenant 404 is unchanged for unknown URLs outside /admin", async ({ page }) => {
+  await page.goto("/no-existe");
+  await expect(page.getByRole("heading", { name: "No encontramos esta página" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /de la consola/ })).toHaveCount(0);
+  await expect(page.locator("html")).not.toHaveAttribute("data-paleta", "indigo");
+  await expect(page.getByText("Ir al panel", { exact: true })).toBeVisible();
+});
+
 test("admin tenants: filters, suspend toggle, alta drawer and detail", async ({ page }) => {
   await page.goto("/admin/empresas");
   await page.waitForLoadState("networkidle");
