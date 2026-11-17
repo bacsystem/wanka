@@ -8,20 +8,36 @@ const ALL_PALETTES =
   "slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose";
 const HARDCODED_PALETTE = new RegExp(`\\b(?:bg|text|border|ring|fill|from|to|via|stroke)-(?:${ALL_PALETTES})-\\d+`);
 
-const ARBITRARY_COLOR =
-  /\b(?:bg|text|border|ring|fill|stroke|from|to|via|outline|decoration|shadow)-\[(?:#|rgba?\(|hsla?\(|hwb\(|lab\(|lch\(|oklab\(|oklch\(|color\()/;
-const HEX_LITERAL = /#[0-9a-fA-F]{3,8}\b/;
-const WHITE_BLACK = /\b(?:bg|text|border|ring|fill|stroke|from|to|via)-(?:white|black)\b/;
+const COLOR_PREFIX = "bg|text|border|ring|fill|stroke|from|to|via|outline|decoration|shadow";
+// CSS named colors (not transparent/currentColor/inherit, which are fine) so `text-[red]` is caught but `w-[min]` is not.
+const CSS_COLOR_NAMES =
+  "red|blue|green|black|white|gray|grey|orange|yellow|purple|pink|teal|cyan|magenta|navy|lime|maroon|olive|silver|aqua|fuchsia|brown|gold|indigo|violet|tomato|coral|crimson|salmon|khaki|beige|ivory|tan|plum|orchid|lavender|turquoise|azure|snow|linen";
+const ARBITRARY_COLOR = new RegExp(
+  `\\b(?:${COLOR_PREFIX})-\\[(?:#|rgba?\\(|hsla?\\(|hwb\\(|lab\\(|lch\\(|oklab\\(|oklch\\(|color\\(|(?:${CSS_COLOR_NAMES})\\])`,
+  "i",
+);
+const WHITE_BLACK = /\b(?:bg|text|border|ring|fill|stroke|from|to|via)-(?:white|black)\b/g;
+
+/** Hex colors only in a color context (an exact quoted 6/8-digit hex, or after color:/fill=/stroke=…); comments ignored. */
+export function findColorLiterals(source: string): string[] {
+  const code = source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:\w"'`])\/\/.*$/gm, "$1");
+  const found = new Set<string>();
+  for (const m of code.matchAll(/["'`](#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?)["'`]/g)) found.add(m[1]);
+  for (const m of code.matchAll(/\b(?:color|fill|stroke|background|backgroundColor)\s*[:=]\s*[{"'`]*\s*(#[0-9a-fA-F]{3,8})\b/g)) found.add(m[1]);
+  for (const m of code.matchAll(WHITE_BLACK)) found.add(m[0]);
+  return [...found];
+}
 
 // Pre-existing literals, out of scope for the khipu adoption PR: migración W-n (docs/frontend-migration-khipu.md).
-// Any NEW file with a hex literal or bg/text-white|black fails the guard.
-const HEX_ALLOWLIST = ["features/platform-admin/components/monitoring-screen.tsx", "components/ui/chart.tsx"];
-const WHITE_BLACK_ALLOWLIST = [
-  "features/settings/components/sunat-settings.tsx",
-  "components/ui/sheet.tsx",
-  "components/ui/dialog.tsx",
-  "components/shared/status-badge.tsx",
-];
+// Exact literals per file: any other literal (even in these files) fails the guard.
+const LITERAL_ALLOWLIST: Record<string, string[]> = {
+  "features/platform-admin/components/monitoring-screen.tsx": ["#d97706", "#059669", "#7c3aed"],
+  "components/ui/chart.tsx": ["#ccc", "#fff"],
+  "features/settings/components/sunat-settings.tsx": ["bg-white", "text-black"],
+  "components/ui/sheet.tsx": ["bg-black"],
+  "components/ui/dialog.tsx": ["bg-black"],
+  "components/shared/status-badge.tsx": ["text-white"],
+};
 
 function collectTsx(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
@@ -43,11 +59,25 @@ describe("khipu design system adoption", () => {
   });
 
   it("no source file adds a hex color literal or bg/text-white|black (allow-list = pending migration)", () => {
-    const rel = (f: string) => relative(SRC, f);
-    const read = (f: string) => readFileSync(f, "utf8");
-    const files = collectTsx(SRC);
-    expect(files.filter((f) => HEX_LITERAL.test(read(f)) && !HEX_ALLOWLIST.includes(rel(f))).map(rel)).toEqual([]);
-    expect(files.filter((f) => WHITE_BLACK.test(read(f)) && !WHITE_BLACK_ALLOWLIST.includes(rel(f))).map(rel)).toEqual([]);
+    const violations = collectTsx(SRC).flatMap((f) => {
+      const rel = relative(SRC, f);
+      const allowed = LITERAL_ALLOWLIST[rel] ?? [];
+      return findColorLiterals(readFileSync(f, "utf8"))
+        .filter((lit) => !allowed.includes(lit))
+        .map((lit) => `${rel}: ${lit}`);
+    });
+    expect(violations).toEqual([]);
+  });
+
+  it("literal and arbitrary-color detectors: no false positives, no misses", () => {
+    expect(findColorLiterals("// tracked in #123\n/* #abcdef */ const a = 1;")).toEqual([]);
+    expect(findColorLiterals('const label = "#add";')).toEqual([]);
+    expect(findColorLiterals('const c = { color: "#d97706" };')).toEqual(["#d97706"]);
+    expect(findColorLiterals("<path fill='#fff' />")).toEqual(["#fff"]);
+    expect(findColorLiterals('"text-white bg-black/10"')).toEqual(["text-white", "bg-black"]);
+    expect(ARBITRARY_COLOR.test("text-[red]")).toBe(true);
+    expect(ARBITRARY_COLOR.test("text-[oklab(0.2_0_0)]")).toBe(true);
+    expect(ARBITRARY_COLOR.test("w-[min] h-[calc(100%-1rem)] text-[11px] bg-[url(/x.png)]")).toBe(false);
   });
 
   it("globals.css imports the package styles and does not redefine its tokens", () => {
