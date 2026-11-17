@@ -13,10 +13,10 @@ const RESTRICTED_PATHS = {
     { name: "class-variance-authority", message: `No local variants: use the ${DS} component or recipe. / Sin variantes locales: usa el componente o receta de ${DS}.` },
   ],
   icons: [
-    { name: "lucide-react", message: "Use Phosphor icons (PESO_ICONO*) from the design system. / Usa iconos Phosphor (PESO_ICONO*) del sistema de diseno." },
+    { name: "lucide-react", message: `Use @phosphor-icons/react with PESO_ICONO* from ${DS}/lib/iconos. / Usa @phosphor-icons/react con PESO_ICONO* de ${DS}/lib/iconos.` },
   ],
   toast: [
-    { name: "sonner", message: `Use \`toast\` from ${DS}/feedback/toast. / Usa \`toast\` de ${DS}/feedback/toast.` },
+    { name: "sonner", message: `Use \`useToast()\` from ${DS}/feedback/toast; the \`toast\` object arrives with DS-D. / Usa \`useToast()\` de ${DS}/feedback/toast; el objeto \`toast\` llega con DS-D.` },
   ],
   charts: [
     { name: "recharts", message: `Use ${DS}/datos/grafico. / Usa ${DS}/datos/grafico.` },
@@ -27,14 +27,20 @@ const RESTRICTED_PATHS = {
 };
 
 const RESTRICTED_PATTERNS = {
+  // Subpaths of the banned packages (e.g. lucide-react/dynamic) are banned with the package itself.
+  icons: [{ group: ["lucide-react/*"], message: RESTRICTED_PATHS.icons[0].message }],
+  toast: [{ group: ["sonner/*"], message: RESTRICTED_PATHS.toast[0].message }],
+  charts: [{ group: ["recharts/*"], message: RESTRICTED_PATHS.charts[0].message }],
+  themes: [{ group: ["next-themes/*"], message: RESTRICTED_PATHS.themes[0].message }],
   baseUi: [
     { group: ["@base-ui/*"], message: `Import the ${DS} component, never Base UI directly. / Importa el componente de ${DS}, no Base UI directamente.` },
   ],
+  // Alias and relative spellings (`@/components/ui/x`, `../../components/ui/x`).
   ui: [
-    { group: ["@/components/ui", "@/components/ui/*"], message: `Local components/ui is being replaced: import from ${DS}/ui/*. / components/ui local se reemplaza: importa de ${DS}/ui/*.` },
+    { regex: "^(@/|(\\.\\./)+)components/ui(/|$)", message: `Local components/ui is being replaced: import from ${DS}/ui/*. / components/ui local se reemplaza: importa de ${DS}/ui/*.` },
   ],
   shared: [
-    { group: ["@/components/shared", "@/components/shared/*"], message: `components/shared is a temporary adapter layer: use the ${DS} component. / components/shared es una capa temporal: usa el componente de ${DS}.` },
+    { regex: "^(@/|(\\.\\./)+)components/shared(/|$)", message: `components/shared is a temporary adapter layer: use the ${DS} component. / components/shared es una capa temporal: usa el componente de ${DS}.` },
   ],
 };
 
@@ -62,6 +68,9 @@ const eslintConfig = defineConfig([
   // The restricted lists are defined ONCE here; every block below derives from them, because a later
   // flat-config entry replaces the rule options instead of merging them.
   // Existing violations live in eslint-suppressions.json (`pnpm lint` passes --pass-on-unpruned-suppressions).
+  // The baseline only shrinks: after each merge the tech-lead runs the serial chore
+  // `eslint . --prune-suppressions` (plan section 1).
+  // Not covered: dynamic `import()` and `require()` (the rule only sees static imports).
   restrictedImports(),
   // Local UI folders may import each other; the other bans still apply (baselined).
   restrictedImports({ files: ["src/components/ui/**"], skip: ["ui"] }),
