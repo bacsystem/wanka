@@ -16,7 +16,7 @@ Los diagramas son archivos Mermaid (`.mmd`). GitHub los renderiza al abrirlos y 
 
 ## 1. Visión en una página
 
-- **Monolito modular hexagonal en Go** ([ADR 0002](adr/0002-modular-monolith-go.md)): un binario con tres roles, `serve --plane=tenant`, `serve --plane=platform` y `worker`. Cada bounded context es un paquete con `domain/app/adapters` y una fachada pública. La venta POS es **una transacción local** que cubre ventas, inventario, numeración, caja y CPE pendiente más el job de emisión.
+- **Monolito modular hexagonal en Go** ([ADR 0002](adr/0002-modular-monolith-go.md)): un binario con cuatro roles: `serve --plane=tenant`, `serve --plane=platform`, `serve --plane=webhooks` y `worker`. Cada bounded context es un paquete con `domain/app/adapters` y una fachada pública. La venta POS es **una transacción local** que cubre ventas, inventario, numeración, caja y CPE pendiente más el job de emisión.
 - **Aislamiento por RLS** ([ADR 0001](adr/0001-multitenancy-rls.md)): cada transacción fija `app.tenant_id` con `set_config(..., true)`, que es compatible con pooling. Los roles de base no tienen `BYPASSRLS` y las FK compuestas incluyen `tenant_id`. La consola super-admin lee agregados y accede a datos de un tenant solo mediante impersonación auditada.
 - **Dos planos de autenticación** ([ADR 0004](adr/0004-in-house-auth.md)): tokens opacos con sesión en Postgres, refresh rotativo con detección de reuso, TOTP obligatorio para propietario, administrador, contador y staff, y RBAC `modulo.recurso:accion` por membresía (usuario × empresa × rol × sedes). Un token de un plano nunca sirve en el otro.
 - **Facturación asíncrona** ([ADR 0003](adr/0003-einvoicing-khipu-port.md)): puerto `InvoicingProvider` y adaptador Khipu, contrastados con su documentación. Wanka numera y envía `correlativo`; Khipu firma, envía a SUNAT y reintenta ese tramo. Wanka reintenta solo el salto Wanka→Khipu, con la `Idempotency-Key` de Khipu. Hay webhooks firmados con HMAC y una conciliación periódica.
@@ -91,7 +91,7 @@ Modelo y reglas en [`data/data-model.md`](data/data-model.md): `tenant_id` y RLS
 
 ## 6. Despliegue
 
-- [`deployment/railway.mmd`](deployment/railway.mmd): servicios, red privada, Postgres, bucket, pre-deploy de migraciones y nombres de variables de entorno. Las API keys de Khipu son por tenant y van **cifradas en la base**, no en variables.
+- [`deployment/railway.mmd`](deployment/railway.mmd): servicios, red privada, Postgres, bucket, pre-deploy de migraciones y nombres de variables de entorno. Railway expone el puerto completo de cada servicio, así que `api` no tiene dominio público y los webhooks entran por un servicio `webhooks` aparte que solo monta esa ruta. Las API keys de Khipu son por tenant y van **cifradas en la base**, no en variables.
 - [`deployment/cloud-migration.md`](deployment/cloud-migration.md): health checks, apagado ordenado, backups, equivalencias en AWS/GCP/Azure y disparadores para migrar.
 
 ## 7. API

@@ -19,7 +19,7 @@ Opción 3.
 
 **Estructura** (`apps/api`, módulo Go `github.com/<org>/wanka/apps/api`):
 ```
-cmd/wanka/                 # main: serve --plane=tenant|platform, worker, migrate
+cmd/wanka/                 # main: serve --plane=tenant|platform|webhooks, worker, migrate
 internal/platform/         # kernel: db (InTenantTx), httpx, auth middleware, jobs (River), money, blob, entitlements, numbering, clock, idgen
 internal/<modulo>/         # identidad, empresas, clientes, catalogo, inventario, ventas, facturacion, compras, finanzas, reportes, agenda, integraciones, auditoria, notificaciones
   domain/                  # entidades, value objects, reglas; sin imports de infraestructura

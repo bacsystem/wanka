@@ -5,13 +5,13 @@ flowchart TB
   web["web (BFF Next.js)"]
   khipuExt["Khipu"]
 
-  subgraph api["Binario Go wanka: serve --plane=tenant | serve --plane=platform | worker"]
+  subgraph api["Binario Go wanka: serve --plane=tenant | platform | webhooks, worker"]
     direction TB
 
     subgraph edge["Borde HTTP (internal/platform/httpx)"]
       mw["Middleware en orden:<br/>request-id y log, recover, timeout,<br/>rate limit, auth (sesion opaca),<br/>tenant + sede, plan y feature flag,<br/>RBAC por permiso, idempotency-key"]
       router["Router net/http + handlers<br/>generados desde OpenAPI (oapi-codegen strict)"]
-      hooks["/webhooks/khipu/{routeId}<br/>verifica HMAC del tenant, dedupe por delivery, encola"]
+      hooks["--plane=webhooks: solo /webhooks/khipu/{routeId}<br/>resuelve tenant en ops.webhook_routes, verifica HMAC,<br/>dedupe por delivery, encola cpe.sync(serie, numero)"]
     end
 
     subgraph core["Bounded contexts core (internal/&lt;modulo&gt;): domain / app / ports / adapters"]

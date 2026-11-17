@@ -17,7 +17,7 @@ sequenceDiagram
   alt no existe
     W->>L: POST /v1/lubricentro/vehicles {plate, customer_id, marca, modelo, anio}
   end
-  R->>W: abre OT con km de ingreso y servicios sugeridos por service_rules
+  R->>W: abre OT con km de ingreso (obligatorio) y servicios del catalogo del rubro
   W->>L: POST /v1/lubricentro/service-orders Idempotency-Key {vehicle_id, km_in, lines}
   L->>DB: BEGIN tenant, serie OT, INSERT service_orders abierta
   L->>DB: INSERT odometer_readings, UPDATE vehicles.current_km (CHECK km_in >= ultimo, salvo correccion con permiso)

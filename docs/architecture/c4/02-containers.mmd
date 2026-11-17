@@ -6,8 +6,9 @@ C4Container
 
   System_Boundary(wanka, "Wanka") {
     Container(web, "web", "Next.js 16, React 19, Node", "UI tenant (app) y consola (admin). BFF: route handlers y server components que llaman a la API con el token de la cookie httpOnly.")
-    Container(api, "api", "Go, net/http", "Modular monolith hexagonal. Plano tenant /v1. Valida sesion, resuelve tenant, aplica RLS, RBAC y feature flags.")
+    Container(api, "api", "Go, net/http", "Sin dominio publico (solo red privada). Modular monolith hexagonal. Plano tenant /v1. Valida sesion, resuelve tenant, aplica RLS, RBAC y feature flags.")
     Container(platformApi, "platform-api", "Go, misma imagen, --plane=platform", "Plano super-admin /platform/v1. Rol de BD distinto. Sin acceso a datos de tenant salvo vistas agregadas e impersonacion auditada.")
+    Container(webhooks, "webhooks", "Go, misma imagen, --plane=webhooks", "Unico servicio Go con dominio publico. Solo monta /webhooks/khipu/{routeId} y health. Rol wanka_webhooks.")
     Container(worker, "worker", "Go, misma imagen, River", "Jobs: emision CPE, polling, webhooks entrantes, recordatorios, reportes pesados, limpieza. Un solo lider para periodicos.")
     ContainerDb(pg, "PostgreSQL", "PostgreSQL 17", "Esquemas por bounded context. RLS por tenant_id. Cola River y outbox en la misma BD.")
     ContainerDb(objects, "Object storage", "S3 compatible", "XML firmado, CDR, PDF, adjuntos. Claves con prefijo tenant_id.")
@@ -26,7 +27,8 @@ C4Container
   Rel(api, objects, "URLs prefirmadas", "S3")
   Rel(worker, objects, "Guarda XML/CDR/PDF", "S3")
   Rel(worker, khipu, "Emite, consulta (X-Api-Key fk_ por tenant)", "HTTPS timeout 30 s")
-  Rel(khipu, api, "Webhook firmado /webhooks/khipu/{routeId}", "HTTPS")
+  Rel(khipu, webhooks, "Webhook firmado /webhooks/khipu/{routeId}", "HTTPS")
+  Rel(webhooks, pg, "ops.webhook_routes + RLS por tenant", "pgx pool")
   Rel(worker, notify, "Envia", "HTTPS")
 
   UpdateLayoutConfig($c4ShapeInRow="3", $c4BoundaryInRow="1")
