@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Tag } from "@/components/shared/status-badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs } from "khipu-design-system/navegacion/tabs";
 import { cn } from "@/lib/utils";
 
 type Cat = "sunat" | "stock" | "cobranzas" | "seguridad";
@@ -26,7 +26,7 @@ const toneClass = { success: "text-success bg-success/10", danger: "text-destruc
 
 export function Notifications() {
   const [items, setItems] = React.useState(initial);
-  const [tab, setTab] = React.useState("all");
+  const [tab, setTab] = React.useState<"all" | Cat>("all");
   const unread = items.filter((i) => !i.read).length;
   const rows = items.filter((i) => tab === "all" || i.cat === tab);
   const count = (c: string) => items.filter((i) => c === "all" || i.cat === c).length;
@@ -38,7 +38,7 @@ export function Notifications() {
       </PopoverTrigger>
       <PopoverContent align="end" className="w-[min(26rem,calc(100vw-2rem))] p-0">
         <div className="flex items-center justify-between gap-2 border-b px-3 py-2"><div><p className="text-sm font-semibold">Notificaciones operativas</p><p className="text-xs text-muted-foreground">{unread} alerta{unread === 1 ? "" : "s"} sin leer</p></div><Button variant="ghost" size="xs" onClick={() => setItems((it) => it.map((i) => ({ ...i, read: true })))}>Marcar leídas</Button></div>
-        <div className="border-b px-2 pt-2"><Tabs value={tab} onValueChange={(v) => setTab(String(v))}><TabsList variant="line"><TabsTrigger value="all">Todas <span className="ml-1 font-mono text-[10px] opacity-70">{count("all")}</span></TabsTrigger><TabsTrigger value="sunat">SUNAT / OSE <span className="ml-1 font-mono text-[10px] opacity-70">{count("sunat")}</span></TabsTrigger><TabsTrigger value="stock">Stock <span className="ml-1 font-mono text-[10px] opacity-70">{count("stock")}</span></TabsTrigger><TabsTrigger value="cobranzas">Cobranzas <span className="ml-1 font-mono text-[10px] opacity-70">{count("cobranzas")}</span></TabsTrigger></TabsList></Tabs></div>
+        <div className="border-b px-2 pt-2"><Tabs estilo="linea" valor={tab} onCambio={setTab} items={[{ id: "all", etiqueta: "Todas", contador: count("all") }, { id: "sunat", etiqueta: "SUNAT / OSE", contador: count("sunat") }, { id: "stock", etiqueta: "Stock", contador: count("stock") }, { id: "cobranzas", etiqueta: "Cobranzas", contador: count("cobranzas") }]} /></div>
         <ul className="max-h-[60svh] divide-y overflow-y-auto">
           {rows.map((n) => { const Icon = n.tone === "success" ? CheckCircle2 : n.tone === "danger" ? AlertTriangle : icon[n.cat]; return (
             <li key={n.id} className={cn("flex gap-3 px-3 py-3", !n.read && "bg-accent/20")}>

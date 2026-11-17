@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { Button } from "khipu-design-system/ui/button";
 import { EntityHeader } from "@/components/shared/entity-header";
 import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs } from "khipu-design-system/navegacion/tabs";
 import { StateIcon } from "@/components/shared/dynamic-icon";
 import { SectionCard } from "@/components/shared/section-card";
 import { StatCard, StatGrid } from "@/components/shared/stat-card";
@@ -41,11 +41,7 @@ export function TenantDetail({ tenant: t }: { tenant: PlatformTenant }) {
         </>}
       />
 
-      <Tabs value={tab} onValueChange={(v) => setTab(String(v))} className="min-w-0 max-w-full">
-        <TabsList variant="card">
-          {tabs.map((name) => <TabsTrigger key={name} value={name}>{name}{name === "Sedes y cajas" ? <span className="rounded bg-muted px-1.5 font-mono text-[10px]">{t.sites} / {t.sites * 4}</span> : name === "Usuarios" ? <span className="rounded bg-muted px-1.5 font-mono text-[10px]">{t.users}</span> : name === "Soporte y tickets" ? <span className="rounded bg-success px-1.5 font-mono text-[10px] text-success-foreground">1 resuelto</span> : null}</TabsTrigger>)}
-        </TabsList>
-      </Tabs>
+      <Tabs estilo="linea" className="min-w-0 max-w-full" valor={tab} onCambio={setTab} items={tabs.map((name) => ({ id: name, etiqueta: name === "Sedes y cajas" ? `${name} (${t.sites} / ${t.sites * 4})` : name === "Soporte y tickets" ? `${name} (1 resuelto)` : name, contador: name === "Usuarios" ? t.users : undefined }))} />
 
       {tab === "Resumen" ? (
         <>

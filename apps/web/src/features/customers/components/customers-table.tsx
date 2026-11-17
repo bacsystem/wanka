@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs } from "khipu-design-system/navegacion/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { DataTable, TwoLine, type Column } from "@/components/shared/data-table";
 import { Field } from "@/components/shared/field";
@@ -103,13 +103,7 @@ export function CustomersScreen({ customers, kpis }: { customers: Customer[]; kp
       <FilterBar stack>
         <div className="flex flex-wrap items-center gap-2">
           <SearchInput placeholder="Buscar por nombre, DNI, RUC, teléfono o N° historia clínica…" value={query} onChange={setQuery} className="flex-1 sm:max-w-none" />
-          <Tabs value={tab} onValueChange={(v) => setTab(String(v))}>
-            <TabsList className="rounded-lg bg-muted p-1">
-              <TabsTrigger value="all" className="rounded-md px-3 font-semibold data-active:text-primary">Todos ({counts.all})</TabsTrigger>
-              <TabsTrigger value="DNI" className="rounded-md px-3 font-semibold data-active:text-primary">DNI ({counts.DNI})</TabsTrigger>
-              <TabsTrigger value="RUC" className="rounded-md px-3 font-semibold data-active:text-primary">RUC ({counts.RUC})</TabsTrigger>
-            </TabsList>
-          </Tabs>
+          <Tabs estilo="segmentado" valor={tab} onCambio={setTab} items={[{ id: "all", etiqueta: "Todos", contador: counts.all }, { id: "DNI", etiqueta: "DNI", contador: counts.DNI }, { id: "RUC", etiqueta: "RUC", contador: counts.RUC }]} />
           <Select value={status} onValueChange={(v) => setStatus(String(v))} items={statusOptions}>
             <SelectTrigger className="w-40 bg-muted/50" aria-label="Estado"><SelectValue /></SelectTrigger>
             <SelectContent>{statusOptions.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>

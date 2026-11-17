@@ -13,7 +13,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs } from "khipu-design-system/navegacion/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { DataTable, TwoLine, type Column } from "@/components/shared/data-table";
 import { Field } from "@/components/shared/field";
@@ -97,13 +97,18 @@ export function CatalogScreen({ tab, entries, categories, total, kpis }: Props) 
         }
       />
       <FilterBar className="justify-between p-2">
-        <Tabs value={tab} onValueChange={(v) => router.push(tabHref[v as CatalogTab])} className="min-w-0 max-w-full">
-          <TabsList variant="pills">
-            {([["todos", "Todos los ítems", LayoutGrid, counts.todos], ["servicios", "Servicios", Briefcase, counts.servicios], ["productos", "Productos (kardex)", Pill, counts.productos], ["categorias", "Categorías y especialidades", FolderTree, counts.categorias]] as const).map(([v, l, Icon, n]) => (
-              <TabsTrigger key={v} value={v}><Icon /> {l} <span className={cn("rounded-full px-1.5 font-mono text-[11px]", tab === v ? "bg-primary-foreground/20" : "bg-accent text-primary dark:bg-muted")}>{n}</span></TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
+        <Tabs
+          estilo="segmentado"
+          className="min-w-0 max-w-full"
+          valor={tab}
+          onCambio={(v) => router.push(tabHref[v])}
+          items={[
+            { id: "todos", etiqueta: <><LayoutGrid /> Todos los ítems</>, contador: counts.todos },
+            { id: "servicios", etiqueta: <><Briefcase /> Servicios</>, contador: counts.servicios },
+            { id: "productos", etiqueta: <><Pill /> Productos (kardex)</>, contador: counts.productos },
+            { id: "categorias", etiqueta: <><FolderTree /> Categorías y especialidades</>, contador: counts.categorias },
+          ]}
+        />
         <span className="hidden items-center gap-2 pr-2 text-xs text-muted-foreground lg:flex">Submenú activo: <span className="flex items-center gap-1 font-semibold text-primary"><span className="size-1.5 rounded-full bg-primary" /> {tab === "categorias" ? "Categorías" : "Vista consolidada"}</span></span>
       </FilterBar>
       {kpis}

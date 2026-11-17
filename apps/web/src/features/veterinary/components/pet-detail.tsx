@@ -10,7 +10,7 @@ import { EntityHeader } from "@/components/shared/entity-header";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs } from "khipu-design-system/navegacion/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DataTable, TwoLine, type Column } from "@/components/shared/data-table";
@@ -62,7 +62,7 @@ export function PetDetail({ pet, vaccines, evolutions, grooming }: { pet: Pet; v
         <div className={cn(TARJETA, "flex flex-col gap-2 p-4")}><div className="flex items-center justify-between"><span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Control de peso</span><span className="flex size-7 items-center justify-center rounded-md bg-accent text-accent-foreground"><Scale className="size-4" strokeWidth={1.5} /></span></div><div className="flex items-end gap-3"><span className="font-mono text-2xl font-semibold tabular-nums">{pet.weightKg.toFixed(1)} kg</span><div className="flex-1"><ResponsiveContainer width="100%" height="100%"><LineChart data={pet.weights}><YAxis hide domain={["dataMin - 0.5", "dataMax + 0.5"]} /><Tooltip formatter={(v) => [`${v} kg`, "Peso"]} labelFormatter={(l) => String(l)} contentStyle={{ fontSize: 11 }} /><Line type="monotone" dataKey="kg" stroke="var(--primary)" strokeWidth={2} dot={{ r: 2 }} isAnimationActive={false} /></LineChart></ResponsiveContainer></div></div><p className="text-xs text-muted-foreground">+{(pet.weights.at(-1)!.kg - pet.weights[0].kg).toFixed(1)} kg en 6 meses</p></div>
       </StatGrid>
 
-      <Tabs value={tab} onValueChange={(v) => setTab(String(v))} className="min-w-0 max-w-full"><TabsList variant="card"><TabsTrigger value="resumen"><LayoutGrid /> Resumen general</TabsTrigger><TabsTrigger value="carne"><Syringe /> Carné de vacunas y desparasitación <span className="rounded bg-success px-1.5 font-mono text-[10px] text-success-foreground ">5</span></TabsTrigger><TabsTrigger value="hc"><ClipboardList /> Historia clínica (SOAP) <span className="rounded bg-muted px-1.5 font-mono text-[10px]">{pet.visits}</span></TabsTrigger><TabsTrigger value="hosp"><BedDouble /> Hospitalización</TabsTrigger><TabsTrigger value="groom"><Scissors /> Peluquería / grooming</TabsTrigger><TabsTrigger value="cpe"><Receipt /> Comprobantes CPE</TabsTrigger></TabsList></Tabs>
+      <Tabs estilo="linea" className="min-w-0 max-w-full" valor={tab} onCambio={setTab} items={[{ id: "resumen", etiqueta: <><LayoutGrid /> Resumen general</> }, { id: "carne", etiqueta: <><Syringe /> Carné de vacunas y desparasitación</>, contador: 5 }, { id: "hc", etiqueta: <><ClipboardList /> Historia clínica (SOAP)</>, contador: pet.visits }, { id: "hosp", etiqueta: <><BedDouble /> Hospitalización</> }, { id: "groom", etiqueta: <><Scissors /> Peluquería / grooming</> }, { id: "cpe", etiqueta: <><Receipt /> Comprobantes CPE</> }]} />
 
       {tab === "carne" || tab === "resumen" ? (
         <>

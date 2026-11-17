@@ -8,7 +8,7 @@ import { Badge } from "khipu-design-system/ui/badge";
 import { Button } from "khipu-design-system/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs } from "khipu-design-system/navegacion/tabs";
 import { Field } from "@/components/shared/field";
 import { DataTable } from "@/components/shared/data-table";
 import { SectionCard } from "@/components/shared/section-card";
@@ -37,7 +37,7 @@ export function HospitalScreen({ kennels: initial, vitals: v0, meds: m0 }: { ken
     <>
       <div className="grid gap-4 xl:grid-cols-5">
         <SectionCard title="Tablero de kennels" className="xl:col-span-2" action={<span className="text-xs text-muted-foreground">{kennels.filter((k) => k.status === "ocupado").length} ocupados · {kennels.filter((k) => k.status === "libre").length} libres · {kennels.filter((k) => k.status === "limpieza").length} desinfección</span>} contentClassName="p-3">
-          <Tabs value={area} onValueChange={(v) => setArea(String(v))}><TabsList>{areas.map((a) => <TabsTrigger key={a.id} value={a.id}>{a.label} <span className="ml-1 font-mono text-[11px] opacity-70">{kennels.filter((k) => k.area === a.id).length}</span></TabsTrigger>)}</TabsList></Tabs>
+          <Tabs estilo="segmentado" valor={area} onCambio={setArea} items={areas.map((a) => ({ id: a.id, etiqueta: a.label, contador: kennels.filter((k) => k.area === a.id).length }))} />
           <ul className="mt-3 grid grid-cols-2 gap-2">
             {kennels.filter((k) => k.area === area).map((k) => (
               <li key={k.id}>

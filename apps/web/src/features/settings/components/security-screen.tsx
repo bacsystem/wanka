@@ -95,15 +95,14 @@ export function SecurityScreen({ collaborators, roles, matrix, kpis }: Props & {
         }
       />
       {kpis}
-      {/* TODO(DS): khipu-design-system#64 (Tabs: modo solo tira + regla de svg) — quitar size-4 al subir a 0.9.0 */}
       <Tabs
         estilo="linea"
         defaultValor="users"
         items={[
-          { id: "users", etiqueta: <><Users className="size-4" /> Colaboradores y usuarios ({collaborators.length})</> },
-          { id: "roles", etiqueta: <><ShieldCheck className="size-4" /> Roles y matriz de permisos ({roles.length} roles)</> },
-          { id: "sites", etiqueta: <><Building2 className="size-4" /> Sedes y cajas asignadas (3 sedes)</> },
-          { id: "audit", etiqueta: <><History className="size-4" /> Registro de auditoría (audit log)</> },
+          { id: "users", etiqueta: <><Users /> Colaboradores y usuarios ({collaborators.length})</> },
+          { id: "roles", etiqueta: <><ShieldCheck /> Roles y matriz de permisos ({roles.length} roles)</> },
+          { id: "sites", etiqueta: <><Building2 /> Sedes y cajas asignadas (3 sedes)</> },
+          { id: "audit", etiqueta: <><History /> Registro de auditoría (audit log)</> },
         ]}
       >
         {(tab) => (

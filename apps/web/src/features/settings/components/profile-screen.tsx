@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "k
 import { Input } from "@/components/ui/input";
 import { ProgresoLineal } from "khipu-design-system/feedback/progreso";
 import { Switch } from "@/components/ui/switch";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs } from "khipu-design-system/navegacion/tabs";
 import { Field } from "@/components/shared/field";
 import { SectionCard } from "@/components/shared/section-card";
 import { StatusBadge } from "@/components/shared/status-badge";
@@ -33,7 +33,7 @@ export function ProfileScreen() {
   const sc = strength(pw);
   return (
     <>
-      <Tabs value={tab} onValueChange={(v) => setTab(String(v))}><TabsList><TabsTrigger value="datos">Datos y seguridad</TabsTrigger><TabsTrigger value="sesiones">Sesiones activas <span className="ml-1 font-mono text-[11px] opacity-70">{sessions.length}</span></TabsTrigger><TabsTrigger value="prefs">Preferencias y notificaciones</TabsTrigger><TabsTrigger value="actividad">Actividad reciente</TabsTrigger></TabsList></Tabs>
+      <Tabs estilo="segmentado" valor={tab} onCambio={setTab} items={[{ id: "datos", etiqueta: "Datos y seguridad" }, { id: "sesiones", etiqueta: "Sesiones activas", contador: sessions.length }, { id: "prefs", etiqueta: "Preferencias y notificaciones" }, { id: "actividad", etiqueta: "Actividad reciente" }]} />
       {tab === "datos" ? (
         <div className="grid gap-4 xl:grid-cols-2">
           <SectionCard title="Información de contacto profesional" contentClassName="grid gap-4 p-4 sm:grid-cols-2">

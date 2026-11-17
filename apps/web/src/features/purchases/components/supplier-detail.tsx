@@ -7,7 +7,7 @@ import { Badge } from "khipu-design-system/ui/badge";
 import { Button } from "khipu-design-system/ui/button";
 import { InitialsAvatar } from "@/components/shared/initials-avatar";
 import { EntityHeader } from "@/components/shared/entity-header";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs } from "khipu-design-system/navegacion/tabs";
 import { DataTable, TwoLine, type Column } from "@/components/shared/data-table";
 import { SectionCard } from "@/components/shared/section-card";
 import { StatCard, StatGrid } from "@/components/shared/stat-card";
@@ -51,7 +51,7 @@ export function SupplierDetail({ supplier, orders, purchases }: { supplier: Supp
         <StatCard label="Órdenes abiertas" value={String(orders.filter((o) => o.status === "pendiente" || o.status === "parcial").length)} icon={ClipboardCheck} hint="Pendientes de recepción" />
         <StatCard label="Puntualidad de entrega" value="92%" icon={CalendarCheck} tone="success" hint="Últimas 12 órdenes" />
       </StatGrid>
-      <Tabs value={tab} onValueChange={(v) => setTab(String(v))}><TabsList><TabsTrigger value="ordenes">Órdenes <span className="ml-1 font-mono text-[11px] opacity-70">{orders.length}</span></TabsTrigger><TabsTrigger value="comprobantes">Comprobantes <span className="ml-1 font-mono text-[11px] opacity-70">{purchases.length}</span></TabsTrigger><TabsTrigger value="pagos">Pagos</TabsTrigger><TabsTrigger value="docs">Documentos</TabsTrigger></TabsList></Tabs>
+      <Tabs estilo="segmentado" valor={tab} onCambio={setTab} items={[{ id: "ordenes", etiqueta: "Órdenes", contador: orders.length }, { id: "comprobantes", etiqueta: "Comprobantes", contador: purchases.length }, { id: "pagos", etiqueta: "Pagos" }, { id: "docs", etiqueta: "Documentos" }]} />
       {tab === "ordenes" ? <SectionCard title="Órdenes recientes" contentClassName="p-0"><DataTable columns={orderCols} rows={orders} rowKey={(o) => o.id} minWidth="640px" mobileCard={(o) => <div className="flex items-center justify-between gap-3"><div><p className="font-mono text-xs text-primary">{o.number}</p><p className="text-xs text-muted-foreground">Entrega {formatDate(o.expectedAt)}</p></div><div className="flex flex-col items-end gap-1"><span className="font-mono text-sm font-medium">{formatCurrency(o.total)}</span><StatusBadge tone={orderMeta[o.status].tone} dot label={orderMeta[o.status].label} /></div></div>} /></SectionCard> : null}
       {tab === "comprobantes" ? <SectionCard title="Comprobantes del proveedor" contentClassName="p-0"><DataTable columns={docCols} rows={purchases} rowKey={(p) => p.id} minWidth="720px" mobileCard={(p) => <div className="flex items-center justify-between gap-3"><div><p className="font-mono text-xs">{p.number}</p><p className="text-xs text-muted-foreground">{formatDate(p.issuedAt)}</p></div><span className="font-mono text-sm font-medium">{formatCurrency(p.total)}</span></div>} /></SectionCard> : null}
       {tab === "pagos" ? <SectionCard title="Pagos realizados" contentClassName="p-0"><ul className="divide-y text-sm">{[["2026-09-10", "Transferencia BCP · F002-011820", 2537], ["2026-08-15", "Transferencia BCP · F002-011702", 3180], ["2026-07-12", "Cheque diferido · F002-011590", 4410]].map(([d, c, a]) => <li key={String(c)} className="flex items-center gap-3 px-4 py-2.5"><span className="font-mono text-xs">{formatDate(String(d))}</span><span className="flex-1">{c}</span><span className="font-mono font-medium text-success">{formatCurrency(Number(a))}</span></li>)}</ul></SectionCard> : null}

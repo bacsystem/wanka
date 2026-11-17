@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "k
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs } from "khipu-design-system/navegacion/tabs";
 import { DataTable, TwoLine, type Column } from "@/components/shared/data-table";
 import { StateIcon } from "@/components/shared/dynamic-icon";
 import { Field } from "@/components/shared/field";
@@ -42,7 +42,7 @@ export function StaffScreen() {
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-4 p-4 md:gap-6 md:p-6">
       <PageHeader eyebrow="Gobernanza · Usuarios internos y roles" title="Personal interno y control de acceso (RBAC)" description="Administración de operadores de soporte, ejecutivos comerciales, auditores de finanzas e ingenieros con acceso a la infraestructura Wanka." status={<StatusBadge tone="success" icon={ShieldCheck} label="Políticas 2FA obligatorias activas" className="rounded-md" />} actions={<Button className="font-semibold" onClick={() => setInviteOpen(true)}><UserPlus data-icon="inline-start" /> Invitar usuario</Button>} />
-      <Tabs value={tab} onValueChange={(v) => setTab(String(v))}><TabsList variant="card"><TabsTrigger value="users"><Users /> Usuarios staff ({s.total})</TabsTrigger><TabsTrigger value="roles"><ShieldCheck /> Matriz de permisos por rol</TabsTrigger></TabsList></Tabs>
+      <Tabs estilo="linea" valor={tab} onCambio={setTab} items={[{ id: "users", etiqueta: <><Users /> Usuarios staff ({s.total})</> }, { id: "roles", etiqueta: <><ShieldCheck /> Matriz de permisos por rol</> }]} />
       <StatGrid>
         <StatCard label="Total staff activo" value={String(s.total)} icon={Users} hint={<span className="font-semibold text-success-foreground">+{s.newMonth} este mes</span>} footer={`Distribuidos en ${s.areas} áreas operativas`} />
         <StatCard label="Cobertura 2FA (MFA)" value={`${s.mfa}%`} suffix={s.mfaCount} icon={ShieldCheck} tone="success" emphasizeValue footer={<span className="text-warning-foreground">1 usuario con gracia (vence hoy)</span>} />

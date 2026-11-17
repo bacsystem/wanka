@@ -10,7 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs } from "khipu-design-system/navegacion/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { DataTable, TwoLine, type Column } from "@/components/shared/data-table";
 import { Field } from "@/components/shared/field";
@@ -114,14 +114,7 @@ export function ReceivablesScreen({ rows: all, weekly, spot, kpis }: Props & { k
 
       <SectionCard title={<span className="sr-only">Cartera de clientes</span>} className="[&>div:first-child]:hidden" contentClassName="p-0">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b p-3">
-          <Tabs value={tab} onValueChange={(v) => setTab(String(v))} className="min-w-0 max-w-full">
-            <TabsList variant="pills">
-              {([["all", "Todas las deudas"], ["por_vencer", "Por vencer"], ["vencido", "Vencidas / morosas"], ["judicial", "Cobranza judicial"]] as const).map(([v, l]) => (
-                <TabsTrigger key={v} value={v}>{l} ({count(v)})</TabsTrigger>
-              ))}
-              <TabsTrigger value="historial" className="h-9 rounded-full px-4 text-sm font-semibold">Historial de abonos</TabsTrigger>
-            </TabsList>
-          </Tabs>
+          <Tabs estilo="segmentado" className="min-w-0 max-w-full" valor={tab} onCambio={setTab} items={[...([["all", "Todas las deudas"], ["por_vencer", "Por vencer"], ["vencido", "Vencidas / morosas"], ["judicial", "Cobranza judicial"]] as const).map(([id, l]) => ({ id: id as string, etiqueta: <>{l} ({count(id)})</> })), { id: "historial", etiqueta: "Historial de abonos" }]} />
           <div className="flex items-center gap-2"><SearchInput placeholder="Buscar cliente, RUC o N° factura…" value={query} onChange={setQuery} className="sm:w-64" /><Button variant="outline" size="sm" className="font-semibold"><SlidersHorizontal data-icon="inline-start" /> Filtros</Button></div>
         </div>
         <DataTable

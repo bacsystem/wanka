@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "k
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs } from "khipu-design-system/navegacion/tabs";
 import { Field } from "@/components/shared/field";
 import { SectionCard } from "@/components/shared/section-card";
 import { StatusBadge } from "@/components/shared/status-badge";
@@ -42,7 +42,7 @@ export function ProductVariants({ variants: initial }: { variants: Variant[] }) 
         </SectionCard>
       </div>
 
-      <SectionCard title="Matriz operativa de variantes (talla × color)" action={<Tabs value={filter} onValueChange={(v) => setFilter(String(v))}><TabsList><TabsTrigger value="all">Todos <span className="ml-1 font-mono text-[11px] opacity-70">{variants.length}</span></TabsTrigger><TabsTrigger value="low">Stock &lt; 10 <span className="ml-1 font-mono text-[11px] opacity-70">{variants.filter((v) => total(v) < 10).length}</span></TabsTrigger><TabsTrigger value="noean">Sin EAN</TabsTrigger></TabsList></Tabs>} contentClassName="p-0">
+      <SectionCard title="Matriz operativa de variantes (talla × color)" action={<Tabs estilo="segmentado" valor={filter} onCambio={setFilter} items={[{ id: "all", etiqueta: "Todos", contador: variants.length }, { id: "low", etiqueta: "Stock < 10", contador: variants.filter((v) => total(v) < 10).length }, { id: "noean", etiqueta: "Sin EAN" }]} />} contentClassName="p-0">
         <div className="hidden overflow-x-auto md:block"><Table className="min-w-[820px]"><TableHeader><TableRow><TableHead className="pl-4">Color / talla</TableHead>{sizes.map((s) => <TableHead key={s} className="text-left">Talla {s}</TableHead>)}</TableRow></TableHeader><TableBody>
           {colors.map((c) => <TableRow key={c.id} className="align-top"><TableCell className="px-4 py-3"><div className="flex items-center gap-2"><span className="size-4 rounded-full border" style={{ background: c.hex }} /><div><p className="font-medium">{c.name}</p><p className="font-mono text-xs text-muted-foreground">{c.code} · {variants.filter((v) => v.color === c.id).reduce((s, v) => s + total(v), 0)} und</p></div></div></TableCell>
             {sizes.map((s) => { const v = variants.find((x) => x.color === c.id && x.size === s)!; const low = total(v) < 10; const hidden = !show(v); return <TableCell key={s} className={cn("px-2 py-2", hidden && "opacity-30")}><label className={cn("flex cursor-pointer flex-col gap-0.5 rounded-md border p-2 text-xs hover:bg-muted/40", sel.has(v.id) && "border-primary bg-accent/40", low && "border-warning/50")}><span className="flex items-center justify-between"><span className="font-mono font-semibold">{formatCurrency(v.price)}</span><Checkbox checked={sel.has(v.id)} onCheckedChange={() => toggle(v.id)} aria-label={`Seleccionar ${v.sku}`} /></span><span className={cn("font-medium", low && "text-warning")}>{total(v)} und{low ? " (bajo)" : ""}</span><span className="font-mono text-muted-foreground">{v.ean}</span><span className="font-mono text-[10px] text-muted-foreground">{v.sku}</span><span className="text-muted-foreground">Alm. {v.stockMain} · Tda. {v.stockShop}</span></label></TableCell>; })}

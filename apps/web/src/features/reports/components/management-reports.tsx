@@ -9,7 +9,7 @@ import { Button } from "khipu-design-system/ui/button";
 import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs } from "khipu-design-system/navegacion/tabs";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { DataTable, type Column } from "@/components/shared/data-table";
 import { SectionCard } from "@/components/shared/section-card";
@@ -51,7 +51,7 @@ export function ManagementReports() {
         <div className="flex gap-1"><Button variant="outline"><FileSpreadsheet data-icon="inline-start" /> Excel</Button><Button variant="outline"><Download data-icon="inline-start" /> PDF</Button><Button variant="outline" onClick={() => toast.success("Envío programado: lunes 08:00 a gerencia@clinicasonrisa.pe")}><CalendarClock data-icon="inline-start" /> Programar envío</Button></div>
       </div>
 
-      <Tabs value={tab} onValueChange={(v) => setTab(String(v))}><TabsList>{tabs.map(([v, l]) => <TabsTrigger key={v} value={v}>{l}</TabsTrigger>)}</TabsList></Tabs>
+      <Tabs estilo="segmentado" valor={tab} onCambio={setTab} items={tabs.map(([id, etiqueta]) => ({ id, etiqueta }))} />
 
       {tab === "periodo" ? (
         <>

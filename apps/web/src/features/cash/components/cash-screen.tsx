@@ -6,7 +6,7 @@ import * as React from "react";
 import { toast } from "sonner";
 import { Button } from "khipu-design-system/ui/button";
 import { NumberInput } from "@/components/shared/number-input";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs } from "khipu-design-system/navegacion/tabs";
 import { DataTable, TwoLine, type Column } from "@/components/shared/data-table";
 import { SectionCard } from "@/components/shared/section-card";
 import { StatusBadge, type BadgeTone } from "@/components/shared/status-badge";
@@ -94,9 +94,7 @@ export function CashScreen({ movements }: { movements: CashMovement[] }) {
       <SectionCard
         title="Movimientos registrados en el turno"
         action={<div className="flex flex-wrap items-center gap-2"><Button size="xs" variant="ghost" render={<Link href="/finanzas/caja/historial" />} nativeButton={false}>Historial de turnos →</Button>
-          <Tabs value={filter} onValueChange={(v) => setFilter(String(v))}>
-            <TabsList><TabsTrigger value="all">Todos</TabsTrigger><TabsTrigger value="ingreso">Ingresos</TabsTrigger><TabsTrigger value="egreso">Vales de salida</TabsTrigger></TabsList>
-          </Tabs></div>
+          <Tabs estilo="segmentado" valor={filter} onCambio={setFilter} items={[{ id: "all", etiqueta: "Todos" }, { id: "ingreso", etiqueta: "Ingresos" }, { id: "egreso", etiqueta: "Vales de salida" }]} /></div>
         }
         contentClassName="p-0"
       >

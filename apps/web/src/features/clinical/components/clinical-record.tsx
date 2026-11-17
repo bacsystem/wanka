@@ -11,7 +11,7 @@ import { EntityHeader } from "@/components/shared/entity-header";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { ProgresoLineal } from "khipu-design-system/feedback/progreso";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs } from "khipu-design-system/navegacion/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Field } from "@/components/shared/field";
@@ -85,7 +85,7 @@ export function ClinicalRecord({ customer }: { customer: Customer }) {
         </SectionCard>
 
         <div className="flex min-w-0 flex-col gap-4 xl:col-span-2">
-          <Tabs value={tab} onValueChange={(v) => setTab(String(v))}><TabsList><TabsTrigger value="soap">Evolución SOAP</TabsTrigger><TabsTrigger value="plan">Plan de tratamiento</TabsTrigger><TabsTrigger value="prev">Evoluciones previas</TabsTrigger></TabsList></Tabs>
+          <Tabs estilo="segmentado" valor={tab} onCambio={setTab} items={[{ id: "soap", etiqueta: "Evolución SOAP" }, { id: "plan", etiqueta: "Plan de tratamiento" }, { id: "prev", etiqueta: "Evoluciones previas" }]} />
           {tab === "soap" ? (
             <SectionCard title={`Acto clínico · pieza ${selected}`} action={<Badge variant="outline" className="font-mono">K02.1</Badge>} contentClassName="flex flex-col gap-3 p-4">
               <Field label="Diagnóstico CIE-10"><Input defaultValue="K02.1 Caries de la dentina" /></Field>

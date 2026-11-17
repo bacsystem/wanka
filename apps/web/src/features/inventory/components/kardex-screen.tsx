@@ -8,7 +8,7 @@ import { Button } from "khipu-design-system/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "khipu-design-system/ui/table";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs } from "khipu-design-system/navegacion/tabs";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Field } from "@/components/shared/field";
 import { PaginationBar } from "@/components/shared/pagination";
@@ -62,9 +62,7 @@ export function KardexScreen({ item, rows }: { item: typeof KardexItemType; rows
         title="Kardex del período"
         action={
           <div className="flex flex-wrap items-center gap-2">
-            <Tabs value={filter} onValueChange={(v) => setFilter(String(v))}>
-              <TabsList><TabsTrigger value="all">Todos <span className="ml-1 font-mono text-[11px] opacity-70">{count("all")}</span></TabsTrigger><TabsTrigger value="in">Entradas <span className="ml-1 font-mono text-[11px] opacity-70">{count("in")}</span></TabsTrigger><TabsTrigger value="out">Consumos / ventas <span className="ml-1 font-mono text-[11px] opacity-70">{count("out")}</span></TabsTrigger><TabsTrigger value="loss">Mermas <span className="ml-1 font-mono text-[11px] opacity-70">{count("loss")}</span></TabsTrigger></TabsList>
-            </Tabs>
+            <Tabs estilo="segmentado" valor={filter} onCambio={setFilter} items={[{ id: "all", etiqueta: "Todos", contador: count("all") }, { id: "in", etiqueta: "Entradas", contador: count("in") }, { id: "out", etiqueta: "Consumos / ventas", contador: count("out") }, { id: "loss", etiqueta: "Mermas", contador: count("loss") }]} />
             <ToggleGroup value={[mode]} onValueChange={(v) => v[0] && setMode(v[0])} variant="outline" size="sm">
               <ToggleGroupItem value="13.1">Físico y valorizado (13.1)</ToggleGroupItem>
               <ToggleGroupItem value="12.1">Físico (12.1)</ToggleGroupItem>

@@ -8,7 +8,7 @@ import { Badge } from "khipu-design-system/ui/badge";
 import { Button } from "khipu-design-system/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs } from "khipu-design-system/navegacion/tabs";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { SectionCard } from "@/components/shared/section-card";
 import { StatusBadge, Tag, type BadgeTone } from "@/components/shared/status-badge";
@@ -69,7 +69,7 @@ export function DeliveryScreen({ orders: initial, riders }: { orders: DeliveryOr
       <div className="flex min-w-0 flex-col gap-4">
         {belowLg ? (
           <SectionCard title="Pedidos" contentClassName="p-3">
-            <Tabs value={laneTab} onValueChange={(v) => setLaneTab(v as DeliveryLane)}><TabsList>{lanes.map((l) => <TabsTrigger key={l.id} value={l.id}>{l.label} <span className="ml-1 font-mono text-[11px] opacity-70">{orders.filter((o) => o.lane === l.id).length}</span></TabsTrigger>)}</TabsList></Tabs>
+            <Tabs estilo="segmentado" valor={laneTab} onCambio={setLaneTab} items={lanes.map((l) => ({ id: l.id, etiqueta: l.label, contador: orders.filter((o) => o.lane === l.id).length }))} />
             <div className="mt-3 flex flex-col gap-2">{orders.filter((o) => o.lane === laneTab).map(card)}{orders.filter((o) => o.lane === laneTab).length === 0 ? <p className="rounded-md border border-dashed p-6 text-center text-xs text-muted-foreground">Sin pedidos</p> : null}</div>
           </SectionCard>
         ) : (

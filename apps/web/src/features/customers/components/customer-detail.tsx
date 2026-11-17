@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { Button } from "khipu-design-system/ui/button";
 import { EntityHeader } from "@/components/shared/entity-header";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs } from "khipu-design-system/navegacion/tabs";
 import { DataTable, type Column } from "@/components/shared/data-table";
 import { SectionCard } from "@/components/shared/section-card";
 import { StatCard, StatGrid } from "@/components/shared/stat-card";
@@ -66,16 +66,20 @@ export function CustomerDetail({ customer, detail }: { customer: Customer; detai
         <StatCard label="Ticket promedio" value={formatCurrency(detail.kpis.avgTicket)} icon={ClipboardList} tone="info" footer="Por tratamiento clínico" />
       </StatGrid>
 
-      <Tabs value={tab} onValueChange={(v) => (v === "hc" ? router.push(`/clientes/${customer.id}/historia`) : setTab(v as Tab))} className="min-w-0 max-w-full">
-        <TabsList variant="card">
-          <TabsTrigger value="resumen"><LayoutGrid /> Resumen</TabsTrigger>
-          <TabsTrigger value="comprobantes"><Receipt /> Comprobantes <span className="rounded bg-muted px-1.5 font-mono text-[11px]">{detail.documents.length}</span></TabsTrigger>
-          <TabsTrigger value="citas"><CalendarClock /> Citas y turnos <span className="rounded bg-muted px-1.5 font-mono text-[11px]">{detail.kpis.appointments}</span></TabsTrigger>
-          <TabsTrigger value="hc" className="h-9 gap-2 rounded-lg px-3 font-semibold"><Stethoscope /> Historia clínica y odontograma</TabsTrigger>
-          <TabsTrigger value="cuenta"><Wallet /> Cuenta corriente y pagos</TabsTrigger>
-          <TabsTrigger value="documentos"><FileText /> Documentos y consentimientos</TabsTrigger>
-        </TabsList>
-      </Tabs>
+      <Tabs
+        estilo="linea"
+        className="min-w-0 max-w-full"
+        valor={tab}
+        onCambio={(v) => (v === "hc" ? router.push(`/clientes/${customer.id}/historia`) : setTab(v))}
+        items={[
+          { id: "resumen", etiqueta: <><LayoutGrid /> Resumen</> },
+          { id: "comprobantes", etiqueta: <><Receipt /> Comprobantes</>, contador: detail.documents.length },
+          { id: "citas", etiqueta: <><CalendarClock /> Citas y turnos</>, contador: detail.kpis.appointments },
+          { id: "hc", etiqueta: <><Stethoscope /> Historia clínica y odontograma</> },
+          { id: "cuenta", etiqueta: <><Wallet /> Cuenta corriente y pagos</> },
+          { id: "documentos", etiqueta: <><FileText /> Documentos y consentimientos</> },
+        ]}
+      />
 
       {tab === "resumen" ? <Summary detail={detail} customer={customer} /> : null}
       {tab === "comprobantes" ? <DocumentsTable docs={detail.documents} /> : null}

@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { Badge } from "khipu-design-system/ui/badge";
 import { Button } from "khipu-design-system/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs } from "khipu-design-system/navegacion/tabs";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { SectionCard } from "@/components/shared/section-card";
 import { SearchInput } from "@/components/shared/toolbar";
@@ -57,7 +57,7 @@ export function FloorScreen({ tables }: { tables: DiningTable[] }) {
           {menuOpen ? (
             <div className="border-t p-3">
               <div className="flex items-center gap-2"><SearchInput value={q} onChange={setQ} placeholder="Buscar plato…" aria-label="Buscar plato" className="flex-1 sm:max-w-none" /><Button variant="ghost" size="sm" onClick={() => setMenuOpen(false)}>Cerrar</Button></div>
-              <Tabs value={menuCat} onValueChange={(v) => setMenuCat(v as keyof typeof menu)} className="mt-2"><TabsList>{(Object.keys(menu) as (keyof typeof menu)[]).map((c) => <TabsTrigger key={c} value={c}>{c}</TabsTrigger>)}</TabsList></Tabs>
+              <Tabs estilo="segmentado" className="mt-2" valor={menuCat} onCambio={setMenuCat} items={(Object.keys(menu) as (keyof typeof menu)[]).map((c) => ({ id: c, etiqueta: c }))} />
               <ul className="mt-2 grid max-h-48 gap-1 overflow-y-auto">{menuItems.map((m) => <li key={m.name}><button type="button" onClick={() => add(m)} className="flex w-full items-center justify-between rounded-md border px-3 py-2 text-left text-sm hover:bg-accent"><span>{m.name}</span><span className="font-mono text-xs">{formatCurrency(m.price)}</span></button></li>)}</ul>
             </div>
           ) : null}
@@ -90,7 +90,7 @@ export function FloorScreen({ tables }: { tables: DiningTable[] }) {
         contentClassName="p-0"
       >
         <div className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-3">
-          <Tabs value={area} onValueChange={(v) => setArea(String(v))}><TabsList>{areas.map((a) => <TabsTrigger key={a.id} value={a.id}>{a.label} <span className="ml-1 font-mono text-[11px] opacity-70">{a.count}</span></TabsTrigger>)}</TabsList></Tabs>
+          <Tabs estilo="segmentado" valor={area} onCambio={setArea} items={areas.map((a) => ({ id: a.id, etiqueta: a.label, contador: a.count }))} />
           <div className="flex flex-wrap gap-1.5">{(Object.keys(statusMeta) as TableStatus[]).map((s) => <Badge key={s} variant="outline" className="gap-1"><span className={cn("size-1.5 rounded-full", s === "libre" && "bg-success-solid", s === "ocupada" && "bg-warning-solid", s === "por_cobrar" && "bg-primary", s === "reservada" && "bg-acento-suave", s === "sucia" && "bg-secondary")} />{statusMeta[s].label} ({counts[s]})</Badge>)}</div>
         </div>
         <ul className="grid grid-cols-3 gap-3 p-4 sm:grid-cols-4 lg:grid-cols-6">
