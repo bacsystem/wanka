@@ -17,12 +17,13 @@ import { cn } from "@/lib/utils";
 import { areas, menu, orderM7, type DiningTable, type OrderItem, type TableStatus } from "../mocks/floor";
 import { TARJETA } from "@/lib/estilos";
 
+// TODO(DS): solid fills use text-foreground/dark:text-background until khipu ships --*-solid-foreground tokens.
 const statusMeta: Record<TableStatus, { label: string; tone: BadgeTone; card: string; dot: string; chip: string }> = {
-  libre: { label: "Libre", tone: "success", card: "border-transparent bg-success hover:bg-success", dot: "bg-success-solid text-white", chip: "bg-success text-success-foreground " },
-  ocupada: { label: "Ocupada", tone: "warning", card: "border-transparent bg-warning hover:bg-warning", dot: "bg-warning-solid text-white", chip: "bg-warning text-warning-foreground " },
+  libre: { label: "Libre", tone: "success", card: "border-transparent bg-success hover:bg-success", dot: "bg-success-solid text-foreground dark:text-background", chip: "bg-success text-success-foreground " },
+  ocupada: { label: "Ocupada", tone: "warning", card: "border-transparent bg-warning hover:bg-warning", dot: "bg-warning-solid text-foreground dark:text-background", chip: "bg-warning text-warning-foreground " },
   por_cobrar: { label: "Por cobrar", tone: "info", card: "border-primary/50 bg-accent/60 hover:bg-accent dark:bg-accent/20", dot: "bg-primary text-primary-foreground", chip: "bg-acento-suave text-acento-superficie-texto dark:text-acento-superficie-texto" },
-  reservada: { label: "Reservada", tone: "neutral", card: "border-accent-border bg-acento-suave hover:bg-acento-suave dark:border-accent-border dark:bg-acento-suave", dot: "bg-acento-suave text-white", chip: "bg-acento-suave text-acento-superficie-texto dark:bg-acento-suave dark:text-acento-superficie-texto" },
-  sucia: { label: "Sucia / limpieza", tone: "neutral", card: "border-border bg-muted/60 hover:bg-muted", dot: "bg-secondary text-white", chip: "bg-muted text-muted-foreground" },
+  reservada: { label: "Reservada", tone: "neutral", card: "border-accent-border bg-acento-suave hover:bg-acento-suave dark:border-accent-border dark:bg-acento-suave", dot: "bg-acento-suave text-acento-superficie-texto", chip: "bg-acento-suave text-acento-superficie-texto dark:bg-acento-suave dark:text-acento-superficie-texto" },
+  sucia: { label: "Sucia / limpieza", tone: "neutral", card: "border-border bg-muted/60 hover:bg-muted", dot: "bg-secondary text-secondary-foreground", chip: "bg-muted text-muted-foreground" },
 };
 const itemStatus = { en_cocina: { label: "En cocina", tone: "warning" as const }, listo: { label: "Listo", tone: "success" as const }, servido: { label: "Servido", tone: "neutral" as const } };
 
@@ -97,7 +98,7 @@ export function FloorScreen({ tables }: { tables: DiningTable[] }) {
             <li key={t.id}>
               <button type="button" onClick={() => pick(t)} aria-pressed={selectedId === t.id} aria-label={`${t.label} ${statusMeta[t.status].label}`} className={cn("relative flex aspect-square w-full flex-col items-center rounded-xl border p-2.5 text-center text-xs transition-colors", statusMeta[t.status].card, selectedId === t.id && "border-primary ring-2 ring-primary")}>
                 {selectedId === t.id ? <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 rounded-md bg-primary px-1.5 py-0.5 text-[9px] font-bold tracking-wide text-primary-foreground uppercase">Mesa activa</span> : null}
-                <span className="flex w-full items-center justify-between"><span className={cn("flex size-7 items-center justify-center rounded-full text-[11px] font-bold", statusMeta[t.status].dot)}>{t.label}</span><span className="inline-flex items-center gap-0.5 text-muted-foreground"><Users className="size-3" />{t.seats}p</span></span>
+                <span className="flex w-full items-center justify-between"><span data-table-dot={t.status} className={cn("flex size-7 items-center justify-center rounded-full text-[11px] font-bold", statusMeta[t.status].dot)}>{t.label}</span><span className="inline-flex items-center gap-0.5 text-muted-foreground"><Users className="size-3" />{t.seats}p</span></span>
                 <span className="mt-auto flex w-full flex-col items-center gap-0.5">
                   {t.since ? <span className={cn("rounded px-1.5 py-0.5 font-mono text-[10px] font-semibold tabular-nums", statusMeta[t.status].chip)}>{t.since}</span> : <span className={cn("rounded px-1.5 py-0.5 text-[10px] font-semibold", statusMeta[t.status].chip)}>{t.status === "reservada" ? "Reserva" : statusMeta[t.status].label}</span>}
                   {t.amount ? <span className="font-mono text-sm font-bold tabular-nums">{formatCurrency(t.amount)}</span> : t.note ? <span className="truncate text-[11px] font-medium">{t.note.split(" · ")[0]}</span> : null}
