@@ -10,7 +10,7 @@ sequenceDiagram
   participant H as handler del modulo
 
   W->>MW: POST /v1/lubricentro/service-orders Bearer wk_at_...
-  MW->>DB: SELECT sesion por sha256(token) (no revocada, no expirada, mfa_passed, tenant_id)
+  MW->>DB: SELECT sesion por sha256(token) (no revocada, no expirada, mfa_satisfied = true, tenant_id)
   alt sesion invalida o token de otro plano (prefijo wka_)
     MW-->>W: 401 unauthenticated
   end

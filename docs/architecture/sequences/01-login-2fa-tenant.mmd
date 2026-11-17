@@ -20,19 +20,19 @@ sequenceDiagram
     A->>DB: BEGIN, set_config app.user_id (sin tenant), SELECT iam.list_my_memberships() (own_memberships + member_read: rol, requires_mfa, sedes, cajas)
     A->>A: PUNTO UNICO DE DECISION: mfa_obligatorio = algun rol de sus membresias activas o invitadas con requires_mfa
     alt usuario con TOTP confirmado
-      A->>DB: INSERT sessions (mfa_passed=false, tenant_id=null)
+      A->>DB: INSERT sessions (mfa_satisfied=false, tenant_id=null): sin tokens de acceso hasta el codigo
       A-->>W: 200 {status:"mfa_required", challenge_token} (TTL 5 min)
       U->>W: codigo TOTP de 6 digitos
       W->>A: POST /v1/auth/mfa/verify {challenge_token, code}
       A->>A: verifica TOTP (ventana +-1 paso, rechaza codigo ya usado)
-      A->>DB: UPDATE sessions SET mfa_passed=true
+      A->>DB: UPDATE sessions SET mfa_satisfied=true, mfa_method=totp
     else sin TOTP y mfa_obligatorio
       A-->>W: 200 {status:"mfa_enrollment_required", enrollment_token} (TTL 10 min, solo sirve para enrolar)
       U->>W: escanea el QR y escribe el primer codigo
       W->>A: POST /v1/auth/mfa/totp/enroll y /confirm {enrollment_token, code}
-      A->>DB: INSERT user_totp (secreto cifrado), codigos de recuperacion, INSERT sessions mfa_passed=true
+      A->>DB: INSERT user_totp (secreto cifrado), codigos de recuperacion, INSERT sessions mfa_satisfied=true, mfa_method=totp
     else sin TOTP y ningun rol lo exige
-      A->>DB: INSERT sessions (mfa_passed=false, tenant_id=null)
+      A->>DB: INSERT sessions (mfa_satisfied=true, mfa_method=none, tenant_id=null): la 2FA no se requeria, la sesion la cumple
     end
     A->>DB: emite access (15 min) + refresh (rotativo)
     A-->>W: 200 {access_token, refresh_token, expiresAt, memberships:[{tenant, role, requiresMfa, sites, cashRegisters}]}
@@ -44,7 +44,7 @@ sequenceDiagram
   A->>DB: SELECT membership por app.user_id (tenant activo, sede en alcance, caja de esa sede)
   alt sin membresia o tenant suspendido
     A-->>W: 403 tenant_access_denied
-  else rol con requires_mfa y sesion con mfa_passed=false
+  else rol con requires_mfa y sesion con mfa_method=none
     Note over A: solo pasa si la membresia se creo despues del login: es una guarda, la decision fue en el login
     A-->>W: 403 mfa_required (el BFF vuelve a /login para cumplir la 2FA)
   else ok
