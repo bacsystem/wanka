@@ -44,7 +44,7 @@ sequenceDiagram
       end
     end
   end
-  WK->>DB: cpe.emit: UPDATE series_emitters SET holder = job, lease_until = now()+60 s WHERE libre o propio RETURNING, COMMIT
+  WK->>DB: cpe.emit: INSERT series_emitters ... ON CONFLICT (tenant_id, series_id) DO UPDATE SET holder = job, lease_until = now()+60 s WHERE libre o propio RETURNING, COMMIT (funciona con una serie nueva)
   alt arrendamiento ocupado por otro drenador
     WK->>WK: termina enseguida (el drenador vigente relee al soltar y cubre este documento)
   else arrendamiento tomado

@@ -87,7 +87,7 @@ erDiagram
   }
   SERIES_EMITTERS {
     uuid tenant_id PK "RLS"
-    uuid series_id PK "arrendamiento en fila: nunca candado de transaccion durante la llamada a Khipu"
+    uuid series_id PK "se crea con la serie; ademas el upsert ON CONFLICT (tenant_id, series_id) la crea si falta"
     text holder "id del job River"
     timestamptz lease_until "now() + 60 s; renovacion solo WHERE holder = job, 0 filas = abortar"
     timestamptz wakeup_at "un solo job dormido por serie hasta el next_attempt_at de la cabeza"

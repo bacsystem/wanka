@@ -87,7 +87,16 @@ La API key `fk_…` se guarda cifrada con AES-GCM (`INTEGRATIONS_ENC_KEY`) en `i
 
 - Wanka asigna el número en la transacción de la venta (ADR 0008) y lo envía en `correlativo`. Las series se registran en Khipu con `correlativo_inicial` y son exclusivas de Wanka. Las GRE las numera Khipu.
 - **Un emisor por serie, en orden.** Khipu procesa en orden lo que recibe de una serie, pero si Wanka enviara en paralelo desde 20 workers, el orden de llegada no sería el de los números.
-  - **Un arrendamiento por serie, en una fila, sin transacción abierta y con fencing.** La tabla `einv.series_emitters (tenant_id, series_id, holder, lease_until, wakeup_at)` se toma con `UPDATE ... SET holder = $job, lease_until = now() + 60 s WHERE series_id = $s AND (lease_until < now() OR holder = $job) RETURNING ...`, confirmado enseguida. **Toda renovación es `UPDATE ... SET lease_until = now() + 60 s WHERE series_id = $s AND holder = $job AND lease_until > now()`**: si afecta 0 filas, el arrendamiento se perdió (venció o lo tomó otro) y el drenaje **se aborta** sin emitir nada más. El arrendamiento se renueva **antes** de cada llamada a Khipu, así que cubre la llamada (60 s > 30 s de timeout). Nunca se usa `pg_*_xact_lock`, que obligaría a retener una transacción y su conexión durante las llamadas HTTP.
+  - **Un arrendamiento por serie, en una fila, sin transacción abierta y con fencing.** La tabla `einv.series_emitters (tenant_id, series_id, holder, lease_until, wakeup_at)` se toma, confirmando enseguida, con un upsert. Así una serie nueva, que todavía no tiene fila, también se emite:
+    ```sql
+    INSERT INTO einv.series_emitters AS e (tenant_id, series_id, holder, lease_until)
+    VALUES ($t, $s, $job, now() + interval '60 seconds')
+    ON CONFLICT (tenant_id, series_id) DO UPDATE
+       SET holder = EXCLUDED.holder, lease_until = EXCLUDED.lease_until
+     WHERE e.lease_until < now() OR e.holder = EXCLUDED.holder
+    RETURNING holder;   -- 0 filas = otro drenador lo tiene
+    ```
+    Además, la fila se crea en la misma transacción que crea la serie (`empresas`, al registrar la serie y al aprovisionar), así que el upsert es solo la red de seguridad. Prueba: crear una serie nueva, vender y verificar que el CPE se emite. **Toda renovación es `UPDATE ... SET lease_until = now() + 60 s WHERE series_id = $s AND holder = $job AND lease_until > now()`**: si afecta 0 filas, el arrendamiento se perdió (venció o lo tomó otro) y el drenaje **se aborta** sin emitir nada más. El arrendamiento se renueva **antes** de cada llamada a Khipu, así que cubre la llamada (60 s > 30 s de timeout). Nunca se usa `pg_*_xact_lock`, que obligaría a retener una transacción y su conexión durante las llamadas HTTP.
   - **Por documento, tres pasos y ninguna red dentro de una transacción.**
     1. Una transacción corta renueva el arrendamiento (con fencing) y lee la **cabeza** de la serie: el pendiente no bloqueado de menor número. Luego hace `COMMIT`.
     2. Llamada HTTP a Khipu, fuera de toda transacción (hasta 30 s).
