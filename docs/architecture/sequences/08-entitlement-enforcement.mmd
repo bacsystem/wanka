@@ -10,7 +10,7 @@ sequenceDiagram
   participant H as handler del modulo
 
   W->>MW: POST /v1/lubricentro/service-orders Bearer wk_at_...
-  MW->>DB: SELECT s.*, m.authz_version AS current_version FROM iam.sessions s LEFT JOIN iam.memberships m ON m.id = s.membership_id WHERE s.access_hash = sha256(token) (no revocada, no expirada, mfa_satisfied = true). Lectura por PK: siempre de la base, nunca de cache
+  MW->>DB: rol wanka_app, SIN app.tenant_id ni app.user_id (aun no se conocen): SELECT * FROM iam.session_lookup(sha256(token)), SECURITY DEFINER con search_path fijo, devuelve la sesion (no revocada, no expirada, mfa_satisfied) + current_version y membership_status de iam.memberships. Siempre de la base, nunca de cache
   alt sesion invalida o token de otro plano (prefijo wka_)
     MW-->>W: 401 unauthenticated
   end
@@ -26,7 +26,10 @@ sequenceDiagram
   else limite de plan alcanzado (ej. CPE del mes, usuarios, sedes)
     MW-->>W: 403 plan_limit_reached {limit, used}
   else ok
-    alt current_version distinta de s.authz_version (rol cambiado desde la ultima peticion)
+    alt sesion de tenant NO impersonada con current_version NULL o membresia no activa (borrada, suspendida)
+      MW->>DB: revoca la sesion
+      MW-->>W: 401 session_expired (nunca se trata como sin cambios)
+    else current_version distinta de s.authz_version (rol cambiado desde la ultima peticion)
       MW->>DB: re-resuelve el rol (requires_mfa) y los permisos, UPDATE sessions SET authz_version = current_version
     else igual
       MW->>MW: rol y permisos de la cache, clave membership_id + current_version (una cache caliente con la version vieja no se usa)
