@@ -1,27 +1,27 @@
 ---
-title: Maquina de estados de un CPE (electronic_documents.status)
+title: Maquina de estados de un CPE (status + status_rank; solo se sube de rango)
 ---
 stateDiagram-v2
-  [*] --> pendiente: venta/nota/guia confirmada (misma tx que el numero)
-  pendiente --> enviado: Khipu responde 201/200 (RECIBIDO, FIRMADO, ENVIADO, ERROR_ENVIO)
-  pendiente --> pendiente: salto Wanka a Khipu fallido (red, 5xx) o 422 a corregir, mismo numero
-  pendiente --> aceptado: SUNAT respondio en la misma llamada (ACEPTADO)
+  [*] --> pendiente: venta, nota o guia confirmada (misma tx que el numero)
+  pendiente --> pendiente: salto Wanka a Khipu fallido (red, 5xx, ENVIO_EN_CURSO) o bloqueado (validation, config, auth, quota)
+  pendiente --> enviado: Khipu responde RECIBIDO, FIRMADO, ENVIADO, ERROR_ENVIO, PENDIENTE_AGRUPACION, ENVIANDO o ENVIADO_PENDIENTE_TICKET
+  pendiente --> aceptado: ACEPTADO en la misma llamada
   pendiente --> observado: ACEPTADO_CON_OBS en la misma llamada
   pendiente --> rechazado: RECHAZADO en la misma llamada
+  enviado --> enviado: ERROR_ENVIO (Khipu reintenta) o SUNAT_YA_LO_TIENE (bloqueado, soporte verifica en SOL)
   enviado --> aceptado: ACEPTADO (CDR 0)
   enviado --> observado: ACEPTADO_CON_OBS (4xxx, valido)
   enviado --> rechazado: RECHAZADO, INVALIDO, FUERA_DE_PLAZO o DESCARTADO
-  enviado --> enviado: ERROR_ENVIO, Khipu reintenta hacia SUNAT
-  aceptado --> anulado: baja aceptada (Khipu arma RA o RC), max 7 dias
-  observado --> anulado: baja aceptada
+  aceptado --> anulado: baja ACEPTADA (Khipu arma RA o RC), max 7 dias
+  observado --> anulado: baja ACEPTADA
   rechazado --> [*]: el numero queda consumido, se emite un CPE nuevo
   anulado --> [*]
-  note right of aceptado
-    NC/ND no cambian el estado del CPE origen:
-    se registran como documentos propios
-    con related_document_id.
-  end note
   note right of pendiente
-    Alerta si now() > fecha_limite_envio - 24 h
-    (factura 3 dias, boleta 5 sola o 7 en resumen).
+    Datos del proveedor (provider_ref, hash, totales)
+    se graban aparte e idempotentes: una respuesta
+    que llega despues del webhook los completa igual.
+  end note
+  note right of enviado
+    cpe.reconcile recorre todo estado no final.
+    Alerta si now() > fecha_limite_envio - 24 h.
   end note

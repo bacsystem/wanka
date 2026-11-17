@@ -18,9 +18,10 @@ Necesitan ejecución diferida y garantizada: emisión y conciliación de CPE (AD
 Opción 3; si la dependencia no se aprueba, opción 2 con la misma semántica (la interfaz `jobs.Enqueuer` del kernel oculta cuál se usa).
 
 - Colas con concurrencia explícita por réplica de worker (bulkhead): `cpe` 20, `webhooks` 10, `notifications` 10, `reports` 2, `maintenance` 2. Ajustables por variable de entorno.
+- **Orden por serie en la cola `cpe`.** River no garantiza FIFO por clave. Khipu, en cambio, procesa en orden lo que recibe de cada serie, y Wanka numera. Para que el orden de llegada sea el de los números, `cpe.emit` toma un candado consultivo de transacción por `series_id` y drena los pendientes de esa serie de menor a mayor (ADR 0003, «Numeración y orden por serie»). Las 20 tareas concurrentes trabajan en **series distintas**: dentro de una serie hay un único emisor. La política ante un hueco (seguir con N+1 o detener la serie) queda sujeta a la verificación 2 en BETA, antes del #56.
 - Entrega **al menos una vez**: todo handler es idempotente (transiciones condicionadas por estado, claves únicas, `idem_key` hacia terceros).
 - Reintentos solo en errores transitorios, en esta única capa (el adaptador HTTP no reintenta por su cuenta). Errores definitivos ⇒ `JobCancel` y estado de negocio explícito (p. ej. CPE `rechazado`).
-- Jobs fallidos definitivamente (`discarded`) se ven en la consola de plataforma (monitoreo) y generan alerta; un job que falla siempre no bloquea a los demás (no hay orden FIFO estricto por tenant, salvo jobs únicos por clave, p. ej. un solo `cpe.void` en curso por documento).
+- Jobs fallidos definitivamente (`discarded`) se ven en la consola de plataforma (monitoreo) y generan alerta; un job que falla siempre no bloquea a los demás (no hay orden FIFO estricto por tenant, salvo el drenaje en orden de cada serie de CPE, descrito arriba, y los jobs únicos por clave, como un solo `cpe.void` en curso por documento).
 - Periódicos (`cpe.reconcile` cada minuto, recordatorios diarios 08:00 `America/Lima`, limpiezas) con el líder de River: corren una vez aunque haya N réplicas.
 - Todo job lleva `tenant_id` en sus argumentos y abre `InTenantTx` (ADR 0001).
 - La tabla de jobs vive en el esquema `ops` (no de tenant) con retención: completados 7 días, descartados 30 días.
