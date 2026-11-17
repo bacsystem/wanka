@@ -78,3 +78,33 @@ Never nest a `Button` inside a clickable tile rendered as `<button>` (hydration 
 - `docs/superpowers/specs/` — approved design specs (one per phase).
 - `prompt/ui-ux-stitch.md` — Stitch prompts and project ids; `prompt/stitch-flujos-faltantes.md` — prompts for the second batch. Generating from here: call the Stitch MCP tool `generate_screen_from_text` (projectId `3747912429457694633`); the response's `outputComponents[].design.screens[0]` carries the HTML/PNG download URLs (`list_screens` is capped/stale — do not rely on it to discover new screens; `get_screen` by id works). Beware: the design-system JSON contains `on_error`, so never grep responses for "error" to detect failures. `design/stitch/screens/` — the 48 reference screens exported from the user's Stitch project (`index.json` maps file → screen id/title); `design/stitch/DESIGN.md` — design tokens. The Stitch HTML uses Material Symbols; the app uses Lucide only.
 - Mermaid diagrams: write `.mmd` files and validate syntax; do not hand-edit diagrams managed by Mermaid Chart Sync (frontmatter with `id:`). See `.github/instructions/mermaid.instructions.md`.
+
+## Backend architecture (`docs/architecture`)
+
+The backend is not built yet. Its design lives in `docs/architecture/`; `README.md` there is the index. Follow these rules when you design or implement backend work, and read the linked doc before changing anything in its area.
+
+- **Stack**: Go modular monolith (hexagonal, one package per bounded context, facades between modules) on PostgreSQL 16. One image runs as `serve --plane=tenant|platform|webhooks`, `worker` and `migrate`. Libraries — River (jobs/outbox), sqlc, goose, oapi-codegen, shopspring/decimal, pquerna/otp, OpenTelemetry, AWS S3 SDK — are **pending owner approval**: do not add them before that (ADR 0002).
+- **Decisions are ADRs** in `docs/architecture/adr/NNNN-kebab-title.md`, numbered in sequence. Each has context, options, decision, consequences (the bad ones too), status and date. Add a new ADR instead of rewriting an accepted one; a reversal is a new ADR that supersedes the old one.
+- **Multi-tenancy** (ADR 0001):
+  - every tenant table has `tenant_id`, `ENABLE` + `FORCE ROW LEVEL SECURITY` and the policy `tenant_id = app.current_tenant()`, where `app.current_tenant()` is `NULLIF(current_setting('app.tenant_id', true), '')::uuid`;
+  - every natural `UNIQUE`/PK starts with `tenant_id`, and FKs are composite with `tenant_id`;
+  - all tenant data access goes through `InTenantTx(ctx, Actor{TenantID, UserID, Kind, ImpersonatorID})`, which always sets `app.tenant_id`, `app.user_id` and `app.session_kind`; the tenant comes from the session, never from body, URL or header;
+  - no role has `BYPASSRLS`, and application roles own no tables;
+  - `SECURITY DEFINER` functions are owned only by `wanka_definer`, have `SET search_path = pg_catalog, pg_temp` and `REVOKE ALL ... FROM PUBLIC`; when they touch RLS tables for a tenant the caller did not set, they set it from their own data and restore the caller's value;
+  - the only extra policies allowed are the named, read-only ones listed in ADR 0001.
+- **RLS check**: `sh docs/architecture/data/rls-check/run.sh` runs the policies and functions on a disposable PostgreSQL 16 container (needs Docker) with the real roles. Any change to policies, roles, grants or `SECURITY DEFINER` functions must update that SQL and pass with **exit 0**. `MUTATION=naive_session_lookup` shows a failing run.
+- **API contract**:
+  - `docs/architecture/api/openapi.yaml` is the spec-first source (ADR 0009); `api/conventions.md` gives REST `/v1`, `camelCase`, RFC 9457 errors with `code`, cursor pagination, a required `Idempotency-Key` on creating `POST`s, and money as decimal strings;
+  - permissions use the catalog `modulo.recurso:accion` in `api/resources.md` (tenant plane plus a separate `plataforma.*` catalog), and stories and routes must cite catalog codes;
+  - the frontend mocks still mirror the future API, and will be replaced by `lib/api/*` functions typed from `openapi.yaml`.
+- **Money and numbering** (ADR 0008):
+  - money is `numeric` with explicit scale (amounts `(14,2)`, unit prices `(14,4)`, costs `(18,6)`, quantities `(14,4)`), never float;
+  - PEN and USD from release 1: every money-bearing record has `currency`, and USD documents carry `exchange_rate numeric(6,3)`, which is Khipu's format;
+  - correlatives come from a row counter per series, one series per cash register, assigned in the same transaction as the document, with no network call inside.
+- **E-invoicing** (ADR 0003):
+  - always through Khipu behind the `InvoicingProvider` port, async with outbox, a single in-order emitter per series, and webhooks plus reconciliation; never call SUNAT directly;
+  - the Khipu BETA checks (rounding against `POST /v1/facturas/calcular`, N+1 before N) are acceptance criteria of issue #56.
+- **Deployment** (ADR 0007, `deployment/`):
+  - Railway services `web`, `api`, `platform-api`, `worker` and `webhooks`; only `web` and `webhooks` have public domains, and `/v1` is reachable only over the private network;
+  - config is 12-factor; write secret **names** only, never values, in docs, code or issues.
+- **Diagrams**: Mermaid `.mmd` files only, validated before committing (`npx -y @mermaid-js/mermaid-cli -i file.mmd -o /tmp/x.svg`), following `.github/instructions/mermaid.instructions.md`.
