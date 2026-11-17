@@ -226,7 +226,7 @@
   },
   "src/components/layout/notifications.tsx": {
     "no-restricted-imports": {
-      "count": 6
+      "count": 5
     }
   },
   "src/components/layout/shell-parts.tsx": {
@@ -461,7 +461,7 @@
   },
   "src/features/cash/components/cash-screen.tsx": {
     "no-restricted-imports": {
-      "count": 8
+      "count": 7
     }
   },
   "src/features/cash/components/shift-history.tsx": {
@@ -471,22 +471,22 @@
   },
   "src/features/catalog/components/catalog-screen.tsx": {
     "no-restricted-imports": {
-      "count": 18
+      "count": 17
     }
   },
   "src/features/clinical/components/clinical-record.tsx": {
     "no-restricted-imports": {
-      "count": 12
+      "count": 11
     }
   },
   "src/features/customers/components/customer-detail.tsx": {
     "no-restricted-imports": {
-      "count": 9
+      "count": 8
     }
   },
   "src/features/customers/components/customers-table.tsx": {
     "no-restricted-imports": {
-      "count": 18
+      "count": 17
     }
   },
   "src/features/dashboard/components/industry-dashboards.tsx": {
@@ -566,7 +566,7 @@
   },
   "src/features/inventory/components/kardex-screen.tsx": {
     "no-restricted-imports": {
-      "count": 11
+      "count": 10
     }
   },
   "src/features/inventory/components/movements-screen.tsx": {
@@ -636,7 +636,7 @@
   },
   "src/features/platform-admin/components/billing-screen.tsx": {
     "no-restricted-imports": {
-      "count": 11
+      "count": 10
     }
   },
   "src/features/platform-admin/components/flags-screen.tsx": {
@@ -661,7 +661,7 @@
   },
   "src/features/platform-admin/components/staff-screen.tsx": {
     "no-restricted-imports": {
-      "count": 14
+      "count": 13
     }
   },
   "src/features/platform-admin/components/support-screen.tsx": {
@@ -676,7 +676,7 @@
   },
   "src/features/platform-admin/components/tenant-detail.tsx": {
     "no-restricted-imports": {
-      "count": 10
+      "count": 9
     }
   },
   "src/features/platform-admin/components/tenants-table.tsx": {
@@ -726,7 +726,7 @@
   },
   "src/features/purchases/components/supplier-detail.tsx": {
     "no-restricted-imports": {
-      "count": 9
+      "count": 8
     }
   },
   "src/features/purchases/components/suppliers-screen.tsx": {
@@ -746,12 +746,12 @@
   },
   "src/features/quotes/components/quotes-board.tsx": {
     "no-restricted-imports": {
-      "count": 10
+      "count": 9
     }
   },
   "src/features/receivables/components/receivables-screen.tsx": {
     "no-restricted-imports": {
-      "count": 17
+      "count": 16
     }
   },
   "src/features/reports/components/liquidation-screen.tsx": {
@@ -761,7 +761,7 @@
   },
   "src/features/reports/components/management-reports.tsx": {
     "no-restricted-imports": {
-      "count": 12
+      "count": 11
     }
   },
   "src/features/reports/components/reports-screen.tsx": {
@@ -771,12 +771,12 @@
   },
   "src/features/restaurant/components/delivery-screen.tsx": {
     "no-restricted-imports": {
-      "count": 7
+      "count": 6
     }
   },
   "src/features/restaurant/components/floor-screen.tsx": {
     "no-restricted-imports": {
-      "count": 7
+      "count": 6
     }
   },
   "src/features/restaurant/components/kds-board.tsx": {
@@ -791,7 +791,7 @@
   },
   "src/features/retail/components/product-variants.tsx": {
     "no-restricted-imports": {
-      "count": 9
+      "count": 8
     }
   },
   "src/features/settings/components/audit-screen.tsx": {
@@ -806,7 +806,7 @@
   },
   "src/features/settings/components/profile-screen.tsx": {
     "no-restricted-imports": {
-      "count": 9
+      "count": 8
     }
   },
   "src/features/settings/components/security-screen.tsx": {
@@ -826,7 +826,7 @@
   },
   "src/features/veterinary/components/hospital-screen.tsx": {
     "no-restricted-imports": {
-      "count": 9
+      "count": 8
     }
   },
   "src/features/veterinary/components/new-pet-sheet.tsx": {
@@ -836,7 +836,7 @@
   },
   "src/features/veterinary/components/pet-detail.tsx": {
     "no-restricted-imports": {
-      "count": 16
+      "count": 15
     }
   },
   "src/features/veterinary/components/pets-list.tsx": {
