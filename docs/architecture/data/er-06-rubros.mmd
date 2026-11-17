@@ -9,7 +9,8 @@ erDiagram
   SERVICE_ORDERS ||--o| SALES : "se cobra en"
   VEHICLES ||--o{ ODOMETER_READINGS : registra
   VEHICLES ||--o{ MAINTENANCE_REMINDERS : programa
-  SERVICE_RULES ||--o{ MAINTENANCE_REMINDERS : origina
+  MAINTENANCE_REMINDERS ||--o{ REMINDER_DELIVERIES : envia
+  SERVICE_ORDERS ||--o| MAINTENANCE_REMINDERS : programa
   ITEMS ||--o| BOOK_DETAILS : "extiende (1:1)"
   BOOK_DETAILS }o--o{ AUTHORS : "escrito por"
   PUBLISHERS ||--o{ BOOK_DETAILS : publica
@@ -61,7 +62,7 @@ erDiagram
     text bay "bahia o rampa"
     uuid technician_id
     text status "abierta, en_proceso, terminada, facturada, cancelada; cobro al contado, sin credito"
-    uuid sale_id FK "UK, nullable hasta facturar"
+    uuid sale_id FK "UK tenant_id+sale_id, nullable hasta facturar"
     timestamptz opened_at
     timestamptz closed_at
   }
@@ -82,27 +83,29 @@ erDiagram
     text condition "bueno, regular, cambiar"
     text note
   }
-  SERVICE_RULES {
-    uuid id PK
-    uuid tenant_id "RLS"
-    text service_kind "cambio_aceite"
-    int every_km "default 5000: proximo = km actual + 5000"
-    int every_days "fecha del proximo servicio, vence lo primero (valor por PO)"
-  }
   MAINTENANCE_REMINDERS {
     uuid id PK
     uuid tenant_id "RLS"
     uuid vehicle_id FK
-    uuid rule_id FK
-    uuid service_order_id "OT que lo origino"
-    int due_km "km de la OT + every_km"
-    date due_on "indice tenant+status+due_on"
-    text channels "whatsapp y correo"
-    text status "programado, enviado, atendido, descartado"
+    uuid service_order_id "OT que lo origino, UK tenant_id+service_order_id"
+    text service_kind "cambio_aceite"
+    int due_km "km_in de la OT + 5000, constante del rubro (issue 100: no configurable en R2)"
+    date due_on "fecha estimada con km_per_day_est del vehiculo"
+    date notify_on "due_on - 7 dias o km estimado alcanzado, lo primero (issue 101)"
+    text status "programado, enviado, reenviado, en_lista_llamada, atendido, reemplazado, descartado"
+    uuid superseded_by "nuevo recordatorio al cerrar otra OT del mismo vehiculo"
+  }
+  REMINDER_DELIVERIES {
+    uuid tenant_id PK "RLS"
+    uuid reminder_id PK, FK
+    text channel PK "whatsapp, correo"
+    smallint attempt PK "1 envio, 2 reenvio unico: un cliente no recibe el mismo aviso dos veces"
+    text status "enviado, fallido, sin_consentimiento"
+    timestamptz sent_at
   }
   BOOK_DETAILS {
+    uuid tenant_id PK "RLS"
     uuid item_id PK, FK
-    uuid tenant_id "RLS"
     text isbn13 "CHECK digito verificador; indice tenant+isbn13"
     text title
     text edition
@@ -118,7 +121,7 @@ erDiagram
   PUBLISHERS {
     uuid id PK
     uuid tenant_id "RLS"
-    text name "UK tenant+name"
+    text name "UK tenant_id+name"
   }
   SCHOOLS {
     uuid id PK

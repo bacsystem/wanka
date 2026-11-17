@@ -1,5 +1,5 @@
 ---
-title: plataforma (esquema platform, sin RLS de tenant) + transversales (audit, ops)
+title: plataforma (esquema platform, SIN RLS, solo roles de plataforma) + transversales (audit con RLS, ops)
 ---
 erDiagram
   PLANS ||--o{ PLAN_MODULES : incluye
@@ -11,6 +11,7 @@ erDiagram
   PLATFORM_USERS ||--o{ PLATFORM_SESSIONS : abre
   PLATFORM_USERS ||--o{ IMPERSONATION_GRANTS : solicita
   PLATFORM_USERS ||--o{ TICKETS : atiende
+  PLATFORM_USERS ||--o{ PLATFORM_AUDIT_EVENTS : registra
 
   MODULES {
     text code PK "ventas, inventario, rubro.lubricentro..."
@@ -55,7 +56,7 @@ erDiagram
     boolean enabled
   }
   TENANT_USAGE {
-    uuid tenant_id PK
+    uuid tenant_id PK "escribe wanka_worker (GRANT INSERT, UPDATE solo en esta tabla)"
     date period PK "mes"
     int cpe_issued "contador actualizado por el worker"
     int active_users
@@ -86,6 +87,7 @@ erDiagram
     uuid tenant_id
     uuid ticket_id "obligatorio"
     text scope "read_only o full"
+    bytea exchange_token_hash "UK: token de un uso que canjea el plano tenant via iam.redeem_impersonation()"
     timestamptz expires_at "max 60 min"
     timestamptz revoked_at
   }
@@ -97,7 +99,8 @@ erDiagram
   }
   AUDIT_LOG {
     uuid id PK "audit.events, solo insercion, particion mensual"
-    uuid tenant_id "RLS; null para eventos de plataforma"
+    uuid tenant_id "NOT NULL, RLS; tambien acciones del staff sobre ese tenant"
+    text actor_type "user, platform_staff, system"
     uuid actor_user_id
     uuid impersonator_id "si aplica"
     text action "modulo.recurso:accion"
@@ -107,6 +110,17 @@ erDiagram
     inet ip
     text request_id
     jsonb diff
+    timestamptz at
+  }
+  PLATFORM_AUDIT_EVENTS {
+    uuid id PK "platform.audit_events SIN RLS: solo wanka_platform"
+    uuid platform_user_id FK
+    uuid target_tenant_id "nullable"
+    text action "tenants:create, tenants:impersonate, plans:update..."
+    text result
+    inet ip
+    text request_id
+    jsonb detail
     timestamptz at
   }
   IDEMPOTENCY_KEYS {

@@ -1,5 +1,5 @@
 ---
-title: compras + finanzas (esquemas purch, fin)
+title: compras + finanzas (esquemas purch, fin) - PEN y USD desde R1; toda UNIQUE natural empieza por tenant_id
 ---
 erDiagram
   SUPPLIERS ||--o{ PURCHASE_ORDERS : recibe
@@ -8,15 +8,11 @@ erDiagram
   PURCHASE_ORDERS ||--o{ PURCHASE_DOCUMENTS : "se factura en"
   PURCHASE_DOCUMENTS ||--o| PAYABLES : genera
   PAYABLES ||--o{ PAYABLE_PAYMENTS : paga
+  CASH_SHIFTS ||--|{ CASH_SHIFT_FLOATS : "fondo inicial por moneda"
   CASH_SHIFTS ||--o{ CASH_MOVEMENTS : registra
   CASH_SHIFTS ||--o{ CASH_COUNTS : arquea
   CASH_SHIFTS ||--o| Z_REPORTS : cierra
-  SUPPLIERS ||--o{ CONSIGNMENTS : "entrega en consignacion"
-  CONSIGNMENTS ||--|{ CONSIGNMENT_LINES : contiene
-  CONSIGNMENTS ||--o{ SUPPLIER_RETURNS : "se devuelve en"
-  SUPPLIER_RETURNS ||--|{ SUPPLIER_RETURN_LINES : contiene
-  CONSIGNMENTS ||--o{ CONSIGNMENT_SETTLEMENTS : liquida
-  CONSIGNMENT_SETTLEMENTS ||--o| PURCHASE_DOCUMENTS : "se factura en"
+  Z_REPORTS ||--|{ Z_REPORT_TOTALS : "por metodo y moneda"
   RECEIVABLES ||--o{ RECEIVABLE_INSTALLMENTS : cuotas
   RECEIVABLES ||--o{ RECEIVABLE_PAYMENTS : cobra
 
@@ -37,17 +33,18 @@ erDiagram
     text series
     bigint number "UK tenant+series+number"
     text status "pendiente, parcial, recibida, cancelada"
+    char currency "PEN, USD"
     date expected_on
-    numeric total "numeric(14,2)"
+    numeric total "numeric(14,2) CHECK > 0"
   }
   PURCHASE_ORDER_LINES {
     uuid id PK
     uuid tenant_id "RLS"
     uuid order_id FK
     uuid variant_id FK
-    numeric qty "numeric(14,4)"
-    numeric qty_received "numeric(14,4)"
-    numeric unit_cost "numeric(18,6)"
+    numeric qty "numeric(14,4) CHECK > 0"
+    numeric qty_received "numeric(14,4) CHECK 0..qty"
+    numeric unit_cost "numeric(18,6) CHECK > 0, en la moneda de la OC"
   }
   PURCHASE_DOCUMENTS {
     uuid id PK
@@ -56,22 +53,25 @@ erDiagram
     text doc_type "01, 03, 07, 14"
     text series
     text number "UK tenant+supplier+doc_type+series+number"
-    text cuo "correlativo unico de operacion"
+    text cuo "correlativo unico de operacion, UK tenant+periodo+cuo"
     date issue_date
-    numeric base "numeric(14,2)"
-    numeric igv "numeric(14,2)"
-    numeric total "numeric(14,2)"
+    char currency "PEN, USD"
+    numeric exchange_rate "numeric(6,3) NOT NULL si USD (CHECK); el kardex valoriza en PEN con este tipo"
+    numeric base "numeric(14,2) CHECK >= 0"
+    numeric igv "numeric(14,2) CHECK >= 0"
+    numeric total "numeric(14,2) CHECK > 0 (NC 07: importe positivo con signo por tipo)"
     numeric detraction_rate "numeric(5,2)"
-    numeric detraction_amount "numeric(14,2)"
+    numeric detraction_amount "numeric(14,2) en PEN (la detraccion se deposita en soles)"
     text sire_status "aceptado, discrepancia, excluido"
     text expense_class
   }
   PAYABLES {
     uuid id PK
     uuid tenant_id "RLS"
-    uuid purchase_document_id FK "UK"
+    uuid purchase_document_id FK "UK tenant_id+purchase_document_id"
+    char currency "PEN, USD (la del documento)"
     date due_on "indice tenant+status+due_on"
-    numeric total "numeric(14,2)"
+    numeric total "numeric(14,2) CHECK > 0"
     numeric balance "numeric(14,2) CHECK 0..total"
     text status "programada, por_vencer, vencida, pagada"
   }
@@ -79,15 +79,19 @@ erDiagram
     uuid id PK
     uuid tenant_id "RLS"
     uuid payable_id FK
+    char currency "moneda pagada"
     numeric amount "numeric(14,2) CHECK > 0"
+    numeric exchange_rate "numeric(6,3) si difiere de la moneda de la deuda"
+    numeric amount_applied "numeric(14,2) CHECK > 0, en la moneda de la deuda"
     date paid_on
   }
   RECEIVABLES {
     uuid id PK
     uuid tenant_id "RLS"
     uuid customer_id FK
-    uuid document_id "comprobante en facturacion-electronica"
-    numeric total "numeric(14,2)"
+    uuid document_id "comprobante en facturacion-electronica; UK tenant_id+document_id"
+    char currency "PEN, USD (la del comprobante)"
+    numeric total "numeric(14,2) CHECK > 0"
     numeric balance "numeric(14,2) CHECK 0..total"
     text status "al_dia, por_vencer, vencido, judicial"
   }
@@ -95,78 +99,45 @@ erDiagram
     uuid id PK
     uuid tenant_id "RLS"
     uuid receivable_id FK
-    int seq "UK receivable_id+seq"
+    int seq "UK tenant_id+receivable_id+seq"
     date due_on
-    numeric amount "numeric(14,2)"
+    numeric amount "numeric(14,2) CHECK > 0"
   }
   RECEIVABLE_PAYMENTS {
     uuid id PK
     uuid tenant_id "RLS"
     uuid receivable_id FK
     uuid cash_movement_id FK "nullable"
-    numeric amount "numeric(14,2)"
-  }
-  CONSIGNMENTS {
-    uuid id PK "flag compras.consignacion (libreria primero)"
-    uuid tenant_id "RLS"
-    uuid supplier_id FK "distribuidora"
-    uuid warehouse_id FK
-    date received_on
-    date return_by "plazo de devolucion, alerta antes"
-    text status "abierta, en_liquidacion, cerrada"
-  }
-  CONSIGNMENT_LINES {
-    uuid id PK
-    uuid tenant_id "RLS"
-    uuid consignment_id FK
-    uuid variant_id FK
-    numeric qty_received "numeric(14,4)"
-    numeric qty_sold "numeric(14,4), lo actualiza la venta"
-    numeric qty_returned "numeric(14,4); CHECK sold + returned <= received"
-    numeric unit_cost "numeric(18,6) acordado"
-  }
-  SUPPLIER_RETURNS {
-    uuid id PK
-    uuid tenant_id "RLS"
-    uuid supplier_id FK
-    uuid consignment_id FK "nullable: tambien devoluciones de compra propia"
-    date due_on "plazo"
-    text status "borrador, enviada, aceptada"
-    uuid dispatch_guide_id "GRE motivo devolucion, si aplica"
-  }
-  SUPPLIER_RETURN_LINES {
-    uuid id PK
-    uuid tenant_id "RLS"
-    uuid return_id FK
-    uuid variant_id FK
-    numeric qty "numeric(14,4) CHECK > 0"
-  }
-  CONSIGNMENT_SETTLEMENTS {
-    uuid id PK
-    uuid tenant_id "RLS"
-    uuid consignment_id FK
-    date period_end
-    numeric amount "numeric(14,2) vendido x costo acordado"
-    uuid purchase_document_id FK "factura de la distribuidora"
+    char currency "moneda cobrada"
+    numeric amount "numeric(14,2) CHECK > 0"
+    numeric exchange_rate "numeric(6,3) si difiere"
+    numeric amount_applied "numeric(14,2) CHECK > 0, en la moneda de la deuda"
   }
   CASH_SHIFTS {
     uuid id PK
     uuid tenant_id "RLS"
-    uuid cash_register_id FK "UK parcial: un turno abierto por caja"
-    uuid opened_by
+    uuid cash_register_id FK "UK parcial tenant_id+cash_register_id WHERE status <> cerrado"
+    uuid opened_by "UK parcial tenant_id+opened_by WHERE status <> cerrado: un cajero, una caja"
     timestamptz opened_at
-    numeric opening_amount "numeric(14,2)"
-    text status "abierto, en_arqueo, cerrado"
+    text status "abierto, en_arqueo, cerrado; venta y movimiento exigen abierto con FOR SHARE"
     uuid closed_by
     uuid supervisor_id
+    text difference_reason "obligatorio si hay diferencia"
     timestamptz closed_at
+  }
+  CASH_SHIFT_FLOATS {
+    uuid tenant_id PK "RLS"
+    uuid shift_id PK, FK
+    char currency PK "PEN, USD"
+    numeric opening_amount "numeric(14,2) CHECK >= 0"
   }
   CASH_MOVEMENTS {
     uuid id PK
     uuid tenant_id "RLS"
     uuid shift_id FK
-    text kind "ingreso, egreso, retiro"
-    text method "efectivo, yape, plin, tarjeta, transferencia"
+    text kind "ingreso, egreso, retiro, vuelto"
+    text method "efectivo, tarjeta, yape, plin, transferencia"
+    char currency "PEN, USD"
     numeric amount "numeric(14,2) CHECK > 0"
     text source_type "sale, receivable_payment, expense, withdrawal"
     uuid source_id
@@ -175,21 +146,28 @@ erDiagram
   CASH_COUNTS {
     uuid id PK
     uuid tenant_id "RLS"
-    uuid shift_id FK
+    uuid shift_id FK "UK tenant_id+shift_id+method+currency"
     text method
-    numeric theoretical "numeric(14,2)"
-    numeric counted "numeric(14,2)"
-    jsonb denominations "solo efectivo"
+    char currency "PEN, USD: arqueo por metodo Y moneda"
+    numeric theoretical "numeric(14,2) CHECK >= 0"
+    numeric counted "numeric(14,2) CHECK >= 0"
+    jsonb denominations "solo efectivo, por moneda"
   }
   Z_REPORTS {
     uuid id PK
     uuid tenant_id "RLS"
-    uuid shift_id FK "UK"
+    uuid shift_id FK "UK tenant_id+shift_id"
     text series "Z"
     bigint number "UK tenant+series+number"
+    jsonb snapshot "inmutable: documentos, anulaciones, descuentos, retiros"
+    text hash "sha256 del snapshot y de los totales"
+  }
+  Z_REPORT_TOTALS {
+    uuid tenant_id PK "RLS"
+    uuid z_report_id PK, FK
+    text method PK
+    char currency PK "PEN, USD; no se convierten ni se suman entre monedas"
     numeric expected "numeric(14,2)"
     numeric counted "numeric(14,2)"
-    numeric difference "numeric(14,2)"
-    jsonb snapshot "totales por metodo y tipo de doc, inmutable"
-    text hash "sha256 del snapshot"
+    numeric difference "numeric(14,2) con signo: sobrante o faltante"
   }

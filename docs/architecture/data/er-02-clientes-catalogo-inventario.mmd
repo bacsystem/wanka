@@ -1,5 +1,5 @@
 ---
-title: clientes + catalogo + inventario (esquemas crm, catalog, inv)
+title: clientes + catalogo + inventario (esquemas crm, catalog, inv) - toda UNIQUE natural empieza por tenant_id
 ---
 erDiagram
   CUSTOMERS ||--o{ CUSTOMER_CONTACTS : tiene
@@ -18,6 +18,11 @@ erDiagram
   TRANSFERS ||--o{ TRANSFER_LINES : contiene
   WAREHOUSES ||--o{ TRANSFERS : origen_destino
   PHYSICAL_COUNTS ||--o{ PHYSICAL_COUNT_LINES : cuenta
+  CONSIGNMENTS ||--|{ CONSIGNMENT_LINES : contiene
+  WAREHOUSES ||--o{ CONSIGNMENTS : "recibe en"
+  CONSIGNMENTS ||--o{ CONSIGNMENT_SETTLEMENTS : liquida
+  CONSIGNMENTS ||--o{ SUPPLIER_RETURNS : "se devuelve en"
+  SUPPLIER_RETURNS ||--|{ SUPPLIER_RETURN_LINES : contiene
 
   CUSTOMERS {
     uuid id PK
@@ -28,7 +33,7 @@ erDiagram
     text email
     text phone
     text address
-    numeric credit_limit "numeric(14,2)"
+    numeric credit_limit "numeric(14,2) CHECK >= 0"
     timestamptz created_at
     timestamptz updated_at
     uuid created_by
@@ -41,6 +46,8 @@ erDiagram
     uuid customer_id FK
     text kind "telefono, correo, whatsapp"
     text value
+    boolean consent "consentimiento para avisos por este canal"
+    timestamptz consent_at
   }
   CATEGORIES {
     uuid id PK
@@ -68,27 +75,28 @@ erDiagram
     uuid item_id FK
     text sku "UK tenant_id+sku"
     jsonb attributes "talla, color, viscosidad, presentacion"
-    numeric price "numeric(14,4), precio con IGV"
-    numeric avg_cost "numeric(18,6), promedio ponderado"
-    numeric min_stock "numeric(14,4)"
+    numeric price "numeric(14,4) con IGV, CHECK > 0"
+    char price_currency "PEN, USD"
+    numeric avg_cost "numeric(18,6) promedio ponderado en PEN"
+    numeric min_stock "numeric(14,4) CHECK >= 0"
     boolean active
   }
   VARIANT_BARCODES {
-    uuid tenant_id "RLS"
-    text code PK "EAN-13, ISBN-13; UK tenant_id+code"
+    uuid tenant_id PK "RLS"
+    text code PK "EAN-13, ISBN-13: PK tenant_id+code"
     uuid variant_id FK
   }
   PRICE_LISTS {
     uuid id PK
     uuid tenant_id "RLS"
-    text name
-    text currency
+    text name "UK tenant_id+name"
+    char currency "PEN, USD"
   }
   PRICE_LIST_ENTRIES {
+    uuid tenant_id PK "RLS"
     uuid price_list_id PK, FK
     uuid variant_id PK, FK
-    uuid tenant_id "RLS"
-    numeric price "numeric(14,4)"
+    numeric price "numeric(14,4) CHECK > 0"
   }
   WAREHOUSES {
     uuid id PK
@@ -104,7 +112,7 @@ erDiagram
     uuid variant_id PK, FK
     numeric on_hand "numeric(14,4); CHECK >= 0 salvo allow_negative_stock"
     numeric reserved "numeric(14,4) CHECK >= 0"
-    numeric consigned "numeric(14,4) parte de on_hand propiedad de distribuidoras, fuera del kardex valorizado"
+    numeric consigned "numeric(14,4) CHECK 0..on_hand: parte de on_hand de distribuidoras, fuera del kardex valorizado"
     bigint version
     timestamptz updated_at
   }
@@ -114,7 +122,7 @@ erDiagram
     uuid warehouse_id FK
     uuid variant_id FK
     numeric qty "numeric(14,4) CHECK > 0"
-    text source_type "service_order, quote, held_sale"
+    text source_type "service_order, quote, school_list, held_sale"
     uuid source_id "UK tenant+source_type+source_id+variant"
     timestamptz expires_at "limpieza programada"
   }
@@ -134,7 +142,7 @@ erDiagram
     text kind "entrada, salida, traslado, merma, ajuste"
     text sunat_op_code "tabla 12"
     numeric qty "numeric(14,4) con signo, CHECK <> 0"
-    numeric unit_cost "numeric(18,6)"
+    numeric unit_cost "numeric(18,6) en PEN"
     numeric balance_qty "numeric(14,4) saldo tras el movimiento"
     numeric balance_avg_cost "numeric(18,6)"
     text source_type "sale, credit_note, purchase, transfer, count, adjustment, consignment, supplier_return"
@@ -148,7 +156,7 @@ erDiagram
     uuid tenant_id "RLS"
     uuid from_warehouse_id FK "CHECK distinto de to"
     uuid to_warehouse_id FK
-    text status "borrador, en_transito, recibido_parcial, recibido, anulado"
+    text status "borrador, en_transito, recibido_parcial, recibido, anulado; recepcion solo desde en_transito o recibido_parcial"
     uuid dispatch_guide_id "GRE en facturacion-electronica"
     timestamptz shipped_at
     timestamptz received_at
@@ -160,14 +168,15 @@ erDiagram
     uuid variant_id FK
     uuid lot_id
     numeric qty_sent "numeric(14,4) CHECK > 0"
-    numeric qty_received "numeric(14,4) CHECK >= 0"
+    numeric qty_received "numeric(14,4) CHECK qty_received >= 0 AND qty_received <= qty_sent"
   }
   PHYSICAL_COUNTS {
     uuid id PK
     uuid tenant_id "RLS"
     uuid warehouse_id FK
-    text status "abierta, cerrada"
+    text status "abierta, por_aprobar, cerrada"
     timestamptz snapshot_at
+    uuid approved_by "permiso inventario.counts:approve"
   }
   PHYSICAL_COUNT_LINES {
     uuid id PK
@@ -175,5 +184,50 @@ erDiagram
     uuid count_id FK
     uuid variant_id FK
     numeric system_qty "numeric(14,4)"
-    numeric counted_qty "numeric(14,4)"
+    numeric counted_qty "numeric(14,4) CHECK >= 0"
+  }
+  CONSIGNMENTS {
+    uuid id PK "inventario, flag inventario.consignacion (libreria primero, issue 112)"
+    uuid tenant_id "RLS"
+    uuid supplier_id "distribuidora (compras.suppliers via fachada)"
+    uuid warehouse_id FK
+    char currency "PEN, USD"
+    date received_on
+    date return_by "plazo de devolucion, alerta antes"
+    text status "abierta, en_liquidacion, cerrada"
+  }
+  CONSIGNMENT_LINES {
+    uuid id PK
+    uuid tenant_id "RLS"
+    uuid consignment_id FK
+    uuid variant_id FK
+    numeric qty_received "numeric(14,4) CHECK > 0"
+    numeric qty_sold "numeric(14,4) CHECK >= 0, lo actualiza la venta"
+    numeric qty_returned "numeric(14,4) CHECK >= 0 y sold + returned <= received"
+    numeric unit_cost "numeric(18,6) CHECK > 0, costo acordado en currency"
+  }
+  CONSIGNMENT_SETTLEMENTS {
+    uuid id PK
+    uuid tenant_id "RLS"
+    uuid consignment_id FK
+    date period_end "UK tenant_id+consignment_id+period_end"
+    char currency
+    numeric amount "numeric(14,2) CHECK >= 0, vendido x costo acordado"
+    uuid purchase_document_id "comprobante de la distribuidora en compras (fachada)"
+  }
+  SUPPLIER_RETURNS {
+    uuid id PK
+    uuid tenant_id "RLS"
+    uuid supplier_id
+    uuid consignment_id FK "nullable: tambien devoluciones de compra propia"
+    date due_on "plazo"
+    text status "borrador, enviada, aceptada"
+    uuid dispatch_guide_id "GRE motivo devolucion, si aplica"
+  }
+  SUPPLIER_RETURN_LINES {
+    uuid id PK
+    uuid tenant_id "RLS"
+    uuid return_id FK
+    uuid variant_id FK
+    numeric qty "numeric(14,4) CHECK > 0"
   }

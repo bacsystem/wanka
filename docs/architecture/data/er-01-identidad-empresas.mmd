@@ -1,5 +1,5 @@
 ---
-title: identidad + empresas (esquemas iam y org)
+title: identidad + empresas (esquemas iam y org) - RLS por tenant salvo las marcadas SIN RLS
 ---
 erDiagram
   TENANTS ||--o{ SITES : tiene
@@ -19,8 +19,8 @@ erDiagram
   TENANTS ||--|| TENANT_SETTINGS : configura
 
   TENANTS {
-    uuid id PK
-    text ruc UK "CHECK 11 digitos"
+    uuid id PK "org.tenants: politica por id = app.tenant_id, o membresia de app.user_id (solo SELECT)"
+    text ruc UK "UK global a proposito: un RUC = una empresa en la plataforma (el alta revela que ya existe)"
     text legal_name
     text trade_name
     text industry "lubricentro, libreria, restaurante, veterinaria, odontologia, retail"
@@ -66,7 +66,7 @@ erDiagram
   }
   USERS {
     uuid id PK
-    citext email UK
+    citext email UK "iam.users SIN RLS: identidad global, no de tenant"
     text full_name
     text password_hash "argon2id PHC"
     boolean email_verified
@@ -82,14 +82,17 @@ erDiagram
     text recovery_codes_hash "array de hashes"
   }
   SESSIONS {
-    uuid id PK
+    uuid id PK "iam.sessions SIN RLS: se busca por hash antes de conocer el tenant"
     uuid user_id FK
     uuid tenant_id "nullable hasta elegir empresa"
     uuid site_id "nullable"
+    uuid cash_register_id "nullable: caja elegida al entrar, fija la serie"
     bytea access_hash UK "sha256 del token"
     timestamptz access_expires_at
     bytea refresh_hash UK
     uuid refresh_family
+    bytea prev_refresh_hash "refresh anterior: reuso dentro de 10 s devuelve el par vigente"
+    timestamptz rotated_at
     timestamptz refresh_expires_at
     boolean mfa_passed
     inet ip
@@ -112,18 +115,18 @@ erDiagram
     boolean requires_mfa "true en propietario, administrador, contador"
   }
   PERMISSIONS {
-    text code PK "modulo.recurso:accion, ej. ventas.pos:create"
+    text code PK "iam.permissions SIN RLS: catalogo global; modulo.recurso:accion"
     text module "catalogo global, sin tenant"
     text description
   }
   ROLE_PERMISSIONS {
-    uuid tenant_id "RLS"
+    uuid tenant_id PK "RLS"
     uuid role_id PK, FK
     text permission_code PK, FK
   }
   MEMBERSHIPS {
     uuid id PK
-    uuid tenant_id FK "RLS"
+    uuid tenant_id FK "RLS: tenant_id = app.tenant_id OR (SELECT) user_id = app.user_id"
     uuid user_id FK "UK tenant_id+user_id"
     uuid role_id FK
     boolean all_sites
@@ -131,7 +134,7 @@ erDiagram
     bigint authz_version "se incrementa al cambiar rol"
   }
   MEMBERSHIP_SITES {
-    uuid tenant_id "RLS"
+    uuid tenant_id PK "RLS, misma politica por app.user_id que memberships"
     uuid membership_id PK, FK
     uuid site_id PK, FK
   }

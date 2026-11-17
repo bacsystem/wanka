@@ -1,5 +1,5 @@
 ---
-title: ventas + facturacion-electronica (esquemas sales, einv)
+title: ventas + facturacion-electronica (esquemas sales, einv) - toda UNIQUE natural empieza por tenant_id
 ---
 erDiagram
   SALES ||--|{ SALE_LINES : contiene
@@ -11,24 +11,25 @@ erDiagram
   ELECTRONIC_DOCUMENTS ||--o{ EDOC_EVENTS : historial
   ELECTRONIC_DOCUMENTS ||--o{ ELECTRONIC_DOCUMENTS : "NC/ND referencia a"
   ELECTRONIC_DOCUMENTS ||--o{ VOIDINGS : "baja solicitada"
-  PROVIDER_CREDENTIALS ||--o{ ELECTRONIC_DOCUMENTS : "emite con"
   DOCUMENT_SERIES ||--o{ ELECTRONIC_DOCUMENTS : numera
+  PROVIDER_CREDENTIALS ||--o{ ELECTRONIC_DOCUMENTS : "emite con"
+  WEBHOOK_ROUTES ||--|| PROVIDER_CREDENTIALS : "resuelve tenant de"
   ELECTRONIC_DOCUMENTS ||--o{ PROVIDER_WEBHOOK_EVENTS : notifica
 
   SALES {
     uuid id PK
     uuid tenant_id "RLS"
     uuid site_id FK
-    uuid cash_register_id FK
-    uuid shift_id FK "turno de caja abierto"
+    uuid cash_register_id FK "caja del turno, define la serie"
+    uuid shift_id FK "turno abierto: FOR SHARE en la tx de venta"
     uuid customer_id FK "FK compuesta tenant_id+customer_id"
     uuid quote_id FK "nullable"
     text status "completada, anulada"
     char currency "PEN, USD"
-    numeric exchange_rate "numeric(10,6), obligatorio si USD"
-    numeric subtotal "numeric(14,2)"
-    numeric igv "numeric(14,2)"
-    numeric total "numeric(14,2) CHECK total = subtotal + igv + otros"
+    numeric exchange_rate "numeric(6,3) soles por USD; NOT NULL si USD, NULL si PEN (CHECK)"
+    numeric subtotal "numeric(14,2) CHECK >= 0"
+    numeric igv "numeric(14,2) CHECK >= 0"
+    numeric total "numeric(14,2) CHECK > 0 y total = subtotal + igv + otros"
     text idempotency_key "UK tenant_id+idempotency_key"
     timestamptz sold_at
     uuid created_by
@@ -40,17 +41,22 @@ erDiagram
     uuid variant_id FK
     text description
     numeric qty "numeric(14,4) CHECK > 0"
-    numeric unit_price "numeric(14,4) con IGV"
-    numeric discount "numeric(14,2) CHECK >= 0"
+    numeric unit_price "numeric(14,4) con IGV, en la moneda de la venta, CHECK > 0"
+    numeric discount "numeric(14,2) CHECK >= 0 y <= qty x unit_price"
+    text discount_reason "obligatorio si discount > 0"
+    uuid discount_approved_by "supervisor si supera el tope del rol"
     text igv_affectation
-    numeric line_total "numeric(14,2)"
+    numeric line_total "numeric(14,2) CHECK > 0"
   }
   SALE_PAYMENTS {
     uuid id PK
     uuid tenant_id "RLS"
     uuid sale_id FK
-    text method "efectivo, tarjeta, yape_plin, transferencia, credito"
-    numeric amount "numeric(14,2) CHECK > 0"
+    text method "efectivo, tarjeta, yape, plin, transferencia, credito (credito solo factura)"
+    char currency "PEN, USD: moneda en que paga el cliente"
+    numeric amount "numeric(14,2) CHECK > 0, en currency"
+    numeric exchange_rate "numeric(6,3) si currency distinta de la venta"
+    numeric amount_in_sale_currency "numeric(14,2) CHECK > 0"
     text reference "lote POS, operacion"
   }
   QUOTES {
@@ -60,17 +66,18 @@ erDiagram
     text series "PRO..."
     bigint number "UK tenant+series+number"
     text status "borrador, enviada, aprobada, vencida, convertida"
+    char currency "PEN, USD"
     date expires_on
-    numeric total "numeric(14,2)"
-    bytea approval_token_hash "enlace publico de aprobacion"
+    numeric total "numeric(14,2) CHECK > 0"
+    bytea approval_token_hash "UK global: token aleatorio del enlace publico"
   }
   QUOTE_LINES {
     uuid id PK
     uuid tenant_id "RLS"
     uuid quote_id FK
     uuid variant_id FK
-    numeric qty "numeric(14,4)"
-    numeric unit_value "numeric(14,4) sin IGV"
+    numeric qty "numeric(14,4) CHECK > 0"
+    numeric unit_value "numeric(14,4) sin IGV CHECK > 0"
     numeric discount_pct "numeric(5,2) CHECK 0..100"
   }
   DOCUMENT_SERIES {
@@ -78,7 +85,7 @@ erDiagram
     bigint last_number
   }
   ELECTRONIC_DOCUMENTS {
-    uuid id PK "tambien clave de idempotencia hacia Khipu"
+    uuid id PK "tambien Idempotency-Key hacia Khipu"
     uuid tenant_id "RLS"
     text doc_type "01 factura, 03 boleta, 07 NC, 08 ND, 09 GRE"
     uuid series_id FK
@@ -88,23 +95,27 @@ erDiagram
     uuid source_sale_id "nullable"
     uuid related_document_id FK "NC/ND"
     text note_reason_code "catalogo 09 o 10"
+    char currency "PEN, USD (GRE: null)"
+    numeric exchange_rate "numeric(6,3) = tipo_cambio de Khipu (3 enteros, 3 decimales); NOT NULL si USD"
     text status "pendiente, enviado, aceptado, observado, rechazado, anulado"
-    text provider_status "estado crudo de Khipu, ej. ERROR_ENVIO"
-    text blocked_reason "validation, quota, auth o null"
+    smallint status_rank "1..5, transiciones solo hacia rango mayor"
+    text provider_status "estado crudo de Khipu, ej. ERROR_ENVIO, PENDIENTE_AGRUPACION"
+    text blocked_reason "validation, quota, auth, sunat_ya_lo_tiene, config o null"
     int attempts
     timestamptz next_attempt_at
     text provider "khipu"
-    text provider_ref "datos.id de Khipu, UK tenant+provider+provider_ref"
+    text provider_ref "datos.id de Khipu; se graba si es NULL, sin depender del estado"
     text sunat_code
     text sunat_message
     text hash "digest del XML firmado"
+    numeric provider_total "numeric(14,2) totales.total de Khipu, se compara con total"
     text xml_key "objeto S3"
     text cdr_key "objeto S3"
     text pdf_key "objeto S3"
     date issue_date
     timestamptz send_deadline "fecha_limite_envio de Khipu, alerta si se acerca"
-    numeric total "numeric(14,2)"
-    bigint version "transiciones con WHERE status = anterior"
+    numeric total "numeric(14,2) CHECK >= 0 (GRE 0)"
+    bigint version
   }
   EDOC_LINES {
     uuid id PK
@@ -112,11 +123,11 @@ erDiagram
     uuid document_id FK
     text code
     text description
-    numeric qty "numeric(14,4)"
+    numeric qty "numeric(14,4) CHECK > 0"
     text unit_code
     numeric unit_value "numeric(14,4) sin IGV"
-    numeric igv "numeric(14,2)"
-    numeric total "numeric(14,2)"
+    numeric igv "numeric(14,2) CHECK >= 0"
+    numeric total "numeric(14,2) CHECK >= 0"
   }
   EDOC_EVENTS {
     uuid id PK
@@ -130,10 +141,11 @@ erDiagram
   VOIDINGS {
     uuid id PK
     uuid tenant_id "RLS"
-    uuid document_id FK "UK parcial: una baja en curso por documento"
+    uuid document_id FK "UK parcial tenant_id+document_id WHERE status en curso"
     text reason "obligatorio"
-    text provider_void_id "id de la baja en Khipu (RA-... o RC-...)"
-    text status "solicitada, enviada, aceptada, rechazada"
+    text provider_void_id "id de la baja en Khipu"
+    text identifier "RA-... o RC-..."
+    text status "solicitada, generada, enviada, aceptada, rechazada, error_envio"
     timestamptz requested_at
   }
   PROVIDER_CREDENTIALS {
@@ -141,14 +153,22 @@ erDiagram
     text provider PK "khipu"
     bytea api_key_enc "fk_... cifrada AES-GCM, nunca se devuelve"
     bytea webhook_secret_enc "whsec_... cifrado"
-    text webhook_route_id UK "segmento aleatorio de /webhooks/khipu/{id}"
     text environment "BETA, PRODUCCION"
     timestamptz verified_at
   }
+  WEBHOOK_ROUTES {
+    text route_id PK "ops.webhook_routes SIN RLS: 128 bits aleatorios, solo SELECT para wanka_webhooks"
+    uuid tenant_id "a que tenant pertenece la ruta"
+    text provider "khipu"
+    timestamptz revoked_at
+  }
   PROVIDER_WEBHOOK_EVENTS {
+    uuid tenant_id PK "RLS"
     text provider PK
-    text event_id PK "X-Khipu-Delivery, dedupe"
-    uuid tenant_id
+    text event_id PK "X-Khipu-Delivery, dedupe por tenant"
+    text event_type "comprobante.aceptado..."
+    text doc_series "datos.serie"
+    bigint doc_number "datos.numero"
     jsonb payload
     timestamptz received_at
     timestamptz processed_at
