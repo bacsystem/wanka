@@ -8,13 +8,26 @@ const ALL_PALETTES =
   "slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose";
 const HARDCODED_PALETTE = new RegExp(`\\b(?:bg|text|border|ring|fill|from|to|via|stroke)-(?:${ALL_PALETTES})-\\d+`);
 
-const ARBITRARY_COLOR = /\b(?:bg|text|border|ring|fill|stroke|from|to|via|outline|decoration|shadow)-\[(?:#|rgb|hsl|oklch)/;
+const ARBITRARY_COLOR =
+  /\b(?:bg|text|border|ring|fill|stroke|from|to|via|outline|decoration|shadow)-\[(?:#|rgba?\(|hsla?\(|hwb\(|lab\(|lch\(|oklab\(|oklch\(|color\()/;
+const HEX_LITERAL = /#[0-9a-fA-F]{3,8}\b/;
+const WHITE_BLACK = /\b(?:bg|text|border|ring|fill|stroke|from|to|via)-(?:white|black)\b/;
+
+// Pre-existing literals, out of scope for the khipu adoption PR: migración W-n (docs/frontend-migration-khipu.md).
+// Any NEW file with a hex literal or bg/text-white|black fails the guard.
+const HEX_ALLOWLIST = ["features/platform-admin/components/monitoring-screen.tsx", "components/ui/chart.tsx"];
+const WHITE_BLACK_ALLOWLIST = [
+  "features/settings/components/sunat-settings.tsx",
+  "components/ui/sheet.tsx",
+  "components/ui/dialog.tsx",
+  "components/shared/status-badge.tsx",
+];
 
 function collectTsx(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
     const full = join(dir, name);
     if (statSync(full).isDirectory()) return name === "mocks" ? [] : collectTsx(full);
-    return name.endsWith(".tsx") && !name.endsWith(".test.tsx") ? [full] : [];
+    return /\.tsx?$/.test(name) && !/\.test\.tsx?$/.test(name) ? [full] : [];
   });
 }
 
@@ -27,6 +40,14 @@ describe("khipu design system adoption", () => {
   it("no TSX component or page uses an arbitrary color value (use DS tokens)", () => {
     const violations = collectTsx(SRC).filter((file) => ARBITRARY_COLOR.test(readFileSync(file, "utf8")));
     expect(violations.map((f) => relative(SRC, f))).toEqual([]);
+  });
+
+  it("no source file adds a hex color literal or bg/text-white|black (allow-list = pending migration)", () => {
+    const rel = (f: string) => relative(SRC, f);
+    const read = (f: string) => readFileSync(f, "utf8");
+    const files = collectTsx(SRC);
+    expect(files.filter((f) => HEX_LITERAL.test(read(f)) && !HEX_ALLOWLIST.includes(rel(f))).map(rel)).toEqual([]);
+    expect(files.filter((f) => WHITE_BLACK.test(read(f)) && !WHITE_BLACK_ALLOWLIST.includes(rel(f))).map(rel)).toEqual([]);
   });
 
   it("globals.css imports the package styles and does not redefine its tokens", () => {
