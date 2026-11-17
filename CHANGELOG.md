@@ -3,6 +3,16 @@
 All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.1.1] - 2026-11-17
+
+### Changed
+- Adopted the **khipu 0.5 ("Pastel Compacto")** design system in `apps/web` (`styles/tokens.css`, `styles/theme.css`, `#eceef1` canvas, borderless `shadow-card` surfaces, Lima default palette + 4 optional palettes, and Lavanda `.theme-admin` console theme with full derived tokens in light and dark mode).
+- Replaced `Geist` / `Geist Mono` with `Inter` (+ optional `Plus Jakarta Sans`, `Manrope`, `DM Sans`, `Figtree`) and `JetBrains Mono`, with `<AppearanceScript />` to prevent FOUC and a theme/palette/font switcher in `ThemeToggle`.
+- Migrated `Sidebar` to floating `rounded-xl` cards with a spring-animated active pill (`m.span` + `layoutId` + `SPRING`) and `Tabs` to `TabsPrimitive.Indicator` sliding transitions.
+- Standardized control heights to `h-control` (`2.25rem` / 36 px) with `size="sm"` (`h-7` / 28 px) for dense rows, `rounded-full` buttons with tactile press feedback, and `StatGrid` mobile horizontal scrolling (`min-w-44 shrink-0 snap-start`).
+- Introduced `@phosphor-icons/react` (`duotone` default, `fill` active, `bold` functional) across navigation, shell, pagination, and search inputs.
+- Added automated design-system guardrails in `apps/web/src/lib/design-system.test.ts` (22 Tailwind palettes, `.theme-admin` derived tokens, and `h-control` / `h-7` assertions) and updated `CLAUDE.md`.
+
 ## [0.1.0] - 2026-09-13
 
 ### Added
