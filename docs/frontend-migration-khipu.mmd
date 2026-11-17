@@ -8,6 +8,7 @@ flowchart LR
     DSD["DS-D toast imperative"]
     DSE["DS-E EntradaDecimal + fix EntradaMonto"]
     DSF["DS-F charts + KPI"]
+    DSH["DS-H Tabs strip-only + svg size rule (0.9.0)"]
   end
   subgraph W["bacsystem/wanka"]
     W0["W0 fix cn"]
@@ -25,6 +26,8 @@ flowchart LR
   W0 --> W1a
   DSG --> W1b
   W1a --> W1b
+  W1a --> W1c["W1c captures"]
+  DSH --> W2
   W1a --> W2 --> W3 --> W4
   W1a --> W5a
   DSE --> W3
