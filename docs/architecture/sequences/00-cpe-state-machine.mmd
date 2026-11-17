@@ -1,0 +1,27 @@
+---
+title: Maquina de estados de un CPE (electronic_documents.status)
+---
+stateDiagram-v2
+  [*] --> pendiente: venta/nota/guia confirmada (misma tx que el numero)
+  pendiente --> enviado: Khipu responde 201/200 (RECIBIDO, FIRMADO, ENVIADO, ERROR_ENVIO)
+  pendiente --> pendiente: salto Wanka a Khipu fallido (red, 5xx) o 422 a corregir, mismo numero
+  pendiente --> aceptado: SUNAT respondio en la misma llamada (ACEPTADO)
+  pendiente --> observado: ACEPTADO_CON_OBS en la misma llamada
+  pendiente --> rechazado: RECHAZADO en la misma llamada
+  enviado --> aceptado: ACEPTADO (CDR 0)
+  enviado --> observado: ACEPTADO_CON_OBS (4xxx, valido)
+  enviado --> rechazado: RECHAZADO, INVALIDO, FUERA_DE_PLAZO o DESCARTADO
+  enviado --> enviado: ERROR_ENVIO, Khipu reintenta hacia SUNAT
+  aceptado --> anulado: baja aceptada (Khipu arma RA o RC), max 7 dias
+  observado --> anulado: baja aceptada
+  rechazado --> [*]: el numero queda consumido, se emite un CPE nuevo
+  anulado --> [*]
+  note right of aceptado
+    NC/ND no cambian el estado del CPE origen:
+    se registran como documentos propios
+    con related_document_id.
+  end note
+  note right of pendiente
+    Alerta si now() > fecha_limite_envio - 24 h
+    (factura 3 dias, boleta 5 sola o 7 en resumen).
+  end note

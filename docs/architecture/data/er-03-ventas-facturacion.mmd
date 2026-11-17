@@ -1,0 +1,155 @@
+---
+title: ventas + facturacion-electronica (esquemas sales, einv)
+---
+erDiagram
+  SALES ||--|{ SALE_LINES : contiene
+  SALES ||--|{ SALE_PAYMENTS : cobra
+  SALES ||--o| ELECTRONIC_DOCUMENTS : "se documenta en"
+  QUOTES ||--|{ QUOTE_LINES : contiene
+  QUOTES ||--o{ SALES : "se convierte en"
+  ELECTRONIC_DOCUMENTS ||--|{ EDOC_LINES : contiene
+  ELECTRONIC_DOCUMENTS ||--o{ EDOC_EVENTS : historial
+  ELECTRONIC_DOCUMENTS ||--o{ ELECTRONIC_DOCUMENTS : "NC/ND referencia a"
+  ELECTRONIC_DOCUMENTS ||--o{ VOIDINGS : "baja solicitada"
+  PROVIDER_CREDENTIALS ||--o{ ELECTRONIC_DOCUMENTS : "emite con"
+  DOCUMENT_SERIES ||--o{ ELECTRONIC_DOCUMENTS : numera
+  ELECTRONIC_DOCUMENTS ||--o{ PROVIDER_WEBHOOK_EVENTS : notifica
+
+  SALES {
+    uuid id PK
+    uuid tenant_id "RLS"
+    uuid site_id FK
+    uuid cash_register_id FK
+    uuid shift_id FK "turno de caja abierto"
+    uuid customer_id FK "FK compuesta tenant_id+customer_id"
+    uuid quote_id FK "nullable"
+    text status "completada, anulada"
+    char currency "PEN, USD"
+    numeric exchange_rate "numeric(10,6), obligatorio si USD"
+    numeric subtotal "numeric(14,2)"
+    numeric igv "numeric(14,2)"
+    numeric total "numeric(14,2) CHECK total = subtotal + igv + otros"
+    text idempotency_key "UK tenant_id+idempotency_key"
+    timestamptz sold_at
+    uuid created_by
+  }
+  SALE_LINES {
+    uuid id PK
+    uuid tenant_id "RLS"
+    uuid sale_id FK
+    uuid variant_id FK
+    text description
+    numeric qty "numeric(14,4) CHECK > 0"
+    numeric unit_price "numeric(14,4) con IGV"
+    numeric discount "numeric(14,2) CHECK >= 0"
+    text igv_affectation
+    numeric line_total "numeric(14,2)"
+  }
+  SALE_PAYMENTS {
+    uuid id PK
+    uuid tenant_id "RLS"
+    uuid sale_id FK
+    text method "efectivo, tarjeta, yape_plin, transferencia, credito"
+    numeric amount "numeric(14,2) CHECK > 0"
+    text reference "lote POS, operacion"
+  }
+  QUOTES {
+    uuid id PK
+    uuid tenant_id "RLS"
+    uuid customer_id FK
+    text series "PRO..."
+    bigint number "UK tenant+series+number"
+    text status "borrador, enviada, aprobada, vencida, convertida"
+    date expires_on
+    numeric total "numeric(14,2)"
+    bytea approval_token_hash "enlace publico de aprobacion"
+  }
+  QUOTE_LINES {
+    uuid id PK
+    uuid tenant_id "RLS"
+    uuid quote_id FK
+    uuid variant_id FK
+    numeric qty "numeric(14,4)"
+    numeric unit_value "numeric(14,4) sin IGV"
+    numeric discount_pct "numeric(5,2) CHECK 0..100"
+  }
+  DOCUMENT_SERIES {
+    uuid id PK
+    bigint last_number
+  }
+  ELECTRONIC_DOCUMENTS {
+    uuid id PK "tambien clave de idempotencia hacia Khipu"
+    uuid tenant_id "RLS"
+    text doc_type "01 factura, 03 boleta, 07 NC, 08 ND, 09 GRE"
+    uuid series_id FK
+    text series
+    bigint number "UK tenant_id+doc_type+series+number; null en GRE hasta que Khipu numere"
+    text issuer_ruc
+    uuid source_sale_id "nullable"
+    uuid related_document_id FK "NC/ND"
+    text note_reason_code "catalogo 09 o 10"
+    text status "pendiente, enviado, aceptado, observado, rechazado, anulado"
+    text provider_status "estado crudo de Khipu, ej. ERROR_ENVIO"
+    text blocked_reason "validation, quota, auth o null"
+    int attempts
+    timestamptz next_attempt_at
+    text provider "khipu"
+    text provider_ref "datos.id de Khipu, UK tenant+provider+provider_ref"
+    text sunat_code
+    text sunat_message
+    text hash "digest del XML firmado"
+    text xml_key "objeto S3"
+    text cdr_key "objeto S3"
+    text pdf_key "objeto S3"
+    date issue_date
+    timestamptz send_deadline "fecha_limite_envio de Khipu, alerta si se acerca"
+    numeric total "numeric(14,2)"
+    bigint version "transiciones con WHERE status = anterior"
+  }
+  EDOC_LINES {
+    uuid id PK
+    uuid tenant_id "RLS"
+    uuid document_id FK
+    text code
+    text description
+    numeric qty "numeric(14,4)"
+    text unit_code
+    numeric unit_value "numeric(14,4) sin IGV"
+    numeric igv "numeric(14,2)"
+    numeric total "numeric(14,2)"
+  }
+  EDOC_EVENTS {
+    uuid id PK
+    uuid tenant_id "RLS"
+    uuid document_id FK
+    text from_status
+    text to_status
+    text detail
+    timestamptz at
+  }
+  VOIDINGS {
+    uuid id PK
+    uuid tenant_id "RLS"
+    uuid document_id FK "UK parcial: una baja en curso por documento"
+    text reason "obligatorio"
+    text provider_void_id "id de la baja en Khipu (RA-... o RC-...)"
+    text status "solicitada, enviada, aceptada, rechazada"
+    timestamptz requested_at
+  }
+  PROVIDER_CREDENTIALS {
+    uuid tenant_id PK "esquema integ, RLS"
+    text provider PK "khipu"
+    bytea api_key_enc "fk_... cifrada AES-GCM, nunca se devuelve"
+    bytea webhook_secret_enc "whsec_... cifrado"
+    text webhook_route_id UK "segmento aleatorio de /webhooks/khipu/{id}"
+    text environment "BETA, PRODUCCION"
+    timestamptz verified_at
+  }
+  PROVIDER_WEBHOOK_EVENTS {
+    text provider PK
+    text event_id PK "X-Khipu-Delivery, dedupe"
+    uuid tenant_id
+    jsonb payload
+    timestamptz received_at
+    timestamptz processed_at
+  }

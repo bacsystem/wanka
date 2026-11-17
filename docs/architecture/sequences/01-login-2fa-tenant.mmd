@@ -1,0 +1,42 @@
+---
+title: Login + 2FA TOTP + seleccion de empresa y sede
+---
+sequenceDiagram
+  autonumber
+  actor U as Usuario
+  participant W as web (BFF Next.js)
+  participant A as api /v1 (identidad)
+  participant DB as PostgreSQL
+
+  U->>W: POST /login (email, password)
+  W->>A: POST /v1/auth/login {email, password}
+  A->>A: rate limit por IP y por email (5/min)
+  A->>DB: SELECT usuario por email (sin RLS: iam.users no es tabla de tenant)
+  alt credencial invalida o bloqueado
+    A->>DB: failed_logins++, locked_until si >= 5
+    A-->>W: 401 invalid_credentials (mismo mensaje y tiempo para email inexistente)
+    W-->>U: "Correo o contrasena incorrectos"
+  else password ok (argon2id verify)
+    A->>DB: INSERT sessions (mfa_passed=false, tenant_id=null), tokens de un solo uso
+    A-->>W: 200 {status:"mfa_required", challenge_token} (TTL 5 min)
+  end
+  U->>W: codigo TOTP de 6 digitos
+  W->>A: POST /v1/auth/mfa/verify {challenge_token, code}
+  A->>A: verifica TOTP (ventana +-1 paso, rechaza codigo ya usado)
+  A->>DB: UPDATE sessions SET mfa_passed=true, emite access (15 min) + refresh (rotativo)
+  A-->>W: 200 {access_token, refresh_token, memberships:[{tenant, role, sites}]}
+  W->>W: Set-Cookie wk_at (httpOnly, Secure, SameSite=Lax), wk_rt (Path=/api/auth/refresh)
+  W-->>U: redirige a /seleccionar-empresa
+  U->>W: elige empresa t y sede s
+  W->>A: POST /v1/auth/session/tenant {tenant_id, site_id}
+  A->>DB: SELECT membership (user, tenant activo, sede en alcance)
+  alt sin membresia o tenant suspendido
+    A-->>W: 403 tenant_access_denied
+  else ok
+    A->>DB: revoca tokens actuales, nueva sesion ligada a tenant_id + site_id + authz_version
+    A-->>W: 200 {access_token, refresh_token, tenant, site, permissions[], modules[]}
+    W->>W: reemplaza cookies, borra cookie legacy tenant_id
+    W-->>U: redirige a /
+  end
+  Note over W,A: Refresh: POST /v1/auth/refresh con rotacion. Reuso de un refresh ya rotado revoca toda la familia (posible robo).
+  Note over A: Recuperacion: POST /v1/auth/password/forgot (respuesta 202 siempre) -> token 15 min por correo -> POST /v1/auth/password/reset revoca todas las sesiones.

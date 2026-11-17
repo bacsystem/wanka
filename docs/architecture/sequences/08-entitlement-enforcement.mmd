@@ -1,0 +1,38 @@
+---
+title: Aplicacion de plan, modulo, feature flag y permiso en una peticion
+---
+sequenceDiagram
+  autonumber
+  participant W as web (BFF)
+  participant MW as api middleware
+  participant E as entitlements (cache en memoria, TTL 30 s)
+  participant DB as PostgreSQL
+  participant H as handler del modulo
+
+  W->>MW: POST /v1/lubricentro/service-orders Bearer wk_at_...
+  MW->>DB: SELECT sesion por sha256(token) (no revocada, no expirada, mfa_passed, tenant_id)
+  alt sesion invalida o token de otro plano (prefijo wka_)
+    MW-->>W: 401 unauthenticated
+  end
+  MW->>E: Entitlements(tenant_id)
+  alt cache vencida
+    E->>DB: subscription activa + plan_modules + tenant_module_overrides + flags + tenant_usage
+    E-->>MW: {modules, flags, limits, usage, version}
+  end
+  alt subscription suspendida
+    MW-->>W: 402 subscription_inactive (solo lectura permitida segun politica)
+  else modulo rubro.lubricentro no habilitado
+    MW-->>W: 403 module_not_enabled {module}
+  else limite de plan alcanzado (ej. CPE del mes, usuarios, sedes)
+    MW-->>W: 403 plan_limit_reached {limit, used}
+  else ok
+    MW->>DB: permisos del membership (cache por membership_id + authz_version)
+    alt falta lubricentro.service_order:create
+      MW-->>W: 403 forbidden {permission}
+    else autorizado
+      MW->>H: ctx con tenant, site, user, permisos
+      H->>DB: BEGIN, set_config('app.tenant_id'), ... COMMIT
+      H-->>W: 201
+    end
+  end
+  Note over E: Cambios desde la consola invalidan via NOTIFY entitlements_changed (todas las replicas escuchan), el TTL acota el peor caso. La UI usa los mismos datos (GET /v1/me/entitlements) solo para ocultar menus.

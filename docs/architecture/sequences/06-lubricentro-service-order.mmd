@@ -1,0 +1,40 @@
+---
+title: Lubricentro - orden de servicio por placa -> venta -> CPE -> recordatorio por km
+---
+sequenceDiagram
+  autonumber
+  actor R as Recepcionista
+  actor T as Tecnico
+  participant W as web
+  participant L as api (rubro lubricentro)
+  participant V as api (ventas, facade)
+  participant DB as PostgreSQL
+  participant WK as worker
+
+  R->>W: busca placa ABC-123
+  W->>L: GET /v1/lubricentro/vehicles?plate=ABC123
+  L->>DB: indice UK tenant_id+plate
+  alt no existe
+    W->>L: POST /v1/lubricentro/vehicles {plate, customer_id, marca, modelo, anio}
+  end
+  R->>W: abre OT con km de ingreso y servicios sugeridos por service_rules
+  W->>L: POST /v1/lubricentro/service-orders Idempotency-Key {vehicle_id, km_in, lines}
+  L->>DB: BEGIN tenant, serie OT, INSERT service_orders abierta
+  L->>DB: INSERT odometer_readings, UPDATE vehicles.current_km (CHECK km_in >= ultimo, salvo correccion con permiso)
+  L->>DB: INSERT stock_reservations (aceite, filtro) via facade inventario, COMMIT
+  T->>W: marca en proceso, registra diagnostico de filtro de aire y de aceite, agrega o quita productos envasados, termina
+  W->>L: PATCH /v1/lubricentro/service-orders/{id} (version para concurrencia optimista)
+  R->>W: Cobrar OT
+  W->>L: POST /v1/lubricentro/service-orders/{id}/checkout Idempotency-Key {pagos al contado, boleta o factura}
+  L->>DB: BEGIN tenant, SELECT OT FOR UPDATE (status terminada)
+  L->>V: CreateSale(tx, lines, customer, payments, source=service_order)
+  V->>DB: libera reservas y descuenta stock, serie B001/F001, sale, electronic_document pendiente, job cpe.emit
+  V-->>L: sale_id
+  L->>DB: UPDATE OT facturada, sale_id, programa maintenance_reminders (due_km = km_in + 5000, due_on segun regla)
+  L->>DB: COMMIT
+  L-->>W: 201 {service_order, sale, document pendiente}
+  Note over WK: Emision CPE identica a la venta POS (diagrama 02)
+  loop diario 08:00 America/Lima (periodico, lider unico)
+    WK->>DB: por tenant con modulo lubricentro: recordatorios con due_on <= hoy+3 o km estimado >= due_km
+    WK->>WK: encola WhatsApp y correo, idempotentes por reminder_id, con lo que ocurra primero entre km y fecha
+  end

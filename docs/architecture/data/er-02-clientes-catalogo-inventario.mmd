@@ -1,0 +1,179 @@
+---
+title: clientes + catalogo + inventario (esquemas crm, catalog, inv)
+---
+erDiagram
+  CUSTOMERS ||--o{ CUSTOMER_CONTACTS : tiene
+  CATEGORIES ||--o{ ITEMS : agrupa
+  ITEMS ||--o{ ITEM_VARIANTS : "tiene (>=1, la variante base)"
+  ITEM_VARIANTS ||--o{ VARIANT_BARCODES : identifica
+  PRICE_LISTS ||--o{ PRICE_LIST_ENTRIES : contiene
+  ITEM_VARIANTS ||--o{ PRICE_LIST_ENTRIES : precio
+  WAREHOUSES ||--o{ STOCK_LEVELS : guarda
+  ITEM_VARIANTS ||--o{ STOCK_LEVELS : en
+  WAREHOUSES ||--o{ STOCK_MOVEMENTS : registra
+  ITEM_VARIANTS ||--o{ STOCK_MOVEMENTS : mueve
+  STOCK_LOTS ||--o{ STOCK_MOVEMENTS : lote
+  ITEM_VARIANTS ||--o{ STOCK_LOTS : lotea
+  STOCK_LEVELS ||--o{ STOCK_RESERVATIONS : reserva
+  TRANSFERS ||--o{ TRANSFER_LINES : contiene
+  WAREHOUSES ||--o{ TRANSFERS : origen_destino
+  PHYSICAL_COUNTS ||--o{ PHYSICAL_COUNT_LINES : cuenta
+
+  CUSTOMERS {
+    uuid id PK
+    uuid tenant_id FK "RLS; UK tenant_id+id para FKs compuestas"
+    text doc_type "DNI, RUC, CE, PAS, SIN_DOC (catalogo 06)"
+    text doc_number "UK tenant_id+doc_type+doc_number"
+    text name
+    text email
+    text phone
+    text address
+    numeric credit_limit "numeric(14,2)"
+    timestamptz created_at
+    timestamptz updated_at
+    uuid created_by
+    uuid updated_by
+    timestamptz deleted_at "baja logica"
+  }
+  CUSTOMER_CONTACTS {
+    uuid id PK
+    uuid tenant_id "RLS"
+    uuid customer_id FK
+    text kind "telefono, correo, whatsapp"
+    text value
+  }
+  CATEGORIES {
+    uuid id PK
+    uuid tenant_id "RLS"
+    text name "UK tenant_id+name"
+    boolean active
+  }
+  ITEMS {
+    uuid id PK
+    uuid tenant_id "RLS"
+    uuid category_id FK
+    text nature "producto, servicio"
+    text name
+    text unspsc "catalogo 25"
+    text unit_code "catalogo 03, ej. NIU, ZZ, BX"
+    text igv_affectation "10, 20, 30 (catalogo 07)"
+    boolean tracks_stock "false para servicios"
+    boolean tracks_lots
+    text industry_ext "lubricentro, libreria... o null"
+    boolean active
+  }
+  ITEM_VARIANTS {
+    uuid id PK
+    uuid tenant_id "RLS"
+    uuid item_id FK
+    text sku "UK tenant_id+sku"
+    jsonb attributes "talla, color, viscosidad, presentacion"
+    numeric price "numeric(14,4), precio con IGV"
+    numeric avg_cost "numeric(18,6), promedio ponderado"
+    numeric min_stock "numeric(14,4)"
+    boolean active
+  }
+  VARIANT_BARCODES {
+    uuid tenant_id "RLS"
+    text code PK "EAN-13, ISBN-13; UK tenant_id+code"
+    uuid variant_id FK
+  }
+  PRICE_LISTS {
+    uuid id PK
+    uuid tenant_id "RLS"
+    text name
+    text currency
+  }
+  PRICE_LIST_ENTRIES {
+    uuid price_list_id PK, FK
+    uuid variant_id PK, FK
+    uuid tenant_id "RLS"
+    numeric price "numeric(14,4)"
+  }
+  WAREHOUSES {
+    uuid id PK
+    uuid tenant_id "RLS"
+    uuid site_id FK
+    text code "UK tenant_id+code"
+    text kind "principal, subalmacen, sucursal, restringido"
+    boolean active
+  }
+  STOCK_LEVELS {
+    uuid tenant_id PK "RLS"
+    uuid warehouse_id PK, FK
+    uuid variant_id PK, FK
+    numeric on_hand "numeric(14,4); CHECK >= 0 salvo allow_negative_stock"
+    numeric reserved "numeric(14,4) CHECK >= 0"
+    numeric consigned "numeric(14,4) parte de on_hand propiedad de distribuidoras, fuera del kardex valorizado"
+    bigint version
+    timestamptz updated_at
+  }
+  STOCK_RESERVATIONS {
+    uuid id PK
+    uuid tenant_id "RLS"
+    uuid warehouse_id FK
+    uuid variant_id FK
+    numeric qty "numeric(14,4) CHECK > 0"
+    text source_type "service_order, quote, held_sale"
+    uuid source_id "UK tenant+source_type+source_id+variant"
+    timestamptz expires_at "limpieza programada"
+  }
+  STOCK_LOTS {
+    uuid id PK
+    uuid tenant_id "RLS"
+    uuid variant_id FK
+    text lot_code "UK tenant+variant+lot_code"
+    date expires_on
+  }
+  STOCK_MOVEMENTS {
+    uuid id PK "uuidv7, solo insercion"
+    uuid tenant_id "RLS"
+    uuid warehouse_id FK
+    uuid variant_id FK
+    uuid lot_id FK "nullable"
+    text kind "entrada, salida, traslado, merma, ajuste"
+    text sunat_op_code "tabla 12"
+    numeric qty "numeric(14,4) con signo, CHECK <> 0"
+    numeric unit_cost "numeric(18,6)"
+    numeric balance_qty "numeric(14,4) saldo tras el movimiento"
+    numeric balance_avg_cost "numeric(18,6)"
+    text source_type "sale, credit_note, purchase, transfer, count, adjustment, consignment, supplier_return"
+    boolean consigned "true si la mercaderia es de una distribuidora"
+    uuid source_id
+    timestamptz occurred_at "indice tenant+variant+warehouse+occurred_at (kardex)"
+    uuid created_by
+  }
+  TRANSFERS {
+    uuid id PK
+    uuid tenant_id "RLS"
+    uuid from_warehouse_id FK "CHECK distinto de to"
+    uuid to_warehouse_id FK
+    text status "borrador, en_transito, recibido_parcial, recibido, anulado"
+    uuid dispatch_guide_id "GRE en facturacion-electronica"
+    timestamptz shipped_at
+    timestamptz received_at
+  }
+  TRANSFER_LINES {
+    uuid id PK
+    uuid tenant_id "RLS"
+    uuid transfer_id FK
+    uuid variant_id FK
+    uuid lot_id
+    numeric qty_sent "numeric(14,4) CHECK > 0"
+    numeric qty_received "numeric(14,4) CHECK >= 0"
+  }
+  PHYSICAL_COUNTS {
+    uuid id PK
+    uuid tenant_id "RLS"
+    uuid warehouse_id FK
+    text status "abierta, cerrada"
+    timestamptz snapshot_at
+  }
+  PHYSICAL_COUNT_LINES {
+    uuid id PK
+    uuid tenant_id "RLS"
+    uuid count_id FK
+    uuid variant_id FK
+    numeric system_qty "numeric(14,4)"
+    numeric counted_qty "numeric(14,4)"
+  }

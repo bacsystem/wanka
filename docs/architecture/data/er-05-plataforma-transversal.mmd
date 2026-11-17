@@ -1,0 +1,127 @@
+---
+title: plataforma (esquema platform, sin RLS de tenant) + transversales (audit, ops)
+---
+erDiagram
+  PLANS ||--o{ PLAN_MODULES : incluye
+  MODULES ||--o{ PLAN_MODULES : en
+  PLANS ||--o{ SUBSCRIPTIONS : contrata
+  SUBSCRIPTIONS ||--o{ SAAS_INVOICES : factura
+  MODULES ||--o{ TENANT_MODULE_OVERRIDES : ajusta
+  FEATURE_FLAGS ||--o{ TENANT_FLAG_OVERRIDES : ajusta
+  PLATFORM_USERS ||--o{ PLATFORM_SESSIONS : abre
+  PLATFORM_USERS ||--o{ IMPERSONATION_GRANTS : solicita
+  PLATFORM_USERS ||--o{ TICKETS : atiende
+
+  MODULES {
+    text code PK "ventas, inventario, rubro.lubricentro..."
+    text kind "core, rubro, addon"
+    text description
+  }
+  PLANS {
+    uuid id PK
+    text code UK
+    text name
+    jsonb limits "usuarios, sedes, CPE por mes"
+    boolean active
+  }
+  PLAN_MODULES {
+    uuid plan_id PK, FK
+    text module_code PK, FK
+  }
+  SUBSCRIPTIONS {
+    uuid id PK
+    uuid tenant_id "UK parcial: una activa por tenant"
+    uuid plan_id FK
+    text status "trial, activa, morosa, suspendida, cancelada"
+    date period_start
+    date period_end
+  }
+  TENANT_MODULE_OVERRIDES {
+    uuid tenant_id PK
+    text module_code PK, FK
+    boolean enabled
+    text reason
+    uuid set_by
+  }
+  FEATURE_FLAGS {
+    text key PK
+    text description
+    int rollout_pct "CHECK 0..100"
+    boolean default_on
+  }
+  TENANT_FLAG_OVERRIDES {
+    uuid tenant_id PK
+    text flag_key PK, FK
+    boolean enabled
+  }
+  TENANT_USAGE {
+    uuid tenant_id PK
+    date period PK "mes"
+    int cpe_issued "contador actualizado por el worker"
+    int active_users
+  }
+  SAAS_INVOICES {
+    uuid id PK
+    uuid subscription_id FK
+    text number
+    text status "pagado, pendiente, moroso, anulado"
+  }
+  PLATFORM_USERS {
+    uuid id PK
+    citext email UK
+    text password_hash
+    text role "superadmin, soporte, finanzas, ventas, ingenieria"
+    boolean totp_required "siempre true"
+  }
+  PLATFORM_SESSIONS {
+    uuid id PK
+    uuid platform_user_id FK
+    bytea access_hash UK
+    bytea refresh_hash UK
+    timestamptz revoked_at
+  }
+  IMPERSONATION_GRANTS {
+    uuid id PK
+    uuid platform_user_id FK
+    uuid tenant_id
+    uuid ticket_id "obligatorio"
+    text scope "read_only o full"
+    timestamptz expires_at "max 60 min"
+    timestamptz revoked_at
+  }
+  TICKETS {
+    uuid id PK
+    uuid tenant_id
+    text priority "P1, P2, P3"
+    text status
+  }
+  AUDIT_LOG {
+    uuid id PK "audit.events, solo insercion, particion mensual"
+    uuid tenant_id "RLS; null para eventos de plataforma"
+    uuid actor_user_id
+    uuid impersonator_id "si aplica"
+    text action "modulo.recurso:accion"
+    text entity_type
+    uuid entity_id
+    text result "ok, denegado"
+    inet ip
+    text request_id
+    jsonb diff
+    timestamptz at
+  }
+  IDEMPOTENCY_KEYS {
+    uuid tenant_id PK
+    text key PK
+    bytea request_hash
+    int status_code
+    jsonb response
+    timestamptz created_at "limpieza a las 24 h"
+  }
+  RIVER_JOB {
+    bigint id PK "tabla de River (cola y outbox)"
+    text kind
+    jsonb args "incluye tenant_id"
+    text state
+    int attempt
+    timestamptz scheduled_at
+  }

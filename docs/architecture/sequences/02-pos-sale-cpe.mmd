@@ -1,0 +1,63 @@
+---
+title: Venta POS -> descuento de stock -> emision CPE asincrona via Khipu
+---
+sequenceDiagram
+  autonumber
+  actor C as Cajero
+  participant W as web (POS)
+  participant A as api (ventas + inventario + facturacion)
+  participant DB as PostgreSQL
+  participant WK as worker (River, cola cpe)
+  participant P as InvoicingProvider (adaptador Khipu)
+  participant S3 as Object storage
+
+  C->>W: Cobrar (lineas, cliente, pagos)
+  W->>A: POST /v1/sales Idempotency-Key: uuid generado al abrir el ticket
+  A->>A: auth, tenant, sede, flag ventas.pos, permiso ventas.pos:create
+  A->>DB: BEGIN, set_config('app.tenant_id', t, true)
+  A->>DB: INSERT idempotency_keys ON CONFLICT DO NOTHING
+  alt clave ya usada
+    A->>DB: ROLLBACK
+    A-->>W: respuesta guardada (mismo cuerpo) o 409 si el hash del request difiere
+  else clave nueva
+    A->>A: valida montos (numeric), turno de caja abierto, precios
+    A->>DB: UPDATE stock_levels SET on_hand = on_hand - q WHERE ... ORDER BY variant_id (locks en orden)
+    alt stock insuficiente y allow_negative_stock = false
+      A->>DB: ROLLBACK
+      A-->>W: 409 insufficient_stock {variant_id, available}
+    else ok
+      A->>DB: INSERT stock_movements (salida, tabla 12 codigo 01)
+      A->>DB: UPDATE document_series SET last_number = last_number + 1 RETURNING (lock de la serie)
+      A->>DB: INSERT sales, sale_lines, sale_payments, cash_movements
+      A->>DB: INSERT electronic_documents (status pendiente, send_deadline)
+      A->>DB: River InsertTx job cpe.emit {tenant_id, document_id}
+      A->>DB: UPDATE idempotency_keys SET response
+      A->>DB: COMMIT (todo o nada, sin llamadas de red dentro)
+      A-->>W: 201 {sale, document: {series, number, status: pendiente}}
+      W-->>C: imprime ticket con serie-numero y CPE "pendiente" (decision del usuario)
+    end
+  end
+  WK->>DB: toma job (FOR UPDATE SKIP LOCKED, concurrencia fija de la cola cpe)
+  WK->>DB: BEGIN, set_config tenant, lee documento y credencial fk_ cifrada del tenant
+  WK->>P: Emit: POST /v1/facturas con correlativo, X-Api-Key, Idempotency-Key = document_id (timeout 3 s conexion, 30 s total)
+  alt 201 o 200 (repeticion idempotente)
+    P-->>WK: datos.id, estado_documento, hash, fecha_limite_envio, enlaces xml/pdf/cdr
+    WK->>DB: status segun mapeo (enviado, aceptado, observado o rechazado), provider_status, hash, WHERE status = pendiente
+    WK->>S3: guarda XML y PDF (y CDR si ya existe) en tenants/t/cpe/...
+    WK->>DB: INSERT edoc_events, encola notificacion al cliente
+  else red, timeout, 500, 502/503 o 409 ENVIO_EN_CURSO
+    WK->>DB: River reintenta con backoff exponencial + jitter (max 10 intentos, ~20 h, dentro de las 24 h de la clave)
+  else 409 DUPLICADO o reintento fuera de las 24 h
+    WK->>P: FindByNumber: GET /v1/facturas?serie=&numero=
+    WK->>DB: adopta el documento si total y receptor coinciden, si no alerta critica
+  else 422 de validacion (Khipu no consumio numero)
+    WK->>DB: sigue pendiente, blocked_reason = validation, mensaje para corregir y reenviar con el mismo numero
+  else 429 LIMITE_PLAN, 402 o 401
+    WK->>DB: pausa emision del tenant o de la cuenta, alerta a plataforma
+  end
+  Note over P: Khipu reintenta solo hacia SUNAT los ERROR_ENVIO (hasta 20 veces, ~74 h). Wanka no llama a /enviar automaticamente.
+  P-)A: webhook POST /webhooks/khipu/{routeId} (X-Khipu-Signature HMAC-SHA256, X-Khipu-Delivery)
+  A->>A: verifica firma con el whsec_ del tenant (tolerancia 300 s), dedupe por delivery, encola cpe.sync, responde 2xx
+  WK->>P: cpe.sync: GET /v1/facturas/{id} (estado actual, el orden de eventos no esta garantizado)
+  WK->>DB: aplica transicion condicionada, guarda CDR
+  Note over WK: cpe.reconcile (lider unico, cada minuto): documentos enviado sin novedad > 5 min -> GET /v1/facturas/{id}. Alerta por edad de la cola pendiente y cercania a fecha_limite_envio.

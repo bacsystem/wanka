@@ -1,0 +1,51 @@
+---
+title: Nota de credito y comunicacion de baja
+---
+sequenceDiagram
+  autonumber
+  actor U as Administrador de sede
+  participant W as web
+  participant A as api (facturacion-electronica)
+  participant DB as PostgreSQL
+  participant WK as worker
+  participant P as InvoicingProvider (Khipu)
+
+  rect rgb(240, 248, 248)
+  Note over U,P: Nota de credito (07) sobre F001-842 aceptado
+  U->>W: wizard NC: motivo catalogo 09, lineas y cantidades
+  W->>A: POST /v1/einvoicing/documents/{id}/credit-notes Idempotency-Key
+  A->>A: permiso facturacion.cpe:void, origen aceptado/observado, suma de NC <= total origen, tipos de NC permitidos (sobre boleta no 04, 05, 08, 13)
+  A->>DB: BEGIN tenant, SELECT origen FOR UPDATE (serializa NC concurrentes del mismo origen)
+  A->>DB: numero de serie FC01 o BC01 segun el origen (lock de la serie), INSERT electronic_documents 07 pendiente
+  opt motivo devuelve mercaderia (01, 06, 07)
+    A->>DB: INSERT stock_movements entrada (tabla 12 codigo 05) y UPDATE stock_levels
+  end
+  A->>DB: si hubo cobro: cash_movement egreso o saldo a favor en CxC
+  A->>DB: River InsertTx cpe.emit, COMMIT
+  A-->>W: 201 {credit_note: pendiente}
+  WK->>P: Emit: POST /v1/notas con correlativo e Idempotency-Key, mismo manejo de respuestas que la venta
+  end
+
+  rect rgb(250, 245, 235)
+  Note over U,P: Baja: Khipu arma la comunicacion de baja (factura) o el resumen diario (boleta y sus notas)
+  U->>W: Anular F001-843 (motivo). Si es boleta, la UI pregunta si ya se entrego al cliente (si se entrego: nota de credito)
+  W->>A: POST /v1/einvoicing/documents/{id}/void Idempotency-Key {reason}
+  A->>A: valida aceptado/observado, max 7 dias calendario desde la emision (hora de Lima), sin baja en curso
+  A->>DB: BEGIN tenant, SELECT doc FOR UPDATE, INSERT voidings (UK parcial: una en curso)
+  A->>DB: River InsertTx cpe.void, COMMIT
+  A-->>W: 202 {voiding: solicitada}
+  WK->>P: GET /v1/facturas/{id}/bajas (la baja no tiene idempotencia: si ya hay una en curso se adopta)
+  opt no existe
+    WK->>P: RequestVoid: POST /v1/facturas/{id}/baja {motivo}
+  end
+  P-->>WK: id de la baja, estado, ticket
+  loop hasta estado final (backoff 30 s a 5 min)
+    WK->>P: GET /v1/bajas/{id} (Khipu reconsulta el ticket en SUNAT)
+  end
+  Note over P,WK: el webhook comprobante.anulado tambien dispara cpe.sync
+  alt baja aceptada
+    WK->>DB: documento anulado, revierte stock y caja segun politica
+  else 422 BAJA_INVALIDA o rechazo SUNAT (2957 fuera de plazo)
+    WK->>DB: voiding rechazada, documento sigue aceptado, alerta al usuario (alternativa: nota de credito)
+  end
+  end

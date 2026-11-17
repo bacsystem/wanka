@@ -1,0 +1,45 @@
+---
+title: Wanka web (Next.js 16) - componentes (C4 nivel 3)
+---
+flowchart TB
+  browser["Navegador<br/>(cookies httpOnly, sin tokens en JS)"]
+
+  subgraph web["apps/web (Next.js App Router, Node runtime)"]
+    direction TB
+    proxy["proxy.ts (antes middleware)<br/>redirige a /login o /admin/login si no hay cookie;<br/>no valida tokens, solo presencia"]
+
+    subgraph tenantUi["Plano tenant: app/(app), app/(auth)"]
+      rsc["Server Components (paginas)<br/>leen datos con apiClient en el servidor"]
+      screens["Client *Screen components<br/>estado de filtros y dialogos"]
+      actions["Server Actions / route handlers app/api/*<br/>mutaciones; reenvian Idempotency-Key"]
+    end
+
+    subgraph adminUi["Plano plataforma: app/(admin), app/(admin-auth)"]
+      adminRsc["Server Components /admin/*"]
+      adminActions["Route handlers app/api/admin/*"]
+    end
+
+    subgraph bff["BFF (src/lib/server, solo servidor: import server-only)"]
+      session["session.ts<br/>lee wk_at / wk_rt (tenant) o wka_at / wka_rt (admin);<br/>refresca con rotacion; borra cookies en 401"]
+      apiClient["apiClient tenant<br/>tipos generados de OpenAPI (openapi-typescript),<br/>timeout 12 s, X-Request-Id, sin reintentos en POST sin Idempotency-Key"]
+      adminClient["apiClient plataforma<br/>base URL y cookies distintas"]
+      csrf["Chequeo Origin/Host en mutaciones<br/>+ SameSite=Lax"]
+    end
+  end
+
+  api["api (Go) /v1"]
+  papi["platform-api (Go) /platform/v1"]
+
+  browser --> proxy
+  proxy --> rsc
+  proxy --> adminRsc
+  rsc --> screens
+  screens -->|"submit"| actions
+  rsc --> apiClient
+  actions --> csrf --> apiClient
+  adminRsc --> adminClient
+  adminActions --> csrf --> adminClient
+  apiClient --> session
+  adminClient --> session
+  apiClient -->|"Authorization: Bearer wk_at_..."| api
+  adminClient -->|"Authorization: Bearer wka_at_..."| papi
