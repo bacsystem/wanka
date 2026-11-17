@@ -1,0 +1,862 @@
+{
+  "src/app/(admin)/admin/empresas/page.tsx": {
+    "no-restricted-imports": {
+      "count": 4
+    }
+  },
+  "src/app/(admin)/admin/perfil/page.tsx": {
+    "no-restricted-imports": {
+      "count": 2
+    }
+  },
+  "src/app/(tenant)/(app)/[...slug]/page.tsx": {
+    "no-restricted-imports": {
+      "count": 1
+    }
+  },
+  "src/app/(tenant)/(app)/acceso-denegado/page.tsx": {
+    "no-restricted-imports": {
+      "count": 1
+    }
+  },
+  "src/app/(tenant)/(app)/agenda/page.tsx": {
+    "no-restricted-imports": {
+      "count": 3
+    }
+  },
+  "src/app/(tenant)/(app)/catalogo/[[...tab]]/page.tsx": {
+    "no-restricted-imports": {
+      "count": 2
+    }
+  },
+  "src/app/(tenant)/(app)/catalogo/variantes/[sku]/page.tsx": {
+    "no-restricted-imports": {
+      "count": 4
+    }
+  },
+  "src/app/(tenant)/(app)/clientes/page.tsx": {
+    "no-restricted-imports": {
+      "count": 3
+    }
+  },
+  "src/app/(tenant)/(app)/compras/ordenes/page.tsx": {
+    "no-restricted-imports": {
+      "count": 1
+    }
+  },
+  "src/app/(tenant)/(app)/compras/page.tsx": {
+    "no-restricted-imports": {
+      "count": 2
+    }
+  },
+  "src/app/(tenant)/(app)/compras/proveedores/page.tsx": {
+    "no-restricted-imports": {
+      "count": 4
+    }
+  },
+  "src/app/(tenant)/(app)/configuracion/auditoria/page.tsx": {
+    "no-restricted-imports": {
+      "count": 1
+    }
+  },
+  "src/app/(tenant)/(app)/configuracion/integraciones/page.tsx": {
+    "no-restricted-imports": {
+      "count": 2
+    }
+  },
+  "src/app/(tenant)/(app)/configuracion/sunat/page.tsx": {
+    "no-restricted-imports": {
+      "count": 2
+    }
+  },
+  "src/app/(tenant)/(app)/configuracion/usuarios/page.tsx": {
+    "no-restricted-imports": {
+      "count": 2
+    }
+  },
+  "src/app/(tenant)/(app)/error.tsx": {
+    "no-restricted-imports": {
+      "count": 1
+    }
+  },
+  "src/app/(tenant)/(app)/finanzas/caja/historial/page.tsx": {
+    "no-restricted-imports": {
+      "count": 3
+    }
+  },
+  "src/app/(tenant)/(app)/finanzas/caja/page.tsx": {
+    "no-restricted-imports": {
+      "count": 4
+    }
+  },
+  "src/app/(tenant)/(app)/finanzas/cuentas-por-cobrar/page.tsx": {
+    "no-restricted-imports": {
+      "count": 2
+    }
+  },
+  "src/app/(tenant)/(app)/finanzas/cuentas-por-pagar/page.tsx": {
+    "no-restricted-imports": {
+      "count": 3
+    }
+  },
+  "src/app/(tenant)/(app)/grooming/page.tsx": {
+    "no-restricted-imports": {
+      "count": 1
+    }
+  },
+  "src/app/(tenant)/(app)/hospitalizacion/page.tsx": {
+    "no-restricted-imports": {
+      "count": 4
+    }
+  },
+  "src/app/(tenant)/(app)/inventario/almacenes/page.tsx": {
+    "no-restricted-imports": {
+      "count": 4
+    }
+  },
+  "src/app/(tenant)/(app)/inventario/kardex/page.tsx": {
+    "no-restricted-imports": {
+      "count": 4
+    }
+  },
+  "src/app/(tenant)/(app)/inventario/movimientos/page.tsx": {
+    "no-restricted-imports": {
+      "count": 2
+    }
+  },
+  "src/app/(tenant)/(app)/inventario/stock/page.tsx": {
+    "no-restricted-imports": {
+      "count": 3
+    }
+  },
+  "src/app/(tenant)/(app)/loading.tsx": {
+    "no-restricted-imports": {
+      "count": 1
+    }
+  },
+  "src/app/(tenant)/(app)/mascotas/page.tsx": {
+    "no-restricted-imports": {
+      "count": 4
+    }
+  },
+  "src/app/(tenant)/(app)/not-found.tsx": {
+    "no-restricted-imports": {
+      "count": 1
+    }
+  },
+  "src/app/(tenant)/(app)/page.tsx": {
+    "no-restricted-imports": {
+      "count": 4
+    }
+  },
+  "src/app/(tenant)/(app)/perfil/page.tsx": {
+    "no-restricted-imports": {
+      "count": 2
+    }
+  },
+  "src/app/(tenant)/(app)/reportes/gestion/page.tsx": {
+    "no-restricted-imports": {
+      "count": 1
+    }
+  },
+  "src/app/(tenant)/(app)/reportes/liquidacion/page.tsx": {
+    "no-restricted-imports": {
+      "count": 2
+    }
+  },
+  "src/app/(tenant)/(app)/reportes/page.tsx": {
+    "no-restricted-imports": {
+      "count": 4
+    }
+  },
+  "src/app/(tenant)/(app)/salon/cocina/page.tsx": {
+    "no-restricted-imports": {
+      "count": 2
+    }
+  },
+  "src/app/(tenant)/(app)/salon/delivery/page.tsx": {
+    "no-restricted-imports": {
+      "count": 4
+    }
+  },
+  "src/app/(tenant)/(app)/salon/page.tsx": {
+    "no-restricted-imports": {
+      "count": 5
+    }
+  },
+  "src/app/(tenant)/(app)/salon/reservas/page.tsx": {
+    "no-restricted-imports": {
+      "count": 1
+    }
+  },
+  "src/app/(tenant)/(app)/ventas/comprobantes/page.tsx": {
+    "no-restricted-imports": {
+      "count": 5
+    }
+  },
+  "src/app/(tenant)/(app)/ventas/guias/page.tsx": {
+    "no-restricted-imports": {
+      "count": 3
+    }
+  },
+  "src/app/(tenant)/(app)/ventas/proformas/page.tsx": {
+    "no-restricted-imports": {
+      "count": 5
+    }
+  },
+  "src/components/layout/app-shell.tsx": {
+    "no-restricted-imports": {
+      "count": 1
+    }
+  },
+  "src/components/layout/app-sidebar.tsx": {
+    "no-restricted-imports": {
+      "count": 1
+    }
+  },
+  "src/components/layout/bottom-nav.tsx": {
+    "no-restricted-imports": {
+      "count": 3
+    }
+  },
+  "src/components/layout/command-palette.tsx": {
+    "no-restricted-imports": {
+      "count": 3
+    }
+  },
+  "src/components/layout/notifications.tsx": {
+    "no-restricted-imports": {
+      "count": 6
+    }
+  },
+  "src/components/layout/shell-parts.tsx": {
+    "no-restricted-imports": {
+      "count": 4
+    }
+  },
+  "src/components/layout/sidebar-auto-collapse.tsx": {
+    "no-restricted-imports": {
+      "count": 1
+    }
+  },
+  "src/components/layout/tenant-switcher.tsx": {
+    "no-restricted-imports": {
+      "count": 6
+    }
+  },
+  "src/components/layout/theme-toggle.tsx": {
+    "no-restricted-imports": {
+      "count": 4
+    }
+  },
+  "src/components/layout/topbar-search.tsx": {
+    "no-restricted-imports": {
+      "count": 2
+    }
+  },
+  "src/components/layout/topbar.tsx": {
+    "no-restricted-imports": {
+      "count": 4
+    }
+  },
+  "src/components/layout/user-menu.tsx": {
+    "no-restricted-imports": {
+      "count": 4
+    }
+  },
+  "src/components/providers/app-document.tsx": {
+    "no-restricted-imports": {
+      "count": 2
+    }
+  },
+  "src/components/shared/data-table.tsx": {
+    "no-restricted-imports": {
+      "count": 4
+    }
+  },
+  "src/components/shared/dynamic-icon.tsx": {
+    "no-restricted-imports": {
+      "count": 1
+    }
+  },
+  "src/components/shared/field.tsx": {
+    "no-restricted-imports": {
+      "count": 1
+    }
+  },
+  "src/components/shared/number-input.tsx": {
+    "no-restricted-imports": {
+      "count": 1
+    }
+  },
+  "src/components/shared/pagination.tsx": {
+    "no-restricted-imports": {
+      "count": 1
+    }
+  },
+  "src/components/shared/section-card.tsx": {
+    "no-restricted-imports": {
+      "count": 2
+    }
+  },
+  "src/components/shared/section-nav.tsx": {
+    "no-restricted-imports": {
+      "count": 1
+    }
+  },
+  "src/components/shared/stat-card.tsx": {
+    "no-restricted-imports": {
+      "count": 3
+    }
+  },
+  "src/components/shared/states.tsx": {
+    "no-restricted-imports": {
+      "count": 3
+    }
+  },
+  "src/components/shared/status-badge.tsx": {
+    "no-restricted-imports": {
+      "count": 2
+    }
+  },
+  "src/components/shared/toolbar.tsx": {
+    "no-restricted-imports": {
+      "count": 1
+    }
+  },
+  "src/components/ui/alert.tsx": {
+    "no-restricted-imports": {
+      "count": 1
+    }
+  },
+  "src/components/ui/avatar.tsx": {
+    "no-restricted-imports": {
+      "count": 1
+    }
+  },
+  "src/components/ui/badge.tsx": {
+    "no-restricted-imports": {
+      "count": 3
+    }
+  },
+  "src/components/ui/button.tsx": {
+    "no-restricted-imports": {
+      "count": 2
+    }
+  },
+  "src/components/ui/chart.tsx": {
+    "no-restricted-imports": {
+      "count": 2
+    }
+  },
+  "src/components/ui/checkbox.tsx": {
+    "no-restricted-imports": {
+      "count": 2
+    }
+  },
+  "src/components/ui/dialog.tsx": {
+    "no-restricted-imports": {
+      "count": 2
+    }
+  },
+  "src/components/ui/dropdown-menu.tsx": {
+    "no-restricted-imports": {
+      "count": 2
+    }
+  },
+  "src/components/ui/empty.tsx": {
+    "no-restricted-imports": {
+      "count": 1
+    }
+  },
+  "src/components/ui/input.tsx": {
+    "no-restricted-imports": {
+      "count": 1
+    }
+  },
+  "src/components/ui/popover.tsx": {
+    "no-restricted-imports": {
+      "count": 1
+    }
+  },
+  "src/components/ui/progress.tsx": {
+    "no-restricted-imports": {
+      "count": 1
+    }
+  },
+  "src/components/ui/radio-group.tsx": {
+    "no-restricted-imports": {
+      "count": 2
+    }
+  },
+  "src/components/ui/scroll-area.tsx": {
+    "no-restricted-imports": {
+      "count": 1
+    }
+  },
+  "src/components/ui/select.tsx": {
+    "no-restricted-imports": {
+      "count": 2
+    }
+  },
+  "src/components/ui/separator.tsx": {
+    "no-restricted-imports": {
+      "count": 1
+    }
+  },
+  "src/components/ui/sheet.tsx": {
+    "no-restricted-imports": {
+      "count": 2
+    }
+  },
+  "src/components/ui/sidebar.tsx": {
+    "no-restricted-imports": {
+      "count": 4
+    }
+  },
+  "src/components/ui/sonner.tsx": {
+    "no-restricted-imports": {
+      "count": 3
+    }
+  },
+  "src/components/ui/switch.tsx": {
+    "no-restricted-imports": {
+      "count": 1
+    }
+  },
+  "src/components/ui/tabs.tsx": {
+    "no-restricted-imports": {
+      "count": 2
+    }
+  },
+  "src/components/ui/toggle-group.tsx": {
+    "no-restricted-imports": {
+      "count": 3
+    }
+  },
+  "src/components/ui/toggle.tsx": {
+    "no-restricted-imports": {
+      "count": 2
+    }
+  },
+  "src/components/ui/tooltip.tsx": {
+    "no-restricted-imports": {
+      "count": 1
+    }
+  },
+  "src/features/appointments/components/agenda.tsx": {
+    "no-restricted-imports": {
+      "count": 8
+    }
+  },
+  "src/features/appointments/components/new-appointment-sheet.tsx": {
+    "no-restricted-imports": {
+      "count": 12
+    }
+  },
+  "src/features/auth/components/brand-panel.tsx": {
+    "no-restricted-imports": {
+      "count": 1
+    }
+  },
+  "src/features/auth/components/company-select-screen.tsx": {
+    "no-restricted-imports": {
+      "count": 5
+    }
+  },
+  "src/features/auth/components/login-screen.tsx": {
+    "no-restricted-imports": {
+      "count": 7
+    }
+  },
+  "src/features/auth/components/onboarding-screen.tsx": {
+    "no-restricted-imports": {
+      "count": 9
+    }
+  },
+  "src/features/cash/components/cash-screen.tsx": {
+    "no-restricted-imports": {
+      "count": 9
+    }
+  },
+  "src/features/cash/components/shift-history.tsx": {
+    "no-restricted-imports": {
+      "count": 9
+    }
+  },
+  "src/features/catalog/components/catalog-screen.tsx": {
+    "no-restricted-imports": {
+      "count": 20
+    }
+  },
+  "src/features/clinical/components/clinical-record.tsx": {
+    "no-restricted-imports": {
+      "count": 15
+    }
+  },
+  "src/features/customers/components/customer-detail.tsx": {
+    "no-restricted-imports": {
+      "count": 10
+    }
+  },
+  "src/features/customers/components/customers-table.tsx": {
+    "no-restricted-imports": {
+      "count": 20
+    }
+  },
+  "src/features/dashboard/components/industry-dashboards.tsx": {
+    "no-restricted-imports": {
+      "count": 8
+    }
+  },
+  "src/features/dashboard/components/kpi-card.test.tsx": {
+    "no-restricted-imports": {
+      "count": 1
+    }
+  },
+  "src/features/dashboard/components/kpi-card.tsx": {
+    "no-restricted-imports": {
+      "count": 2
+    }
+  },
+  "src/features/dashboard/components/recent-documents-table.tsx": {
+    "no-restricted-imports": {
+      "count": 6
+    }
+  },
+  "src/features/dashboard/components/sales-chart.tsx": {
+    "no-restricted-imports": {
+      "count": 7
+    }
+  },
+  "src/features/dashboard/components/stock-alerts.tsx": {
+    "no-restricted-imports": {
+      "count": 4
+    }
+  },
+  "src/features/dashboard/components/sunat-status-card.tsx": {
+    "no-restricted-imports": {
+      "count": 5
+    }
+  },
+  "src/features/dispatch-guides/components/guide-detail.tsx": {
+    "no-restricted-imports": {
+      "count": 12
+    }
+  },
+  "src/features/dispatch-guides/components/guides-table.tsx": {
+    "no-restricted-imports": {
+      "count": 14
+    }
+  },
+  "src/features/documents/components/credit-note-wizard.tsx": {
+    "no-restricted-imports": {
+      "count": 15
+    }
+  },
+  "src/features/documents/components/debit-note-form.tsx": {
+    "no-restricted-imports": {
+      "count": 10
+    }
+  },
+  "src/features/documents/components/document-detail.tsx": {
+    "no-restricted-imports": {
+      "count": 9
+    }
+  },
+  "src/features/documents/components/documents-list.tsx": {
+    "no-restricted-imports": {
+      "count": 11
+    }
+  },
+  "src/features/documents/components/sunat-status-badge.tsx": {
+    "no-restricted-imports": {
+      "count": 3
+    }
+  },
+  "src/features/inventory/components/inventory-tabs.tsx": {
+    "no-restricted-imports": {
+      "count": 2
+    }
+  },
+  "src/features/inventory/components/kardex-screen.tsx": {
+    "no-restricted-imports": {
+      "count": 14
+    }
+  },
+  "src/features/inventory/components/movements-screen.tsx": {
+    "no-restricted-imports": {
+      "count": 16
+    }
+  },
+  "src/features/inventory/components/new-warehouse-sheet.tsx": {
+    "no-restricted-imports": {
+      "count": 9
+    }
+  },
+  "src/features/inventory/components/physical-count-screen.tsx": {
+    "no-restricted-imports": {
+      "count": 11
+    }
+  },
+  "src/features/inventory/components/reception-screen.tsx": {
+    "no-restricted-imports": {
+      "count": 15
+    }
+  },
+  "src/features/inventory/components/stock-screen.tsx": {
+    "no-restricted-imports": {
+      "count": 16
+    }
+  },
+  "src/features/inventory/components/warehouses-screen.tsx": {
+    "no-restricted-imports": {
+      "count": 8
+    }
+  },
+  "src/features/payables/components/integrations-screen.tsx": {
+    "no-restricted-imports": {
+      "count": 4
+    }
+  },
+  "src/features/payables/components/payables-screen.tsx": {
+    "no-restricted-imports": {
+      "count": 11
+    }
+  },
+  "src/features/platform-admin/components/admin-dashboard.tsx": {
+    "no-restricted-imports": {
+      "count": 10
+    }
+  },
+  "src/features/platform-admin/components/admin-login-screen.tsx": {
+    "no-restricted-imports": {
+      "count": 6
+    }
+  },
+  "src/features/platform-admin/components/admin-shell.tsx": {
+    "no-restricted-imports": {
+      "count": 6
+    }
+  },
+  "src/features/platform-admin/components/admin-user-menu.tsx": {
+    "no-restricted-imports": {
+      "count": 4
+    }
+  },
+  "src/features/platform-admin/components/audit-global-screen.tsx": {
+    "no-restricted-imports": {
+      "count": 10
+    }
+  },
+  "src/features/platform-admin/components/billing-screen.tsx": {
+    "no-restricted-imports": {
+      "count": 12
+    }
+  },
+  "src/features/platform-admin/components/flags-screen.tsx": {
+    "no-restricted-imports": {
+      "count": 8
+    }
+  },
+  "src/features/platform-admin/components/monitoring-screen.tsx": {
+    "no-restricted-imports": {
+      "count": 9
+    }
+  },
+  "src/features/platform-admin/components/plans-screen.tsx": {
+    "no-restricted-imports": {
+      "count": 8
+    }
+  },
+  "src/features/platform-admin/components/platform-config-screen.tsx": {
+    "no-restricted-imports": {
+      "count": 11
+    }
+  },
+  "src/features/platform-admin/components/staff-screen.tsx": {
+    "no-restricted-imports": {
+      "count": 16
+    }
+  },
+  "src/features/platform-admin/components/support-screen.tsx": {
+    "no-restricted-imports": {
+      "count": 9
+    }
+  },
+  "src/features/platform-admin/components/tenant-badges.tsx": {
+    "no-restricted-imports": {
+      "count": 2
+    }
+  },
+  "src/features/platform-admin/components/tenant-detail.tsx": {
+    "no-restricted-imports": {
+      "count": 11
+    }
+  },
+  "src/features/platform-admin/components/tenants-table.tsx": {
+    "no-restricted-imports": {
+      "count": 13
+    }
+  },
+  "src/features/pos/components/cart-panel.tsx": {
+    "no-restricted-imports": {
+      "count": 5
+    }
+  },
+  "src/features/pos/components/catalog-grid.tsx": {
+    "no-restricted-imports": {
+      "count": 2
+    }
+  },
+  "src/features/pos/components/customer-picker.tsx": {
+    "no-restricted-imports": {
+      "count": 3
+    }
+  },
+  "src/features/pos/components/pos-screen.tsx": {
+    "no-restricted-imports": {
+      "count": 7
+    }
+  },
+  "src/features/purchases/components/orders-screen.tsx": {
+    "no-restricted-imports": {
+      "count": 7
+    }
+  },
+  "src/features/purchases/components/purchase-order-editor.tsx": {
+    "no-restricted-imports": {
+      "count": 15
+    }
+  },
+  "src/features/purchases/components/purchases-screen.tsx": {
+    "no-restricted-imports": {
+      "count": 14
+    }
+  },
+  "src/features/purchases/components/purchases-tabs.tsx": {
+    "no-restricted-imports": {
+      "count": 2
+    }
+  },
+  "src/features/purchases/components/supplier-detail.tsx": {
+    "no-restricted-imports": {
+      "count": 11
+    }
+  },
+  "src/features/purchases/components/suppliers-screen.tsx": {
+    "no-restricted-imports": {
+      "count": 14
+    }
+  },
+  "src/features/quotes/components/new-quote-wizard.tsx": {
+    "no-restricted-imports": {
+      "count": 13
+    }
+  },
+  "src/features/quotes/components/quote-detail.tsx": {
+    "no-restricted-imports": {
+      "count": 12
+    }
+  },
+  "src/features/quotes/components/quotes-board.tsx": {
+    "no-restricted-imports": {
+      "count": 12
+    }
+  },
+  "src/features/receivables/components/receivables-screen.tsx": {
+    "no-restricted-imports": {
+      "count": 18
+    }
+  },
+  "src/features/reports/components/liquidation-screen.tsx": {
+    "no-restricted-imports": {
+      "count": 12
+    }
+  },
+  "src/features/reports/components/management-reports.tsx": {
+    "no-restricted-imports": {
+      "count": 14
+    }
+  },
+  "src/features/reports/components/reports-screen.tsx": {
+    "no-restricted-imports": {
+      "count": 10
+    }
+  },
+  "src/features/restaurant/components/delivery-screen.tsx": {
+    "no-restricted-imports": {
+      "count": 9
+    }
+  },
+  "src/features/restaurant/components/floor-screen.tsx": {
+    "no-restricted-imports": {
+      "count": 9
+    }
+  },
+  "src/features/restaurant/components/kds-board.tsx": {
+    "no-restricted-imports": {
+      "count": 5
+    }
+  },
+  "src/features/restaurant/components/reservations-screen.tsx": {
+    "no-restricted-imports": {
+      "count": 11
+    }
+  },
+  "src/features/retail/components/product-variants.tsx": {
+    "no-restricted-imports": {
+      "count": 12
+    }
+  },
+  "src/features/settings/components/audit-screen.tsx": {
+    "no-restricted-imports": {
+      "count": 8
+    }
+  },
+  "src/features/settings/components/invite-collaborator-sheet.tsx": {
+    "no-restricted-imports": {
+      "count": 11
+    }
+  },
+  "src/features/settings/components/profile-screen.tsx": {
+    "no-restricted-imports": {
+      "count": 12
+    }
+  },
+  "src/features/settings/components/security-screen.tsx": {
+    "no-restricted-imports": {
+      "count": 15
+    }
+  },
+  "src/features/settings/components/sunat-settings.tsx": {
+    "no-restricted-imports": {
+      "count": 11
+    }
+  },
+  "src/features/veterinary/components/grooming-screen.tsx": {
+    "no-restricted-imports": {
+      "count": 6
+    }
+  },
+  "src/features/veterinary/components/hospital-screen.tsx": {
+    "no-restricted-imports": {
+      "count": 11
+    }
+  },
+  "src/features/veterinary/components/new-pet-sheet.tsx": {
+    "no-restricted-imports": {
+      "count": 9
+    }
+  },
+  "src/features/veterinary/components/pet-detail.tsx": {
+    "no-restricted-imports": {
+      "count": 17
+    }
+  },
+  "src/features/veterinary/components/pets-list.tsx": {
+    "no-restricted-imports": {
+      "count": 8
+    }
+  }
+}
