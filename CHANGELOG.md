@@ -3,6 +3,14 @@
 All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.2.1] - Unreleased
+
+### Changed
+- `khipu-design-system` bumped from `v0.5.23` to `v0.6.0` (Next 16 peer support; `lucide-react` is no longer a peer of the package, Wanka keeps its own dependency until #123).
+
+### Removed
+- The `pnpm.peerDependencyRules.allowedVersions` override for `next` in the root `package.json`: it existed only because the package declared Next 15.
+
 ## [0.2.0] - 2026-11-17
 
 ### Added
