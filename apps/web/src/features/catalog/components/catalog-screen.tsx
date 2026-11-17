@@ -5,8 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Badge } from "khipu-design-system/ui/badge";
+import { Button } from "khipu-design-system/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -64,10 +64,10 @@ export function CatalogScreen({ tab, entries, categories, total, kpis }: Props) 
     { key: "tariff", header: "Tarifario EPS", cell: (e) => <span className={cn("text-xs", e.tariff.toLowerCase().includes("rimac") && "font-semibold text-primary")}>{e.tariff}</span>, className: "max-w-48" },
     { key: "actions", header: <span className="sr-only">Acciones</span>, align: "right", cell: (e) => (
       <div className="flex justify-end gap-0.5">
-        {e.nature === "producto" ? <Button variant="ghost" size="icon-sm" aria-label="Variantes y códigos de barras" render={<Link href={`/catalogo/variantes/${e.sku}`} />} nativeButton={false}><Tags /></Button> : null}
-        <Button variant="ghost" size="icon-sm" aria-label="Editar" onClick={() => setOpen(true)}><Pencil /></Button>
-        <Button variant="ghost" size="icon-sm" aria-label="Duplicar" onClick={() => toast.info(`${e.sku} duplicado como borrador`)}><Copy /></Button>
-        <Button variant="ghost" size="icon-sm" aria-label="Más"><MoreHorizontal /></Button>
+        {e.nature === "producto" ? <Button variant="ghost" size="icon" aria-label="Variantes y códigos de barras" render={<Link href={`/catalogo/variantes/${e.sku}`} />} nativeButton={false}><Tags /></Button> : null}
+        <Button variant="ghost" size="icon" aria-label="Editar" onClick={() => setOpen(true)}><Pencil /></Button>
+        <Button variant="ghost" size="icon" aria-label="Duplicar" onClick={() => toast.info(`${e.sku} duplicado como borrador`)}><Copy /></Button>
+        <Button variant="ghost" size="icon" aria-label="Más"><MoreHorizontal /></Button>
       </div>
     ) },
   ];
@@ -77,7 +77,7 @@ export function CatalogScreen({ tab, entries, categories, total, kpis }: Props) 
     { key: "spec", header: "Especialidad", cell: (c) => c.specialty },
     { key: "items", header: "Ítems", align: "right", cell: (c) => <span className="font-mono tabular-nums">{c.items}</span> },
     { key: "status", header: "Estado", cell: (c) => <StatusBadge tone={c.active ? "success" : "neutral"} dot label={c.active ? "Activa" : "Inactiva"} /> },
-    { key: "actions", header: <span className="sr-only">Acciones</span>, align: "right", cell: () => <Button variant="ghost" size="icon-sm" aria-label="Editar categoría"><Pencil /></Button> },
+    { key: "actions", header: <span className="sr-only">Acciones</span>, align: "right", cell: () => <Button variant="ghost" size="icon" aria-label="Editar categoría"><Pencil /></Button> },
   ];
 
   return (

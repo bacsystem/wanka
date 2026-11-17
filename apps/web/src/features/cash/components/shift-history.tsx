@@ -3,8 +3,8 @@
 import { Download, LockOpen, Printer } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Badge } from "khipu-design-system/ui/badge";
+import { Button } from "khipu-design-system/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DataTable, TwoLine, type Column } from "@/components/shared/data-table";
 import { SectionCard } from "@/components/shared/section-card";

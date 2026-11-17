@@ -3,7 +3,7 @@
 import { ArrowDownToLine, ArrowRightLeft, ArrowUpFromLine, CalendarDays, Download, FileText, FilterX, History, PackageMinus, Plus, Printer, ShieldCheck, SlidersHorizontal, Upload } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { Button } from "khipu-design-system/ui/button";
 import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -54,8 +54,8 @@ export function MovementsScreen({ movements, total, kpis }: { movements: Invento
     { key: "who", header: "Responsable", cell: (m) => <TwoLine primary={m.responsible} secondary={m.role} /> },
     { key: "actions", header: <span className="sr-only">Acciones</span>, align: "right", cell: (m) => (
       <div className="flex justify-end gap-0.5">
-        <Button variant="ghost" size="icon-sm" aria-label="Ver comprobante" onClick={() => toast.info(m.reference)}><FileText /></Button>
-        <Button variant="ghost" size="icon-sm" aria-label="Imprimir"><Printer /></Button>
+        <Button variant="ghost" size="icon" aria-label="Ver comprobante" onClick={() => toast.info(m.reference)}><FileText /></Button>
+        <Button variant="ghost" size="icon" aria-label="Imprimir"><Printer /></Button>
       </div>
     ) },
   ];

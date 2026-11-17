@@ -4,8 +4,8 @@ import { Armchair, Building2, ClipboardCheck, Gavel, History, MapPin, MoreHorizo
 import Link from "next/link";
 import * as React from "react";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Badge } from "khipu-design-system/ui/badge";
+import { Button } from "khipu-design-system/ui/button";
 import { InitialsAvatar } from "@/components/shared/initials-avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SectionCard } from "@/components/shared/section-card";
@@ -87,7 +87,7 @@ export function WarehousesScreen({ cards, establishments, custodians, transfers 
                         <Button key={a} size="sm" variant={i === 0 ? "secondary" : "outline"} className={cls} onClick={() => toast.info(a)}>{a}</Button>
                       );
                     })}
-                    <Button variant="ghost" size="icon-sm" className="ml-auto" aria-label="Más opciones"><MoreHorizontal /></Button>
+                    <Button variant="ghost" size="icon" className="ml-auto" aria-label="Más opciones"><MoreHorizontal /></Button>
                   </div>
                 </li>
               );

@@ -3,7 +3,7 @@
 import { Banknote, Clock, Download, FileMinus, FilePlus, Landmark, RefreshCw, Wallet } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { Button } from "khipu-design-system/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DataTable, TwoLine, type Column } from "@/components/shared/data-table";
@@ -34,7 +34,7 @@ export function BillingScreen() {
     { key: "total", header: "Total S/ (inc. IGV)", align: "right", cell: (i) => <span className={cn("font-mono text-sm font-bold", i.total < 0 && "text-destructive")}>{formatCurrency(i.total)}</span> },
     { key: "gateway", header: "Pasarela y conciliación", cell: (i) => <div className="flex items-center gap-2"><StateIcon state={i.reconciled ? "ok" : i.status === "moroso" ? "error" : "pending"} /><TwoLine primary={i.gateway} secondary={i.reconciled ? "Conciliado automáticamente" : i.retries ? `${i.retries} reintentos fallidos` : "Pendiente de conciliación"} /></div> },
     { key: "status", header: "Estado y OSE", cell: (i) => <div className="flex flex-col gap-1"><StatusBadge tone={statusMeta[i.status].tone} dot label={statusMeta[i.status].label} /><span className="text-[11px] text-muted-foreground">CDR aceptado · Bizlinks</span></div> },
-    { key: "actions", header: <span className="sr-only">Acciones</span>, align: "right", cell: (i) => <div className="flex justify-end gap-1">{i.status === "moroso" ? <Button size="sm" className="font-semibold" onClick={() => toast.success(`${i.number}: reintento de cobro enviado a Niubiz`)}><RefreshCw data-icon="inline-start" /> Reintentar cobro</Button> : i.status === "pendiente" ? <Button size="sm" variant="outline" className="font-semibold" onClick={() => toast.success("Recordatorio de pago enviado")}>Recordar</Button> : null}<Button size="icon-sm" variant="ghost" aria-label="Descargar PDF" onClick={() => toast.info(`${i.number}.pdf`)}><Download /></Button></div> },
+    { key: "actions", header: <span className="sr-only">Acciones</span>, align: "right", cell: (i) => <div className="flex justify-end gap-1">{i.status === "moroso" ? <Button size="sm" className="font-semibold" onClick={() => toast.success(`${i.number}: reintento de cobro enviado a Niubiz`)}><RefreshCw data-icon="inline-start" /> Reintentar cobro</Button> : i.status === "pendiente" ? <Button size="sm" variant="outline" className="font-semibold" onClick={() => toast.success("Recordatorio de pago enviado")}>Recordar</Button> : null}<Button size="icon" variant="ghost" aria-label="Descargar PDF" onClick={() => toast.info(`${i.number}.pdf`)}><Download /></Button></div> },
   ];
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-4 p-4 md:gap-6 md:p-6">

@@ -5,11 +5,11 @@ import { useRouter } from "next/navigation";
 import * as React from "react";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
+import { Button } from "khipu-design-system/ui/button";
+import { Tabs } from "khipu-design-system/navegacion/tabs";
 import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Field } from "@/components/shared/field";
 import { DataTable } from "@/components/shared/data-table";
@@ -29,16 +29,24 @@ export function SunatSettings({ config }: { config: Config }) {
   const [format, setFormat] = React.useState(config.print.format);
 
   return (
-    <Tabs defaultValue="certificado" className="min-w-0 max-w-full gap-4">
-      <TabsList variant="card">
-        <TabsTrigger value="empresa"><Building2 /> Datos de empresa y sedes</TabsTrigger>
-        <TabsTrigger value="certificado"><FileBadge2 /> Certificado digital y SOL SUNAT <span className="size-1.5 rounded-full bg-primary" /></TabsTrigger>
-        <TabsTrigger value="series"><ListOrdered /> Series y correlativos</TabsTrigger>
-        <TabsTrigger value="impresion"><Printer /> Diseño de impresión (A4 / Ticket 80mm)</TabsTrigger>
-        <TabsTrigger value="usuarios" className="h-9 gap-2 rounded-lg px-4 font-semibold" onClick={() => router.push("/configuracion/usuarios")}><Users /> Usuarios y permisos</TabsTrigger>
-      </TabsList>
+    <Tabs
+      estilo="linea"
+      defaultValor="certificado"
+      className="min-w-0 max-w-full"
+      onCambio={(v) => { if (v === "usuarios") router.push("/configuracion/usuarios"); }}
+      items={[
+        // TODO(DS): khipu-design-system#64 (Tabs: modo solo tira + regla de svg) — quitar size-4 al subir a 0.9.0
+        { id: "empresa", etiqueta: <><Building2 className="size-4" /> Datos de empresa y sedes</> },
+        { id: "certificado", etiqueta: <><FileBadge2 className="size-4" /> Certificado digital y SOL SUNAT <span className="size-1.5 rounded-full bg-primary" /></> },
+        { id: "series", etiqueta: <><ListOrdered className="size-4" /> Series y correlativos</> },
+        { id: "impresion", etiqueta: <><Printer className="size-4" /> Diseño de impresión (A4 / Ticket 80mm)</> },
+        { id: "usuarios", etiqueta: <><Users className="size-4" /> Usuarios y permisos</> },
+      ]}
+    >
+      {(tab) => (
+        <>
 
-      <TabsContent value="empresa">
+          {tab === "empresa" ? (
         <SectionCard title="Datos de la empresa" contentClassName="grid gap-4 p-4 sm:grid-cols-2">
           <Field label="Razón social" className="sm:col-span-2"><Input defaultValue={config.company.name} /></Field>
           <Field label="RUC"><Input defaultValue={config.company.ruc} className="font-mono" readOnly /></Field>
@@ -48,9 +56,10 @@ export function SunatSettings({ config }: { config: Config }) {
           <Field label="Rubro principal"><Input defaultValue="Odontología" /></Field>
           <div className="flex justify-end sm:col-span-2"><Button onClick={() => toast.success("Datos de empresa guardados")}><Save data-icon="inline-start" /> Guardar cambios</Button></div>
         </SectionCard>
-      </TabsContent>
+          ) : null}
 
-      <TabsContent value="certificado" className="grid gap-4 xl:grid-cols-2">
+          {tab === "certificado" ? (
+<div className="grid gap-4 xl:grid-cols-2">
         <SectionCard title="Certificado digital tributario" icon={FileBadge2} action={<StatusBadge tone="success" icon={CheckCircle2} label={`Vigente hasta ${formatDate(config.certificate.validUntil)}`} />} contentClassName="flex flex-col gap-3 p-4 text-sm">
           <p className="text-xs text-muted-foreground">Firma digital de comprobantes XML bajo el estándar UBL 2.1.</p>
           <dl className="grid gap-3 sm:grid-cols-2">
@@ -99,15 +108,16 @@ export function SunatSettings({ config }: { config: Config }) {
             </div>
           </div>
         </SectionCard>
-      </TabsContent>
+</div>
+          ) : null}
 
-      <TabsContent value="series">
+          {tab === "series" ? (
         <SectionCard title="Series fiscales por sede" action={<Button size="sm"><PlusCircle data-icon="inline-start" /> Nueva serie</Button>} contentClassName="p-0">
-          <DataTable columns={[{ key: "type", header: "Tipo", cell: (s) => <DocumentTypeBadge type={/factura/i.test(s.type) ? "factura" : /boleta/i.test(s.type) ? "boleta" : /cr[eé]dito/i.test(s.type) ? "nota_credito" : /gu[ií]a/i.test(s.type) ? "guia_remision" : "proforma"} /> }, { key: "series", header: "Serie", cell: (s) => <span className="font-mono text-sm font-bold">{s.series}</span> }, { key: "site", header: "Sede", cell: (s) => s.site }, { key: "last", header: "Último emitido", align: "right", cell: (s) => <span className="font-mono font-semibold text-primary tabular-nums">{s.series}-{String(s.last).padStart(8, "0")}</span> }, { key: "actions", header: <span className="sr-only">Acción</span>, align: "right", cell: () => <Button variant="ghost" size="icon-sm" aria-label="Editar serie"><Pencil /></Button> }]} rows={config.series} rowKey={(s) => s.series} minWidth="640px" />
+          <DataTable columns={[{ key: "type", header: "Tipo", cell: (s) => <DocumentTypeBadge type={/factura/i.test(s.type) ? "factura" : /boleta/i.test(s.type) ? "boleta" : /cr[eé]dito/i.test(s.type) ? "nota_credito" : /gu[ií]a/i.test(s.type) ? "guia_remision" : "proforma"} /> }, { key: "series", header: "Serie", cell: (s) => <span className="font-mono text-sm font-bold">{s.series}</span> }, { key: "site", header: "Sede", cell: (s) => s.site }, { key: "last", header: "Último emitido", align: "right", cell: (s) => <span className="font-mono font-semibold text-primary tabular-nums">{s.series}-{String(s.last).padStart(8, "0")}</span> }, { key: "actions", header: <span className="sr-only">Acción</span>, align: "right", cell: () => <Button variant="ghost" size="icon" aria-label="Editar serie"><Pencil /></Button> }]} rows={config.series} rowKey={(s) => s.series} minWidth="640px" />
         </SectionCard>
-      </TabsContent>
+          ) : null}
 
-      <TabsContent value="impresion">
+          {tab === "impresion" ? (
         <SectionCard title="Plantilla de impresión" contentClassName="grid gap-4 p-4 lg:grid-cols-2">
           <div className="flex min-w-0 flex-col gap-4">
             <Field label="Formato">
@@ -132,7 +142,9 @@ export function SunatSettings({ config }: { config: Config }) {
             <p className="mt-3 text-[8px] text-muted-foreground">{config.print.legend}</p>
           </div>
         </SectionCard>
-      </TabsContent>
+          ) : null}
+        </>
+      )}
     </Tabs>
   );
 }

@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import * as React from "react";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
+import { Button } from "khipu-design-system/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { SearchInput } from "@/components/shared/toolbar";
 import { formatCurrency, formatDocumentNumber } from "@/lib/format";

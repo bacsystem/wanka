@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowLeftRight, Banknote, CheckCircle2, CreditCard, FileText, Minus, Plus, QrCode, ShoppingBasket, Trash2, UserRound, X, Zap } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button } from "khipu-design-system/ui/button";
 import { Tag } from "@/components/shared/status-badge";
 import { Input } from "@/components/ui/input";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";

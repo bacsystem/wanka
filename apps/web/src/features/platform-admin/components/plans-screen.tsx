@@ -3,7 +3,7 @@
 import { Check, CreditCard, Download, Plus, Settings2, ShieldAlert, TrendingUp, Users } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { Button } from "khipu-design-system/ui/button";
 import { DataTable, TwoLine, type Column } from "@/components/shared/data-table";
 import { PageHeader } from "@/components/shared/page-header";
 import { SectionCard } from "@/components/shared/section-card";

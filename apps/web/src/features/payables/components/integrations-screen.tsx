@@ -3,7 +3,7 @@
 import { Plug, RefreshCw, Settings2 } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { Button } from "khipu-design-system/ui/button";
 import { StatusBadge, type BadgeTone } from "@/components/shared/status-badge";
 import { integrations as data, type Integration } from "../mocks/payables";
 import { TARJETA } from "@/lib/estilos";

@@ -3,8 +3,8 @@
 import { Camera, Check, MessageCircle, Scissors } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Badge } from "khipu-design-system/ui/badge";
+import { Button } from "khipu-design-system/ui/button";
 import { SectionCard } from "@/components/shared/section-card";
 import { StatusBadge, type BadgeTone } from "@/components/shared/status-badge";
 import type { GroomingJob } from "../mocks/hospital";

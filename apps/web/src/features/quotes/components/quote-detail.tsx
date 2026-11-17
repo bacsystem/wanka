@@ -4,11 +4,11 @@ import { ArrowLeft, Check, Copy, FileDown, Landmark, Mail, MessageCircle, Pencil
 import Link from "next/link";
 import * as React from "react";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Badge } from "khipu-design-system/ui/badge";
+import { Button } from "khipu-design-system/ui/button";
 import { NumberInput } from "@/components/shared/number-input";
-import { Separator } from "@/components/ui/separator";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Separator } from "khipu-design-system/ui/separator";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "khipu-design-system/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { PageHeader } from "@/components/shared/page-header";
 import { SectionCard } from "@/components/shared/section-card";
@@ -105,7 +105,7 @@ export function QuoteDetail({ quote }: { quote: Quote }) {
                         <TableCell className="text-right">{ed ? <NumberInput size="sm" value={l.discountPct} onValueChange={(n) => update(l.id, { discountPct: n })} className="w-14 text-right font-mono" aria-label="Descuento" /> : <span className="font-mono tabular-nums">{l.discountPct}%</span>}</TableCell>
                         <TableCell><Badge variant="outline">{l.affectation === "10" ? "10 Gravado" : "20 Exonerado"}</Badge></TableCell>
                         <TableCell className="text-right font-mono font-medium tabular-nums">{lineTotal(l).toLocaleString("en-US", { minimumFractionDigits: 2 })}</TableCell>
-                        <TableCell className="pr-3 text-right"><div className="flex justify-end gap-0.5"><Button variant="ghost" size="icon-sm" aria-label={ed ? "Guardar línea" : "Editar línea"} onClick={() => setEditing(ed ? null : l.id)}>{ed ? <Check /> : <Pencil />}</Button><Button variant="ghost" size="icon-sm" aria-label="Quitar línea" onClick={() => setLines((ls) => ls.filter((x) => x.id !== l.id))}><Trash2 /></Button></div></TableCell>
+                        <TableCell className="pr-3 text-right"><div className="flex justify-end gap-0.5"><Button variant="ghost" size="icon" aria-label={ed ? "Guardar línea" : "Editar línea"} onClick={() => setEditing(ed ? null : l.id)}>{ed ? <Check /> : <Pencil />}</Button><Button variant="ghost" size="icon" aria-label="Quitar línea" onClick={() => setLines((ls) => ls.filter((x) => x.id !== l.id))}><Trash2 /></Button></div></TableCell>
                       </TableRow>
                     );
                   })}

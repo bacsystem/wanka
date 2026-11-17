@@ -4,13 +4,13 @@ import { AlertTriangle, ArrowLeft, FileDown, Image as ImageIcon, PenLine, Plus, 
 import Link from "next/link";
 import * as React from "react";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Badge } from "khipu-design-system/ui/badge";
+import { Button } from "khipu-design-system/ui/button";
 import { InitialsAvatar } from "@/components/shared/initials-avatar";
 import { EntityHeader } from "@/components/shared/entity-header";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { Progress } from "@/components/ui/progress";
+import { ProgresoLineal } from "khipu-design-system/feedback/progreso";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -80,7 +80,7 @@ export function ClinicalRecord({ customer }: { customer: Customer }) {
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-md bg-muted/40 px-3 py-2 text-xs"><span>Pieza seleccionada: <span className="font-mono font-semibold">{selected}</span> · {toothNames[selected] ?? "—"} · {toothStateMeta[stateOf(selected)].label}</span><span>Índice CPO-D: <span className="font-mono font-semibold">{cpo.c + cpo.p + cpo.o}</span> (C:{cpo.c} P:{cpo.p} O:{cpo.o})</span></div>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             <div className="rounded-md border p-3 text-sm"><p className="flex items-center gap-2 font-medium"><ImageIcon className="size-4 text-primary" /> Estudios radiográficos (RVG) <Badge variant="outline">{radiographs.length}</Badge></p><ul className="mt-2 flex flex-col gap-1 text-xs">{radiographs.map((r) => <li key={r.name} className="flex justify-between"><span>{r.name} <span className="text-muted-foreground">· {r.kind}</span></span><span className="font-mono text-muted-foreground">{formatDate(r.date)}</span></li>)}</ul></div>
-            <div className="rounded-md border p-3 text-sm"><p className="flex items-center justify-between font-medium">Plan de tratamiento activo <span className="font-mono text-xs">{Math.round((done / (treatmentPlan.length + 3)) * 100)}%</span></p><Progress value={(done / (treatmentPlan.length + 3)) * 100} className="mt-2" /><p className="mt-2 text-xs text-muted-foreground">Fase correctiva y restauradora · próxima cita 18/09 09:30 (Dra. Ramos)</p></div>
+            <div className="rounded-md border p-3 text-sm"><p className="flex items-center justify-between font-medium">Plan de tratamiento activo <span className="font-mono text-xs">{Math.round((done / (treatmentPlan.length + 3)) * 100)}%</span></p><ProgresoLineal valor={(done / (treatmentPlan.length + 3)) * 100} className="mt-2" /><p className="mt-2 text-xs text-muted-foreground">Fase correctiva y restauradora · próxima cita 18/09 09:30 (Dra. Ramos)</p></div>
           </div>
         </SectionCard>
 

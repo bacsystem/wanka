@@ -4,7 +4,7 @@ import { Activity, Download, FileBadge2, Route, ShieldAlert, Zap } from "lucide-
 import * as React from "react";
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { Button } from "khipu-design-system/ui/button";
 import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { StateIcon } from "@/components/shared/dynamic-icon";
 import { PageHeader } from "@/components/shared/page-header";
@@ -40,7 +40,7 @@ export function MonitoringScreen() {
       </SectionCard>
 
       <div className="grid gap-4 xl:grid-cols-3">
-        <SectionCard title="Telemetría de latencia en timbrado (últimas 24 horas)" description="Comparativa directa de tiempo de respuesta de autorización CDR en milisegundos" className="xl:col-span-2" action={<div className="flex items-center gap-2"><div className="inline-flex rounded-lg bg-muted p-0.5 text-xs font-medium">{["24h", "7 días", "30 días"].map((r) => <button key={r} type="button" onClick={() => setRange(r)} className={cn("rounded px-2.5 py-1", range === r && "bg-card font-semibold text-primary shadow-xs")}>{r}</button>)}</div><Button variant="outline" size="icon-sm" aria-label="Exportar CSV" onClick={() => toast.success("CSV exportado")}><Download /></Button></div>} contentClassName="p-4">
+        <SectionCard title="Telemetría de latencia en timbrado (últimas 24 horas)" description="Comparativa directa de tiempo de respuesta de autorización CDR en milisegundos" className="xl:col-span-2" action={<div className="flex items-center gap-2"><div className="inline-flex rounded-lg bg-muted p-0.5 text-xs font-medium">{["24h", "7 días", "30 días"].map((r) => <button key={r} type="button" onClick={() => setRange(r)} className={cn("rounded px-2.5 py-1", range === r && "bg-card font-semibold text-primary shadow-xs")}>{r}</button>)}</div><Button variant="outline" size="icon" aria-label="Exportar CSV" onClick={() => toast.success("CSV exportado")}><Download /></Button></div>} contentClassName="p-4">
           <ChartContainer config={chartConfig} className="aspect-auto h-64 w-full">
             <LineChart data={latency24h} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
               <CartesianGrid vertical={false} strokeDasharray="3 3" /><XAxis dataKey="hour" tickLine={false} axisLine={false} tickMargin={8} minTickGap={28} /><YAxis tickLine={false} axisLine={false} width={48} tickFormatter={(v: number) => `${v}ms`} />

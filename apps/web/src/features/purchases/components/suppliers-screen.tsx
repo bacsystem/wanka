@@ -4,8 +4,8 @@ import { History, Mail, MoreHorizontal, Phone, UserPlus, Zap } from "lucide-reac
 import Link from "next/link";
 import * as React from "react";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Badge } from "khipu-design-system/ui/badge";
+import { Button } from "khipu-design-system/ui/button";
 import { InitialsAvatar } from "@/components/shared/initials-avatar";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -42,10 +42,10 @@ export function SuppliersScreen({ suppliers, openNew, onOpenNewChange }: { suppl
     { key: "status", header: "Estado", cell: (s) => <StatusBadge tone={statusMeta[s.status].tone} label={statusMeta[s.status].label} /> },
     { key: "actions", header: <span className="sr-only">Acciones</span>, align: "right", cell: (s) => (
       <div className="flex justify-end gap-0.5">
-        <Button variant="ghost" size="icon-sm" aria-label="Historial" render={<Link href={`/compras/proveedores/${s.id}`} />} nativeButton={false}><History /></Button>
-        <Button variant="ghost" size="icon-sm" aria-label="Llamar"><Phone /></Button>
-        <Button variant="ghost" size="icon-sm" aria-label="Correo"><Mail /></Button>
-        <Button variant="ghost" size="icon-sm" aria-label="Más"><MoreHorizontal /></Button>
+        <Button variant="ghost" size="icon" aria-label="Historial" render={<Link href={`/compras/proveedores/${s.id}`} />} nativeButton={false}><History /></Button>
+        <Button variant="ghost" size="icon" aria-label="Llamar"><Phone /></Button>
+        <Button variant="ghost" size="icon" aria-label="Correo"><Mail /></Button>
+        <Button variant="ghost" size="icon" aria-label="Más"><MoreHorizontal /></Button>
       </div>
     ) },
   ];

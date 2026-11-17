@@ -1,7 +1,7 @@
 "use client";
 
 import { CircleDot, Link2, Plus, ScanLine } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button } from "khipu-design-system/ui/button";
 import { formatCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { CatalogItem } from "@/types/domain";

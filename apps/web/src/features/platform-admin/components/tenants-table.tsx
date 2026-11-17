@@ -4,7 +4,7 @@ import { Download, LogIn, Lock, LockOpen, MoreHorizontal, Plus, X } from "lucide
 import Link from "next/link";
 import * as React from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { Button } from "khipu-design-system/ui/button";
 import { Tag } from "@/components/shared/status-badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -56,8 +56,8 @@ export function TenantsTable({ tenants, compact }: { tenants: PlatformTenant[]; 
     { key: "actions", header: <span className="sr-only">Acciones</span>, align: "right", cell: (t) => (
       <div className="flex justify-end gap-1">
         <Button size="sm" variant="outline" className="font-semibold" onClick={() => toast.success(`Impersonando ${t.name}`, { description: "Sesión de soporte con auditoría activa" })}><LogIn data-icon="inline-start" /> Entrar</Button>
-        <Button size="icon-sm" variant="outline" aria-label={t.status === "suspendida" ? "Reactivar" : "Suspender"} onClick={() => { toggleSuspend(t.id); toast.info(`${t.name}: ${t.status === "suspendida" ? "reactivada" : "suspendida"}`); }}>{t.status === "suspendida" ? <Lock className="text-destructive" /> : <LockOpen />}</Button>
-        <Button size="icon-sm" variant="ghost" aria-label="Más"><MoreHorizontal /></Button>
+        <Button size="icon" variant="outline" aria-label={t.status === "suspendida" ? "Reactivar" : "Suspender"} onClick={() => { toggleSuspend(t.id); toast.info(`${t.name}: ${t.status === "suspendida" ? "reactivada" : "suspendida"}`); }}>{t.status === "suspendida" ? <Lock className="text-destructive" /> : <LockOpen />}</Button>
+        <Button size="icon" variant="ghost" aria-label="Más"><MoreHorizontal /></Button>
       </div>
     ) },
   ];

@@ -4,7 +4,7 @@ import { Banknote, Clock, CreditCard, Landmark, Lock, Printer, QrCode, RefreshCw
 import Link from "next/link";
 import * as React from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { Button } from "khipu-design-system/ui/button";
 import { NumberInput } from "@/components/shared/number-input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DataTable, TwoLine, type Column } from "@/components/shared/data-table";

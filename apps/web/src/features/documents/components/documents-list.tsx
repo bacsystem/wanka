@@ -4,7 +4,7 @@ import { CalendarDays, CircleDollarSign, Code2, Download, Eye, FileDown, Filter,
 import Link from "next/link";
 import * as React from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { Button } from "khipu-design-system/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
@@ -142,8 +142,8 @@ export function DocumentsList({ documents }: { documents: SalesDocument[] }) {
           <SelectContent>{statusOptions.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
         </Select>
         <div className="ml-auto flex items-center gap-1">
-          <Button variant="outline" size="icon-sm" aria-label="Más filtros" onClick={() => toast.info("Filtros avanzados")}><Filter /></Button>
-          <Button variant="outline" size="icon-sm" aria-label="Limpiar filtros" disabled={!anyFilter} onClick={() => { setQuery(""); setType("all"); setStatus("all"); }}><X /></Button>
+          <Button variant="outline" size="icon" aria-label="Más filtros" onClick={() => toast.info("Filtros avanzados")}><Filter /></Button>
+          <Button variant="outline" size="icon" aria-label="Limpiar filtros" disabled={!anyFilter} onClick={() => { setQuery(""); setType("all"); setStatus("all"); }}><X /></Button>
         </div>
       </FilterBar>
 
@@ -206,20 +206,20 @@ function RowActions({ doc }: { doc: SalesDocument }) {
       ) : doc.sunatStatus === "rechazado" ? (
         <Button size="xs" variant="destructive" aria-label="Corregir" render={<Link href={`/ventas/comprobantes/${doc.id}`} />} nativeButton={false}>Corregir</Button>
       ) : null}
-      <Button variant="ghost" size="icon-sm" aria-label="Ver comprobante" render={<Link href={`/ventas/comprobantes/${doc.id}`} />} nativeButton={false}>
+      <Button variant="ghost" size="icon" aria-label="Ver comprobante" render={<Link href={`/ventas/comprobantes/${doc.id}`} />} nativeButton={false}>
         <Eye />
       </Button>
-      <Button variant="ghost" size="icon-sm" aria-label="Descargar PDF" onClick={() => toast.info(`Descargando ${doc.id}.pdf`)}>
+      <Button variant="ghost" size="icon" aria-label="Descargar PDF" onClick={() => toast.info(`Descargando ${doc.id}.pdf`)}>
         <FileDown />
       </Button>
-      <Button variant="ghost" size="icon-sm" aria-label="Descargar XML" className="hidden 2xl:inline-flex" onClick={() => toast.info(`Descargando ${doc.id}.xml`)}>
+      <Button variant="ghost" size="icon" aria-label="Descargar XML" className="hidden 2xl:inline-flex" onClick={() => toast.info(`Descargando ${doc.id}.xml`)}>
         <Code2 />
       </Button>
-      <Button variant="ghost" size="icon-sm" aria-label="Enviar por WhatsApp" className="hidden 2xl:inline-flex" onClick={() => toast.success("Enviado por WhatsApp")}>
+      <Button variant="ghost" size="icon" aria-label="Enviar por WhatsApp" className="hidden 2xl:inline-flex" onClick={() => toast.success("Enviado por WhatsApp")}>
         <MessageCircle />
       </Button>
       <DropdownMenu>
-        <DropdownMenuTrigger render={<Button variant="ghost" size="icon-sm" aria-label="Más acciones" />}>
+        <DropdownMenuTrigger render={<Button variant="ghost" size="icon" aria-label="Más acciones" />}>
           <MoreHorizontal />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">

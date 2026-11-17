@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { Button } from "khipu-design-system/ui/button";
 import { EntityHeader } from "@/components/shared/entity-header";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -92,7 +92,7 @@ function DocumentsTable({ docs, compact }: { docs: Detail["documents"]; compact?
     { key: "date", header: "Emisión", cell: (d) => <span className="font-mono tabular-nums">{formatDate(d.date)}</span> },
     { key: "total", header: "Total", align: "right", cell: (d) => <span className="font-mono font-medium tabular-nums">{formatCurrency(d.total)}</span> },
     { key: "status", header: "Estado SUNAT", cell: (d) => <SunatStatusBadge status={d.status} /> },
-    { key: "files", header: "Archivos", align: "right", cell: () => <div className="flex justify-end gap-0.5"><Button variant="ghost" size="icon-sm" aria-label="PDF"><FileDown /></Button><Button variant="ghost" size="icon-sm" aria-label="XML"><FileText /></Button></div> },
+    { key: "files", header: "Archivos", align: "right", cell: () => <div className="flex justify-end gap-0.5"><Button variant="ghost" size="icon" aria-label="PDF"><FileDown /></Button><Button variant="ghost" size="icon" aria-label="XML"><FileText /></Button></div> },
   ];
   return (
     <SectionCard title="Comprobantes de pago (CPE)" action={compact ? <Button variant="ghost" size="sm" render={<Link href="/ventas/comprobantes" />} nativeButton={false}>Ver todos <ArrowRight data-icon="inline-end" /></Button> : <StatusBadge tone="success" dot label="SUNAT OSE conectado" />} contentClassName="p-0">
@@ -163,7 +163,7 @@ function LedgerTab({ detail }: { detail: Detail }) {
 function FilesTab({ detail }: { detail: Detail }) {
   return (
     <SectionCard title="Documentos y consentimientos" action={<Button size="sm" variant="outline">Subir documento</Button>} contentClassName="p-0">
-      <ul className="divide-y">{detail.files.map((f) => (<li key={f.name} className="flex items-center gap-3 px-4 py-3 text-sm"><FileText className="size-4 shrink-0 text-muted-foreground" /><div className="min-w-0 flex-1"><p className="truncate font-medium">{f.name}</p><p className="text-xs text-muted-foreground">{f.kind} · {formatDate(f.date)} · {f.size}</p></div><Button variant="ghost" size="icon-sm" aria-label="Descargar"><FileDown /></Button></li>))}</ul>
+      <ul className="divide-y">{detail.files.map((f) => (<li key={f.name} className="flex items-center gap-3 px-4 py-3 text-sm"><FileText className="size-4 shrink-0 text-muted-foreground" /><div className="min-w-0 flex-1"><p className="truncate font-medium">{f.name}</p><p className="text-xs text-muted-foreground">{f.kind} · {formatDate(f.date)} · {f.size}</p></div><Button variant="ghost" size="icon" aria-label="Descargar"><FileDown /></Button></li>))}</ul>
     </SectionCard>
   );
 }

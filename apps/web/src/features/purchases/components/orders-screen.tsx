@@ -3,7 +3,7 @@
 import { Eye, FileDown, PlusCircle } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { Button } from "khipu-design-system/ui/button";
 import { DataTable, TwoLine, type Column } from "@/components/shared/data-table";
 import { PaginationBar } from "@/components/shared/pagination";
 import { SectionCard } from "@/components/shared/section-card";
@@ -21,7 +21,7 @@ export function OrdersScreen({ orders }: { orders: PurchaseOrder[] }) {
     { key: "total", header: "Total", align: "right", cell: (o) => <span className="font-mono font-medium tabular-nums">{formatCurrency(o.total)}</span> },
     { key: "spot", header: "Detracción / SPOT", cell: (o) => o.detraction ? <TwoLine primary={<span className="font-mono tabular-nums">{o.detraction.rate}% · {formatCurrency(o.detraction.amount)}</span>} secondary={o.detraction.deposited ? "Constancia registrada" : "Pendiente de depósito"} /> : <span className="text-muted-foreground">—</span> },
     { key: "status", header: "Estado", cell: (o) => <StatusBadge tone={statusMeta[o.status].tone} dot label={statusMeta[o.status].label} /> },
-    { key: "actions", header: <span className="sr-only">Acciones</span>, align: "right", cell: (o) => (<div className="flex justify-end gap-0.5"><Button variant="ghost" size="icon-sm" aria-label="Ver orden"><Eye /></Button><Button variant="ghost" size="icon-sm" aria-label="PDF" onClick={() => toast.info(`${o.number}.pdf`)}><FileDown /></Button></div>) },
+    { key: "actions", header: <span className="sr-only">Acciones</span>, align: "right", cell: (o) => (<div className="flex justify-end gap-0.5"><Button variant="ghost" size="icon" aria-label="Ver orden"><Eye /></Button><Button variant="ghost" size="icon" aria-label="PDF" onClick={() => toast.info(`${o.number}.pdf`)}><FileDown /></Button></div>) },
   ];
   return (
     <>

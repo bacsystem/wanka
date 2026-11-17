@@ -4,7 +4,7 @@ import { Download } from "lucide-react";
 import * as React from "react";
 import { Bar, BarChart, Cell, XAxis, YAxis } from "recharts";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { Button } from "khipu-design-system/ui/button";
 import { Tag } from "@/components/shared/status-badge";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { cn } from "@/lib/utils";
@@ -34,7 +34,7 @@ export function SalesChartCard({ data }: { data: DailySales[] }) {
               <button key={r.id} type="button" role="tab" aria-selected={range === r.id} onClick={() => setRange(r.id)} className={cn("rounded px-2.5 py-1 text-muted-foreground transition-colors hover:text-foreground", range === r.id && "bg-card font-semibold text-primary shadow-xs")}>{r.label}</button>
             ))}
           </div>
-          <Button variant="outline" size="icon-sm" aria-label="Exportar reporte" onClick={() => toast.success("Reporte de ventas exportado (XLSX)")}><Download /></Button>
+          <Button variant="outline" size="icon" aria-label="Exportar reporte" onClick={() => toast.success("Reporte de ventas exportado (XLSX)")}><Download /></Button>
       </>}
       contentClassName="p-4 pt-4"
     >

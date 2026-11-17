@@ -3,7 +3,7 @@
 import { ArrowUpDown, Eye, FileCode, FileDown, Filter, MoreHorizontal, Receipt, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { Button } from "khipu-design-system/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DataTable, TwoLine, type Column } from "@/components/shared/data-table";
 import { SectionCard } from "@/components/shared/section-card";
