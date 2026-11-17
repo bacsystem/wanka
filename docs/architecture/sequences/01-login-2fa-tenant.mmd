@@ -48,7 +48,7 @@ sequenceDiagram
     Note over A: solo pasa si la membresia se creo despues del login: es una guarda, la decision fue en el login
     A-->>W: 403 mfa_required (el BFF vuelve a /login para cumplir la 2FA)
   else ok
-    A->>DB: revoca tokens actuales, nueva sesion ligada a tenant_id + site_id + cash_register_id + authz_version
+    A->>DB: revoca tokens actuales, nueva sesion ligada a tenant_id + membership_id + site_id + cash_register_id + authz_version (de esa membresia) + mfa_method heredado
     A-->>W: 200 {access_token, refresh_token, tenant, site, permissions[], modules[]}
     W->>W: reemplaza cookies, borra cookie legacy tenant_id
     W-->>U: redirige a /
