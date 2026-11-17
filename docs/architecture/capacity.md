@@ -20,7 +20,7 @@ Estado: propuesto (2026-11-17). La carga por tenant (50 usuarios concurrentes, 3
 ### De los números al tamaño (ley de Little)
 
 - API: 300 req/s × 50 ms medios ≈ **15 peticiones en vuelo**; a 1 000 req/s ≈ 50. Una réplica de Go con 2 vCPU atiende eso si el cuello no es la base.
-- Conexiones a Postgres: cada petición usa la conexión solo durante su transacción (~10-30 ms). 300 req/s × 20 ms ≈ **6 conexiones activas**; a 1 000 req/s ≈ 20. Pool explícito: `api` 20, `worker` 10, `platform-api` 5 → 35 en total, dentro de "unas pocas por núcleo" de una base de 8 vCPU. El total se reparte entre réplicas: con 2 réplicas de `api`, 10 cada una.
+- Conexiones a Postgres: cada petición usa la conexión solo durante su transacción (~10-30 ms). 300 req/s × 20 ms ≈ **6 conexiones activas**; a 1 000 req/s ≈ 20. Pool explícito por réplica: `api` 20, `worker` 10, `webhooks` 5, `platform-api` 5 → 40 en total, más 1 del pre-deploy (ADR 0007). Los jobs no retienen conexiones durante las llamadas HTTP (ADR 0006), dentro de "unas pocas por núcleo" de una base de 8 vCPU. El total se reparte entre réplicas: con 2 réplicas de `api`, 10 cada una.
 - Worker CPE: Khipu no tiene tope por segundo en emisión, pero cada llamada incluye la ida a SUNAT, y una misma serie se procesa en orden (ADR 0003). 100 emisiones/s con 1-3 s por llamada (supuesto, a medir en BETA) dan entre 100 y 300 llamadas en vuelo. La concurrencia de la cola `cpe` es explícita (inicial 20 por réplica) y se sube midiendo. El límite real lo pone la **cuota mensual del plan de Khipu**, que se suma entre las empresas de la cuenta; se monitorea con alerta al 80 %.
 
 ## 2. Caminos calientes y su criterio de carga

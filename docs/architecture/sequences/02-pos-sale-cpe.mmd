@@ -36,7 +36,7 @@ sequenceDiagram
         A->>DB: UPDATE document_series de (caja, tipo) SET last_number = last_number + 1 RETURNING
         A->>DB: INSERT sales, sale_lines, sale_payments, cash_movements (por metodo y moneda)
         A->>DB: INSERT electronic_documents (pendiente, rank 1, currency, exchange_rate)
-        A->>DB: River InsertTx cpe.emit {tenant_id, series_id}
+        A->>DB: River InsertTx cpe.emit {tenant_id, series_id} unico por serie entre estados en espera
         A->>DB: UPDATE idempotency_keys SET response
         A->>DB: COMMIT (sin llamadas de red dentro)
         A-->>W: 201 {sale, document: {series, number, status: pendiente}}
@@ -44,29 +44,34 @@ sequenceDiagram
       end
     end
   end
-  WK->>DB: cpe.emit: pg_try_advisory_xact_lock(series_id). Sin lock otro worker ya drena la serie y termina
-  loop mientras la serie tenga pendientes no bloqueados, en orden de numero
-    WK->>DB: SELECT pendiente de menor numero de la serie FOR UPDATE SKIP LOCKED, credencial fk_ del tenant
-    WK->>P: POST /v1/facturas con correlativo y tipo_cambio, X-Api-Key, Idempotency-Key = document_id (3 s conexion, 30 s total)
-    alt 201 o 200 (repeticion idempotente)
-      P-->>WK: datos.id, estado_documento, hash, totales, fecha_limite_envio, enlaces
-      WK->>DB: graba provider_ref, hash, provider_total WHERE provider_ref IS NULL (independiente del estado)
-      WK->>DB: transicion por rango WHERE status_rank < nuevo, edoc_events
-      WK->>S3: guarda XML y PDF (y CDR si existe)
-    else red, timeout, 500, 502/503, ENVIO_EN_CURSO
-      WK->>DB: next_attempt_at con backoff + jitter (max 10 en ~20 h), la serie espera
-    else 409 DUPLICADO o reintento fuera de las 24 h
-      WK->>P: GET /v1/facturas?serie=&numero=
-      WK->>DB: adopta si total y receptor coinciden, si no alerta critica
-    else 422 de validacion
-      WK->>DB: blocked_reason = validation (mismo numero tras corregir), la serie sigue con N+1 (politica de hueco, verificar en BETA)
-    else config, 401, 403, 429 LIMITE_PLAN o LIMITE_PRUEBAS, 402
-      WK->>DB: blocked_reason config, auth o quota, pausa tenant o cuenta, alerta
+  WK->>DB: cpe.emit (job unico por series_id entre estados en espera): UPDATE series_emitters SET holder, lease_until = now()+60 s WHERE libre o propio, COMMIT
+  alt arrendamiento ocupado por otro drenador
+    WK->>WK: JobSnooze(2 s): el job no termina, reintenta (sin aviso perdido)
+  else arrendamiento tomado
+    loop mientras la serie tenga pendientes no bloqueados, en orden de numero
+      WK->>DB: tx corta: SELECT pendiente de menor numero de la serie + credencial fk_, COMMIT
+      Note over WK,P: la llamada HTTP corre SIN transacción ni conexión retenida
+      WK->>P: POST /v1/facturas con correlativo y tipo_cambio, X-Api-Key, Idempotency-Key = document_id (3 s conexion, 30 s total)
+      alt 201 o 200 (repeticion idempotente)
+        P-->>WK: datos.id, estado_documento, hash, totales, fecha_limite_envio, enlaces
+        WK->>DB: tx corta: graba provider_ref, hash, provider_total WHERE provider_ref IS NULL, transicion por rango, edoc_events, renueva lease, COMMIT por documento
+        WK->>S3: guarda XML y PDF (y CDR si existe)
+      else red, timeout, 500, 502/503, ENVIO_EN_CURSO
+        WK->>DB: tx corta: next_attempt_at con backoff + jitter (max 10 en ~20 h), la serie espera, COMMIT
+      else 409 DUPLICADO o reintento fuera de las 24 h
+        WK->>P: GET /v1/facturas?serie=&numero=
+        WK->>DB: tx corta: adopta si total y receptor coinciden, si no alerta critica
+      else 422 de validacion
+        WK->>DB: tx corta: blocked_reason = validation (mismo numero tras corregir), la serie sigue con N+1 (politica de hueco, verificar en BETA)
+      else config, 401, 403, 429 LIMITE_PLAN o LIMITE_PRUEBAS, 402
+        WK->>DB: tx corta: blocked_reason config, auth o quota, pausa tenant o cuenta, alerta
+      end
     end
+    WK->>DB: suelta el arrendamiento, COMMIT, y vuelve a mirar: si hay pendientes encola cpe.emit (el unico lo deduplica)
   end
   Note over P: Khipu reintenta ERROR_ENVIO hacia SUNAT (20 veces, ~74 h). Wanka no llama /enviar automaticamente.
   P-)WH: POST /webhooks/khipu/{routeId} (X-Khipu-Signature, X-Khipu-Delivery)
-  WH->>DB: ops.resolve_webhook_route(routeId) -> tenant, InTenantTx, lee whsec_, verifica HMAC (300 s), dedupe, guarda evento
+  WH->>DB: ops.resolve_webhook_route(routeId) -> tenant + whsec_ cifrado (WEBHOOK_SECRET_ENC_KEY), verifica HMAC (300 s), InTenantTx, dedupe, guarda evento (sin acceso a fk_)
   WH->>DB: encola cpe.sync(tenant, serie, numero), responde 2xx
   WK->>P: cpe.sync: GET /v1/facturas/{id}, o por serie y numero si aun no hay provider_ref
   WK->>DB: graba datos del proveedor, luego transicion por rango (el orden de eventos no importa)

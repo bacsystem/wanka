@@ -81,16 +81,17 @@ type InvoicingProvider interface {
 
 ### Credenciales por tenant
 
-La API key `fk_…` y el `whsec_` se guardan cifrados con AES-GCM (`INTEGRATIONS_ENC_KEY`) en `integ.provider_credentials`, que tiene RLS. La ruta del webhook vive en `ops.webhook_routes`, sin RLS (ADR 0001). El certificado y la clave SOL se cargan en Khipu.
+La API key `fk_…` se guarda cifrada con AES-GCM (`INTEGRATIONS_ENC_KEY`) en `integ.provider_credentials`, con RLS. Solo la leen `api` y `worker`. El `whsec_` va en `ops.webhook_routes`, cifrado con una clave aparte, `WEBHOOK_SECRET_ENC_KEY`. El servicio público `webhooks` solo accede a él mediante `ops.resolve_webhook_route()`: no puede leer las API keys ni recibe `INTEGRATIONS_ENC_KEY` (ADR 0001). El certificado y la clave SOL se cargan en Khipu.
 
 ### Numeración y orden por serie
 
 - Wanka asigna el número en la transacción de la venta (ADR 0008) y lo envía en `correlativo`. Las series se registran en Khipu con `correlativo_inicial` y son exclusivas de Wanka. Las GRE las numera Khipu.
 - **Un emisor por serie, en orden.** Khipu procesa en orden lo que recibe de una serie, pero si Wanka enviara en paralelo desde 20 workers, el orden de llegada no sería el de los números.
-  - El job `cpe.emit` toma un candado consultivo de transacción por serie (`pg_try_advisory_xact_lock(hashtext(series_id))`).
-  - Con el candado, emite el **pendiente de menor número** de esa serie (`ORDER BY number LIMIT 1 FOR UPDATE SKIP LOCKED`) y repite hasta vaciarla.
-  - Si no obtiene el candado, termina: otro worker ya está drenando esa serie.
+  - **Un arrendamiento por serie, en una fila y sin transacción abierta.** La tabla `einv.series_emitters (tenant_id, series_id PK, holder, lease_until)` se toma con un `UPDATE ... SET holder = $job, lease_until = now() + 60 s WHERE series_id = $s AND (lease_until < now() OR holder = $job)`, que se confirma enseguida. Nunca se usa `pg_*_xact_lock`: ese candado obligaría a mantener abierta una transacción, y su conexión, durante las llamadas HTTP a Khipu.
+  - **Por documento, tres pasos y ninguna red dentro de una transacción.** (1) Una transacción corta lee el pendiente de **menor número** de la serie, sin bloqueo, y hace `COMMIT`. (2) Llamada HTTP a Khipu, fuera de toda transacción (hasta 30 s). (3) Otra transacción corta graba los datos del proveedor y la transición, renueva el arrendamiento y hace `COMMIT`. Cada documento queda confirmado apenas Khipu responde. Si el worker cae, solo se pierde el documento que estaba en vuelo, y se recupera con la `Idempotency-Key` o con `FindByNumber`.
+  - **Sin avisos perdidos.** La venta encola `cpe.emit {series_id}` como job **único por `series_id` entre los estados en espera** (`available`, `scheduled`, `retryable`; **no** `running`). Así, mientras un drenador corre, una venta nueva deja como mucho un sucesor en cola. El job que no consigue el arrendamiento hace `JobSnooze(2 s)`: no termina, vuelve a intentar. El drenador, después de soltar el arrendamiento, **vuelve a mirar** si hay pendientes, y si los hay encola otra vez `cpe.emit` (el índice único lo deduplica). Si el drenador cae, el arrendamiento vence a los 60 s y lo toma el siguiente job.
   - Distintas series se emiten en paralelo (concurrencia de la cola `cpe`, ADR 0006), y una serie por caja reparte la carga.
+  - **Pruebas:** una prueba de carga con 20 series y un doble de Khipu a 3 s, que vigile la espera y las conexiones en uso de `pgxpool` (ninguna conexión retenida durante la llamada HTTP); y un test de un N+1 encolado justo cuando el drenaje termina, que debe salir en menos de 5 s.
 - **Política de hueco.** Un documento bloqueado por `422` se aparta (`blocked_reason = validation`) y el drenaje sigue con N+1.
   - Si la verificación en BETA del punto 2 muestra que Khipu **rechaza** un N+1 cuando N falta, la política cambia a "detener la serie": la serie queda en pausa, con alerta inmediata y una acción "corregir" en la UI.
   - En ese caso las demás cajas siguen con sus series, y la caja afectada puede pasar temporalmente a una serie de contingencia configurada.
@@ -115,13 +116,14 @@ Las transiciones solo suben de rango: `UPDATE ... SET status = $s, status_rank =
 | Transitorio | red, timeout, `500 INTERNO`, `502`/`503` (incluso sin JSON), `503 SUNAT_NO_DISPONIBLE`, `409 ENVIO_EN_CURSO` | reintento del salto Wanka→Khipu con backoff y jitter, como máximo 10 en ~20 h (dentro de las 24 h de la clave) |
 | Ya existe | `409 DUPLICADO`; o reintento pasadas las 24 h | `FindByNumber` y adopción si coinciden total y receptor; si no, alerta crítica |
 | Corregir | `422` de validación y de reglas (`VALIDACION`, `RECEPTOR_INVALIDO`, `FORMA_PAGO_INVALIDA`, `TIPO_CAMBIO_INVALIDO`, `REDONDEO_INVALIDO`, `ITEM_INVALIDO`, `NOTA_INVALIDA`, `DOCUMENTO_RELACIONADO_INVALIDO`, …) | `pendiente` + `blocked_reason = validation`; se reenvía con el mismo número tras corregir |
-| Configuración del tenant | `422 SERIE_NO_CONFIGURADA`, `SERIE_INVALIDA`, `CERTIFICADO_NO_CARGADO/VENCIDO/INVALIDO`, `CREDENCIALES_SOL_NO_CARGADAS`, `CREDENCIALES_SUNAT_NO_CARGADAS`, `CREDENCIALES_API_SUNAT_*`, `FIRMA_FALLIDA`, `XSD_INVALIDO` | `blocked_reason = config`; pausa de la emisión del tenant y banner en `/configuracion/sunat` |
+| Configuración del tenant | `422 SERIE_NO_CONFIGURADA`, `SERIE_INVALIDA`, `CERTIFICADO_NO_CARGADO/VENCIDO/INVALIDO`, `CREDENCIALES_SOL_NO_CARGADAS`, `CREDENCIALES_SOL_FALTAN`, `CREDENCIALES_SOL_RECHAZADAS`, `CREDENCIALES_SUNAT_NO_CARGADAS`, `CREDENCIALES_GRE_RECHAZADAS`, `CREDENCIALES_API_SUNAT_*`, `FIRMA_FALLIDA`, `XSD_INVALIDO` | `blocked_reason = config`; pausa de la emisión del tenant y banner en `/configuracion/sunat` |
 | Credencial | `401 NO_AUTORIZADO` | `blocked_reason = auth`; pausa del tenant |
 | Operación no permitida | `403 REQUIERE_SESION`, `EMPRESA_AJENA`, `ROL_INSUFICIENTE`, `SOPORTE_SOLO_LECTURA` | es un error de programación o de configuración (se llamó con API key una operación del portal, o la llave es de otra empresa). Sin reintento; alerta a ingeniería |
 | Cuota | `429 LIMITE_PLAN`, `429 LIMITE_PRUEBAS` (BETA, compartida entre las empresas de la cuenta), `402 PLAN_VENCIDO` | `blocked_reason = quota`; pausa de la cuenta (o del tenant, si las cuentas son por tenant) y alerta crítica a plataforma. Monitoreo de la cuota al 80 % con `GET /v1/cuenta` (solo portal: la mide plataforma) |
 | SUNAT ya lo tiene | `409 SUNAT_YA_LO_TIENE`: el documento queda `ERROR_ENVIO`, fuera de los reintentos automáticos | `enviado` + `blocked_reason = sunat_ya_lo_tiene`; **no se reemite**; tarea para soporte (verificar el CDR en SOL) y `POST /v1/facturas/{id}/cdr/recuperar` manual |
 | Estado | `409 ESTADO_NO_ENVIABLE`, `FUERA_DE_PLAZO`, `NO_ACEPTADO`, `422 BAJA_INVALIDA` | sin reintento; se aplica el estado real con `GetDocument` y se informa al usuario |
-| No encontrado | `404 NO_ENCONTRADO`, `SIN_CDR` (CDR aún no disponible), `404 NO_DISPONIBLE_EN_BETA` | `SIN_CDR`: se reintenta la descarga más tarde. El resto: alerta |
+| No encontrado | `404 NO_ENCONTRADO`, `404 SIN_CDR` (CDR aún no disponible) | `SIN_CDR`: se reintenta la descarga más tarde. `NO_ENCONTRADO`: alerta |
+| No disponible en BETA | `422 NO_DISPONIBLE_EN_BETA` (CDR, GRE y consultas que BETA no ofrece) | sin reintento ni alerta en BETA: se registra y se omite el paso (el CDR queda vacío); en PRODUCCION no debería ocurrir y genera alerta |
 
 ### Respuesta, webhook y conciliación sin carreras
 

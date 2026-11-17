@@ -12,6 +12,7 @@ erDiagram
   ELECTRONIC_DOCUMENTS ||--o{ ELECTRONIC_DOCUMENTS : "NC/ND referencia a"
   ELECTRONIC_DOCUMENTS ||--o{ VOIDINGS : "baja solicitada"
   DOCUMENT_SERIES ||--o{ ELECTRONIC_DOCUMENTS : numera
+  DOCUMENT_SERIES ||--o| SERIES_EMITTERS : "un emisor a la vez"
   PROVIDER_CREDENTIALS ||--o{ ELECTRONIC_DOCUMENTS : "emite con"
   WEBHOOK_ROUTES ||--|| PROVIDER_CREDENTIALS : "resuelve tenant de"
   ELECTRONIC_DOCUMENTS ||--o{ PROVIDER_WEBHOOK_EVENTS : notifica
@@ -84,6 +85,12 @@ erDiagram
     uuid id PK
     bigint last_number
   }
+  SERIES_EMITTERS {
+    uuid tenant_id PK "RLS"
+    uuid series_id PK "arrendamiento en fila: nunca candado de transaccion durante la llamada a Khipu"
+    text holder "id del job River"
+    timestamptz lease_until "now() + 60 s, se renueva por documento; vencido = libre"
+  }
   ELECTRONIC_DOCUMENTS {
     uuid id PK "tambien Idempotency-Key hacia Khipu"
     uuid tenant_id "RLS"
@@ -151,15 +158,15 @@ erDiagram
   PROVIDER_CREDENTIALS {
     uuid tenant_id PK "esquema integ, RLS"
     text provider PK "khipu"
-    bytea api_key_enc "fk_... cifrada AES-GCM, nunca se devuelve"
-    bytea webhook_secret_enc "whsec_... cifrado"
+    bytea api_key_enc "fk_... cifrada AES-GCM con INTEGRATIONS_ENC_KEY; sin GRANT para wanka_webhooks"
     text environment "BETA, PRODUCCION"
     timestamptz verified_at
   }
   WEBHOOK_ROUTES {
-    text route_id PK "ops.webhook_routes SIN RLS: 128 bits aleatorios, solo SELECT para wanka_webhooks"
+    text route_id PK "ops.webhook_routes SIN RLS: 128 bits aleatorios; wanka_webhooks solo via ops.resolve_webhook_route()"
     uuid tenant_id "a que tenant pertenece la ruta"
     text provider "khipu"
+    bytea webhook_secret_enc "whsec_ cifrado con WEBHOOK_SECRET_ENC_KEY (clave propia, no INTEGRATIONS_ENC_KEY)"
     timestamptz revoked_at
   }
   PROVIDER_WEBHOOK_EVENTS {
