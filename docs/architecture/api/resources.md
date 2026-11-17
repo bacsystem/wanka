@@ -169,17 +169,17 @@ Ajustes de forma respecto a los mocks, comunes a todos los recursos:
 | Método y ruta | Pantalla | Forma (mock) | Rol de staff |
 |---|---|---|---|
 | `POST /platform/v1/auth/login`, `/mfa/verify`, `/refresh`, `/logout` | `/admin/login` (2FA obligatorio; SSO en ADR futuro) | — | — |
-| `GET /platform/v1/dashboard` | `/admin` | `platformSummary`, `mrrSeries` (agregados) | superadmin, finanzas |
-| `GET /platform/v1/tenants`, `GET /{id}`, `POST` **(I)**, `PATCH /{id}` | `/admin/empresas`, `/[id]` | `PlatformTenant` (los precios de plan se leen de `plans`, no se duplican en el tenant) | `tenants:*` |
-| `POST /platform/v1/tenants/{id}/suspend`, `/reactivate` **(I)** | acciones de tenant | — | `tenants:suspend` |
-| `POST /platform/v1/tenants/{id}/impersonations` **(I)** | soporte | — | `tenants:impersonate`, requiere ticket |
-| `GET/POST/PATCH /platform/v1/plans`, `/subscriptions` | `/admin/planes` | `Plan` | finanzas, ventas |
-| `GET /platform/v1/saas-invoices` | `/admin/facturacion` | `SaasInvoice` | finanzas |
-| `GET/PATCH /platform/v1/modules`, `/feature-flags`, `PUT /tenants/{id}/overrides` | `/admin/modulos` | `FeatureFlag` | superadmin, ingeniería |
-| `GET /platform/v1/monitoring/providers`, `/incidents`, `/certificates` | `/admin/monitoreo` | `providers`, `latency24h`, `expiringCerts`, `rejectTop` | soporte, ingeniería |
-| `GET/POST/PATCH /platform/v1/tickets` | `/admin/soporte` | `Ticket`, `supportSummary` | soporte |
-| `GET/POST/PATCH /platform/v1/staff` | `/admin/usuarios` | `StaffUser`, `roleMatrix` | superadmin |
-| `GET /platform/v1/audit` | `/admin/auditoria` | `AuditEvent` (`ops.ts`) | superadmin |
+| `GET /platform/v1/dashboard` | `/admin` | `platformSummary`, `mrrSeries` (agregados) | `plataforma.dashboard:read` |
+| `GET /platform/v1/tenants`, `GET /{id}`, `POST` **(I)**, `PATCH /{id}` | `/admin/empresas`, `/[id]` | `PlatformTenant` (los precios de plan se leen de `plans`, no se duplican en el tenant) | `plataforma.tenants:read`, `:create`, `:update` |
+| `POST /platform/v1/tenants/{id}/suspend`, `/reactivate` **(I)** | acciones de tenant | — | `plataforma.tenants:suspend` |
+| `POST /platform/v1/tenants/{id}/impersonations` **(I)** | soporte | — | `plataforma.tenants:impersonate`, requiere ticket y consentimiento de la empresa (#90) |
+| `GET/POST/PATCH /platform/v1/plans`, `/subscriptions` | `/admin/planes` | `Plan` | `plataforma.plans:*`, `plataforma.subscriptions:*` |
+| `GET /platform/v1/saas-invoices` | `/admin/facturacion` | `SaasInvoice` | `plataforma.billing:read` |
+| `GET/PATCH /platform/v1/modules`, `/feature-flags`, `PUT /tenants/{id}/overrides` | `/admin/modulos` | `FeatureFlag` | `plataforma.flags:read`, `:update` |
+| `GET /platform/v1/monitoring/providers`, `/incidents`, `/certificates` | `/admin/monitoreo` | `providers`, `latency24h`, `expiringCerts`, `rejectTop` | `plataforma.monitoring:read` |
+| `GET/POST/PATCH /platform/v1/tickets` | `/admin/soporte` | `Ticket`, `supportSummary` | `plataforma.tickets:read`, `:update` |
+| `GET/POST/PATCH /platform/v1/staff` | `/admin/usuarios` | `StaffUser`, `roleMatrix` | `plataforma.staff:read`, `:create`, `:update` |
+| `GET /platform/v1/audit` | `/admin/auditoria` | `AuditEvent` (`ops.ts`) | `plataforma.audit:read`, `:export` |
 
 Nota: el mock de monitoreo muestra varios OSE (`providers`, `OseProvider`). Con Khipu como proveedor único, `monitoring/providers` reporta la salud del adaptador Khipu (latencia, cola, rechazos); la lista multi-OSE del diseño queda como visión futura si se agrega un segundo `InvoicingProvider`.
 
@@ -253,3 +253,37 @@ Los issues usan 37 códigos abreviados (relevados con `gh issue list --limit 200
 | `ventas.descuento` | #51 | `ventas.discounts:create`; sobre el tope del rol, `ventas.discounts:approve` del supervisor que autoriza |
 
 La consignación (#112) no tenía código propio: usa `inventario.consignments:*`.
+
+## Catálogo de permisos de plataforma (plano super-admin)
+
+Es un catálogo **separado** del de tenant. Se guarda en `platform.platform_permissions` y se asigna a los roles de staff en `platform.platform_role_permissions`. Lo exige `platform-api` y nunca es válido en el plano tenant, igual que sus tokens (ADR 0004). Las acciones son las mismas del catálogo de tenant, más `suspend` e `impersonate`. La matriz de roles del mock (`platform-admin/mocks/ops.ts`, `roleMatrix`) se traduce a estos códigos.
+
+| Recurso | Permisos | Roles de staff con acceso (según `roleMatrix`) |
+|---|---|---|
+| dashboard | `plataforma.dashboard:read` | todos |
+| tenants | `plataforma.tenants:read`, `:create`, `:update`, `:suspend`, `:impersonate` | read: todos; create/update: SuperAdmin, Finanzas, Ventas; suspend: SuperAdmin, Finanzas; impersonate: SuperAdmin, Soporte |
+| plans | `plataforma.plans:read`, `:create`, `:update` | SuperAdmin, Finanzas, Ventas |
+| subscriptions | `plataforma.subscriptions:read`, `:update` | SuperAdmin, Finanzas |
+| billing (facturación del SaaS) | `plataforma.billing:read`, `:create`, `:export` | SuperAdmin, Finanzas |
+| monitoring (OSE, SUNAT, Khipu, certificados) | `plataforma.monitoring:read` | SuperAdmin, Soporte, Ingeniería |
+| tickets | `plataforma.tickets:read`, `:create`, `:update` | SuperAdmin, Soporte |
+| staff | `plataforma.staff:read`, `:create`, `:update` | SuperAdmin |
+| flags (módulos y feature flags) | `plataforma.flags:read`, `:update` | SuperAdmin, Ingeniería |
+| audit | `plataforma.audit:read`, `:export` | SuperAdmin, Soporte, Finanzas, Ingeniería |
+| config (configuración núcleo) | `plataforma.config:read`, `:update` | SuperAdmin, Ingeniería |
+
+### Correspondencia: historias de plataforma → catálogo
+
+Las historias #85 a #93 citan hoy el comodín `plataforma.*`. El PO las reemplaza por los permisos concretos de esta tabla.
+
+| Issue | Historia | Permisos del catálogo |
+|---|---|---|
+| #85 | Listar y ver fichas de empresas | `plataforma.tenants:read` |
+| #86 | Crear, suspender y reactivar empresas | `plataforma.tenants:create`, `plataforma.tenants:suspend` (suspender y reactivar) |
+| #87 | Gestionar planes y límites | `plataforma.plans:read`, `:create`, `:update` |
+| #88 | Gestionar suscripciones y cobros del SaaS | `plataforma.subscriptions:read`, `:update`, `plataforma.billing:read`, `:create` |
+| #89 | Monitorear la salud de OSE/SUNAT/Khipu | `plataforma.monitoring:read` |
+| #90 | Atender tickets de soporte | `plataforma.tickets:read`, `:update`; para entrar a los datos de una empresa, además `plataforma.tenants:impersonate` (con consentimiento y auditado) |
+| #91 | Gestionar usuarios de plataforma | `plataforma.staff:read`, `:create`, `:update` |
+| #92 | Administrar feature flags y módulos | `plataforma.flags:read`, `:update` |
+| #93 | Auditar acciones de la plataforma | `plataforma.audit:read`, `:export` |
