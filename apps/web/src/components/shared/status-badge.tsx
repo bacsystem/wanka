@@ -39,9 +39,10 @@ export function Tag({ tone = "neutral", label, className, solid }: { tone?: Badg
         ? "bg-primary text-primary-foreground"
         : "bg-acento-suave text-acento-superficie-texto"
       : solid
-        ? {
-            success: "bg-success-solid text-[#0a0b0e]",
-            warning: "bg-warning-solid text-[#0a0b0e]",
+        ? // TODO(DS): solid fills use text-foreground/dark:text-background until khipu ships --*-solid-foreground tokens.
+          {
+            success: "bg-success-solid text-foreground dark:text-background",
+            warning: "bg-warning-solid text-foreground dark:text-background",
             danger: "bg-destructive text-destructive-foreground",
             info: "bg-acento-2-texto text-white",
             neutral: "bg-foreground text-background",

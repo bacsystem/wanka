@@ -8,6 +8,8 @@ const ALL_PALETTES =
   "slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose";
 const HARDCODED_PALETTE = new RegExp(`\\b(?:bg|text|border|ring|fill|from|to|via|stroke)-(?:${ALL_PALETTES})-\\d+`);
 
+const ARBITRARY_COLOR = /\b(?:bg|text|border|ring|fill|stroke|from|to|via|outline|decoration|shadow)-\[(?:#|rgb|hsl|oklch)/;
+
 function collectTsx(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
     const full = join(dir, name);
@@ -19,6 +21,11 @@ function collectTsx(dir: string): string[] {
 describe("khipu design system adoption", () => {
   it("no TSX component or page hardcodes a Tailwind palette color", () => {
     const violations = collectTsx(SRC).filter((file) => HARDCODED_PALETTE.test(readFileSync(file, "utf8")));
+    expect(violations.map((f) => relative(SRC, f))).toEqual([]);
+  });
+
+  it("no TSX component or page uses an arbitrary color value (use DS tokens)", () => {
+    const violations = collectTsx(SRC).filter((file) => ARBITRARY_COLOR.test(readFileSync(file, "utf8")));
     expect(violations.map((f) => relative(SRC, f))).toEqual([]);
   });
 

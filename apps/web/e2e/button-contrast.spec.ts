@@ -68,3 +68,29 @@ for (const theme of ["light", "dark"] as const) {
     });
   }
 }
+
+const DOT_STATUSES = ["libre", "ocupada", "por_cobrar", "reservada", "sucia"];
+const MODES = [
+  { name: "light", theme: "light", oscuro: "" },
+  { name: "dark", theme: "dark", oscuro: "" },
+  { name: "dark grafito", theme: "dark", oscuro: "grafito" },
+  { name: "dark tintado", theme: "dark", oscuro: "tintado" },
+] as const;
+
+for (const mode of MODES) {
+  test(`${mode.name}: every /salon table status dot has WCAG contrast >= 4.5`, async ({ page, context }, testInfo) => {
+    test.skip(testInfo.project.name !== "desktop", "desktop only");
+    await page.emulateMedia({ colorScheme: mode.theme });
+    await page.addInitScript((t) => localStorage.setItem("theme", t), mode.theme);
+    await context.addCookies([{ name: "tenant_id", value: "t_004", url: String(testInfo.project.use.baseURL) }]);
+    await page.goto("/salon");
+    await expect(page.locator("html")).toHaveClass(mode.theme === "dark" ? /dark/ : /^(?!.*dark)/);
+    if (mode.oscuro) await page.evaluate((o) => document.documentElement.setAttribute("data-oscuro", o), mode.oscuro);
+    for (const status of DOT_STATUSES) {
+      const dot = page.locator(`[data-table-dot="${status}"]`).first();
+      await expect(dot, `dot ${status}`).toBeVisible();
+      const { text, background } = await colorsOf(dot);
+      expect(contrast(text, background), `dot ${status}`).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+}
