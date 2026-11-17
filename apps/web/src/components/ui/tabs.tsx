@@ -23,16 +23,14 @@ function Tabs({
 }
 
 const tabsListVariants = cva(
-  "group/tabs-list no-scrollbar inline-flex w-fit max-w-full items-center justify-start overflow-x-auto rounded-lg p-[3px] text-muted-foreground group-data-horizontal/tabs:h-8 group-data-vertical/tabs:h-fit group-data-vertical/tabs:flex-col data-[variant=line]:rounded-none",
+  "group/tabs-list no-scrollbar relative isolate inline-flex w-fit max-w-full items-center justify-start overflow-x-auto rounded-full p-[3px] text-muted-foreground group-data-horizontal/tabs:min-h-control group-data-vertical/tabs:h-fit group-data-vertical/tabs:flex-col data-[variant=line]:rounded-none",
   {
     variants: {
       variant: {
-        default: "bg-muted",
-        line: "gap-1 bg-transparent",
-        /** Stitch card strip: full-width, 40 px triggers, card surface. */
-        /** Filter pills inside a toolbar: transparent list, solid primary pill when active. */
-        pills: "h-auto gap-1 bg-transparent p-0 group-data-horizontal/tabs:h-auto [&>[data-slot=tabs-trigger]]:h-9 [&>[data-slot=tabs-trigger]]:flex-none [&>[data-slot=tabs-trigger]]:rounded-full [&>[data-slot=tabs-trigger]]:px-4 [&>[data-slot=tabs-trigger]]:font-semibold [&>[data-slot=tabs-trigger]]:data-active:bg-primary [&>[data-slot=tabs-trigger]]:data-active:text-primary-foreground [&>[data-slot=tabs-trigger]]:data-active:shadow-sm",
-        card: "h-auto w-full gap-1 rounded-xl border bg-card p-1.5 shadow-xs group-data-horizontal/tabs:h-auto [&>[data-slot=tabs-trigger]]:h-10 [&>[data-slot=tabs-trigger]]:flex-none [&>[data-slot=tabs-trigger]]:px-3 [&>[data-slot=tabs-trigger]]:font-semibold [&>[data-slot=tabs-trigger]]:data-active:bg-accent [&>[data-slot=tabs-trigger]]:data-active:text-primary [&>[data-slot=tabs-trigger]]:data-active:shadow-none",
+        default: "bg-secondary",
+        line: "gap-4 bg-transparent p-0 shadow-[inset_0_-1px_0_var(--color-border)]",
+        pills: "h-auto gap-1 bg-secondary p-[3px] group-data-horizontal/tabs:h-auto [&>[data-slot=tabs-trigger]]:h-7 [&>[data-slot=tabs-trigger]]:flex-none [&>[data-slot=tabs-trigger]]:rounded-full [&>[data-slot=tabs-trigger]]:px-3.5 [&>[data-slot=tabs-trigger]]:font-semibold",
+        card: "h-auto w-full gap-1 rounded-xl border border-borde-tarjeta bg-card p-1.5 shadow-tarjeta group-data-horizontal/tabs:h-auto [&>[data-slot=tabs-trigger]]:h-control [&>[data-slot=tabs-trigger]]:flex-none [&>[data-slot=tabs-trigger]]:rounded-full [&>[data-slot=tabs-trigger]]:px-3.5 [&>[data-slot=tabs-trigger]]:font-semibold",
       },
     },
     defaultVariants: {
@@ -44,6 +42,7 @@ const tabsListVariants = cva(
 function TabsList({
   className,
   variant = "default",
+  children,
   ...props
 }: TabsPrimitive.List.Props & VariantProps<typeof tabsListVariants>) {
   return (
@@ -52,7 +51,20 @@ function TabsList({
       data-variant={variant}
       className={cn(tabsListVariants({ variant }), className)}
       {...props}
-    />
+    >
+      {children}
+      <TabsPrimitive.Indicator
+        data-slot="tabs-indicator"
+        className={cn(
+          "pointer-events-none absolute -z-10 left-(--active-tab-left) w-(--active-tab-width) transition-[left,width,top,height] duration-(--duracion-media) ease-salida motion-reduce:transition-none",
+          variant === "line"
+            ? "bottom-0 h-0.5 rounded-full bg-foreground"
+            : variant === "card"
+              ? "top-(--active-tab-top) h-(--active-tab-height) rounded-full bg-acento-suave"
+              : "top-(--active-tab-top) h-(--active-tab-height) rounded-full bg-card shadow-xs ring-1 ring-border dark:bg-input"
+        )}
+      />
+    </TabsPrimitive.List>
   )
 }
 
@@ -61,10 +73,7 @@ function TabsTrigger({ className, ...props }: TabsPrimitive.Tab.Props) {
     <TabsPrimitive.Tab
       data-slot="tabs-trigger"
       className={cn(
-        "relative inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-1.5 rounded-md border border-transparent px-1.5 py-0.5 text-sm font-medium whitespace-nowrap text-foreground/60 transition-all group-data-vertical/tabs:w-full group-data-vertical/tabs:justify-start hover:text-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-1 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-50 has-data-[icon=inline-end]:pr-1 has-data-[icon=inline-start]:pl-1 aria-disabled:pointer-events-none aria-disabled:opacity-50 dark:text-muted-foreground dark:hover:text-foreground group-data-[variant=default]/tabs-list:data-active:shadow-sm group-data-[variant=line]/tabs-list:data-active:shadow-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-        "group-data-[variant=line]/tabs-list:bg-transparent group-data-[variant=line]/tabs-list:data-active:bg-transparent dark:group-data-[variant=line]/tabs-list:data-active:border-transparent dark:group-data-[variant=line]/tabs-list:data-active:bg-transparent",
-        "data-active:bg-background data-active:text-foreground dark:data-active:border-input dark:data-active:bg-input/30 dark:data-active:text-foreground",
-        "after:absolute after:bg-foreground after:opacity-0 after:transition-opacity group-data-horizontal/tabs:after:inset-x-0 group-data-horizontal/tabs:after:bottom-[-5px] group-data-horizontal/tabs:after:h-0.5 group-data-vertical/tabs:after:inset-y-0 group-data-vertical/tabs:after:-right-1 group-data-vertical/tabs:after:w-0.5 group-data-[variant=line]/tabs-list:data-active:after:opacity-100",
+        "relative inline-flex h-7 flex-1 items-center justify-center gap-1.5 rounded-full border border-transparent px-3 py-0.5 text-control font-medium whitespace-nowrap text-muted-foreground transition-colors duration-(--duracion-rapida) ease-salida outline-none group-data-vertical/tabs:w-full group-data-vertical/tabs:justify-start hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-active:font-semibold data-active:text-foreground group-data-[variant=card]/tabs-list:data-active:text-acento-superficie-texto [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         className
       )}
       {...props}

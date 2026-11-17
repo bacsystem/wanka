@@ -190,7 +190,7 @@ export function CartPanel(p: CartPanelProps) {
             <Button variant="secondary" className="bg-accent font-semibold text-primary hover:bg-accent/70 dark:bg-muted" onClick={p.onSaveProforma} disabled={p.lines.length === 0}>
               <FileText data-icon="inline-start" /> Guardar proforma
             </Button>
-            <Button variant="secondary" className="bg-teal-100 font-semibold text-teal-900 hover:bg-teal-200 dark:bg-teal-900/50 dark:text-teal-100" onClick={() => p.onCashReceived(String(totals.total))} disabled={p.lines.length === 0}>
+            <Button variant="secondary" className="bg-acento-suave font-semibold text-acento-superficie-texto hover:bg-acento-suave dark:text-acento-superficie-texto" onClick={() => p.onCashReceived(String(totals.total))} disabled={p.lines.length === 0}>
               <Zap data-icon="inline-start" /> Cobro rápido exacto
             </Button>
           </div>

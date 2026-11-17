@@ -30,7 +30,7 @@ export function CustomerDetail({ customer, detail }: { customer: Customer; detai
     <div className="flex min-w-0 flex-1 flex-col gap-4 p-4 md:gap-5 md:p-6">
       <nav className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground" aria-label="Ruta">
         <span className="flex flex-wrap items-center gap-1.5"><Link href="/clientes" className="flex items-center gap-1 hover:text-primary"><ArrowLeft className="size-3.5" /> Clientes</Link><span>/</span><Link href="/clientes" className="hover:text-primary">Directorio</Link><span>/</span><span className="font-semibold text-foreground">{customer.name}</span>{customer.clinicalRecord ? <span className="rounded bg-muted px-1.5 py-0.5 font-mono font-medium text-foreground">{customer.clinicalRecord}</span> : null}</span>
-        <span className="hidden items-center gap-1.5 rounded-md bg-muted px-2.5 py-1 font-medium lg:flex"><span className="size-1.5 rounded-full bg-emerald-500" /> RUC: 20608941235 • Sede Miraflores</span>
+        <span className="hidden items-center gap-1.5 rounded-md bg-muted px-2.5 py-1 font-medium lg:flex"><span className="size-1.5 rounded-full bg-success-solid" /> RUC: 20608941235 • Sede Miraflores</span>
       </nav>
 
       <EntityHeader
@@ -126,7 +126,7 @@ function Summary({ detail, customer }: { detail: Detail; customer: Customer }) {
         ) : null}
         <SectionCard title="Alertas clínicas y anamnesis" icon={AlertTriangle} iconTone="danger" contentClassName="flex flex-col gap-2 p-4 text-sm">
           {detail.alerts.map((a) => (
-            <div key={a.title} className={a.level === "danger" ? "rounded-md border border-destructive/40 bg-destructive/5 p-3" : "rounded-md border bg-muted/40 p-3"}><p className="flex items-center gap-1.5 font-medium">{a.level === "danger" ? <AlertTriangle className="size-4 text-destructive" /> : <Info className="size-4 text-primary" />}{a.title}</p><p className="mt-1 text-xs text-muted-foreground">{a.text}</p></div>
+            <div key={a.title} className={a.level === "danger" ? "rounded-md border border-destructive/40 bg-destructive/5 p-3" : "rounded-xl bg-secondary p-3"}><p className="flex items-center gap-1.5 font-medium">{a.level === "danger" ? <AlertTriangle className="size-4 text-destructive" /> : <Info className="size-4 text-primary" />}{a.title}</p><p className="mt-1 text-xs text-muted-foreground">{a.text}</p></div>
           ))}
           <p className="text-xs text-muted-foreground">Grupo sanguíneo: <span className="font-medium text-foreground">O positivo (O+)</span></p>
         </SectionCard>

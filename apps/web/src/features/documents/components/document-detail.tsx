@@ -64,13 +64,13 @@ export function DocumentDetail({ doc }: { doc: SalesDocumentDetail }) {
             <Button render={<Link href={`/ventas/comprobantes/${doc.id}/nota-credito`} />} nativeButton={false}><FileMinus data-icon="inline-start" /> Emitir nota de crédito</Button>
           ) : null}
           <div className="flex flex-wrap items-center gap-1 rounded-lg bg-muted p-1">
-            <Button variant="ghost" size="sm" className="bg-card text-xs font-semibold shadow-xs" onClick={() => toast.info("Descargando PDF…")}><FileDown data-icon="inline-start" className="text-rose-600" /> PDF</Button>
+            <Button variant="ghost" size="sm" className="bg-card text-xs font-semibold shadow-xs" onClick={() => toast.info("Descargando PDF…")}><FileDown data-icon="inline-start" className="text-destructive-texto" /> PDF</Button>
             <Button variant="ghost" size="sm" className="bg-card text-xs font-semibold shadow-xs"><FileCode data-icon="inline-start" className="text-primary" /> XML</Button>
             <Button variant="ghost" size="sm" className="bg-card text-xs font-semibold shadow-xs" disabled={!doc.cdr?.acceptedAt}><ShieldCheck data-icon="inline-start" className="text-primary" /> CDR</Button>
-            <Button variant="ghost" size="sm" className="bg-card text-xs font-semibold shadow-xs" onClick={() => toast.success("Enviado por WhatsApp")}><MessageCircle data-icon="inline-start" className="text-emerald-600" /> WhatsApp</Button>
+            <Button variant="ghost" size="sm" className="bg-card text-xs font-semibold shadow-xs" onClick={() => toast.success("Enviado por WhatsApp")}><MessageCircle data-icon="inline-start" className="text-success-foreground" /> WhatsApp</Button>
             <Button variant="ghost" size="sm" className="bg-card text-xs font-semibold shadow-xs" onClick={() => toast.success("Correo enviado")}><Mail data-icon="inline-start" /> Correo</Button>
             {doc.type !== "nota_credito" ? <Button variant="ghost" size="sm" className="bg-card text-xs font-semibold shadow-xs" render={<Link href={`/ventas/comprobantes/${doc.id}/nota-debito`} />} nativeButton={false}><FilePlus data-icon="inline-start" /> Nota de débito</Button> : null}
-            <Button variant="ghost" size="icon-sm" className="bg-rose-50 text-rose-600 hover:bg-rose-100 hover:text-rose-700 dark:bg-rose-950/60" aria-label="Anular comprobante" onClick={() => setVoidOpen(true)}><Ban /></Button>
+            <Button variant="ghost" size="icon-sm" className="bg-destructive-suave text-destructive-texto hover:bg-destructive-suave hover:text-destructive-texto" aria-label="Anular comprobante" onClick={() => setVoidOpen(true)}><Ban /></Button>
           </div>
         </>}
       />
@@ -172,7 +172,7 @@ export function DocumentDetail({ doc }: { doc: SalesDocumentDetail }) {
           <SectionCard title="Certificación y CDR" icon={ShieldCheck} action={doc.cdr ? <StatusBadge tone={doc.cdr.code === "0" ? "success" : "danger"} label={`Código ${doc.cdr.code}`} /> : null} contentClassName="p-4">
             {doc.cdr ? (
               <dl className="flex flex-col gap-2 text-sm">
-                <div className="rounded-lg bg-emerald-50/70 p-3 dark:bg-emerald-950/30"><dt className="flex items-center gap-2 text-sm font-semibold"><CheckCircle2 className="size-4 text-emerald-600" /> {doc.cdr.code === "0" ? "Aceptada sin observaciones" : "Observada"}</dt><dd className="mt-0.5 pl-6 text-xs text-muted-foreground">{doc.cdr.code} - {doc.cdr.message}</dd></div>
+                <div className="rounded-lg bg-success p-3"><dt className="flex items-center gap-2 text-sm font-semibold"><CheckCircle2 className="size-4 text-success-foreground" /> {doc.cdr.code === "0" ? "Aceptada sin observaciones" : "Observada"}</dt><dd className="mt-0.5 pl-6 text-xs text-muted-foreground">{doc.cdr.code} - {doc.cdr.message}</dd></div>
                 {doc.cdr.acceptedAt ? (
                   <div><dt className="text-xs text-muted-foreground">Fecha de aceptación</dt><dd className="font-mono tabular-nums">{formatDate(doc.cdr.acceptedAt)} {doc.cdr.acceptedAt.slice(11, 19)}</dd></div>
                 ) : null}

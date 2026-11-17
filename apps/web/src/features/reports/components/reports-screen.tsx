@@ -43,7 +43,7 @@ export function ReportsScreen({ types, rows: all, schedule }: Props) {
   const columns: Column<SalesRegisterRow>[] = [
     { key: "cuo", header: "N° CUO", cell: (r) => <span className="font-mono text-xs tabular-nums">{r.cuo}</span> },
     { key: "date", header: "Fecha emis.", cell: (r) => <span className="font-mono tabular-nums">{formatDate(r.issuedAt)}</span> },
-    { key: "type", header: "Tipo", cell: (r) => <span className={cn("rounded px-1.5 py-0.5 font-mono text-[11px] font-semibold", r.type === "07" ? "bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300" : "bg-blue-50 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300")}>{r.type}</span> },
+    { key: "type", header: "Tipo", cell: (r) => <span className={cn("rounded px-1.5 py-0.5 font-mono text-[11px] font-semibold", r.type === "07" ? "bg-destructive-suave text-destructive-texto " : "bg-info text-info-foreground")}>{r.type}</span> },
     { key: "number", header: "Serie - N°", cell: (r) => <span className={cn("font-mono text-xs font-bold tabular-nums", r.total < 0 && "text-destructive")}>{r.number}</span> },
     { key: "doc", header: "Doc. identidad", cell: (r) => <span className="text-xs"><span className="mr-1 text-[10px] text-muted-foreground uppercase">{r.docType}</span><span className="font-mono">{r.docNumber}</span></span> },
     { key: "customer", header: "Razón social / cliente", cell: (r) => <span className="font-medium">{r.customer}</span>, className: "max-w-56 truncate" },
@@ -65,7 +65,7 @@ export function ReportsScreen({ types, rows: all, schedule }: Props) {
             return (
               <button key={t.id} type="button" onClick={() => pickType(t.id)} aria-pressed={isActive} className={cn("flex shrink-0 items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors", isActive ? "bg-accent text-primary shadow-xs dark:bg-muted" : "text-foreground/80 hover:bg-muted")}>
                 <Icon className="size-4" strokeWidth={2} /> {t.label}
-                <span className={cn("rounded-full px-2 py-0.5 font-mono text-[10px]", isActive ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300" : "bg-muted text-muted-foreground")}>{t.count}</span>
+                <span className={cn("rounded-full px-2 py-0.5 font-mono text-[10px]", isActive ? "bg-success text-success-foreground " : "bg-muted text-muted-foreground")}>{t.count}</span>
               </button>
             );
           })}
@@ -107,7 +107,7 @@ export function ReportsScreen({ types, rows: all, schedule }: Props) {
             <span className="font-mono font-bold text-primary">{formatCurrency(totals.base)}</span>
             <span className="font-mono font-bold text-primary">{formatCurrency(totals.igv)}</span>
             <span className="font-mono text-muted-foreground">{formatCurrency(totals.exempt)}</span>
-            <span className="rounded-md bg-teal-100 px-2 py-1 font-mono text-sm font-bold text-teal-900 dark:bg-teal-900/50 dark:text-teal-100">{formatCurrency(totals.total)}</span>
+            <span className="rounded-md bg-acento-suave px-2 py-1 font-mono text-sm font-bold text-acento-superficie-texto dark:text-acento-superficie-texto">{formatCurrency(totals.total)}</span>
             <span className="font-semibold text-primary">100% conciliado SIRE</span>
           </span>
         </div>

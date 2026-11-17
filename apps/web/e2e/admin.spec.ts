@@ -35,7 +35,11 @@ test("admin login: SSO → 2FA → dashboard; console is themed and separate fro
   await expect(page).toHaveURL(/\/admin$/);
   await expect(page.getByRole("heading", { level: 1, name: /Panel maestro de operaciones/ })).toBeVisible();
   if (testInfo.project.name === "desktop") await expect(page.getByRole("button", { name: /app de empresa/i }).first()).toBeVisible();
-  await page.getByRole("button", { name: "Menú de usuario" }).click();
+  // /admin/login and /admin are different root layouts (full page load): retry the click until the page is hydrated.
+  await expect(async () => {
+    await page.getByRole("button", { name: "Menú de usuario" }).click();
+    await expect(page.getByRole("menuitem", { name: "Mi perfil" })).toBeVisible({ timeout: 1500 });
+  }).toPass();
   await page.getByRole("menuitem", { name: "Mi perfil" }).click();
   await expect(page).toHaveURL(/\/admin\/perfil$/);
   await expect(page.getByRole("heading", { level: 1, name: /Mi perfil y seguridad/ })).toBeVisible();

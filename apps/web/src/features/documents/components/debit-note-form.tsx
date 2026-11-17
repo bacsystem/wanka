@@ -17,6 +17,7 @@ import { formatCurrency, formatDate, formatDocumentNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { SalesDocumentDetail } from "@/types/domain";
 import { documentTypeLabel } from "../lib/document-type";
+import { TARJETA } from "@/lib/estilos";
 
 const types = [{ code: "01", label: "Intereses por mora", text: "Cargo por pago fuera de la fecha de vencimiento pactada." }, { code: "02", label: "Aumento en el valor", text: "Incremento del importe de la operación original (ítems o precio)." }, { code: "03", label: "Penalidades / otros conceptos", text: "Penalidades contractuales u otros cargos adicionales." }];
 
@@ -39,7 +40,7 @@ export function DebitNoteForm({ doc }: { doc: SalesDocumentDetail }) {
             <Field label="Monto adicional (inc. IGV)"><Input value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" className="font-mono" /></Field>
             <Field label="Sustento (exigido en el XML)" className="sm:col-span-2"><Textarea rows={3} value={reason} onChange={(e) => setReason(e.target.value)} /></Field>
           </SectionCard>
-          <div className="flex justify-end rounded-lg border bg-card p-3"><Button disabled={!(Number(amount) > 0) || reason.trim().length < 10} onClick={() => { toast.success(`Nota de débito FD01-00000012 emitida · ${formatCurrency(Number(amount))}`); router.push(`/ventas/comprobantes/${doc.id}`); }}><Send data-icon="inline-start" /> Emitir y transmitir a SUNAT</Button></div>
+          <div className={cn(TARJETA, "flex justify-end p-3")}><Button disabled={!(Number(amount) > 0) || reason.trim().length < 10} onClick={() => { toast.success(`Nota de débito FD01-00000012 emitida · ${formatCurrency(Number(amount))}`); router.push(`/ventas/comprobantes/${doc.id}`); }}><Send data-icon="inline-start" /> Emitir y transmitir a SUNAT</Button></div>
         </div>
         <div className="flex min-w-0 flex-col gap-4">
           <SectionCard title="Comprobante afectado" contentClassName="p-4 text-sm"><p className="font-mono text-lg font-semibold">{number}</p><dl className="mt-2 grid gap-1 text-xs">{[["Tipo", `${documentTypeLabel[doc.type]} electrónica`], ["Emisión", formatDate(doc.issuedAt)], ["Cliente", doc.customerName], ["Total original", formatCurrency(doc.total)]].map(([k, v]) => <div key={k} className="flex justify-between gap-2"><dt className="text-muted-foreground">{k}</dt><dd className="text-right font-medium">{v}</dd></div>)}</dl></SectionCard>

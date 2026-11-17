@@ -11,6 +11,8 @@ import { StatusBadge, type BadgeTone } from "@/components/shared/status-badge";
 import { SearchInput, Toolbar } from "@/components/shared/toolbar";
 import { formatDate } from "@/lib/format";
 import type { AuditEvent } from "@/features/cash/mocks/shifts";
+import { TARJETA } from "@/lib/estilos";
+import { cn } from "@/lib/utils";
 
 const sev: Record<AuditEvent["severity"], { label: string; tone: BadgeTone }> = { info: { label: "Info", tone: "neutral" }, advertencia: { label: "Advertencia", tone: "warning" }, critico: { label: "Crítico", tone: "danger" } };
 const res: Record<AuditEvent["result"], { label: string; tone: BadgeTone }> = { ok: { label: "OK", tone: "success" }, denegado: { label: "Denegado", tone: "danger" }, error: { label: "Error", tone: "danger" } };
@@ -31,7 +33,7 @@ export function AuditScreen({ events }: { events: AuditEvent[] }) {
   const detail = open !== null ? events[open] : null;
   return (
     <>
-      <div className="grid gap-3 sm:grid-cols-3">{[["4 intentos fallidos · IP bloqueada", "critico"], ["Cambio de rol: M. Guerrero → Administrador de sede", "critico"], ["Exportación masiva RVIE por contador externo", "advertencia"]].map(([t, v]) => <div key={t} className="flex items-center gap-2 rounded-lg border bg-card p-3 text-sm"><ShieldAlert className={v === "critico" ? "size-4 text-destructive" : "size-4 text-warning"} /><span className="flex-1">{t}</span><StatusBadge tone={sev[v as AuditEvent["severity"]].tone} label={sev[v as AuditEvent["severity"]].label} /></div>)}</div>
+      <div className="grid gap-3 sm:grid-cols-3">{[["4 intentos fallidos · IP bloqueada", "critico"], ["Cambio de rol: M. Guerrero → Administrador de sede", "critico"], ["Exportación masiva RVIE por contador externo", "advertencia"]].map(([t, v]) => <div key={t} className={cn(TARJETA, "flex items-center gap-2 p-3 text-sm")}><ShieldAlert className={v === "critico" ? "size-4 text-destructive" : "size-4 text-warning"} /><span className="flex-1">{t}</span><StatusBadge tone={sev[v as AuditEvent["severity"]].tone} label={sev[v as AuditEvent["severity"]].label} /></div>)}</div>
       <SectionCard title="Registro de auditoría" action={<div className="flex items-center gap-2 text-xs text-muted-foreground"><span>Retención 5 años</span><Button size="sm" variant="outline"><Download data-icon="inline-start" /> Exportar CSV</Button></div>} contentClassName="p-0">
         <Toolbar><SearchInput placeholder="Buscar usuario, acción, entidad o módulo" value={q} onChange={setQ} /><Select value={s} onValueChange={(v) => setS(String(v))} items={[{ value: "all", label: "Severidad: todas" }, { value: "info", label: "Info" }, { value: "advertencia", label: "Advertencia" }, { value: "critico", label: "Crítico" }]}><SelectTrigger className="w-44" aria-label="Severidad"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Severidad: todas</SelectItem><SelectItem value="info">Info</SelectItem><SelectItem value="advertencia">Advertencia</SelectItem><SelectItem value="critico">Crítico</SelectItem></SelectContent></Select></Toolbar>
         <DataTable columns={cols} rows={rows} rowKey={(e) => e.at + e.action} minWidth="1100px" mobileCard={(e) => <div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="text-sm font-medium">{e.action}</p><p className="text-xs text-muted-foreground">{e.user} · {e.module} · {formatDate(e.at)} {e.at.slice(11, 16)}</p></div><StatusBadge tone={sev[e.severity].tone} label={sev[e.severity].label} /></div>} />

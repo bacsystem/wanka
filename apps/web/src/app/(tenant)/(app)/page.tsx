@@ -29,7 +29,7 @@ const kpiIcons = {
 const kpiExtras: Record<string, Partial<React.ComponentProps<typeof KpiCard>>> = {
   sales_today: { tone: "default", deltaLabel: "vs. ayer", footer: <Sparkline /> },
   docs_today: { tone: "info", suffix: "documentos", deltaLabel: "vs. ayer", footer: <><StatChip>24 Boletas</StatChip><StatChip>14 Facturas</StatChip></> },
-  receivable: { tone: "warning", deltaLabel: "saldo 7 días", footer: <><span className="size-1.5 rounded-full bg-amber-500" />3 clientes con crédito activo</> },
+  receivable: { tone: "warning", deltaLabel: "saldo 7 días", footer: <><span className="size-1.5 rounded-full bg-warning" />3 clientes con crédito activo</> },
   low_stock: { tone: "danger", suffix: "ítems alerta", emphasizeValue: true, footer: <span className="flex w-full items-center justify-between"><span>Almacén Miraflores</span><Link href="/inventario/stock" className="flex items-center gap-1 font-semibold text-primary hover:underline">Ver alertas <Eye className="size-3" /></Link></span> },
 };
 

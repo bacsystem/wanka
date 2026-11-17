@@ -1,6 +1,6 @@
 {
   "name": "wanka",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "packageManager": "pnpm@9.15.0",
   "scripts": {
@@ -10,5 +10,12 @@
     "typecheck": "pnpm --filter web typecheck",
     "test": "pnpm --filter web test",
     "test:e2e": "pnpm --filter web test:e2e"
+  },
+  "pnpm": {
+    "peerDependencyRules": {
+      "allowedVersions": {
+        "khipu-design-system>next": "16"
+      }
+    }
   }
 }

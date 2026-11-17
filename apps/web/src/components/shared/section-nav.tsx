@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { TARJETA } from "@/lib/estilos";
 
 export interface SectionNavItem {
   href: string;
@@ -23,7 +24,7 @@ interface SectionNavProps {
 /** Route-based pill navigation between sibling screens (compras, inventario…). Uses Link so each tab is a real page. */
 export function SectionNav({ items, active, className, ...rest }: SectionNavProps) {
   return (
-    <nav className={cn("no-scrollbar flex max-w-full gap-1 overflow-x-auto rounded-xl border bg-card p-1.5 shadow-xs", className)} {...rest}>
+    <nav className={cn(TARJETA, "no-scrollbar flex max-w-full gap-1 overflow-x-auto p-1.5", className)} {...rest}>
       {items.map((t) => {
         const isActive = t.href === active;
         return (

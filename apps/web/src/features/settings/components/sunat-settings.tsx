@@ -129,7 +129,7 @@ export function SunatSettings({ config }: { config: Config }) {
             <div className="mt-2 border-t border-dashed pt-1">1 × Profilaxis LED premium ……… 448.40</div>
             <div>2 × Exodoncia simple ……………… 354.00</div>
             <div className="mt-2 text-right font-bold">TOTAL S/ 1,280.00</div>
-            <p className="mt-3 text-[8px] text-neutral-500">{config.print.legend}</p>
+            <p className="mt-3 text-[8px] text-muted-foreground">{config.print.legend}</p>
           </div>
         </SectionCard>
       </TabsContent>

@@ -129,7 +129,7 @@ export function PosScreen({ items, categories, customers, genericCustomer, initi
         {/* Stitch status strip: OSE, sede, caja, shortcuts */}
         <div className="-mx-4 -mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-b bg-card px-4 py-2 text-xs md:-mx-6 md:-mt-6 md:px-6">
           <h1 className="sr-only">Nueva venta</h1>
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-2.5 py-1 text-[11px] font-semibold text-primary"><span className="size-1.5 rounded-full bg-emerald-500" />OSE / SUNAT CONECTADO</span>
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-2.5 py-1 text-[11px] font-semibold text-primary"><span className="size-1.5 rounded-full bg-success-solid" />OSE / SUNAT CONECTADO</span>
           <span className="inline-flex items-center gap-1.5 text-muted-foreground"><Store className="size-3.5" /> Sede Central Miraflores</span>
           <span className="inline-flex items-center gap-1.5 text-muted-foreground"><Wallet className="size-3.5" /> Caja principal: <strong className="font-semibold text-foreground">CAJA-01 (Dra. M. Ramos)</strong></span>
           <span className="ml-auto hidden items-center gap-2 md:flex">

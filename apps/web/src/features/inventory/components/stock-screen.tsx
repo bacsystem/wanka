@@ -20,6 +20,7 @@ import { formatCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { stockState, type StockItem, type StockState, type WarehouseInfo } from "../mocks/stock";
 import { FilterBar } from "@/components/shared/filter-bar";
+import { TARJETA } from "@/lib/estilos";
 
 const stateMeta: Record<StockState, { label: string; tone: BadgeTone }> = {
   optimo: { label: "Óptimo", tone: "success" },
@@ -50,7 +51,7 @@ export function StockScreen({ items, warehouses, categories, kpis }: Props & { k
     { key: "cat", header: "Categoría", cell: (i) => <span className="rounded-full bg-accent px-2.5 py-1 text-[11px] font-semibold text-primary dark:bg-muted">{i.category}</span> },
     { key: "wh", header: "Almacén", cell: (i) => whName(i.warehouseId) },
     { key: "lot", header: "Lote / venc.", cell: (i) => i.lot ? <TwoLine primary={<span className="font-mono text-xs">{i.lot}</span>} secondary={i.expiresAt ? `Vence ${i.expiresAt}` : undefined} /> : <span className="text-muted-foreground">—</span> },
-    { key: "stock", header: "Stock actual", align: "right", cell: (i) => { const st = stockState(i); return <span className={cn("font-mono text-base font-bold tabular-nums", st === "critico" && "text-destructive", st === "alerta" && "text-blue-600")}>{i.stock} <span className="font-sans text-xs font-normal text-muted-foreground">{i.unit}</span></span>; } },
+    { key: "stock", header: "Stock actual", align: "right", cell: (i) => { const st = stockState(i); return <span className={cn("font-mono text-base font-bold tabular-nums", st === "critico" && "text-destructive", st === "alerta" && "text-info-foreground")}>{i.stock} <span className="font-sans text-xs font-normal text-muted-foreground">{i.unit}</span></span>; } },
     { key: "min", header: "Mínimo", align: "right", cell: (i) => <span className="text-xs text-muted-foreground tabular-nums">{i.minimum} {i.unit}</span> },
     { key: "state", header: "Estado", cell: (i) => { const m = stateMeta[stockState(i)]; return <StatusBadge tone={m.tone} dot label={m.label} />; } },
     { key: "cost", header: "Costo prom.", align: "right", cell: (i) => <span className="font-mono tabular-nums">{formatCurrency(i.avgCost)}</span> },
@@ -127,10 +128,10 @@ export function StockScreen({ items, warehouses, categories, kpis }: Props & { k
 
       <div className="grid gap-4 md:grid-cols-3">
         {warehouses.filter((w) => w.id !== "all").map((w, i) => { const occ = [76, 91, 42][i]; const val = [58410.2, 16820.3, 9000][i]; const note = ["Despachos al día", "1 traslado pendiente", "Recepción abierta"][i]; return (
-          <div key={w.id} className="rounded-xl border bg-card p-4 shadow-xs">
+          <div key={w.id} className={cn(TARJETA, "p-4")}>
             <div className="flex items-center justify-between"><p className="flex items-center gap-2 text-sm font-bold"><Warehouse className="size-4 text-primary" /> {w.name.split(" (")[0]}</p><StatusBadge tone={occ > 85 ? "info" : "success"} dot label={occ > 85 ? "Alta ocupación" : "Operativo"} /></div>
             <div className="mt-3 flex items-center justify-between text-xs"><span className="text-muted-foreground">Ocupación de capacidad:</span><span className="text-sm font-bold">{occ}%</span></div>
-            <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-muted"><div className={cn("h-full rounded-full", occ > 85 ? "bg-blue-600" : occ > 60 ? "bg-primary" : "bg-slate-400")} style={{ width: `${occ}%` }} /></div>
+            <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-muted"><div className={cn("h-full rounded-full", occ > 85 ? "bg-info" : occ > 60 ? "bg-primary" : "bg-secondary")} style={{ width: `${occ}%` }} /></div>
             <div className="mt-3 flex items-center justify-between text-xs"><span className="text-muted-foreground">Valorizado: <span className="font-mono text-foreground">{formatCurrency(val)}</span></span><span className="font-semibold text-primary">{note}</span></div>
           </div>
         ); })}

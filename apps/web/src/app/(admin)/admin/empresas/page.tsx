@@ -13,9 +13,9 @@ export default function AdminTenantsPage() {
     <div className="flex min-w-0 flex-1 flex-col gap-4 p-4 md:gap-6 md:p-6">
       <PageHeader eyebrow="Plataforma · Directorio de empresas (tenants)" title="Directorio de empresas (tenants)" description="Supervisa consumo mensual de CPE, conectores OSE certificados, límites de emisión y control de acceso administrativo." status={<StatusBadge tone="info" dot label={`${s.active.toLocaleString("es-PE")} clientes activos`} />} />
       <StatGrid>
-        <StatCard label="Total empresas" value={s.active.toLocaleString("es-PE")} icon={Building2} hint={<span className="font-semibold text-emerald-600">+{s.activeDelta} netas este mes (set 2026)</span>} />
-        <StatCard label="En periodo de prueba (trial)" value={String(s.trial)} icon={Sparkles} tone="info" footer={<span className="text-amber-700">{s.trialExpiring} vencen en ≤ 48 horas</span>} />
-        <StatCard label="Emisión CPE total (mes)" value={s.cpeToday.toLocaleString("es-PE")} icon={FileText} tone="success" footer={<span className="text-emerald-600">{s.cdrRate}% CDR aprobados SUNAT</span>} />
+        <StatCard label="Total empresas" value={s.active.toLocaleString("es-PE")} icon={Building2} hint={<span className="font-semibold text-success-foreground">+{s.activeDelta} netas este mes (set 2026)</span>} />
+        <StatCard label="En periodo de prueba (trial)" value={String(s.trial)} icon={Sparkles} tone="info" footer={<span className="text-warning-foreground">{s.trialExpiring} vencen en ≤ 48 horas</span>} />
+        <StatCard label="Emisión CPE total (mes)" value={s.cpeToday.toLocaleString("es-PE")} icon={FileText} tone="success" footer={<span className="text-success-foreground">{s.cdrRate}% CDR aprobados SUNAT</span>} />
         <StatCard label="Suspendidas / bloqueadas" value={String(s.suspended)} icon={Lock} tone="danger" emphasizeValue footer="5 por mora, 4 cert. caduco" />
       </StatGrid>
       <TenantsTable tenants={platformTenants} />

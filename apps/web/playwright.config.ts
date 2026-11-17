@@ -11,7 +11,8 @@ export default defineConfig({
     trace: "on-first-retry",
   },
   webServer: {
-    command: `pnpm next dev -p ${PORT}`,
+    // E2E_PROD=1 serves the existing production build (`pnpm build` first) instead of the dev server.
+    command: process.env.E2E_PROD ? `pnpm next start -p ${PORT}` : `pnpm next dev -p ${PORT}`,
     url: `http://localhost:${PORT}`,
     reuseExistingServer: true,
     timeout: 120_000,
