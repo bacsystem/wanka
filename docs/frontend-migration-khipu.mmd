@@ -1,6 +1,6 @@
 flowchart LR
   subgraph DS["bacsystem/khipu-design-system (one tag per PR)"]
-    DS0["DS-0 Next 16 peer (in progress)"]
+    DS0["DS-0 PR 57 v0.6.0: Next 16, drop lucide peer"]
     DSG["DS-G verificar CLI"]
     DSA["DS-A tables"]
     DSB["DS-B rail + BarraInferior + TopBar"]
@@ -11,7 +11,8 @@ flowchart LR
   end
   subgraph W["bacsystem/wanka"]
     W0["W0 fix cn"]
-    W1["W1 guards + baselines"]
+    W1a["W1a ESLint + suppressions"]
+    W1b["W1b lint:ds"]
     W2["W2 primitives basic"]
     W3["W3 form primitives"]
     W4["W4 overlays + toast"]
@@ -21,10 +22,10 @@ flowchart LR
     W7["W7 shell tenant + admin"]
     W8["W8 cleanup + strict guards"]
   end
-  W0 --> W1
-  DSG --> W1
-  W1 --> W2 --> W3 --> W4
-  W1 --> W5a
+  W0 --> W1a
+  DSG --> W1b
+  W1a --> W2 --> W3 --> W4
+  W1a --> W5a
   DSE --> W3
   DSD --> W4
   W5a --> W5b
@@ -38,4 +39,6 @@ flowchart LR
   DSC --> W7
   W6 --> W8
   W7 --> W8
+  DS0 --> W7
   DS0 --> W8
+  W1b --> W8
