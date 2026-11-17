@@ -26,7 +26,7 @@ Ajustes de forma respecto a los mocks, comunes a todos los recursos:
 | `GET/POST /v1/users`, `PATCH /v1/users/{id}`, `POST /v1/users/invitations` | `/configuracion/usuarios`, invite drawer | `Collaborator`, `securitySummary` | `identidad.users:*` |
 | `GET/POST/PATCH /v1/roles`, `GET /v1/permissions` | matriz de permisos | `permissionMatrix`, `permissionModules` | `identidad.roles:*` |
 | `GET /v1/sessions`, `DELETE /v1/sessions/{id}` | sesiones activas | `securitySummary.sessions` | `identidad.sessions:*` |
-| `GET /v1/support-access/requests`, `POST /{id}/approve`, `/reject`, `/revoke` | consentimiento de acceso de soporte (#90) | `IMPERSONATION_GRANTS` | `identidad.support_access:read`, `:approve` |
+| `GET /v1/support-access/requests`, `POST /{id}/approve`, `/reject`, `/revoke` | consentimiento de acceso de soporte (#90). La lectura va por `iam.list_support_requests()` y la decisión por `iam.decide_impersonation()`, ambas `SECURITY DEFINER` acotadas a `app.current_tenant()` (ADR 0001) | `IMPERSONATION_GRANTS` | `identidad.support_access:read`, `:approve`. **Nunca** desde una sesión impersonada (403) |
 
 ## empresas (`org`)
 

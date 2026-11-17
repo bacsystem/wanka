@@ -97,6 +97,9 @@ erDiagram
     uuid ticket_id "obligatorio"
     text scope "read_only o full"
     text status "solicitado, aprobado, rechazado, canjeado, revocado, vencido"
+    text reason "motivo visible para la empresa"
+    timestamptz redeemed_at
+    timestamptz created_at "requested_at en iam.list_support_requests()"
     uuid approved_by "usuario del tenant con identidad.support_access:approve"
     timestamptz approved_at
     timestamptz consent_expires_at "max 24 h desde la aprobacion"

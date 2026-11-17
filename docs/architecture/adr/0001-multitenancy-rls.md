@@ -64,7 +64,7 @@ Ningún rol de aplicación tiene `BYPASSRLS` ni es dueño de tablas. Todos son `
 | `ops.webhook_routes` (sin RLS; guarda el `whsec_` cifrado con `WEBHOOK_SECRET_ENC_KEY`) | dueño | INSERT/UPDATE al conectar Khipu | — | solo a través de `ops.resolve_webhook_route` (sin SELECT directo) | SELECT de `route_id`, `tenant_id`, `revoked_at` (GRANT por columna, sin el secreto) |
 | `ops.idempotency_keys` (con RLS), `ops.exchange_rates` (global) | dueño | DML / SELECT | DELETE (limpieza) / INSERT (tipo de cambio) | — | SELECT |
 | Tablas de River (`ops`) | dueño | INSERT (encolar) | todo | INSERT (encolar) | INSERT (encolar) |
-| Funciones `SECURITY DEFINER` (`platform_fn.*`, `iam.*`) | dueño | EXECUTE de `iam.redeem_impersonation`, `iam.decide_impersonation` | EXECUTE de `platform_fn.purge_closed_tenant` | EXECUTE de `ops.resolve_webhook_route` | EXECUTE de `platform_fn.provision_tenant`, `suspend_tenant`, `request_impersonation` |
+| Funciones `SECURITY DEFINER` (`platform_fn.*`, `iam.*`) | dueño | EXECUTE de `iam.redeem_impersonation`, `iam.decide_impersonation`, `iam.list_support_requests` (sin GRANT sobre el esquema `platform`) | EXECUTE de `platform_fn.purge_closed_tenant` | EXECUTE de `ops.resolve_webhook_route` | EXECUTE de `platform_fn.provision_tenant`, `suspend_tenant`, `request_impersonation` |
 
 \* `org.tenants` tiene la fila propia del tenant y se trata aparte (siguiente sección).
 
@@ -118,7 +118,36 @@ La revisión los reprodujo en PG16 (cero filas o `new row violates row-level sec
    - La empresa aprueba o rechaza en el plano tenant (`POST /v1/support-access/requests/{id}/approve|reject`). La API verifica el permiso y llama a `iam.decide_impersonation(grant_id, decision)`, una función `SECURITY DEFINER` que solo actúa si `grant.tenant_id = app.current_tenant()`. Guarda `approved_by`, `approved_at` y `consent_expires_at`: el consentimiento dura como máximo 24 h y el acceso, 60 min desde el canje.
    - `iam.redeem_impersonation(token)` **rechaza** todo grant que no esté `aprobado`, que tenga el consentimiento vencido o que haya sido revocado. Si es válido, crea la sesión de tenant con `impersonator_id`. La empresa puede revocar en cualquier momento, y la revocación corta la sesión.
    - Auditoría en `platform.audit_events` y en `audit.events` del tenant: solicitud, decisión, canje, acciones y cierre.
-   - Prueba: canjear un grant `solicitado` o vencido debe fallar.
+   - **Lectura desde el plano tenant.** Las solicitudes viven en `platform.impersonation_grants`, sin RLS, y `wanka_app` **no tiene GRANT sobre el esquema `platform`**. Un `GRANT SELECT` directo expondría las solicitudes de todos los tenants. `GET /v1/support-access/requests` lee solo a través de `iam.list_support_requests()`:
+     ```sql
+     CREATE FUNCTION iam.list_support_requests()
+       RETURNS TABLE (id uuid, ticket_id uuid, scope text, reason text, status text,
+                      requested_at timestamptz, approved_by uuid, approved_at timestamptz,
+                      consent_expires_at timestamptz, redeemed_at timestamptz, revoked_at timestamptz)
+       LANGUAGE sql STABLE SECURITY DEFINER
+       SET search_path = pg_catalog, pg_temp
+     AS $$
+       SELECT g.id, g.ticket_id, g.scope, g.reason, g.status, g.created_at, g.approved_by,
+              g.approved_at, g.consent_expires_at, g.redeemed_at, g.revoked_at
+         FROM platform.impersonation_grants g
+        WHERE app.current_tenant() IS NOT NULL
+          AND g.tenant_id = app.current_tenant()
+        ORDER BY g.created_at DESC
+        LIMIT 200
+     $$;
+     REVOKE ALL ON FUNCTION iam.list_support_requests() FROM PUBLIC;
+     GRANT EXECUTE ON FUNCTION iam.list_support_requests() TO wanka_app;
+     ```
+     No recibe argumentos: el tenant sale de `app.current_tenant()`, que solo fija `InTenantTx`. Sin tenant fijado devuelve 0 filas. No devuelve el `exchange_token_hash` ni los datos del staff, salvo el ticket. `iam.decide_impersonation` aplica la misma condición.
+   - **Una sesión impersonada no puede autorizar accesos de soporte ni gestionar identidad.** La sesión creada por `iam.redeem_impersonation` lleva `impersonator_id`.
+     - **Permisos:** los del alcance del grant, nunca los de un rol del tenant. `read_only` tiene solo las acciones `read`. `full` tiene todas las acciones del catálogo **menos** `identidad.support_access:*`, `identidad.users:*`, `identidad.roles:*`, `identidad.sessions:*` y `empresas.einvoicing:update` (credenciales de Khipu).
+     - **Doble barrera:** el middleware arma el conjunto de permisos con esa lista de exclusión, y `iam.decide_impersonation` rechaza la llamada si la sesión actual tiene `impersonator_id` (la API le pasa `app.impersonator_id` con `set_config`, y la función lo verifica).
+     - Así, el staff no puede aprobar su propia solicitud ni otra.
+   - Pruebas:
+     - canjear un grant `solicitado` o vencido debe fallar;
+     - con dos tenants, `iam.list_support_requests()` con `app.tenant_id = A` devuelve solo las solicitudes de A, y 0 filas sin tenant;
+     - con el rol `wanka_app`, `SELECT FROM platform.impersonation_grants` da `permission denied`;
+     - canjear un grant `full` e intentar aprobar otra solicitud o crear un usuario responde `403 forbidden`.
    - **Pregunta abierta al PO (no decidida):** si se admite una excepción para incidentes P1 sin consentimiento previo (por ejemplo con doble firma de staff y aviso inmediato a la empresa). Mientras no se decida, no hay excepción.
 7. **Purga de empresas cerradas** (5 años): la hace `platform_fn.purge_closed_tenant(tenant_id)`, que el worker ejecuta por lotes y con auditoría en plataforma.
 
