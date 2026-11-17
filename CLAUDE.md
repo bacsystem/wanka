@@ -1,12 +1,39 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Guidance for coding agents in this repository: Claude Code reads it directly; Gemini CLI and Antigravity through the root `GEMINI.md` (see "Agent context files").
 
 ## Project
 
 SaaS de gestión empresarial multirubro para Perú (restaurantes, veterinarias, odontologías, retail): clientes, catálogo, inventario multialmacén, ventas/POS, facturación electrónica SUNAT (boleta, factura, nota de crédito, proforma, guía de remisión) y reportes. Código e identificadores en inglés; textos de UI en español (Perú), moneda `S/`, fechas `dd/mm/aaaa`.
 
 pnpm workspace monorepo. Only app so far: `apps/web` (Next.js 16 App Router, React 19, TypeScript, Tailwind v4, shadcn/ui on Base UI, Phosphor icons (lucide-react in legacy screens, see Icons), Recharts). Design system: the pinned package `khipu-design-system` (see Design system).
+
+## Project memory: `wanka-memory`
+
+**Before the day's work or any development, consult `wanka-memory`** (the project's NotebookLM notebook) on the project status and the topic at hand, via the `gemini-notebook-mcp` MCP server or the `nlm` CLI, and say in one line what was consulted and what came back.
+
+- Only where that server is set up (the notebook is the owner's); elsewhere, skip it.
+- If the query fails (expired Google session, server down), say so and don't carry on as if it had been consulted. `nlm login` renews the session.
+- It holds copies of repo docs and can lag: the repo and GitHub win.
+- Only public content goes in (the repo is public): no secrets, customer data, pricing or commercial strategy, nor anything git-ignored (`design/`).
+- **Log each closed block of work** (merged PR, decision, end of session) as a text **source** (not a note: queries read sources) titled `sesion-YYYY-MM-DD`, or `-2`, `-3` for later blocks that day, under ~1000 characters:
+
+  ```
+  sesion-YYYY-MM-DD[-n] · <topic in a few words>
+  Hecho: #PR → #issue, one line each (what changed, not how it was reviewed)
+  Decisiones: the decision and why (only what no issue, PR or ADR records)
+  Pendiente: what · who · blocked by
+  Lecciones: a trap in the environment or the workflow (optional)
+  ```
+
+  Leave out what GitHub keeps (test counts, review details, measurements): the PR number is enough.
+- **Consolidate weekly.** The first session of an ISO week merges the previous week's `sesion-*` into one `semana-YYYY-Www` source with what is still true (decisions, open pending, lessons) and deletes them.
+
+## Team rules
+
+- Every PR goes through `/pr-review` and its report is posted as a PR comment; re-reviews after new commits too.
+- No merge, tag or release without the owner's explicit approval.
+- bacsystem standard: the UI is built with khipu-design-system components, never hardcoded styles (`[...]` values, hex/rgb, palette colors, inline `style`); a missing component or variant goes to the DS first. Until the migration plan (PR #128, `docs/frontend-migration-khipu.md`) lands, the local wrappers below are the transition path: don't add new look-alikes.
 
 ## Commands
 
@@ -22,7 +49,7 @@ pnpm test                # vitest run (unit, jsdom)
 pnpm test:e2e            # playwright (desktop 1440 / tablet 1024 / mobile Pixel 7); starts its own dev server on :3100
 ```
 
-Single tests: `pnpm --filter web vitest run src/lib/format.test.ts` · `pnpm --filter web exec playwright test --project=mobile -g "sidebar"`. First E2E run needs `pnpm --filter web exec playwright install chromium`.
+Single tests: `pnpm --filter web exec vitest run src/lib/format.test.ts` · `pnpm --filter web exec playwright test --project=mobile -g "sidebar"`. First E2E run needs `pnpm --filter web exec playwright install chromium`.
 
 Note: `next dev` re-writes `apps/web/AGENTS.md`; that file points to the Next 16 docs in `node_modules/next/dist/docs/` — check them before assuming Next API from memory.
 
@@ -45,7 +72,7 @@ Feature-based layout: **`app/` holds thin route files; everything else lives in 
 - Route groups: `app/(tenant)/(app)/` is the shell (sidebar, topbar, bottom nav); `app/(tenant)/(auth)/` renders without the shell (`/login`, `/seleccionar-empresa`, `/onboarding`). There is no real auth: `(auth)` pages are mock flows; the selected tenant is stored in the `tenant_id` cookie (`features/auth/lib/tenant-cookie.ts`) and read by `app/(tenant)/(app)/layout.tsx` to pick the tenant from `features/auth/mocks/tenants.ts`. The topbar `TenantSwitcher` writes that cookie and calls `router.refresh()`.
 - Root layouts (three, none at the top of `app/`): `app/(tenant)/layout.tsx` (tenant app + auth), `app/(admin)/layout.tsx` and `app/(admin-auth)/layout.tsx` (console, `palette="indigo"`). All three render `components/providers/app-document.tsx`: fonts from `app/fonts.ts` (`next/font`: Inter → `--font-sans`, JetBrains Mono → `--font-mono`; Plus Jakarta Sans / Manrope / DM Sans / Figtree → `--fuente-*`, chosen with `data-fuente`), `ScriptDiseno` in `<head>` (applies the saved palette / dark tone / font before the first paint), `ThemeProvider` (`components/providers/theme-provider.tsx`: next-themes class strategy + the design system's `DisenoProvider`, `AparienciaProvider`, `ProveedorMovimiento`), `TooltipProvider`, sonner `Toaster`, `lang="es-PE"`.
 - `app/(tenant)/(app)/layout.tsx` — reads the `sidebar_state` cookie and wraps pages in `components/layout/app-shell.tsx` (shadcn `SidebarProvider` + `AppSidebar` + `Topbar` + `BottomNav`). `app/(tenant)/(app)/[...slug]/page.tsx` renders "Módulo en construcción" for any nav entry without a screen (none at the moment; keep it for future modules). `next.config.ts` redirects group routes (`/ventas`, `/inventario`, `/finanzas`, `/configuracion`) to the landing module declared in `config/redirects.ts`; `navigation.test.ts` checks each landing is a child of its group.
-- `config/navigation.ts` — single source of truth for navigation (label, href, icon, children). `getNavigation(industry)` / `getBottomNavHrefs(industry)` add the industry modules (odontología: Agenda; veterinaria: Mascotas + Agenda; restaurante: Salón, Comandas/cocina, Delivery). Sidebar and bottom nav read the tenant industry from `components/layout/tenant-context.tsx` (`useTenant`). `app/(tenant)/(app)/[...slug]/page.tsx` shows a placeholder only for hrefs present in some industry's navigation; anything else is a real 404 (`app/(tenant)/(app)/not-found.tsx`). Add a nav entry here when adding a screen.
+- `config/navigation.ts` — single source of truth for navigation (label, href, icon, children). `getNavigation(industry)` / `getBottomNavHrefs(industry)` add the industry modules (odontología: Agenda; veterinaria: Mascotas, Agenda, Hospitalización, Grooming, and Clientes becomes Propietarios; restaurante: Salón y mesas, Comandas / cocina, Delivery, Reservas). Sidebar and bottom nav read the tenant industry from `components/layout/tenant-context.tsx` (`useTenant`). `app/(tenant)/(app)/[...slug]/page.tsx` shows a placeholder only for hrefs present in some industry's navigation; anything else is a real 404 (`app/(tenant)/(app)/not-found.tsx`). Add a nav entry here when adding a screen.
 - `components/layout/command-palette.tsx` (Ctrl/Cmd+K global search over mocks, opened from `topbar-search.tsx`) and `notifications.tsx` (bell popover). Base UI menus: a `DropdownMenuLabel` MUST be inside `DropdownMenuGroup` or the page crashes at open time.
 - `components/layout/*` — shell only. `sidebar-nav.tsx`, `bottom-nav.tsx`, `theme-toggle.tsx` are client components; `sidebar-auto-collapse.tsx` collapses the sidebar to icons on 768–1279px when no cookie is set.
 - `components/shared/states.tsx` — reusable EmptyState / ErrorState / NotFoundState / ForbiddenState / SessionExpiredState / LoadingState; `app/(tenant)/(app)/{loading,error,not-found}.tsx` use them and `DataTable` renders EmptyState when there are no rows. `components/shared/field.tsx` auto-wires `<Label htmlFor>` to its single child control (so tests can use `getByLabel`).
@@ -65,7 +92,7 @@ Never nest a `Button` inside a clickable tile rendered as `<button>` (hydration 
 
 The tokens, the Tailwind theme, the recipes and the appearance preferences come from the **`khipu-design-system` package** (https://github.com/bacsystem/khipu-design-system), pinned by tag in `apps/web/package.json` (`github:bacsystem/khipu-design-system#v0.5.23`). Nothing of it is vendored in the repo: `src/styles/tokens.css` / `theme.css` no longer exist.
 
-- `app/globals.css` is `@import "tailwindcss"; @import "khipu-design-system/styles.css";` (tw-animate-css, shadcn variants, `dark` variant, tokens, theme, `@source` of the package) plus Wanka-only CSS. Never declare a bare `:root` or `.dark` there: it would override the palette the user chose (`lib/design-system.test.ts` guards it).
+- `app/globals.css` is `@import "tailwindcss"; @import "khipu-design-system/styles.css";` (tw-animate-css, shadcn variants, `dark` variant, tokens, theme, `@source` of the package) plus Wanka-only CSS. Never redefine a DS token in a bare `:root` or declare `.dark` there: it would override the palette the user chose (only Wanka's own `--brand-panel` is allowed; `lib/design-system.test.ts` guards it).
 - **Fix it in the DS first, then bump the tag.** A change to a token, recipe or shared component goes to the DS repo, gets released as a tag, and reaches Wanka by changing the version in `apps/web/package.json` and running `pnpm install` (the package builds `dist/` in its `prepare` script; pnpm 9 runs it without extra approval; `peerDependencyRules` in the root `package.json` allows Next 16 against the package's `next@^15.5` peer).
 - `lib/estilos.ts`, `lib/iconos.ts`, `lib/movimiento.ts` and `lib/utils.ts` are one-line facades over `khipu-design-system/lib/*` and `/utils` (`cn` knows the named type scale).
 - **Identifiers that come from the DS stay in Spanish** (documented exception to the "code in English" rule): tokens and utilities (`--acento*`, `--sombra-*`, `--codigo*`, `--borde-tarjeta`, `bg-acento-suave`, `shadow-tarjeta`, `text-etiqueta` / `text-cuerpo` / `text-titulo` / `text-metrica`, `h-control`, `duracion-*`), recipes (`TARJETA`, `ENTRADA`, `FOCO`...), icon weights (`PESO_ICONO*`), `RESORTE`, `useApariencia`, `data-paleta` / `data-oscuro` / `data-fuente`. Wanka's own code (components, hooks, files, mocks, e2e) stays in English.
@@ -79,14 +106,14 @@ The tokens, the Tailwind theme, the recipes and the appearance preferences come 
 
 - ≥1280px: sidebar expanded, dashboard grid 2/3 + 1/3.
 - 768–1279px: sidebar collapsed to icons with tooltips; tables scroll horizontally (`min-w` on the table).
-- ≤767px: sidebar hidden, `BottomNav` (Inicio, Ventas, Clientes, Inventario, Más → Sheet), FAB "Nueva venta", KPIs in a horizontal scroller, tables rendered as card lists (`md:hidden` / `hidden md:block` pairs).
+- ≤767px: sidebar hidden, `BottomNav` (four entries from `getBottomNavHrefs(industry)`, default Inicio, Ventas, Clientes, Inventario, plus Más → Sheet), FAB "Nueva venta", KPIs in a horizontal scroller, tables rendered as card lists (`md:hidden` / `hidden md:block` pairs).
 
 ## Docs and design assets
 
 `design/` is git-ignored: the Stitch exports referenced below live only on the local machine (re-export them from the Stitch projects if missing).
 
 - `docs/superpowers/specs/` — approved design specs (one per phase).
-- `prompt/ui-ux-stitch.md` — Stitch prompts and project ids; `prompt/stitch-flujos-faltantes.md` — prompts for the second batch. Generating from here: call the Stitch MCP tool `generate_screen_from_text` (projectId `3747912429457694633`); the response's `outputComponents[].design.screens[0]` carries the HTML/PNG download URLs (`list_screens` is capped/stale — do not rely on it to discover new screens; `get_screen` by id works). Beware: the design-system JSON contains `on_error`, so never grep responses for "error" to detect failures. `design/stitch/screens/` — the 48 reference screens exported from the user's Stitch project (`index.json` maps file → screen id/title); `design/stitch/DESIGN.md` — design tokens. The Stitch HTML uses Material Symbols; the app uses Lucide only.
+- `prompt/ui-ux-stitch.md` — Stitch prompts and project ids; `prompt/stitch-flujos-faltantes.md` — prompts for the second batch. Generate with the Stitch MCP tool `generate_screen_from_text` (projectId `3747912429457694633`); HTML/PNG URLs are in `outputComponents[].design.screens[0]` (`list_screens` is capped/stale, `get_screen` by id works; the design-system JSON contains `on_error`, so don't grep responses for "error"). `design/stitch/screens/` — the 48 reference screens exported from the user's Stitch project (`index.json` maps file → screen id/title); `design/stitch/DESIGN.md` — design tokens. The Stitch HTML uses Material Symbols; the app uses Phosphor (see Icons).
 - Mermaid diagrams: write `.mmd` files and validate syntax; do not hand-edit diagrams managed by Mermaid Chart Sync (frontmatter with `id:`). See `.github/instructions/mermaid.instructions.md`.
 
 ## Backend architecture (`docs/architecture`)
