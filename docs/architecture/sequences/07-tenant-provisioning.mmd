@@ -1,0 +1,23 @@
+---
+title: Alta y aprovisionamiento de una empresa desde la consola super-admin
+---
+sequenceDiagram
+  autonumber
+  actor S as Staff plataforma (finanzas o superadmin)
+  participant W as web /admin
+  participant PA as platform-api /platform/v1
+  participant DB as PostgreSQL
+  participant WK as worker
+  participant N as Mensajeria
+
+  S->>W: nueva empresa (RUC, razon social, rubro, plan, correo del propietario)
+  W->>PA: POST /platform/v1/tenants Idempotency-Key (token wka_at, rol con tenants:create)
+  PA->>PA: valida RUC (modulo 11), consulta padron SUNAT con timeout 3 s (si falla: continua y marca "por verificar")
+  PA->>DB: BEGIN (rol wanka_platform, sin DML en iam ni org)
+  PA->>DB: SELECT platform_fn.provision_tenant(ruc, razon_social, rubro, plan, owner_email) SECURITY DEFINER, search_path fijo
+  Note over DB: La funcion crea org.tenants (UK ruc, trial), subscriptions y modulos del rubro, fija app.tenant_id y crea sede, almacen, caja, series, roles plantilla con permisos, configuracion, iam.users si no existe y la membresia owner invitada. Escribe audit.events del tenant (actor_type platform_staff).
+  PA->>DB: INSERT platform.audit_events (actor staff), River InsertTx notify.owner_invite
+  PA->>DB: COMMIT
+  PA-->>W: 201 {tenant, status: trial}
+  WK->>N: correo de invitacion con token de un uso (72 h)
+  Note over S,N: El propietario completa /onboarding (6 pasos): datos fiscales, sedes, usuarios y conexion con Khipu. Hoy la empresa, la API key fk_ y el webhook se crean solo en el portal de Khipu (pregunta abierta: API de integrador). Se pega la llave, Wanka la verifica, registra las series con correlativo_inicial y guarda cifrado el whsec_ del webhook.

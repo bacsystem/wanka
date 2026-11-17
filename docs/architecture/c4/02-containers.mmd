@@ -1,0 +1,34 @@
+C4Container
+  title Wanka - Contenedores (C4 nivel 2)
+
+  Person(tenantUser, "Usuario de empresa", "Navegador escritorio, tablet o movil")
+  Person(platformStaff, "Staff de plataforma", "Navegador")
+
+  System_Boundary(wanka, "Wanka") {
+    Container(web, "web", "Next.js 16, React 19, Node", "UI tenant (app) y consola (admin). BFF: route handlers y server components que llaman a la API con el token de la cookie httpOnly.")
+    Container(api, "api", "Go, net/http", "Sin dominio publico (solo red privada). Modular monolith hexagonal. Plano tenant /v1. Valida sesion, resuelve tenant, aplica RLS, RBAC y feature flags.")
+    Container(platformApi, "platform-api", "Go, misma imagen, --plane=platform", "Plano super-admin /platform/v1. Rol de BD distinto. Sin acceso a datos de tenant salvo vistas agregadas e impersonacion auditada.")
+    Container(webhooks, "webhooks", "Go, misma imagen, --plane=webhooks", "Unico servicio Go con dominio publico. Solo monta /webhooks/khipu/{routeId} y health. Rol wanka_webhooks.")
+    Container(worker, "worker", "Go, misma imagen, River", "Jobs: emision CPE (un emisor por serie con arrendamiento), cpe.sync de los eventos que encola el servicio webhooks, conciliacion, recordatorios, reportes pesados, limpieza. Un solo lider para periodicos.")
+    ContainerDb(pg, "PostgreSQL", "PostgreSQL 16 (ADR 0002)", "Esquemas por bounded context. RLS por tenant_id. Cola River y outbox en la misma BD.")
+    ContainerDb(objects, "Object storage", "S3 compatible", "XML firmado, CDR, PDF, adjuntos. Claves con prefijo tenant_id.")
+  }
+
+  System_Ext(khipu, "Khipu", "Proveedor CPE")
+  System_Ext(notify, "Mensajeria", "Correo/WhatsApp")
+
+  Rel(tenantUser, web, "Usa", "HTTPS")
+  Rel(platformStaff, web, "Usa /admin", "HTTPS")
+  Rel(web, api, "REST JSON, Bearer token tenant", "HTTPS red privada")
+  Rel(web, platformApi, "REST JSON, Bearer token plataforma", "HTTPS red privada")
+  Rel(api, pg, "SQL, rol wanka_app (RLS)", "pgx pool")
+  Rel(platformApi, pg, "SQL, rol wanka_platform", "pgx pool")
+  Rel(worker, pg, "SQL, rol wanka_worker + RLS por job", "pgx pool")
+  Rel(api, objects, "URLs prefirmadas", "S3")
+  Rel(worker, objects, "Guarda XML/CDR/PDF", "S3")
+  Rel(worker, khipu, "Emite, consulta (X-Api-Key fk_ por tenant)", "HTTPS timeout 30 s")
+  Rel(khipu, webhooks, "Webhook firmado /webhooks/khipu/{routeId}", "HTTPS")
+  Rel(webhooks, pg, "ops.webhook_routes + RLS por tenant", "pgx pool")
+  Rel(worker, notify, "Envia", "HTTPS")
+
+  UpdateLayoutConfig($c4ShapeInRow="3", $c4BoundaryInRow="1")

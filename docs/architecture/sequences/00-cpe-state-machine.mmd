@@ -1,0 +1,27 @@
+---
+title: Maquina de estados de un CPE (status + status_rank; solo se sube de rango)
+---
+stateDiagram-v2
+  [*] --> pendiente: venta, nota o guia confirmada (misma tx que el numero)
+  pendiente --> pendiente: salto Wanka a Khipu fallido (red, 5xx, ENVIO_EN_CURSO) o bloqueado (validation, config, auth, quota)
+  pendiente --> enviado: Khipu responde RECIBIDO, FIRMADO, ENVIADO, ERROR_ENVIO, PENDIENTE_AGRUPACION, ENVIANDO o ENVIADO_PENDIENTE_TICKET
+  pendiente --> aceptado: ACEPTADO en la misma llamada
+  pendiente --> observado: ACEPTADO_CON_OBS en la misma llamada
+  pendiente --> rechazado: RECHAZADO en la misma llamada
+  enviado --> enviado: ERROR_ENVIO (Khipu reintenta) o SUNAT_YA_LO_TIENE (bloqueado, soporte verifica en SOL)
+  enviado --> aceptado: ACEPTADO (CDR 0)
+  enviado --> observado: ACEPTADO_CON_OBS (4xxx, valido)
+  enviado --> rechazado: RECHAZADO, INVALIDO, FUERA_DE_PLAZO o DESCARTADO
+  aceptado --> anulado: baja ACEPTADA (Khipu arma RA o RC), max 7 dias
+  observado --> anulado: baja ACEPTADA
+  rechazado --> [*]: el numero queda consumido, se emite un CPE nuevo
+  anulado --> [*]
+  note right of pendiente
+    Datos del proveedor (provider_ref, hash, totales)
+    se graban aparte e idempotentes: una respuesta
+    que llega despues del webhook los completa igual.
+  end note
+  note right of enviado
+    cpe.reconcile recorre todo estado no final.
+    Alerta si now() > fecha_limite_envio - 24 h.
+  end note

@@ -1,0 +1,144 @@
+---
+title: identidad + empresas (esquemas iam y org) - RLS por tenant salvo las marcadas SIN RLS
+---
+erDiagram
+  TENANTS ||--o{ SITES : tiene
+  TENANTS ||--o{ MEMBERSHIPS : agrupa
+  USERS ||--o{ MEMBERSHIPS : pertenece
+  ROLES ||--o{ MEMBERSHIPS : asigna
+  ROLES ||--o{ ROLE_PERMISSIONS : concede
+  PERMISSIONS ||--o{ ROLE_PERMISSIONS : en
+  MEMBERSHIPS ||--o{ MEMBERSHIP_SITES : alcance
+  SITES ||--o{ MEMBERSHIP_SITES : en
+  USERS ||--o{ USER_TOTP : protege
+  USERS ||--o{ SESSIONS : abre
+  USERS ||--o{ PASSWORD_RESETS : solicita
+  SITES ||--o{ CASH_REGISTERS : tiene
+  SITES ||--o{ DOCUMENT_SERIES : emite
+  CASH_REGISTERS ||--o{ DOCUMENT_SERIES : usa
+  TENANTS ||--|| TENANT_SETTINGS : configura
+
+  TENANTS {
+    uuid id PK "org.tenants: politica por id = app.tenant_id, o, sin tenant fijado, membresia de app.user_id (solo SELECT)"
+    text ruc UK "UK global a proposito: un RUC = una empresa en la plataforma (el alta revela que ya existe)"
+    text legal_name
+    text trade_name
+    text industry "lubricentro, libreria, restaurante, veterinaria, odontologia, retail"
+    text status "trial, activa, suspendida, cerrada (solo lectura 5 anios)"
+    timestamptz closed_at "purga programada a closed_at + 5 anios"
+    timestamptz created_at
+    timestamptz updated_at
+  }
+  TENANT_SETTINGS {
+    uuid tenant_id PK, FK
+    text tax_regime
+    text ubigeo
+    text default_currency "PEN; USD tambien desde R1"
+    boolean allow_negative_stock "default false"
+    jsonb print_settings
+    bigint version "concurrencia optimista"
+  }
+  SITES {
+    uuid id PK
+    uuid tenant_id FK "RLS: tenant_isolation + member_read (sedes del alcance de app.user_id, solo SELECT y solo sin tenant fijado)"
+    text code "UK tenant_id+code"
+    text name
+    text sunat_annex "codigo de establecimiento anexo, 4 digitos"
+    text address
+    timestamptz created_at
+  }
+  CASH_REGISTERS {
+    uuid id PK
+    uuid tenant_id FK "RLS: tenant_isolation + member_read (cajas de esas sedes, solo SELECT y solo sin tenant fijado)"
+    uuid site_id FK
+    text code "UK tenant_id+code, ej. CAJA-01"
+    boolean active
+  }
+  DOCUMENT_SERIES {
+    uuid id PK
+    uuid tenant_id FK "RLS"
+    uuid site_id FK
+    uuid cash_register_id FK "nullable"
+    text doc_type "01,03,07,08,09 o interno: PRO, OC, Z, OT"
+    text series "UK tenant_id+doc_type+series, CHECK formato"
+    bigint last_number "CHECK >= 0, fila caliente"
+    boolean active
+  }
+  USERS {
+    uuid id PK
+    citext email UK "iam.users SIN RLS: identidad global, no de tenant"
+    text full_name
+    text password_hash "argon2id PHC"
+    boolean email_verified
+    text status "activo, bloqueado"
+    int failed_logins
+    timestamptz locked_until
+    timestamptz created_at
+  }
+  USER_TOTP {
+    uuid user_id PK, FK
+    bytea secret_enc "cifrado AES-GCM, clave en env"
+    timestamptz confirmed_at
+    text recovery_codes_hash "array de hashes"
+  }
+  SESSIONS {
+    uuid id PK "iam.sessions SIN RLS: se busca por hash antes de conocer el tenant"
+    uuid user_id FK
+    uuid tenant_id "nullable hasta elegir empresa"
+    uuid site_id "nullable"
+    uuid cash_register_id "nullable: caja elegida al entrar, fija la serie"
+    bytea access_hash UK "sha256 del token"
+    timestamptz access_expires_at
+    bytea refresh_hash UK
+    uuid refresh_family
+    bytea prev_refresh_hash "refresh anterior: reuso dentro de 10 s devuelve SOLO un access nuevo, nunca un refresh"
+    timestamptz rotated_at
+    timestamptz refresh_expires_at
+    boolean mfa_satisfied "true si paso la 2FA o si ningun rol la requeria al iniciar sesion"
+    text mfa_method "NOT NULL, CHECK IN (totp, recovery_code, none, platform); CHECK (mfa_method = platform) = (impersonator_id IS NOT NULL)"
+    uuid impersonator_id "staff que impersona; null en sesiones normales"
+    uuid membership_id "CHECK membership_id NULL o tenant_id NOT NULL; y tenant_id NULL o membership_id NOT NULL o impersonator_id NOT NULL"
+    bigint authz_version "copia de memberships.authz_version al resolver el rol; se compara en cada peticion"
+    inet ip
+    text user_agent
+    timestamptz revoked_at
+    timestamptz created_at "indice para limpieza"
+  }
+  PASSWORD_RESETS {
+    uuid id PK
+    uuid user_id FK
+    bytea token_hash UK
+    timestamptz expires_at "15 min"
+    timestamptz used_at
+  }
+  ROLES {
+    uuid id PK
+    uuid tenant_id FK "RLS: tenant_isolation + member_read (solo el rol de las membresias propias, solo sin tenant fijado); plantillas copiadas al provisionar"
+    text name "UK tenant_id+name"
+    boolean system
+    boolean requires_mfa "true en propietario, administrador, contador"
+  }
+  PERMISSIONS {
+    text code PK "iam.permissions SIN RLS: catalogo global; modulo.recurso:accion"
+    text module "catalogo global, sin tenant"
+    text description
+  }
+  ROLE_PERMISSIONS {
+    uuid tenant_id PK "RLS"
+    uuid role_id PK, FK
+    text permission_code PK, FK
+  }
+  MEMBERSHIPS {
+    uuid id PK
+    uuid tenant_id FK "RLS: tenant_id = app.tenant_id OR (SELECT, sin tenant fijado) user_id = app.user_id"
+    uuid user_id FK "UK tenant_id+user_id"
+    uuid role_id FK
+    boolean all_sites
+    text status "invitado, activo, suspendido"
+    bigint authz_version "se incrementa al cambiar rol"
+  }
+  MEMBERSHIP_SITES {
+    uuid tenant_id PK "RLS, misma politica por app.user_id que memberships"
+    uuid membership_id PK, FK
+    uuid site_id PK, FK
+  }

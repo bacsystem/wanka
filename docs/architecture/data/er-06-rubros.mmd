@@ -1,0 +1,147 @@
+---
+title: rubros - extensiones de dominio (esquemas lube, books; resto resumido)
+---
+erDiagram
+  CUSTOMERS ||--o{ VEHICLES : posee
+  VEHICLES ||--o{ SERVICE_ORDERS : ingresa
+  SERVICE_ORDERS ||--|{ SERVICE_ORDER_LINES : contiene
+  SERVICE_ORDERS ||--o{ SERVICE_ORDER_INSPECTIONS : diagnostica
+  SERVICE_ORDERS ||--o| SALES : "se cobra en"
+  VEHICLES ||--o{ ODOMETER_READINGS : registra
+  VEHICLES ||--o{ MAINTENANCE_REMINDERS : programa
+  MAINTENANCE_REMINDERS ||--o{ REMINDER_DELIVERIES : envia
+  SERVICE_ORDERS ||--o| MAINTENANCE_REMINDERS : programa
+  ITEMS ||--o| BOOK_DETAILS : "extiende (1:1)"
+  BOOK_DETAILS }o--o{ AUTHORS : "escrito por"
+  PUBLISHERS ||--o{ BOOK_DETAILS : publica
+  SCHOOLS ||--o{ SCHOOL_LISTS : publica
+  SCHOOL_LISTS ||--|{ SCHOOL_LIST_ITEMS : contiene
+  ITEM_VARIANTS ||--o{ SCHOOL_LIST_ITEMS : sugiere
+
+  CUSTOMERS {
+    uuid id PK "core clientes"
+  }
+  SALES {
+    uuid id PK "core ventas"
+  }
+  ITEMS {
+    uuid id PK "core catalogo"
+  }
+  ITEM_VARIANTS {
+    uuid id PK "core catalogo"
+  }
+  VEHICLES {
+    uuid id PK
+    uuid tenant_id "RLS"
+    uuid customer_id FK
+    text plate "normalizada mayusculas sin guion; UK tenant_id+plate"
+    text vin "nullable"
+    text brand
+    text model
+    smallint year
+    text fuel "gasolina, diesel, glp, gnv, hibrido"
+    int current_km "CHECK >= 0"
+    numeric km_per_day_est "numeric(8,2), calculado"
+  }
+  ODOMETER_READINGS {
+    uuid id PK
+    uuid tenant_id "RLS"
+    uuid vehicle_id FK
+    int km "CHECK >= 0"
+    timestamptz read_at
+    text source "orden_servicio, cliente, manual"
+  }
+  SERVICE_ORDERS {
+    uuid id PK
+    uuid tenant_id "RLS"
+    uuid site_id FK
+    uuid vehicle_id FK
+    text series "OT"
+    bigint number "UK tenant+series+number"
+    int km_in "CHECK >= 0"
+    text bay "bahia o rampa"
+    uuid technician_id
+    text status "abierta, en_proceso, terminada, facturada, cancelada; cobro al contado, sin credito"
+    uuid sale_id FK "UK tenant_id+sale_id, nullable hasta facturar"
+    timestamptz opened_at
+    timestamptz closed_at
+  }
+  SERVICE_ORDER_LINES {
+    uuid id PK
+    uuid tenant_id "RLS"
+    uuid order_id FK
+    uuid variant_id FK "aceite, filtro o servicio de mano de obra"
+    numeric qty "numeric(14,4), entero: solo productos envasados"
+    numeric unit_price "numeric(14,4)"
+    uuid reservation_id "reserva de stock"
+  }
+  SERVICE_ORDER_INSPECTIONS {
+    uuid id PK
+    uuid tenant_id "RLS"
+    uuid order_id FK
+    text component "filtro_aire, filtro_aceite (lista abierta)"
+    text condition "bueno, regular, cambiar"
+    text note
+  }
+  MAINTENANCE_REMINDERS {
+    uuid id PK
+    uuid tenant_id "RLS"
+    uuid vehicle_id FK
+    uuid service_order_id "OT que lo origino, UK tenant_id+service_order_id"
+    text service_kind "cambio_aceite"
+    int due_km "km_in de la OT + 5000, constante del rubro (issue 100: no configurable en R2)"
+    date due_on "fecha estimada con km_per_day_est del vehiculo"
+    date notify_on "due_on - 7 dias o km estimado alcanzado, lo primero (issue 101)"
+    text status "programado, enviado, reenviado, en_lista_llamada, atendido, reemplazado, descartado"
+    uuid superseded_by "nuevo recordatorio al cerrar otra OT del mismo vehiculo"
+  }
+  REMINDER_DELIVERIES {
+    uuid tenant_id PK "RLS"
+    uuid reminder_id PK, FK
+    text channel PK "whatsapp, correo"
+    smallint attempt PK "1 envio, 2 reenvio unico: un cliente no recibe el mismo aviso dos veces"
+    text status "enviado, fallido, sin_consentimiento"
+    timestamptz sent_at
+  }
+  BOOK_DETAILS {
+    uuid tenant_id PK "RLS"
+    uuid item_id PK, FK
+    text isbn13 "CHECK digito verificador; indice tenant+isbn13"
+    text title
+    text edition
+    smallint pub_year
+    uuid publisher_id FK
+    text language
+  }
+  AUTHORS {
+    uuid id PK
+    uuid tenant_id "RLS"
+    text name
+  }
+  PUBLISHERS {
+    uuid id PK
+    uuid tenant_id "RLS"
+    text name "UK tenant_id+name"
+  }
+  SCHOOLS {
+    uuid id PK
+    uuid tenant_id "RLS"
+    text name
+    text district
+  }
+  SCHOOL_LISTS {
+    uuid id PK
+    uuid tenant_id "RLS"
+    uuid school_id FK
+    smallint school_year
+    text grade "UK tenant+school+year+grade"
+    text status "borrador, publicada"
+  }
+  SCHOOL_LIST_ITEMS {
+    uuid id PK
+    uuid tenant_id "RLS"
+    uuid list_id FK
+    uuid variant_id FK "nullable si aun no existe en catalogo"
+    text requested_text "texto original de la lista"
+    numeric qty "numeric(14,4); la lista se cobra al contado, sin descuentos por convenio"
+  }

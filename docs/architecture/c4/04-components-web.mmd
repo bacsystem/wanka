@@ -1,0 +1,59 @@
+---
+title: Wanka web (Next.js 16) - componentes (C4 nivel 3)
+---
+flowchart TB
+  browser["Navegador<br/>(cookies httpOnly, sin tokens en JS)"]
+
+  subgraph ds["Paquete khipu-design-system<br/>github:bacsystem/khipu-design-system#v0.5.23 (fijado por tag, PR 2)"]
+    direction TB
+    dsShell["nav/shell, sidebar, sidebar-nav,<br/>selector-contexto, top-bar, mobile-nav"]
+    dsUi["ui/*, formularios/*, patrones/*,<br/>feedback/*, lib/paginacion, lib/estilos"]
+    dsTheme["styles.css + tokens; Providers,<br/>ScriptDiseno, PanelApariencia (paleta, tono, fuente)"]
+  end
+
+  subgraph web["apps/web (Next.js App Router, Node runtime)"]
+    direction TB
+    proxy["proxy.ts (antes middleware)<br/>sin cookie: /login o /admin/login;<br/>wk_at_exp con menos de 60 s: refresca ANTES del render<br/>y reescribe cookies (los Server Components no pueden)"]
+    providers["app/layout.tsx + providers.tsx<br/>ScriptDiseno en head, Providers del DS (apariencia)"]
+    icons["Iconos Phosphor: @phosphor-icons/react en cliente,<br/>/dist/ssr en servidor con peso explicito;<br/>lucide-react se retira en el issue 123"]
+
+    subgraph tenantUi["Plano tenant: app/(app), app/(auth)"]
+      rsc["Server Components (paginas)<br/>leen con apiClient; solo LEEN cookies;<br/>401 a mitad del render: /login?next="]
+      screens["Client *Screen components<br/>estado de filtros y dialogos"]
+      actions["Route handlers app/api/* y app/api/proxy/[...path]<br/>mutaciones con Idempotency-Key;<br/>401: refresco single-flight y 1 reintento"]
+    end
+
+    subgraph adminUi["Plano plataforma: app/(admin), app/(admin-auth)"]
+      adminRsc["Server Components /admin/*"]
+      adminActions["Route handlers app/api/admin/*"]
+    end
+
+    subgraph bff["BFF (src/lib/server, import server-only)"]
+      session["session.ts<br/>cookies wk_at, wk_rt, wk_at_exp (tenant) o wka_* (admin);<br/>refrescarUnaVez: candado por sesion a nivel de modulo"]
+      apiClient["lib/api/*.ts: funciones a mano por recurso,<br/>tipadas con components de openapi-typescript<br/>(spec-first con required explicito: los tipos generados son exactos);<br/>timeout 12 s, X-Request-Id, reintento de POST solo con Idempotency-Key"]
+      adminClient["lib/api/admin/*.ts<br/>base URL y cookies distintas"]
+      csrf["Chequeo Origin/Host en mutaciones<br/>+ SameSite=Lax"]
+    end
+  end
+
+  api["api (Go) /v1, red privada"]
+  papi["platform-api (Go) /platform/v1, red privada"]
+
+  browser --> proxy
+  proxy -->|"refresh proactivo"| session
+  proxy --> rsc
+  proxy --> adminRsc
+  providers --> dsTheme
+  rsc --> dsShell
+  screens --> dsUi
+  screens --> icons
+  rsc --> screens
+  screens -->|"submit"| actions
+  rsc --> apiClient
+  actions --> csrf --> apiClient
+  adminRsc --> adminClient
+  adminActions --> csrf --> adminClient
+  apiClient --> session
+  adminClient --> session
+  apiClient -->|"Authorization: Bearer wk_at_..."| api
+  adminClient -->|"Authorization: Bearer wka_at_..."| papi

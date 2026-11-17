@@ -1,0 +1,78 @@
+---
+title: Wanka API (Go) - componentes (C4 nivel 3)
+---
+flowchart TB
+  web["web (BFF Next.js)"]
+  khipuExt["Khipu"]
+
+  subgraph api["Binario Go wanka: serve --plane=tenant | platform | webhooks, worker"]
+    direction TB
+
+    subgraph edge["Borde HTTP (internal/platform/httpx)"]
+      mw["Middleware en orden:<br/>request-id y log, recover, timeout,<br/>rate limit, auth (sesion opaca),<br/>tenant + sede, plan y feature flag,<br/>RBAC por permiso, idempotency-key"]
+      router["Router net/http + handlers<br/>generados desde OpenAPI (oapi-codegen strict)"]
+      hooks["--plane=webhooks: solo /webhooks/khipu/{routeId}<br/>resuelve tenant en ops.webhook_routes, verifica HMAC,<br/>dedupe por delivery, encola cpe.sync(serie, numero)"]
+    end
+
+    subgraph core["Bounded contexts core (internal/&lt;modulo&gt;): domain / app / ports / adapters"]
+      identidad["identidad<br/>usuarios, credenciales, 2FA,<br/>sesiones, roles, permisos"]
+      empresas["empresas<br/>tenant, sedes, cajas, onboarding,<br/>configuracion, series + numeracion"]
+      clientes["clientes"]
+      catalogo["catalogo<br/>items, categorias, variantes,<br/>listas de precio"]
+      inventario["inventario<br/>almacenes, stock, movimientos,<br/>kardex, toma fisica, traslados"]
+      ventas["ventas<br/>POS, proformas"]
+      cpe["facturacion-electronica<br/>CPE, NC/ND, baja, GRE,<br/>maquina de estados"]
+      compras["compras<br/>proveedores, OC, SIRE compras"]
+      finanzas["finanzas<br/>caja/turnos, CxC, CxP"]
+      reportes["reportes<br/>lecturas y exportes"]
+      agenda["agenda"]
+      integraciones["integraciones"]
+      auditoria["auditoria"]
+      notificaciones["notificaciones"]
+    end
+
+    subgraph rubros["Modulos de rubro (internal/rubros/&lt;rubro&gt;), se registran en el arranque"]
+      lubri["lubricentro<br/>vehiculos, ordenes de servicio,<br/>recordatorios por km"]
+      libre["libreria<br/>ISBN/autor/editorial,<br/>listas escolares"]
+      otros["restaurante, veterinaria,<br/>odontologia, retail"]
+    end
+
+    subgraph plataforma["plataforma (solo plane=platform)"]
+      tenantsAdm["tenants, planes,<br/>suscripciones, flags"]
+      soporte["soporte, monitoreo,<br/>impersonacion auditada"]
+    end
+
+    subgraph shared["Kernel compartido (internal/platform)"]
+      db["db: pgx pool, InTenantTx<br/>(set_config app.tenant_id local)"]
+      outbox["jobs: River (encolado transaccional,<br/>reintentos con jitter, periodicos con lider)"]
+      money["money: decimal escala fija"]
+      flags["entitlements: plan + flags por tenant"]
+      blob["blob: S3 adapter"]
+    end
+
+    port["Puerto InvoicingProvider"]
+    khipuAdapter["Adaptador khipu<br/>(X-Api-Key por tenant, timeout 30 s,<br/>reintento solo Wanka-Khipu en River,<br/>concurrencia fija)"]
+  end
+
+  pg[("PostgreSQL")]
+
+  web --> mw --> router
+  khipuExt --> hooks
+  router --> core
+  router --> rubros
+  router --> plataforma
+  ventas -->|"facade + misma tx"| inventario
+  ventas -->|"facade + misma tx"| cpe
+  ventas -->|"facade"| finanzas
+  ventas -->|"numeracion"| empresas
+  lubri -->|"crea venta"| ventas
+  lubri --> inventario
+  libre --> catalogo
+  cpe --> port --> khipuAdapter --> khipuExt
+  cpe --> outbox
+  core --> db
+  rubros --> db
+  plataforma --> db
+  hooks --> outbox
+  db --> pg
+  outbox --> pg

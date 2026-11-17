@@ -1,0 +1,27 @@
+C4Context
+  title Wanka - Contexto del sistema (C4 nivel 1)
+
+  Person(tenantUser, "Usuario de empresa", "Propietario, cajero, administrador de sede, tecnico, contador. Pertenece a N empresas con un rol por empresa.")
+  Person(platformStaff, "Staff de plataforma", "Soporte, finanzas, ingenieria. Opera la consola super-admin.")
+  Person(endCustomer, "Cliente final", "Recibe comprobantes, recordatorios y enlaces de aprobacion de proformas.")
+
+  System(wanka, "Wanka", "SaaS multiempresa y multirubro: ventas/POS, inventario, compras, finanzas, reportes, modulos por rubro.")
+
+  System_Ext(khipu, "Khipu (proveedor de facturacion electronica)", "Firma y envia CPE a SUNAT: boleta, factura, NC, ND, baja (RA o RC), GRE. API key por empresa.")
+  System_Ext(sunat, "SUNAT", "Valida CPE (via Khipu), consulta RUC/DNI, SIRE.")
+  System_Ext(notify, "Correo / WhatsApp / SMS", "Proveedores de mensajeria (a elegir).")
+  System_Ext(payments, "Pasarelas y POS bancarios", "Niubiz, Izipay, Yape/Plin (conciliacion; integraciones).")
+  System_Ext(storage, "Almacenamiento de objetos S3", "XML, PDF, CDR, adjuntos.")
+
+  Rel(tenantUser, wanka, "Opera su empresa", "HTTPS navegador")
+  Rel(platformStaff, wanka, "Administra tenants, planes, flags", "HTTPS consola /admin")
+  Rel(wanka, khipu, "Emite y consulta CPE, X-Api-Key por tenant", "HTTPS")
+  Rel(khipu, wanka, "Notifica estado de CPE", "Webhook HTTPS firmado HMAC-SHA256")
+  Rel(khipu, sunat, "Envia y recibe CDR", "SOAP/REST SUNAT")
+  Rel(wanka, sunat, "Consulta RUC/DNI, SIRE", "HTTPS")
+  Rel(wanka, notify, "Envia mensajes", "HTTPS")
+  Rel(notify, endCustomer, "Entrega", "Correo/WhatsApp")
+  Rel(wanka, payments, "Concilia pagos", "HTTPS")
+  Rel(wanka, storage, "Guarda y lee documentos", "S3 API")
+
+  UpdateLayoutConfig($c4ShapeInRow="3", $c4BoundaryInRow="1")

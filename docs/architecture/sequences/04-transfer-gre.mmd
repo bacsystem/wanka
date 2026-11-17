@@ -1,0 +1,41 @@
+---
+title: Traslado entre almacenes con guia de remision (GRE remitente, motivo 04)
+---
+sequenceDiagram
+  autonumber
+  actor O as Almacenero origen
+  actor D as Almacenero destino
+  participant W as web
+  participant A as api (inventario + facturacion-electronica)
+  participant DB as PostgreSQL
+  participant WK as worker
+  participant P as InvoicingProvider (Khipu)
+
+  O->>W: nuevo traslado (origen, destino, lineas, lotes, transporte, placa, conductor)
+  W->>A: POST /v1/inventory/transfers Idempotency-Key
+  A->>DB: BEGIN tenant
+  A->>DB: UPDATE stock_levels origen (on_hand - q) ORDER BY variant_id
+  A->>DB: INSERT stock_movements salida traslado (tabla 12 codigo 11) desde origen
+  A->>DB: INSERT transfers status en_transito (stock en transito, fuera de ambos almacenes)
+  A->>DB: INSERT electronic_documents 09 pendiente sin numero (Khipu numera la GRE), motivo 04, establecimientos de partida y llegada
+  A->>DB: River InsertTx cpe.emit, COMMIT
+  A-->>W: 201 {transfer, guide: pendiente}
+  WK->>P: EmitDispatchGuide: POST /v1/guias-remision con Idempotency-Key, serie T001 (timeout 30 s, reintentos con jitter)
+  P-->>WK: numero asignado, estado ACEPTADO o ENVIADO_PENDIENTE_TICKET (Khipu consulta el ticket ~24 h)
+  WK->>DB: guarda numero T001-n y estado, PDF en storage (webhook o reconcile para el estado final)
+  Note over O,D: GRE marcada experimental en Khipu y no disponible en BETA: el traslado se registra igual, el despacho fisico con GRE aceptada es regla a confirmar
+  D->>W: /inventario/recepcion/T001-146 cantidades recibidas por lote
+  W->>A: POST /v1/inventory/transfers/{id}/receipts Idempotency-Key
+  A->>DB: BEGIN tenant, SELECT transfer FOR UPDATE
+  alt status no es en_transito ni recibido_parcial
+    A-->>W: 409 invalid_state_transition (recepcion repetida o traslado anulado)
+  end
+  A->>A: por linea: recibido acumulado <= enviado, si no 422 validation_failed (CHECK qty_received <= qty_sent como ultima barrera)
+  A->>DB: UPDATE transfer_lines qty_received, UPDATE stock_levels destino (+ recibido), INSERT stock_movements entrada (codigo 11)
+  alt recibido < enviado
+    A->>DB: status recibido_parcial, diferencia como incidencia (merma o devolucion)
+  else completo
+    A->>DB: status recibido
+  end
+  A->>DB: COMMIT
+  A-->>W: 200 {transfer}
