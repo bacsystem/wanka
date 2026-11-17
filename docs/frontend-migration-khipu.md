@@ -62,7 +62,7 @@ Owner rules (fixed): the app only uses DS components; no exceptions; no styles o
   - `tarjetaMovil?: (fila: T) => ReactNode`. Below `md` it renders `<ul role="list" aria-label={titulo}>` with one card per row instead of the table. Search, filters, sort, pagination and `seleccion` still apply. With `onFila`, the card is a `<button>` only if it has no interactive children; otherwise it is a `div` with a primary link.
   - `anchoMinimo?: string` (rem) sets the table `min-width` inside an `overflow-x-auto` container.
   - `pie?: Partial<Record<idColumna, ReactNode>>` adds a `<tfoot>` totals row on the visible columns (on mobile, a summary card at the end).
-  - `filaActiva?: string` (a `clave`) sets `aria-selected` + the `accent` band (§12).
+  - `filaActiva?: string` (a `clave`) sets `aria-current="true"` on the active row (table rows and mobile cards) + the `accent` band (§12). Not `aria-selected`: it is only meaningful inside grid/treegrid, and the table already uses "selected" for checkbox selection (khipu PR #60 review).
   - Columns menu: `ocultable: false` shows "Fijo" (`textos.fijo`); a new item "Restablecer" (`textos.restablecer`) restores `ocultaInicial`; `claveAlmacenamiento?: string` persists the visible columns in `localStorage` (try/catch).
 - **DS-B shell:**
   - **Rail:** `Shell rail?: "auto" | "nunca"` (default `"nunca"`).
