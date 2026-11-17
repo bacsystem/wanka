@@ -16,7 +16,6 @@
     "@base-ui/react": "^1.8.0",
     "@phosphor-icons/react": "^2.1.10",
     "class-variance-authority": "^0.7.1",
-    "cn": "^0.2.6",
     "khipu-design-system": "github:bacsystem/khipu-design-system#v0.5.23",
     "lucide-react": "^1.45.0",
     "motion": "^14.14.0",

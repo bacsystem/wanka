@@ -37,7 +37,7 @@ export function SupportScreen() {
       <div className="flex flex-wrap items-center gap-3 rounded-xl border border-warning-border border-l-4 bg-warning p-4 text-sm">
         <StateIcon state="warning" className="size-5" />
         <div className="min-w-0 flex-1"><p className="font-bold text-warning-foreground">Alerta de mesa SRE: incidencia SUNAT Web Services directo (error 1033) <Tag label="INC-8421" className="ml-1 font-mono" /></p><p className="text-xs text-warning-foreground/80 ">Afecta a 4 empresas con certificado directo en Huancayo y Trujillo. Las respuestas automáticas sugieren activar bypass a Bizlinks OSE para evitar rechazos en facturas de contingencia de cierre diario.</p></div>
-        <Button className="bg-warning font-semibold text-white hover:bg-warning" onClick={() => toast.success("Macro 'Bypass a Bizlinks OSE' enviada a 4 tenants")}><Wand2 data-icon="inline-start" /> Activar macro</Button>
+        <Button className="bg-warning font-semibold text-warning-foreground hover:bg-warning" onClick={() => toast.success("Macro 'Bypass a Bizlinks OSE' enviada a 4 tenants")}><Wand2 data-icon="inline-start" /> Activar macro</Button>
       </div>
 
       <div className="grid gap-4 xl:grid-cols-5">

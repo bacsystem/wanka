@@ -1,6 +1,6 @@
 import * as React from "react"
 import { Input as InputPrimitive } from "@base-ui/react/input"
-import { cn } from "cn"
+import { cn } from "@/lib/utils"
 
 interface InputProps extends Omit<React.ComponentProps<"input">, "size"> {
   /** `sm` (32 px) only inside dense table rows; every standalone field stays 40 px. */
