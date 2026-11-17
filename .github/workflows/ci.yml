@@ -17,6 +17,10 @@ jobs:
     name: checks (lint, typecheck, unit, build)
     runs-on: ubuntu-24.04
     timeout-minutes: 15
+    env:
+      # keep the pnpm store out of the pnpm install dir (its .bin path breaks the tsc build
+      # of the khipu-design-system git dependency with TS2742)
+      npm_config_store_dir: /home/runner/.pnpm-store
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -38,6 +42,8 @@ jobs:
     needs: checks
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    env:
+      npm_config_store_dir: /home/runner/.pnpm-store
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
