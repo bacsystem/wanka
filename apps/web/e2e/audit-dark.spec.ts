@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 // Dark-theme overflow / console audit for the batch-3 routes (light theme is covered by screens.spec.ts).
 const routes = ["/salon/delivery", "/salon/reservas", "/hospitalizacion", "/grooming", "/catalogo/variantes/POL-001", "/reportes/gestion", "/finanzas/cuentas-por-pagar", "/finanzas/caja/historial", "/configuracion/auditoria", "/configuracion/integraciones", "/ventas/proformas/nueva", "/ventas/comprobantes/F001-00000842/nota-debito"];

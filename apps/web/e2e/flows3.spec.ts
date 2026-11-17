@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 test("new quote wizard: template, customer, items, live totals and send", async ({ page }) => {
   await page.goto("/ventas/proformas");

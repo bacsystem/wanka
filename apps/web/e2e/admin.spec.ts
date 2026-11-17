@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 const screens: { path: string; heading: RegExp }[] = [
   { path: "/admin", heading: /Panel maestro de operaciones/ },

@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 test("POS adds items, computes IGV totals and emits a comprobante", async ({ page }, testInfo) => {
   await page.goto("/ventas/nueva");

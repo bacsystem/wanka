@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page } from "./fixtures";
 
 // khipu-design-system v0.5.23 palette values (dist/styles/tokens.css): default Lima in :root, Indigo and Oceano in html[data-paleta].
 const LIMA = "#d4f06b";
