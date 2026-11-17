@@ -13,7 +13,6 @@ const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../../../.."
 export const ANTIGRAVITY_BUDGET_BYTES = 22_000;
 
 const INCLUDE = /@\[[^\]]*\]\(([^)\s]+)\)/g; // Antigravity inline include
-const GEMINI_IMPORT = /^@(\.{1,2}\/\S+|\/\S+)\s*$/gm; // Gemini CLI import on its own line
 
 function stripFrontmatter(text: string) {
   return text.startsWith("---\n") ? text.replace(/^---\n[\s\S]*?\n---\n/, "") : text;
@@ -31,8 +30,36 @@ export function expandAntigravity(file: string, seen = new Set<string>()): strin
   });
 }
 
+/**
+ * Mirrors Gemini CLI's `findImports` (packages/core/src/utils/memoryImportProcessor.ts): an `@` at the
+ * start of the text or right after whitespace, followed by a path up to the next whitespace whose first
+ * character is `.`, `/` or an ASCII letter, outside code regions (any backtick run, inline or fenced).
+ */
+export function geminiImportPaths(text: string): string[] {
+  const code: Array<[number, number]> = [];
+  for (const m of text.matchAll(/(`+)([\s\S]*?)\1/g)) code.push([m.index, m.index + m[0].length]);
+  const inCode = (i: number) => code.some(([a, b]) => i >= a && i < b);
+  const paths: string[] = [];
+  for (let i = text.indexOf("@"); i !== -1; i = text.indexOf("@", i + 1)) {
+    if (i > 0 && !/\s/.test(text[i - 1])) continue;
+    if (inCode(i)) continue;
+    const path = text.slice(i + 1).match(/^\S+/)?.[0] ?? "";
+    if (path && (path[0] === "." || path[0] === "/" || /[A-Za-z]/.test(path[0]))) paths.push(path);
+  }
+  return paths;
+}
+
 function geminiImports(file: string) {
-  return [...readFileSync(file, "utf8").matchAll(GEMINI_IMPORT)].map((m) => resolve(dirname(file), m[1]));
+  return geminiImportPaths(readFileSync(file, "utf8")).map((p) => resolve(dirname(file), p));
+}
+
+/** Every file Gemini CLI reaches from `entry` by following imports recursively (max depth 5, like Gemini). */
+function geminiImportGraph(entry: string, depth = 0, out = new Map<string, string[]>()) {
+  if (out.has(entry) || depth > 5 || !existsSync(entry)) return out;
+  const targets = geminiImports(entry);
+  out.set(entry, targets);
+  for (const t of targets) geminiImportGraph(t, depth + 1, out);
+  return out;
 }
 
 describe("agent context files", () => {
@@ -53,9 +80,12 @@ describe("agent context files", () => {
     expect(readFileSync(resolve(REPO_ROOT, "CLAUDE.md"), "utf8").match(INCLUDE)).toBeNull();
   });
 
-  it("every Gemini CLI import in the context files points to an existing file", () => {
-    for (const file of [rootGemini, resolve(REPO_ROOT, "apps/web/GEMINI.md")]) {
-      for (const target of geminiImports(file)) expect(existsSync(target), `${file} -> ${target}`).toBe(true);
+  it("every Gemini CLI import reachable from the context files (CLAUDE.md included) resolves to an existing file", () => {
+    for (const entry of [rootGemini, resolve(REPO_ROOT, "apps/web/GEMINI.md")]) {
+      const graph = geminiImportGraph(entry);
+      if (entry === rootGemini) expect([...graph.keys()]).toContain(resolve(REPO_ROOT, "CLAUDE.md"));
+      for (const [file, targets] of graph)
+        for (const target of targets) expect(existsSync(target), `unresolved Gemini import in ${file}: ${target}`).toBe(true);
     }
   });
 });
