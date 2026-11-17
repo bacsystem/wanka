@@ -1,5 +1,4 @@
-import { expect, test } from "./fixtures";
-import type { Page } from "@playwright/test";
+import { expect, test, type Page } from "./fixtures";
 
 /**
  * Tab strips (khipu `Tabs`, strip-only mode): found by role, arrow keys move selection,
