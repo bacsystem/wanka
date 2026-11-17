@@ -157,6 +157,24 @@ Infraestructura (tech-lead):
 
 Supuestos de carga: los de toda la plataforma en `capacity.md`, sujetos a la prueba de carga.
 
+## 11. Detalle de las reglas para agentes (resumidas en `CLAUDE.md`)
+
+`CLAUDE.md` solo lleva las reglas; el detalle vive aquí y en los ADR.
+
+- **Binario:** una imagen con `serve --plane=tenant|platform|webhooks`, `worker` y `migrate`. Librerías propuestas, pendientes de aprobación del dueño: River, sqlc, goose, oapi-codegen, shopspring/decimal, pquerna/otp, OpenTelemetry y el SDK de S3 de AWS (ADR 0002).
+- **Multi-tenancy (ADR 0001):**
+  - `app.current_tenant()` es `NULLIF(current_setting('app.tenant_id', true), '')::uuid`;
+  - `InTenantTx(ctx, Actor{TenantID, UserID, Kind, ImpersonatorID})` fija siempre `app.tenant_id`, `app.user_id` y `app.session_kind`, y el tenant sale de la sesión, nunca del cuerpo, la URL ni una cabecera;
+  - los roles de aplicación no son dueños de tablas;
+  - las funciones `SECURITY DEFINER` tienen `REVOKE ALL ... FROM PUBLIC`, y cuando necesitan un tenant que el llamador no fijó, lo fijan desde sus propios datos y restauran el valor del llamador;
+  - las únicas políticas extra permitidas son las de solo lectura con nombre, más `platform_rw` en `org.tenants`, limitada a `wanka_platform`.
+- **RLS check:** `MUTATION=naive_session_lookup sh data/rls-check/run.sh` muestra una corrida que falla.
+- **API:** REST `/v1`, `camelCase`, errores RFC 9457 con `code`, paginación por cursor, `Idempotency-Key` obligatoria en los `POST` que crean, y dinero como string decimal (`api/conventions.md`). El catálogo de permisos tiene el plano tenant y el `plataforma.*`. Los mocks del frontend se reemplazan por funciones `lib/api/*` tipadas con `openapi.yaml`.
+- **Dinero (ADR 0008):** importes `(14,2)`, precios unitarios `(14,4)`, costos `(18,6)` y cantidades `(14,4)`. `exchange_rate numeric(6,3)` es el formato de Khipu. Los correlativos salen de un contador por serie, sin llamadas de red dentro de la transacción.
+- **Facturación (ADR 0003):** asíncrona con outbox, un emisor en orden por serie, y webhooks más conciliación. Las verificaciones en BETA son el redondeo contra `POST /v1/facturas/calcular` y el correlativo N+1 antes que N.
+- **Despliegue (ADR 0007):** servicios `web`, `api`, `platform-api`, `worker` y `webhooks`. `/v1` solo se alcanza por la red privada, con configuración 12-factor.
+- **Diagramas:** se validan con `npx -y @mermaid-js/mermaid-cli -i file.mmd -o /tmp/x.svg`.
+
 ## Validación
 
 Cada `.mmd` se renderizó con `npx -y @mermaid-js/mermaid-cli -i <archivo> -o <scratch>/<archivo>.svg`, con la salida fuera del repositorio. Un archivo inválido hace fallar el comando; se comprobó con un diagrama roto a propósito. El esqueleto OpenAPI se validó con `npx @redocly/cli lint`: es válido, y solo queda un aviso porque falta el campo `license`.

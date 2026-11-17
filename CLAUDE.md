@@ -51,7 +51,7 @@ Feature-based layout: **`app/` holds thin route files; everything else lives in 
 - `components/shared/states.tsx` — reusable EmptyState / ErrorState / NotFoundState / ForbiddenState / SessionExpiredState / LoadingState; `app/(app)/{loading,error,not-found}.tsx` use them and `DataTable` renders EmptyState when there are no rows. `components/shared/field.tsx` auto-wires `<Label htmlFor>` to its single child control (so tests can use `getByLabel`).
 - `components/shared/*` — building blocks every screen uses: `PageHeader`, `StatCard`/`StatGrid` (KPI row, horizontal scroller on mobile), `StatusBadge` (tone: success/warning/danger/info/neutral), `DataTable` (desktop table + `mobileCard` renderer for ≤767px; pass `minWidth` so wide tables scroll inside the card), `SectionCard`, `EntityHeader`, `FilterBar`, `SectionNav`, `Toolbar`/`SearchInput`, `Field`, `PaginationBar`, `InitialsAvatar`, `Tag`.
 - `components/ui/*` — shadcn generated (Base UI variant): use the `render` prop instead of `asChild`, and add `nativeButton={false}` when a `Button` renders a `Link`. `Select` needs `items={[...]}` so `SelectValue` shows labels.
-- `features/*` — one folder per screen/domain: `dashboard`, `pos` (cart logic in `lib/pos.ts`: IGV-inclusive prices, `cartTotals`), `documents` (comprobantes list + detail, `SunatStatusBadge`, `documentTypeLabel`), `quotes` (board + `/ventas/proformas/[id]` editable detail), `documents` also holds the credit-note wizard (`/ventas/comprobantes/[id]/nota-credito`) and the void ("comunicación de baja") dialog, `dispatch-guides`, `customers` (list, `/clientes/[id]` file), `clinical` (`/clientes/[id]/historia`: interactive FDI odontogram, SOAP evolution), `appointments` (its "Cobrar en POS" links to `/ventas/nueva?cliente=<id>&items=<catalogId,…>`, which the POS reads to preselect customer/lines), `catalog` (tabbed route `/catalogo/[[...tab]]`), `inventory` (stock, movements, warehouses, kardex 13.1, `/inventario/recepcion/[guia]` GRE reception, `/inventario/toma-fisica` physical count), `purchases` (RCE, suppliers, orders — tabs navigate between `/compras`, `/compras/proveedores`, `/compras/ordenes`), `receivables`, `cash`, `reports` (RVIE + `/reportes/liquidacion` PDT 621 & consolidated kardex), `settings` (SUNAT, users/roles, invite drawer, `/perfil`), `restaurant` (`/salon` floor map + table panel, `/salon/cocina` KDS, `/salon/delivery`, `/salon/reservas`), `veterinary` (`/mascotas`, `/mascotas/[id]` vaccine card + SOAP, `/hospitalizacion` kennels + vitals, `/grooming`, `NewPetSheet`), `retail` (`/catalogo/variantes/[sku]` size×color matrix; the POS scan field matches sku/id/EAN `77512345…`), `payables` (`/finanzas/cuentas-por-pagar`, `/configuracion/integraciones`), `cash` also has `/finanzas/caja/historial` (Z-reports), `settings` also `/configuracion/auditoria`, `reports` also `/reportes/gestion` (management tabs), `quotes` also `/ventas/proformas/nueva` (3-step wizard), `documents` also `/ventas/comprobantes/[id]/nota-debito` (catálogo 10, serie FD01), `auth`. `dashboard/components/industry-dashboards.tsx` swaps the home page per tenant industry (restaurante / veterinaria; default is the dental dashboard). Pages are server components that import mocks and render a client `*Screen` component holding filter/dialog state.
+- `features/*` — one folder per screen/domain; the per-feature inventory (routes, screens, special flows) is in `docs/frontend-structure.md`.
 - `types/domain.ts` — shared domain types (Tenant, SalesDocument/Detail, Customer, CatalogItem, CartLine…). Feature-only types live next to their mocks. Mocks mirror the shape the future API will return; there is no backend yet.
 - `lib/format.ts` — currency (`S/`), integer, percent, date (`dd/mm/aaaa`) and `SERIE-NNNNNNNN` formatting. Use these instead of ad-hoc formatting.
 
@@ -81,44 +81,18 @@ Never nest a `Button` inside a clickable tile rendered as `<button>` (hydration 
 
 ## Backend architecture (`docs/architecture`)
 
-The backend is not built yet. Its design lives in `docs/architecture/`; `README.md` there is the index. Follow these rules when you design or implement backend work, and read the linked doc before changing anything in its area.
+Not built yet. The design is in `docs/architecture/` (index and full detail: `README.md`; decisions: `adr/`). Rules:
 
-- **Stack**: Go modular monolith (hexagonal, one package per bounded context, facades between modules) on PostgreSQL 16 (version fixed in ADR 0002). One image runs as `serve --plane=tenant|platform|webhooks`, `worker` and `migrate`. Libraries — River (jobs/outbox), sqlc, goose, oapi-codegen, shopspring/decimal, pquerna/otp, OpenTelemetry, AWS S3 SDK — are **pending owner approval**: do not add them before that (ADR 0002).
-- **Decisions are ADRs** in `docs/architecture/adr/NNNN-kebab-title.md`, numbered in sequence. Each has context, options, decision, consequences (the bad ones too), status and date. To add, change or supersede one, follow the process in `docs/architecture/README.md` §9.
-- **Multi-tenancy** (ADR 0001):
-  - every tenant table has `tenant_id`, `ENABLE` + `FORCE ROW LEVEL SECURITY` and the policy `tenant_id = app.current_tenant()`, where `app.current_tenant()` is `NULLIF(current_setting('app.tenant_id', true), '')::uuid`;
-  - every natural `UNIQUE`/PK starts with `tenant_id`, and FKs are composite with `tenant_id`;
-  - all tenant data access goes through `InTenantTx(ctx, Actor{TenantID, UserID, Kind, ImpersonatorID})`, which always sets `app.tenant_id`, `app.user_id` and `app.session_kind`; the tenant comes from the session, never from body, URL or header;
-  - no role has `BYPASSRLS`, and application roles own no tables;
-  - `SECURITY DEFINER` functions are owned only by `wanka_definer`, have `SET search_path = pg_catalog, pg_temp` and `REVOKE ALL ... FROM PUBLIC`; when they touch RLS tables for a tenant the caller did not set, they set it from their own data and restore the caller's value;
-  - the only extra policies allowed are the named read-only ones listed in ADR 0001, plus `platform_rw` on `org.tenants`, limited to `wanka_platform`.
-- **RLS check**: `sh docs/architecture/data/rls-check/run.sh` runs the policies and functions on a disposable PostgreSQL 16 container (needs Docker) with the real roles. Any change to policies, roles, grants or `SECURITY DEFINER` functions must update that SQL and pass with **exit 0**. `MUTATION=naive_session_lookup` shows a failing run.
-- **API contract**:
-  - `docs/architecture/api/openapi.yaml` is the spec-first source (ADR 0009); `api/conventions.md` gives REST `/v1`, `camelCase`, RFC 9457 errors with `code`, cursor pagination, a required `Idempotency-Key` on creating `POST`s, and money as decimal strings;
-  - permissions use the catalog `modulo.recurso:accion` in `api/resources.md` (tenant plane plus a separate `plataforma.*` catalog), and stories and routes must cite catalog codes;
-  - the frontend mocks still mirror the future API, and will be replaced by `lib/api/*` functions typed from `openapi.yaml`.
-- **Money and numbering** (ADR 0008):
-  - money is `numeric` with explicit scale (amounts `(14,2)`, unit prices `(14,4)`, costs `(18,6)`, quantities `(14,4)`), never float;
-  - PEN and USD from release 1: every money-bearing record has `currency`, and USD documents carry `exchange_rate numeric(6,3)`, which is Khipu's format;
-  - correlatives come from a row counter per series, one series per cash register, assigned in the same transaction as the document, with no network call inside.
-- **E-invoicing** (ADR 0003):
-  - always through Khipu behind the `InvoicingProvider` port, async with outbox, a single in-order emitter per series, and webhooks plus reconciliation; never call SUNAT directly;
-  - the Khipu BETA checks (rounding against `POST /v1/facturas/calcular`, N+1 before N) are acceptance criteria of issue #56.
-- **Deployment** (ADR 0007, `deployment/`):
-  - Railway services `web`, `api`, `platform-api`, `worker` and `webhooks`; only `web` and `webhooks` have public domains, and `/v1` is reachable only over the private network;
-  - config is 12-factor; write secret **names** only, never values, in docs, code or issues.
-- **Diagrams**: Mermaid `.mmd` files only, validated before committing (`npx -y @mermaid-js/mermaid-cli -i file.mmd -o /tmp/x.svg`), following `.github/instructions/mermaid.instructions.md`.
+- **Stack** (ADR 0002): Go modular monolith on PostgreSQL 16. The proposed libraries need owner approval; don't add any before it.
+- **ADRs**: `docs/architecture/adr/NNNN-*.md`; to add, change or supersede one, follow `docs/architecture/README.md` §9.
+- **Multi-tenancy** (ADR 0001): every tenant table has `tenant_id` + `FORCE ROW LEVEL SECURITY` with `tenant_id = app.current_tenant()` (`NULLIF`); uniques and FKs include `tenant_id`; data access only via `InTenantTx(Actor{..., Kind})`; no `BYPASSRLS`; `SECURITY DEFINER` functions only owned by `wanka_definer` with a pinned `search_path`; extra policies only those whitelisted in ADR 0001.
+- **RLS check**: any change to policies, roles, grants or definer functions updates `docs/architecture/data/rls-check/` and must pass `sh docs/architecture/data/rls-check/run.sh` (Docker, exit 0).
+- **API**: `docs/architecture/api/openapi.yaml` is the contract source (rules in `api/conventions.md`); permission codes only from the catalog in `api/resources.md`. The frontend mocks mirror it until replaced by clients typed from the spec.
+- **Money and numbering** (ADR 0008): `numeric` with explicit scale, never float; `currency` (PEN/USD) on every amount, `exchange_rate numeric(6,3)`; correlatives per series per cash register, inside the document's transaction.
+- **E-invoicing** (ADR 0003): only through Khipu behind `InvoicingProvider`, never SUNAT directly; the Khipu BETA checks gate #56.
+- **Deployment** (ADR 0007): Railway; only `web` and `webhooks` are public; write secret names, never values.
+- **Diagrams**: Mermaid `.mmd`, validated before committing (`.github/instructions/mermaid.instructions.md`).
 
 ## Agent context files
 
-`CLAUDE.md` (this file) is the **single source of truth** for project context. Every other agent context file only imports it, so edit `CLAUDE.md` and never copy its content elsewhere.
-
-- **Claude Code** loads `CLAUDE.md` at the root, plus `apps/web/CLAUDE.md` when it works under `apps/web` (that file only contains `@AGENTS.md`). `apps/web/GEMINI.md` (`@./AGENTS.md`) is the same for Gemini CLI.
-- **Gemini CLI**:
-  - loads the root `GEMINI.md`, which imports this file with `@./CLAUDE.md`;
-  - it picks up `apps/web/GEMINI.md` when a tool touches that folder. `AGENTS.md` is deliberately **not** in `context.fileName`: Gemini CLI would also load the `AGENTS.md` files that packages ship inside `node_modules` (`next` does), which is a prompt-injection surface from dependencies.
-- **Antigravity**:
-  - loads the root `GEMINI.md`, whose second import line (an at-sign followed by a Markdown link to `./CLAUDE.md`) inlines this file. Antigravity's plain at-sign path form only inserts a reference, and Gemini CLI ignores the Markdown-link form. This file must never contain that Markdown-link include syntax itself, because Antigravity would expand it (the test checks this);
-  - it reads `AGENTS.md` and `GEMINI.md` from the workspace folder and its parents, never from subfolders, so `apps/web/AGENTS.md` only applies when the workspace is opened at `apps/web` (that is why `apps/web/GEMINI.md` has no Markdown-link include);
-  - it truncates each rule file above 24 000 bytes after includes. `pnpm test` runs `apps/web/src/test/agent-context.test.ts`, which expands the root `GEMINI.md` and **fails above 22 000 bytes**. If it fails, move detail from `CLAUDE.md` into a linked doc instead of raising the limit.
-- `apps/web/AGENTS.md` is generated and re-added by `next dev`; do not edit it by hand. There is no root `AGENTS.md`, to avoid confusing it with that file.
+`CLAUDE.md` is the single source of truth: edit only this file. `GEMINI.md` (root) only imports it, and `apps/web/CLAUDE.md` / `apps/web/GEMINI.md` only import `apps/web/AGENTS.md` (regenerated by `next dev`). How Claude Code, Gemini CLI and Antigravity load them: `docs/agent-context.md`. Keep this file small: `apps/web/src/test/agent-context.test.ts` (`pnpm test`) fails if the expanded root `GEMINI.md` exceeds 22 000 B (Antigravity truncates at 24 000 B), so move detail into linked docs instead. Never write Antigravity's include syntax (an at-sign followed by a Markdown link) in this file.
