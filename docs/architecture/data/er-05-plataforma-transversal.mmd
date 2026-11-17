@@ -96,6 +96,10 @@ erDiagram
     uuid tenant_id
     uuid ticket_id "obligatorio"
     text scope "read_only o full"
+    text status "solicitado, aprobado, rechazado, canjeado, revocado, vencido"
+    uuid approved_by "usuario del tenant con identidad.support_access:approve"
+    timestamptz approved_at
+    timestamptz consent_expires_at "max 24 h desde la aprobacion"
     bytea exchange_token_hash "UK: token de un uso que canjea el plano tenant via iam.redeem_impersonation()"
     timestamptz expires_at "max 60 min"
     timestamptz revoked_at

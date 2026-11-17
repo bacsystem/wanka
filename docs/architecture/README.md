@@ -122,7 +122,7 @@ Las dependencias nuevas que proponen los ADR (River, sqlc, goose, oapi-codegen, 
 
 ## 10. Supuestos y preguntas abiertas
 
-Verificaciones en BETA de Khipu, criterios previos al issue #56 (no son preguntas: se cierran con una prueba):
+Verificaciones en BETA de Khipu, criterios previos al issue #56 (no son preguntas: se cierran con una prueba). **Ya figuran como criterios de aceptación en el #56**, así que el gate vive en el issue:
 - **Redondeo.** Los totales de `pricing.Compute` deben ser idénticos a los de `POST /v1/facturas/calcular` en al menos 200 carritos (`data/data-model.md` §2, ADR 0003).
 - **Orden y huecos por serie.** Comprobar si Khipu acepta el correlativo N+1 antes que N. De eso depende la política de hueco (ADR 0003 y 0006).
 
@@ -139,6 +139,7 @@ Producto (PO):
 8. Fecha estimada del próximo cambio de aceite cuando el vehículo no tiene historial de km (el intervalo es fijo: +5 000 km, #100; el aviso sale 7 días antes, #101).
 9. Fuente del tipo de cambio y del DNI.
 10. 2FA por SMS (no propuesto).
+   - Impersonación de soporte en incidentes P1: ¿se admite alguna excepción al consentimiento previo de la empresa (#90), por ejemplo con doble firma de staff y aviso inmediato? No está decidida; mientras tanto no hay excepción (ADR 0001).
 11. Paginación numerada frente a cursor (cambio de UX en `PaginationBar`).
 12. Si el despacho físico requiere la GRE aceptada.
 

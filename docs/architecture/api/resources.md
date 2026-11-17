@@ -26,6 +26,7 @@ Ajustes de forma respecto a los mocks, comunes a todos los recursos:
 | `GET/POST /v1/users`, `PATCH /v1/users/{id}`, `POST /v1/users/invitations` | `/configuracion/usuarios`, invite drawer | `Collaborator`, `securitySummary` | `identidad.users:*` |
 | `GET/POST/PATCH /v1/roles`, `GET /v1/permissions` | matriz de permisos | `permissionMatrix`, `permissionModules` | `identidad.roles:*` |
 | `GET /v1/sessions`, `DELETE /v1/sessions/{id}` | sesiones activas | `securitySummary.sessions` | `identidad.sessions:*` |
+| `GET /v1/support-access/requests`, `POST /{id}/approve`, `/reject`, `/revoke` | consentimiento de acceso de soporte (#90) | `IMPERSONATION_GRANTS` | `identidad.support_access:read`, `:approve` |
 
 ## empresas (`org`)
 
@@ -172,7 +173,7 @@ Ajustes de forma respecto a los mocks, comunes a todos los recursos:
 | `GET /platform/v1/dashboard` | `/admin` | `platformSummary`, `mrrSeries` (agregados) | `plataforma.dashboard:read` |
 | `GET /platform/v1/tenants`, `GET /{id}`, `POST` **(I)**, `PATCH /{id}` | `/admin/empresas`, `/[id]` | `PlatformTenant` (los precios de plan se leen de `plans`, no se duplican en el tenant) | `plataforma.tenants:read`, `:create`, `:update` |
 | `POST /platform/v1/tenants/{id}/suspend`, `/reactivate` **(I)** | acciones de tenant | — | `plataforma.tenants:suspend` |
-| `POST /platform/v1/tenants/{id}/impersonations` **(I)** | soporte | — | `plataforma.tenants:impersonate`, requiere ticket y consentimiento de la empresa (#90) |
+| `POST /platform/v1/tenants/{id}/impersonations` **(I)** | soporte: crea la solicitud en estado `solicitado`; solo se canjea si la empresa la aprueba (#90) | — | `plataforma.tenants:impersonate`, requiere ticket |
 | `GET/POST/PATCH /platform/v1/plans`, `/subscriptions` | `/admin/planes` | `Plan` | `plataforma.plans:*`, `plataforma.subscriptions:*` |
 | `GET /platform/v1/saas-invoices` | `/admin/facturacion` | `SaasInvoice` | `plataforma.billing:read` |
 | `GET/PATCH /platform/v1/modules`, `/feature-flags`, `PUT /tenants/{id}/overrides` | `/admin/modulos` | `FeatureFlag` | `plataforma.flags:read`, `:update` |
@@ -189,7 +190,7 @@ Formato `modulo.recurso:accion`. Este catálogo es la **fuente de verdad**: se c
 
 | Módulo | Permisos |
 |---|---|
-| identidad | `identidad.users:read/create/update`, `identidad.roles:read/create/update`, `identidad.sessions:read/void` |
+| identidad | `identidad.users:read/create/update`, `identidad.roles:read/create/update`, `identidad.sessions:read/void`, `identidad.support_access:read/approve` (consentimiento de impersonación, #90) |
 | empresas | `empresas.config:read/update`, `empresas.sites:read/create/update`, `empresas.series:read/create/update`, `empresas.einvoicing:read/update` |
 | clientes | `clientes.customers:read/create/update/export/import` |
 | catalogo | `catalogo.items:read/create/update/import/export`, `catalogo.categories:read/create/update`, `catalogo.prices:read/update` |
@@ -274,7 +275,7 @@ Es un catálogo **separado** del de tenant. Se guarda en `platform.platform_perm
 
 ### Correspondencia: historias de plataforma → catálogo
 
-Las historias #85 a #93 citan hoy el comodín `plataforma.*`. El PO las reemplaza por los permisos concretos de esta tabla.
+Las historias #85 a #93 ya citan estos códigos concretos (el PO las migró desde el comodín `plataforma.*`). La tabla es la referencia para mantenerlas alineadas.
 
 | Issue | Historia | Permisos del catálogo |
 |---|---|---|
@@ -283,7 +284,7 @@ Las historias #85 a #93 citan hoy el comodín `plataforma.*`. El PO las reemplaz
 | #87 | Gestionar planes y límites | `plataforma.plans:read`, `:create`, `:update` |
 | #88 | Gestionar suscripciones y cobros del SaaS | `plataforma.subscriptions:read`, `:update`, `plataforma.billing:read`, `:create` |
 | #89 | Monitorear la salud de OSE/SUNAT/Khipu | `plataforma.monitoring:read` |
-| #90 | Atender tickets de soporte | `plataforma.tickets:read`, `:update`; para entrar a los datos de una empresa, además `plataforma.tenants:impersonate` (con consentimiento y auditado) |
+| #90 | Atender tickets de soporte | `plataforma.tickets:read`, `:update`; para entrar a los datos de una empresa, además `plataforma.tenants:impersonate`, y la empresa aprueba con `identidad.support_access:approve` (plano tenant) |
 | #91 | Gestionar usuarios de plataforma | `plataforma.staff:read`, `:create`, `:update` |
 | #92 | Administrar feature flags y módulos | `plataforma.flags:read`, `:update` |
 | #93 | Auditar acciones de la plataforma | `plataforma.audit:read`, `:export` |

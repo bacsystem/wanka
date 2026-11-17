@@ -57,14 +57,14 @@ Ningún rol de aplicación tiene `BYPASSRLS` ni es dueño de tablas. Todos son `
 | Tablas de tenant (`org`*, `crm`, `catalog`, `inv`, `sales`, `einv`, `purch`, `fin`, `agenda`, `integ`, `notify`, `audit`, rubros) | dueño | SELECT/INSERT/UPDATE (DELETE solo donde el módulo lo declara), **con RLS** | igual, con RLS por job | solo INSERT en `einv.provider_webhook_events` (con RLS). **Sin acceso a `integ.provider_credentials`**: no puede leer las API keys `fk_` | **ninguno directo** |
 | `org.tenants` | dueño | SELECT con RLS (política extra por membresía) | SELECT con RLS | — | SELECT/UPDATE vía la política `platform_rw` (`TO wanka_platform USING (true)`) |
 | `iam.users`, `iam.sessions`, `iam.user_totp`, `iam.password_resets` (sin RLS: identidad global) | dueño | SELECT/INSERT/UPDATE | DELETE para limpieza | — | — |
-| `iam.memberships`, `iam.membership_sites`, `iam.roles`, `org.sites`, `org.cash_registers` | dueño | con RLS + política `member_read` por membresía de `app.user_id` (solo SELECT) | con RLS | — | — |
+| `iam.memberships`, `iam.membership_sites`, `iam.roles`, `org.sites`, `org.cash_registers` | dueño | con RLS + política `member_read`/`own_memberships` por membresía de `app.user_id` (solo SELECT y **solo sin tenant fijado**) | con RLS | — | — |
 | `iam.role_permissions` | dueño | con RLS (los permisos se resuelven ya con tenant fijado) | con RLS | — | — |
 | `iam.permissions` (catálogo global, sin RLS) | dueño | SELECT | SELECT | — | SELECT |
 | `platform.*` (sin RLS) | dueño | SELECT solo en `plans`, `plan_modules`, `modules`, `feature_flags`, `tenant_flag_overrides`, `tenant_module_overrides`, `subscriptions` (entitlements) | INSERT/UPDATE solo en `platform.tenant_usage`; SELECT de entitlements | — | SELECT/INSERT/UPDATE |
 | `ops.webhook_routes` (sin RLS; guarda el `whsec_` cifrado con `WEBHOOK_SECRET_ENC_KEY`) | dueño | INSERT/UPDATE al conectar Khipu | — | solo a través de `ops.resolve_webhook_route` (sin SELECT directo) | SELECT de `route_id`, `tenant_id`, `revoked_at` (GRANT por columna, sin el secreto) |
 | `ops.idempotency_keys` (con RLS), `ops.exchange_rates` (global) | dueño | DML / SELECT | DELETE (limpieza) / INSERT (tipo de cambio) | — | SELECT |
 | Tablas de River (`ops`) | dueño | INSERT (encolar) | todo | INSERT (encolar) | INSERT (encolar) |
-| Funciones `SECURITY DEFINER` (`platform_fn.*`, `iam.*`) | dueño | EXECUTE de `iam.redeem_impersonation` | EXECUTE de `platform_fn.purge_closed_tenant` | EXECUTE de `ops.resolve_webhook_route` | EXECUTE de `platform_fn.provision_tenant`, `suspend_tenant`, `create_impersonation_grant` |
+| Funciones `SECURITY DEFINER` (`platform_fn.*`, `iam.*`) | dueño | EXECUTE de `iam.redeem_impersonation`, `iam.decide_impersonation` | EXECUTE de `platform_fn.purge_closed_tenant` | EXECUTE de `ops.resolve_webhook_route` | EXECUTE de `platform_fn.provision_tenant`, `suspend_tenant`, `request_impersonation` |
 
 \* `org.tenants` tiene la fila propia del tenant y se trata aparte (siguiente sección).
 
@@ -73,29 +73,30 @@ Ningún rol de aplicación tiene `BYPASSRLS` ni es dueño de tablas. Todos son `
 La revisión los reprodujo en PG16 (cero filas o `new row violates row-level security policy`). Cada uno tiene ahora un mecanismo acotado:
 
 1. **Login y `/seleccionar-empresa`** (el usuario todavía no eligió empresa).
-   - `iam.memberships` y `iam.membership_sites` tienen una segunda política, solo de lectura: `CREATE POLICY own_memberships ON iam.memberships FOR SELECT USING (user_id = app.current_user_id())`.
-   - `org.tenants` admite `FOR SELECT USING (id = app.current_tenant() OR id IN (SELECT tenant_id FROM iam.memberships WHERE user_id = app.current_user_id()))`.
+   - `iam.memberships` y `iam.membership_sites` tienen una segunda política, solo de lectura: `CREATE POLICY own_memberships ON iam.memberships FOR SELECT USING (app.current_tenant() IS NULL AND user_id = app.current_user_id())`.
+   - `org.tenants` admite `member_read FOR SELECT USING (id = app.current_tenant() OR (app.current_tenant() IS NULL AND id IN (SELECT tenant_id FROM iam.memberships WHERE user_id = app.current_user_id())))`.
+   - **Las ramas por usuario solo valen sin tenant fijado** (`app.current_tenant() IS NULL`). Postgres combina con OR las políticas permisivas: sin esa condición, dentro de `InTenantTx(A)` un usuario que también es miembro de B vería sedes, cajas, roles, membresías y la empresa de B, y un listado o reporte de A sin `WHERE tenant_id` los mezclaría (lo reprodujo la revisión en PG16).
    - **Política `member_read`** (solo `FOR SELECT`) en las tres tablas que la vista necesita y que antes solo tenían `tenant_isolation`. Con ella, la vista devuelve rol, `requires_mfa`, sedes y cajas, y la 2FA obligatoria por rol se puede aplicar:
      ```sql
      -- rol de cada membresia propia
      CREATE POLICY member_read ON iam.roles FOR SELECT USING (
        tenant_id = app.current_tenant()
-       OR id IN (SELECT role_id FROM iam.memberships
-                 WHERE user_id = app.current_user_id() AND status IN ('invitado','activo')));
+       OR (app.current_tenant() IS NULL AND id IN (SELECT role_id FROM iam.memberships
+                 WHERE user_id = app.current_user_id() AND status IN ('invitado','activo'))));
      -- sedes en el alcance de cada membresia propia
      CREATE POLICY member_read ON org.sites FOR SELECT USING (
        tenant_id = app.current_tenant()
-       OR EXISTS (SELECT 1 FROM iam.memberships m
+       OR (app.current_tenant() IS NULL AND EXISTS (SELECT 1 FROM iam.memberships m
                   WHERE m.user_id = app.current_user_id() AND m.status = 'activo' AND m.tenant_id = sites.tenant_id
                     AND (m.all_sites OR EXISTS (SELECT 1 FROM iam.membership_sites ms
-                                                WHERE ms.membership_id = m.id AND ms.site_id = sites.id))));
+                                                WHERE ms.membership_id = m.id AND ms.site_id = sites.id)))));
      -- cajas de esas sedes
      CREATE POLICY member_read ON org.cash_registers FOR SELECT USING (
        tenant_id = app.current_tenant()
-       OR site_id IN (SELECT id FROM org.sites));  -- org.sites ya filtrado por su propia politica
+       OR (app.current_tenant() IS NULL AND site_id IN (SELECT id FROM org.sites)));  -- org.sites ya filtrado por su propia politica
      ```
      Solo exponen lo que el usuario puede elegir: su rol (no los demás roles de la empresa), y sus sedes y cajas. No exponen permisos ni datos de negocio.
-   - La API abre la transacción con solo `app.user_id` (sin `app.tenant_id`) y llama a `iam.list_my_memberships()`, una vista `security_invoker` que une membresía, empresa, rol (`name`, `requires_mfa`), sedes y cajas. **Prueba de integración:** con solo `app.user_id` fijado, la vista devuelve rol, `requires_mfa`, sedes y cajas no nulos para las membresías propias, y cero filas de otros usuarios.
+   - La API abre la transacción con solo `app.user_id` (sin `app.tenant_id`) y llama a `iam.list_my_memberships()`, una vista `security_invoker` que une membresía, empresa, rol (`name`, `requires_mfa`), sedes y cajas. **Prueba de integración:** (1) con solo `app.user_id` fijado, la vista devuelve rol, `requires_mfa`, sedes y cajas no nulos para las membresías propias, y cero filas de otros usuarios; (2) con un usuario miembro de A y de B y `app.tenant_id = A`, `org.sites`, `org.cash_registers`, `iam.roles`, `iam.memberships` y `org.tenants` devuelven **cero filas de B**.
    - `POST /v1/auth/session/tenant` valida la membresía por la misma política antes de fijar el tenant.
 2. **Webhook de Khipu** (`/webhooks/khipu/{routeId}`).
    - La ruta se resuelve con `ops.webhook_routes`, una tabla **sin RLS** con `route_id` (128 bits aleatorios), `tenant_id`, `provider`, `revoked_at` y `webhook_secret_enc` (el `whsec_` cifrado con **`WEBHOOK_SECRET_ENC_KEY`**, una clave distinta de `INTEGRATIONS_ENC_KEY`).
@@ -112,10 +113,13 @@ La revisión los reprodujo en PG16 (cero filas o `new row violates row-level sec
    - Todo el alta ocurre en `platform_fn.provision_tenant(ruc, razon_social, rubro, plan, owner_email)`: `SECURITY DEFINER`, `SET search_path = pg_catalog, platform_fn`, nombres cualificados, validación de argumentos y una sola transacción.
    - La función fija `app.tenant_id` al tenant nuevo y crea: `org.tenants`, la sede, el almacén, la caja, las series, los roles plantilla con sus permisos, `iam.users` (si el email no existe), la membresía del propietario en estado `invitado` y las dos filas de auditoría.
    - Devuelve el `tenant_id` y un token de invitación.
-6. **Impersonación de soporte.**
-   - `platform_fn.create_impersonation_grant(ticket_id, tenant_id, scope)` crea el grant (60 min como máximo) con un token de canje de un uso.
-   - El plano tenant lo canjea con `iam.redeem_impersonation(token)`, una función `SECURITY DEFINER` que valida el hash, la vigencia y la revocación, y crea una sesión de tenant con `impersonator_id`.
-   - Desde ahí todo pasa por RLS normal.
+6. **Impersonación de soporte, con consentimiento de la empresa** (issue #90: «solo con consentimiento de la empresa y queda auditado»).
+   - `platform_fn.request_impersonation(ticket_id, tenant_id, scope, reason)` crea el grant en estado **`solicitado`**. Solo se ejecuta con el permiso `plataforma.tenants:impersonate`, y notifica a los usuarios de la empresa con permiso `identidad.support_access:approve` (por defecto, propietario y administrador).
+   - La empresa aprueba o rechaza en el plano tenant (`POST /v1/support-access/requests/{id}/approve|reject`). La API verifica el permiso y llama a `iam.decide_impersonation(grant_id, decision)`, una función `SECURITY DEFINER` que solo actúa si `grant.tenant_id = app.current_tenant()`. Guarda `approved_by`, `approved_at` y `consent_expires_at`: el consentimiento dura como máximo 24 h y el acceso, 60 min desde el canje.
+   - `iam.redeem_impersonation(token)` **rechaza** todo grant que no esté `aprobado`, que tenga el consentimiento vencido o que haya sido revocado. Si es válido, crea la sesión de tenant con `impersonator_id`. La empresa puede revocar en cualquier momento, y la revocación corta la sesión.
+   - Auditoría en `platform.audit_events` y en `audit.events` del tenant: solicitud, decisión, canje, acciones y cierre.
+   - Prueba: canjear un grant `solicitado` o vencido debe fallar.
+   - **Pregunta abierta al PO (no decidida):** si se admite una excepción para incidentes P1 sin consentimiento previo (por ejemplo con doble firma de staff y aviso inmediato a la empresa). Mientras no se decida, no hay excepción.
 7. **Purga de empresas cerradas** (5 años): la hace `platform_fn.purge_closed_tenant(tenant_id)`, que el worker ejecuta por lotes y con auditoría en plataforma.
 
 Cada función `SECURITY DEFINER` tiene su prueba de integración, que también verifica que no hace nada fuera de su tenant.
@@ -127,7 +131,7 @@ La tabla de jobs no es de tenant (no tiene RLS). Cada job lleva `tenant_id` en s
 ### Migraciones y pruebas
 
 Las migraciones las aplica `wanka_migrator`. Pruebas de CI contra `pg_catalog`:
-- (a) toda tabla con columna `tenant_id` tiene `relrowsecurity` y `relforcerowsecurity`, y una política que usa `app.current_tenant()`. Las demás políticas solo pueden ser `FOR SELECT` y tener un nombre de la lista blanca (`own_memberships` en `iam.memberships` e `iam.membership_sites`; `member_read` en `org.tenants`, `iam.roles`, `org.sites`, `org.cash_registers`; y, como única excepción que no es solo de lectura, `platform_rw` en `org.tenants`, limitada `TO wanka_platform`). Cualquier otra política, o una de esas en otra tabla, hace fallar la prueba;
+- (a) toda tabla con columna `tenant_id` tiene `relrowsecurity` y `relforcerowsecurity`, y una política que usa `app.current_tenant()`. Las demás políticas solo pueden ser `FOR SELECT`, su rama por usuario debe contener `app.current_tenant() IS NULL` (se verifica sobre `pg_policies.qual`) y tener un nombre de la lista blanca (`own_memberships` en `iam.memberships` e `iam.membership_sites`; `member_read` en `org.tenants`, `iam.roles`, `org.sites`, `org.cash_registers`; y, como única excepción que no es solo de lectura, `platform_rw` en `org.tenants`, limitada `TO wanka_platform`). Cualquier otra política, o una de esas en otra tabla, hace fallar la prueba;
 - (b) ningún índice único de esas tablas omite `tenant_id`, salvo una lista blanca explícita;
 - (c) ninguna política usa `current_setting` sin `NULLIF`.
 
