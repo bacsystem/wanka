@@ -409,11 +409,6 @@
       "count": 1
     }
   },
-  "src/components/ui/tabs.tsx": {
-    "no-restricted-imports": {
-      "count": 2
-    }
-  },
   "src/components/ui/toggle-group.tsx": {
     "no-restricted-imports": {
       "count": 3
