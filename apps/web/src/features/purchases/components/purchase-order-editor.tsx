@@ -125,8 +125,8 @@ export function PurchaseOrderEditor({ suppliers }: { suppliers: Supplier[] }) {
           </SectionCard>
           <SectionCard title="Sugerencias por stock crítico" icon={AlertTriangle} iconTone="danger" action={<StatusBadge tone="warning" label="Kárdex sede" className="rounded-md" />} contentClassName="flex flex-col gap-2 p-3">
             {suggestions.map((s) => { const added = lines.some((l) => l.sku === s.sku); const crit = /agotad|crític/i.test(s.reason); return (
-              <div key={s.sku} className={cn("flex items-center gap-3 rounded-lg border p-3 text-xs", added ? "border-transparent bg-success" : crit ? "border-transparent bg-destructive-soft" : "border-transparent bg-warning")}>
-                <div className="min-w-0 flex-1"><p className="flex items-center gap-1.5 text-sm font-semibold">{added ? <CheckCircle2 className="size-4 text-success-foreground" /> : crit ? <AlertCircle className="size-4 text-destructive-text" /> : <AlertTriangle className="size-4 text-warning-foreground" />}{s.name}</p><p className="text-muted-foreground">{s.reason} · Sugerido: <strong className="text-foreground">{s.qty}</strong></p></div>
+              <div key={s.sku} className={cn("flex items-center gap-3 rounded-lg border p-3 text-xs", added ? "border-transparent bg-success" : crit ? "border-transparent bg-destructive-suave" : "border-transparent bg-warning")}>
+                <div className="min-w-0 flex-1"><p className="flex items-center gap-1.5 text-sm font-semibold">{added ? <CheckCircle2 className="size-4 text-success-foreground" /> : crit ? <AlertCircle className="size-4 text-destructive-texto" /> : <AlertTriangle className="size-4 text-warning-foreground" />}{s.name}</p><p className="text-muted-foreground">{s.reason} · Sugerido: <strong className="text-foreground">{s.qty}</strong></p></div>
                 {added ? <StatusBadge tone="success" label="Ya agregado ✓" className="rounded-md" /> : <Button size="xs" variant="outline" className="bg-card font-semibold" onClick={() => addSuggestion(s)}>+ Agregar</Button>}
               </div>
             ); })}

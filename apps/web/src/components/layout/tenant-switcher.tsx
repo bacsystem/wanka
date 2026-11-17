@@ -12,6 +12,8 @@ import { TENANT_COOKIE, setClientCookie } from "@/features/auth/lib/tenant-cooki
 import { tenantOptions } from "@/features/auth/mocks/tenants";
 import { industryLabel, initials } from "@/lib/tenant";
 import type { Tenant } from "@/types/domain";
+import { TARJETA } from "@/lib/estilos";
+import { cn } from "@/lib/utils";
 
 function useChooseTenant(tenant: Tenant) {
   const router = useRouter();
@@ -34,7 +36,7 @@ export function SidebarTenantCard({ tenant }: { tenant: Tenant }) {
   const choose = useChooseTenant(tenant);
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className="group flex w-full items-center justify-between gap-2 rounded-xl border border-card-border bg-card shadow-card p-2 text-left shadow-xs transition-colors hover:border-ring/40 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none" aria-label={`Empresa seleccionada: ${tenant.name}`}>
+      <DropdownMenuTrigger className={cn(TARJETA, "group flex w-full items-center justify-between gap-2 p-2 text-left transition-colors hover:border-ring/40 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none")} aria-label={`Empresa seleccionada: ${tenant.name}`}>
         <span className="flex min-w-0 items-center gap-2">
           <span className="flex size-7 shrink-0 items-center justify-center rounded border border-primary/15 bg-accent text-primary"><Building className="size-3.5" /></span>
           <span className="flex min-w-0 flex-col leading-tight">

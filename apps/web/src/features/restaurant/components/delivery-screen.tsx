@@ -15,6 +15,7 @@ import { StatusBadge, Tag, type BadgeTone } from "@/components/shared/status-bad
 import { formatCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { DeliveryLane, DeliveryOrder, Rider } from "../mocks/delivery";
+import { TARJETA } from "@/lib/estilos";
 
 const lanes: { id: DeliveryLane; label: string; tone: BadgeTone; dot: string; border: string }[] = [
   { id: "nuevo", label: "Nuevo", tone: "info", dot: "bg-info", border: "border-l-blue-500" },
@@ -23,7 +24,7 @@ const lanes: { id: DeliveryLane; label: string; tone: BadgeTone; dot: string; bo
   { id: "ruta", label: "En ruta", tone: "info", dot: "bg-primary", border: "border-l-primary" },
   { id: "entregado", label: "Entregado", tone: "neutral", dot: "bg-secondary", border: "border-l-slate-400" },
 ];
-const channelTone: Record<DeliveryOrder["channel"], string> = { WhatsApp: "bg-success/10 text-success", Rappi: "bg-warning text-warning-foreground", PedidosYa: "bg-destructive-soft text-destructive-text", Web: "bg-accent text-accent-foreground" };
+const channelTone: Record<DeliveryOrder["channel"], string> = { WhatsApp: "bg-success/10 text-success", Rappi: "bg-warning text-warning-foreground", PedidosYa: "bg-destructive-suave text-destructive-texto", Web: "bg-accent text-accent-foreground" };
 
 export function DeliveryScreen({ orders: initial, riders }: { orders: DeliveryOrder[]; riders: Rider[] }) {
   const [orders, setOrders] = React.useState(initial);
@@ -78,7 +79,7 @@ export function DeliveryScreen({ orders: initial, riders }: { orders: DeliveryOr
         )}
         <SectionCard title="Repartidores" contentClassName="p-0"><ul className="divide-y text-sm">{riders.map((r) => <li key={r.id} className="flex items-center gap-3 px-4 py-2.5"><span className="flex size-8 items-center justify-center rounded-full bg-accent"><Bike className="size-4" strokeWidth={1.5} /></span><div className="min-w-0 flex-1"><p className="font-medium">{r.name}</p><p className="text-xs text-muted-foreground">{r.vehicle} · {r.orders.length ? r.orders.join(", ") : "sin pedidos"}</p></div><StatusBadge tone={r.status === "en_ruta" ? "info" : r.status === "disponible" ? "success" : "neutral"} dot label={r.status === "en_ruta" ? "En ruta" : r.status === "disponible" ? "Disponible" : "Descanso"} /></li>)}</ul></SectionCard>
       </div>
-      <aside aria-label="Detalle del pedido" className="hidden rounded-xl border border-card-border bg-card shadow-card xl:block">{panel ?? <div className="p-6 text-center text-sm text-muted-foreground"><UserCheck className="mx-auto mb-2 size-6" /> Selecciona un pedido</div>}</aside>
+      <aside aria-label="Detalle del pedido" className={cn(TARJETA, "hidden xl:block")}>{panel ?? <div className="p-6 text-center text-sm text-muted-foreground"><UserCheck className="mx-auto mb-2 size-6" /> Selecciona un pedido</div>}</aside>
       <Sheet open={sheet} onOpenChange={setSheet}><SheetContent side="bottom" className="max-h-[88svh] overflow-y-auto rounded-t-xl p-0 xl:hidden"><SheetHeader className="sr-only"><SheetTitle>Detalle del pedido</SheetTitle></SheetHeader>{panel}</SheetContent></Sheet>
     </div>
   );

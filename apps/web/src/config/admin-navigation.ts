@@ -10,9 +10,9 @@ import {
   ToggleRightIcon,
   UsersIcon,
 } from "@phosphor-icons/react/ssr";
-import type { IconComponent } from "@/lib/icons";
+import type { IconoComponente } from "@/lib/iconos";
 
-export interface AdminNavItem { label: string; href: string; icon: IconComponent; badge?: string; section: "supervision" | "facturacion" | "plataforma" }
+export interface AdminNavItem { label: string; href: string; icon: IconoComponente; badge?: string; section: "supervision" | "facturacion" | "plataforma" }
 export const adminSectionLabel = { supervision: "Supervisión global", facturacion: "Facturación y clientes", plataforma: "Plataforma" } as const;
 
 /** Navigation of the SaaS admin console (separate from the tenant app). */

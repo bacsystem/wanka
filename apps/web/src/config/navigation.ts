@@ -32,13 +32,13 @@ import {
   WalletIcon,
   WarehouseIcon,
 } from "@phosphor-icons/react/ssr";
-import type { IconComponent } from "@/lib/icons";
+import type { IconoComponente } from "@/lib/iconos";
 import type { Industry } from "@/types/domain";
 
 export interface NavItem {
   label: string;
   href: string;
-  icon: IconComponent;
+  icon: IconoComponente;
   children?: NavItem[];
   /** Sidebar section; defaults to "core". */
   section?: NavSection;

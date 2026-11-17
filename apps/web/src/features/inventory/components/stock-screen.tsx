@@ -20,6 +20,7 @@ import { formatCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { stockState, type StockItem, type StockState, type WarehouseInfo } from "../mocks/stock";
 import { FilterBar } from "@/components/shared/filter-bar";
+import { TARJETA } from "@/lib/estilos";
 
 const stateMeta: Record<StockState, { label: string; tone: BadgeTone }> = {
   optimo: { label: "Óptimo", tone: "success" },
@@ -127,7 +128,7 @@ export function StockScreen({ items, warehouses, categories, kpis }: Props & { k
 
       <div className="grid gap-4 md:grid-cols-3">
         {warehouses.filter((w) => w.id !== "all").map((w, i) => { const occ = [76, 91, 42][i]; const val = [58410.2, 16820.3, 9000][i]; const note = ["Despachos al día", "1 traslado pendiente", "Recepción abierta"][i]; return (
-          <div key={w.id} className="rounded-xl border border-card-border bg-card shadow-card p-4 shadow-xs">
+          <div key={w.id} className={cn(TARJETA, "p-4")}>
             <div className="flex items-center justify-between"><p className="flex items-center gap-2 text-sm font-bold"><Warehouse className="size-4 text-primary" /> {w.name.split(" (")[0]}</p><StatusBadge tone={occ > 85 ? "info" : "success"} dot label={occ > 85 ? "Alta ocupación" : "Operativo"} /></div>
             <div className="mt-3 flex items-center justify-between text-xs"><span className="text-muted-foreground">Ocupación de capacidad:</span><span className="text-sm font-bold">{occ}%</span></div>
             <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-muted"><div className={cn("h-full rounded-full", occ > 85 ? "bg-info" : occ > 60 ? "bg-primary" : "bg-secondary")} style={{ width: `${occ}%` }} /></div>

@@ -1,8 +1,12 @@
 @import "tailwindcss";
-@import "tw-animate-css";
-@import "shadcn/tailwind.css";
-@import "../styles/tokens.css";
-@import "../styles/theme.css";
+/*
+ * khipu-design-system (https://github.com/bacsystem/khipu-design-system, pinned by tag in package.json) brings
+ * everything else: tw-animate-css, the shadcn variants, the `dark` variant, the tokens and the Tailwind theme
+ * (colors, radii, type scale, selectable palettes / dark tones / fonts) and the @source of its components.
+ * Do NOT declare a bare `:root` or `.dark` here: it would override the palette the user chose. To change a token,
+ * fix it in the DS and bump the tag.
+ */
+@import "khipu-design-system/styles.css";
 
 @theme inline {
   --color-brand-panel: var(--brand-panel);
@@ -22,66 +26,4 @@
   40% { transform: rotate(12deg); }
   60% { transform: rotate(-8deg); }
   80% { transform: rotate(6deg); }
-}
-
-/* Consola de Administración (super-admin de la plataforma): variante pastel Lavanda sobre khipu 0.5 */
-.theme-admin {
-  --brand-panel: #16181d;
-  --accent-base: #ddd4fb;
-  --accent-text: #3d2a7e;
-  --accent-2: #cfe2fb;
-  --accent-2-text: #1d4f91;
-  --accent-3: #f5ccde;
-  --accent-soft: color-mix(in srgb, var(--accent-base) 30%, #ffffff);
-  --accent-2-soft: color-mix(in srgb, var(--accent-2) 30%, #ffffff);
-  --accent-3-soft: color-mix(in srgb, var(--accent-3) 30%, #ffffff);
-  --accent-surface: var(--accent-base);
-  --accent-surface-text: var(--accent-text);
-  --accent-border: color-mix(in srgb, var(--accent-text) 20%, transparent);
-  --accent: var(--accent-soft);
-  --accent-foreground: var(--accent-text);
-  --ring: var(--accent-text);
-  --sidebar-primary: var(--accent-surface);
-  --sidebar-primary-foreground: var(--accent-surface-text);
-  --sidebar-ring: var(--ring);
-  --brand: var(--accent-base);
-  --brand-foreground: var(--accent-text);
-  --chart-1: var(--accent-2-text);
-  --chart-base: var(--accent-2);
-  --chart-highlight: var(--accent-base);
-  --chart-stroke-base: var(--accent-2-text);
-  --chart-stroke-highlight: var(--accent-text);
-}
-
-.dark .theme-admin {
-  --accent-base: #3d2a7e;
-  --accent-text: #e4ddfc;
-  --accent-2: #1d4f91;
-  --accent-2-text: #d9e9fc;
-  --accent-3: #7f2954;
-  --accent-soft: color-mix(in srgb, var(--accent-base) 45%, #121317);
-  --accent-2-soft: color-mix(in srgb, var(--accent-2) 45%, #121317);
-  --accent-3-soft: color-mix(in srgb, var(--accent-3) 45%, #121317);
-  --accent-surface: var(--accent-soft);
-  --accent-surface-text: var(--accent-text);
-  --accent-border: color-mix(in srgb, var(--accent-text) 25%, transparent);
-  --accent: var(--accent-soft);
-  --accent-foreground: var(--accent-text);
-  --ring: var(--accent-text);
-  --sidebar-primary: var(--accent-surface);
-  --sidebar-primary-foreground: var(--accent-surface-text);
-  --sidebar-ring: var(--ring);
-  --brand: var(--accent-base);
-  --brand-foreground: var(--accent-text);
-  --chart-1: var(--accent-2-text);
-  --chart-base: var(--accent-2);
-  --chart-highlight: var(--accent-base);
-  --chart-stroke-base: var(--accent-2-text);
-  --chart-stroke-highlight: var(--accent-text);
-}
-
-@media print {
-  [data-sin-imprimir] {
-    display: none !important;
-  }
 }

@@ -18,6 +18,7 @@ import { formatCurrency, formatDate, formatInteger } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { BarChart3, Receipt, ShoppingCart, PieChart as PieIcon } from "lucide-react";
 import { bySite, byPayment, dailySales, heatmap, mgmtSummary as s, receivablesAging, topCustomers, topPros, topServices, weeklySales } from "../mocks/management";
+import { TARJETA } from "@/lib/estilos";
 
 const lineCfg = { sales: { label: "Ventas", color: "var(--chart-1)" }, prev: { label: "Período anterior", color: "var(--chart-4)" } } satisfies ChartConfig;
 const pct = (a: number, b: number) => ((a - b) / b) * 100;
@@ -40,7 +41,7 @@ export function ManagementReports() {
   ];
   return (
     <>
-      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-card-border bg-card shadow-card p-3">
+      <div className={cn(TARJETA, "flex flex-wrap items-center gap-2 p-3")}>
         <ToggleGroup value={[range]} onValueChange={(v) => v[0] && setRange(v[0])} variant="outline" size="sm" className="flex-wrap">{ranges.map((r) => <ToggleGroupItem key={r} value={r}>{r}</ToggleGroupItem>)}</ToggleGroup>
         <Badge variant="outline" className="font-mono">01/09/2026 – 18/09/2026</Badge>
         <Select defaultValue="all" items={[{ value: "all", label: "Sede: todas" }, { value: "mira", label: "Sede Miraflores" }, { value: "si", label: "Sede San Isidro" }]}><SelectTrigger className="w-44" aria-label="Sede"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Sede: todas</SelectItem><SelectItem value="mira">Sede Miraflores</SelectItem><SelectItem value="si">Sede San Isidro</SelectItem></SelectContent></Select>

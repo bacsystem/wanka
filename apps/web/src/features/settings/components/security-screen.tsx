@@ -55,7 +55,7 @@ export function SecurityScreen({ collaborators, roles, matrix, kpis }: Props & {
       ),
       className: "max-w-80",
     },
-    { key: "role", header: "Rol en clínica", cell: (c) => <span className={cn("inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-semibold", c.role === "Super Admin" ? "bg-accent-soft text-accent-surface-text dark:text-accent-surface-text" : /Cajero/.test(c.role) ? "bg-accent-soft text-accent-surface-text dark:text-accent-surface-text" : /Administrador/.test(c.role) ? "bg-info text-info-foreground " : "bg-muted text-foreground")}><ShieldCheck className="size-3.5" /> {c.role}</span> },
+    { key: "role", header: "Rol en clínica", cell: (c) => <span className={cn("inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-semibold", c.role === "Super Admin" ? "bg-acento-suave text-acento-superficie-texto dark:text-acento-superficie-texto" : /Cajero/.test(c.role) ? "bg-acento-suave text-acento-superficie-texto dark:text-acento-superficie-texto" : /Administrador/.test(c.role) ? "bg-info text-info-foreground " : "bg-muted text-foreground")}><ShieldCheck className="size-3.5" /> {c.role}</span> },
     { key: "sites", header: "Sedes autorizadas", cell: (c) => <span className="inline-flex items-center gap-1"><Store className="size-3.5 text-muted-foreground" /> {c.sites}</span> },
     { key: "2fa", header: "Seguridad 2FA", cell: (c) => <StatusBadge tone={twoFaMeta[c.twoFa].tone} icon={c.twoFa === "sms" ? Smartphone : ShieldCheck} label={twoFaMeta[c.twoFa].label} /> },
     { key: "last", header: "Último acceso / IP", cell: (c) => <TwoLine primary={c.lastAccess} secondary={c.ip} mono /> },

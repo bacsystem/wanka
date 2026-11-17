@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { TARJETA } from "@/lib/estilos";
 
 interface EntityHeaderProps {
   /** Avatar / icon box on the left (already styled). */
@@ -18,7 +19,7 @@ interface EntityHeaderProps {
 /** Standard header of detail screens (cliente, mascota, comprobante, orden, tenant…). */
 export function EntityHeader({ avatar, title, chips, meta, aside, actions, className }: EntityHeaderProps) {
   return (
-    <header className={cn("flex flex-col gap-4 rounded-xl border border-card-border bg-card shadow-card p-4 shadow-xs md:p-5 lg:flex-row lg:items-center lg:justify-between", className)}>
+    <header className={cn(TARJETA, "flex flex-col gap-4 p-4 md:p-5 lg:flex-row lg:items-center lg:justify-between", className)}>
       <div className="flex min-w-0 items-start gap-4">
         {avatar}
         <div className="min-w-0">

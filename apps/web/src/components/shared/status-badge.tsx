@@ -8,7 +8,7 @@ export type BadgeTone = "success" | "warning" | "danger" | "info" | "neutral";
 export const toneClass: Record<BadgeTone, string> = {
   success: "border-transparent bg-success text-success-foreground",
   warning: "border-transparent bg-warning text-warning-foreground",
-  danger: "border-transparent bg-destructive-soft text-destructive-text",
+  danger: "border-transparent bg-destructive-suave text-destructive-texto",
   info: "border-transparent bg-info text-info-foreground",
   neutral: "border-transparent bg-secondary text-muted-foreground",
 };
@@ -37,13 +37,13 @@ export function Tag({ tone = "neutral", label, className, solid }: { tone?: Badg
     tone === "primary"
       ? solid
         ? "bg-primary text-primary-foreground"
-        : "bg-accent-soft text-accent-surface-text"
+        : "bg-acento-suave text-acento-superficie-texto"
       : solid
         ? {
             success: "bg-success-solid text-white",
             warning: "bg-warning-solid text-white",
             danger: "bg-destructive text-destructive-foreground",
-            info: "bg-accent-surface-2-texto text-white",
+            info: "bg-acento-2-texto text-white",
             neutral: "bg-foreground text-background",
           }[tone]
         : toneClass[tone];

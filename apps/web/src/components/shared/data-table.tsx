@@ -74,9 +74,9 @@ export function DataTable<T>({
     <div className={cn("flex flex-wrap items-center justify-between gap-2 border-b bg-muted/30 px-3 py-1.5 text-xs text-muted-foreground", mobileCard && "hidden md:flex")}>
       <div className="min-w-0">{controlsSlot ?? <span>{rows.length} registro{rows.length === 1 ? "" : "s"} · {columns.length}/{allColumns.length} columnas</span>}</div>
       <div className="flex items-center gap-1">
-        <Button variant="ghost" size="sm" className="h-7 text-xs" aria-pressed={dense} onClick={() => setDense((d) => !d)}><Rows3 data-icon="inline-start" className={cn("transition-transform", dense && "scale-y-75")} /> {dense ? "Compacta" : "Cómoda"}</Button>
+        <Button variant="ghost" size="sm" className="text-xs" aria-pressed={dense} onClick={() => setDense((d) => !d)}><Rows3 data-icon="inline-start" className={cn("transition-transform", dense && "scale-y-75")} /> {dense ? "Compacta" : "Cómoda"}</Button>
         <DropdownMenu>
-          <DropdownMenuTrigger render={<Button variant="ghost" size="sm" className="h-7 text-xs" />}><Columns3 data-icon="inline-start" /> Columnas</DropdownMenuTrigger>
+          <DropdownMenuTrigger render={<Button variant="ghost" size="sm" className="text-xs" />}><Columns3 data-icon="inline-start" /> Columnas</DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-60">
             <DropdownMenuGroup>
               <DropdownMenuLabel className="flex items-center justify-between text-xs"><span className="font-semibold text-foreground">Personalizar columnas</span><button type="button" className="flex items-center gap-1 font-medium text-primary hover:underline disabled:opacity-50" disabled={!dirty} onClick={reset}><RotateCcw className="size-3" /> Restablecer</button></DropdownMenuLabel>
@@ -90,7 +90,7 @@ export function DataTable<T>({
             <DropdownMenuGroup><DropdownMenuLabel className="text-[11px] font-normal text-muted-foreground">{columns.length} activas de {allColumns.length}</DropdownMenuLabel></DropdownMenuGroup>
           </DropdownMenuContent>
         </DropdownMenu>
-        {dirty ? <Button variant="ghost" size="sm" className="h-7 text-xs text-primary" onClick={reset}><RotateCcw data-icon="inline-start" /> Restablecer</Button> : null}
+        {dirty ? <Button variant="ghost" size="sm" className="text-xs text-primary" onClick={reset}><RotateCcw data-icon="inline-start" /> Restablecer</Button> : null}
       </div>
     </div>
   ) : null;

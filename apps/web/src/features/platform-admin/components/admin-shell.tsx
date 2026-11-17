@@ -14,17 +14,19 @@ import { Topbar } from "@/components/layout/topbar";
 import { DEMO_ADMIN_USER } from "@/features/auth/mocks/demo-session";
 import { ConnectionIcon } from "@/components/shared/dynamic-icon";
 import { adminNavigation, adminSectionLabel, isAdminActive } from "@/config/admin-navigation";
+import { AdminPalette } from "./admin-palette";
 import { AdminSidebarUser, AdminUserMenu } from "./admin-user-menu";
 
 /**
  * Shell of the SaaS admin console. Same anatomy as the tenant AppShell (brand → context card →
  * sectioned nav → user footer; topbar with context, search, bell, theme, user, primary action);
- * only the theme (`.theme-admin`, indigo) and the content differ.
+ * only the palette (design system `indigo`, see AdminPalette) and the content differ.
  */
 export function AdminShell({ children, defaultOpen = true, hasStoredState = false }: { children: ReactNode; defaultOpen?: boolean; hasStoredState?: boolean }) {
   const sections = (["supervision", "facturacion", "plataforma"] as const).map((id) => ({ id, label: adminSectionLabel[id], items: adminNavigation.filter((i) => i.section === id) }));
   return (
-    <div className="theme-admin flex min-h-svh w-full bg-background text-foreground">
+    <div className="flex min-h-svh w-full bg-background text-foreground">
+      <AdminPalette />
       <SidebarProvider defaultOpen={defaultOpen}>
         <SidebarAutoCollapse hasStoredState={hasStoredState} />
         <Sidebar collapsible="icon">

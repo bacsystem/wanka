@@ -2,6 +2,8 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
+const SRC = resolve(__dirname, "..");
+const PKG = resolve(SRC, "../node_modules/khipu-design-system/dist");
 const ALL_PALETTES =
   "slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose";
 const HARDCODED_PALETTE = new RegExp(`\\b(?:bg|text|border|ring|fill|from|to|via|stroke)-(?:${ALL_PALETTES})-\\d+`);
@@ -14,34 +16,65 @@ function collectTsx(dir: string): string[] {
   });
 }
 
-describe("Design System khipu 0.5 guardrails", () => {
-  it("ningún componente o página TSX usa colores de paleta Tailwind hardcodeados", () => {
-    const root = resolve(__dirname, "..");
-    const violations = collectTsx(root).filter((file) => HARDCODED_PALETTE.test(readFileSync(file, "utf8")));
-    expect(violations.map((f) => relative(root, f))).toEqual([]);
+describe("khipu design system adoption", () => {
+  it("no TSX component or page hardcodes a Tailwind palette color", () => {
+    const violations = collectTsx(SRC).filter((file) => HARDCODED_PALETTE.test(readFileSync(file, "utf8")));
+    expect(violations.map((f) => relative(SRC, f))).toEqual([]);
   });
 
-  it("globals.css importa shadcn/tailwind.css, tokens.css y theme.css y redeclara derivados en .theme-admin", () => {
-    const globals = readFileSync(resolve(__dirname, "../app/globals.css"), "utf8");
-    expect(globals).toContain('@import "shadcn/tailwind.css";');
-    expect(globals).toContain("../styles/tokens.css");
-    expect(globals).toContain("../styles/theme.css");
-    expect(globals).toMatch(/\.theme-admin[\s\S]*--sidebar-primary:/);
-    expect(globals).toMatch(/\.dark \.theme-admin[\s\S]*--accent-soft:/);
+  it("globals.css imports the package styles and does not redefine its tokens", () => {
+    const globals = readFileSync(resolve(SRC, "app/globals.css"), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+    expect(globals).toContain('@import "khipu-design-system/styles.css";');
+    // A bare :root/.dark override would beat the palette the user chose (same specificity, last one wins).
+    const declaredInRoot = [...globals.matchAll(/(?:^|\n)\s*(?:html)?:root\s*\{([^}]*)\}/g)].flatMap((m) =>
+      [...m[1].matchAll(/(--[a-z0-9-]+)\s*:/g)].map((d) => d[1]),
+    );
+    expect(declaredInRoot).toEqual(["--brand-panel"]);
+    expect(globals).not.toMatch(/(^|\n)\s*(html)?\.dark\s*\{/);
+    expect(globals).not.toContain("theme-admin");
   });
 
-  it("todos los controles base usan h-control (36 px) y su variante sm es menor (h-7, 28 px)", () => {
-    const theme = readFileSync(resolve(__dirname, "../styles/theme.css"), "utf8");
-    expect(theme).toContain("--spacing-control: 2.25rem;");
+  it("the vendored tokens.css / theme.css copies are gone", () => {
+    expect(() => readFileSync(resolve(SRC, "styles/tokens.css"))).toThrow();
+    expect(() => readFileSync(resolve(SRC, "styles/theme.css"))).toThrow();
+  });
 
-    const btn = readFileSync(resolve(__dirname, "../components/ui/button.tsx"), "utf8");
-    const inp = readFileSync(resolve(__dirname, "../components/ui/input.tsx"), "utf8");
-    const sel = readFileSync(resolve(__dirname, "../components/ui/select.tsx"), "utf8");
-    expect(btn).toContain("h-control");
-    expect(btn).toContain("sm: \"h-7");
-    expect(inp).toContain("h-control");
-    expect(inp).toContain('"h-7"');
-    expect(sel).toContain("data-[size=default]:h-control");
-    expect(sel).toContain("data-[size=sm]:h-7");
+  it("controls are h-control and the package defines it as 32 px", () => {
+    expect(readFileSync(resolve(PKG, "styles/theme.css"), "utf8")).toContain("--spacing-control: 2rem;");
+    for (const file of ["button", "input", "select"]) {
+      const source = readFileSync(resolve(SRC, `components/ui/${file}.tsx`), "utf8");
+      expect(source).toContain("h-control");
+      expect(source).not.toMatch(/(?<![\w-])h-(?:7|8|9|10|11)(?![\w-])/);
+    }
+  });
+});
+
+describe("admin console palette", () => {
+  const options = readFileSync(resolve(PKG, "components/apariencia-opciones.js"), "utf8");
+  const tokens = readFileSync(resolve(PKG, "styles/tokens.css"), "utf8");
+  const palette = readFileSync(resolve(SRC, "features/platform-admin/components/admin-palette.tsx"), "utf8");
+
+  it("is the design system's indigo palette, which defines the five accents", () => {
+    expect(palette).toContain('ADMIN_PALETTE = "indigo"');
+    expect(options).toContain('valor: "indigo"');
+    const block = tokens.match(/html:root\[data-paleta="indigo"\]\s*\{([^}]*)\}/)?.[1] ?? "";
+    for (const token of ["--acento", "--acento-texto", "--acento-2", "--acento-2-texto", "--acento-3"]) {
+      expect(block).toContain(`${token}:`);
+    }
+  });
+
+  it("is applied by the console only, without writing the user's saved palette", () => {
+    expect(palette).not.toContain("setItem");
+    expect(palette).toContain("savedPalette()");
+    const files = collectTsx(resolve(SRC, "features/platform-admin")).filter((f) => readFileSync(f, "utf8").includes("<AdminPalette />"));
+    expect(files.map((f) => relative(SRC, f)).sort()).toEqual([
+      "features/platform-admin/components/admin-login-screen.tsx",
+      "features/platform-admin/components/admin-shell.tsx",
+    ]);
+  });
+
+  it("the local .theme-admin overrides no longer exist", () => {
+    const offenders = collectTsx(SRC).filter((f) => readFileSync(f, "utf8").includes("theme-admin"));
+    expect(offenders.map((f) => relative(SRC, f))).toEqual([]);
   });
 });

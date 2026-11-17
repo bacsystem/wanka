@@ -4,9 +4,9 @@ import { documentTypeLabel } from "../lib/document-type";
 
 const short: Record<DocumentType, string> = { boleta: "Boleta", factura: "Factura", nota_credito: "N. Crédito", proforma: "Proforma", guia_remision: "GRE" };
 const cls: Record<DocumentType, string> = {
-  boleta: "bg-accent-soft text-accent-surface-text",
+  boleta: "bg-acento-suave text-acento-superficie-texto",
   factura: "bg-info text-info-foreground",
-  nota_credito: "bg-destructive-soft text-destructive-text",
+  nota_credito: "bg-destructive-suave text-destructive-texto",
   proforma: "bg-secondary text-foreground/80",
   guia_remision: "bg-warning text-warning-foreground",
 };

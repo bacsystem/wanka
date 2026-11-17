@@ -1,8 +1,8 @@
 "use client";
 
 import { Monitor, Moon, Palette, Sun } from "lucide-react";
+import { useApariencia } from "khipu-design-system/apariencia";
 import { useTheme } from "next-themes";
-import { useAppearance } from "@/components/providers/appearance-provider";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -17,7 +17,7 @@ import {
 
 export function ThemeToggle() {
   const { theme = "system", setTheme } = useTheme();
-  const { palette, setPalette, palettes, font, setFont, fonts } = useAppearance();
+  const { paleta, setPaleta, paletas, fuente, setFuente, fuentes } = useApariencia();
 
   return (
     <DropdownMenu>
@@ -40,33 +40,33 @@ export function ThemeToggle() {
             </DropdownMenuRadioItem>
           </DropdownMenuRadioGroup>
         </DropdownMenuGroup>
-        {palettes.length > 0 ? (
+        {paletas.length > 0 ? (
           <>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuLabel className="flex items-center gap-1.5">
                 <Palette className="size-3.5" /> Paleta
               </DropdownMenuLabel>
-              <DropdownMenuRadioGroup value={palette} onValueChange={(v) => setPalette(String(v))}>
-                {palettes.map((p) => (
-                  <DropdownMenuRadioItem key={p.value} value={p.value}>
-                    <span className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: p.swatch[0] }} />
-                    {p.label}
+              <DropdownMenuRadioGroup value={paleta} onValueChange={(v) => setPaleta(String(v))}>
+                {paletas.map((p) => (
+                  <DropdownMenuRadioItem key={p.valor} value={p.valor}>
+                    <span className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: p.muestra[0] }} />
+                    {p.etiqueta}
                   </DropdownMenuRadioItem>
                 ))}
               </DropdownMenuRadioGroup>
             </DropdownMenuGroup>
           </>
         ) : null}
-        {fonts.length > 0 ? (
+        {fuentes.length > 0 ? (
           <>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuLabel>Tipografía</DropdownMenuLabel>
-              <DropdownMenuRadioGroup value={font} onValueChange={(v) => setFont(String(v))}>
-                {fonts.map((f) => (
-                  <DropdownMenuRadioItem key={f.value} value={f.value}>
-                    {f.label}
+              <DropdownMenuRadioGroup value={fuente} onValueChange={(v) => setFuente(String(v))}>
+                {fuentes.map((f) => (
+                  <DropdownMenuRadioItem key={f.valor} value={f.valor}>
+                    {f.etiqueta}
                   </DropdownMenuRadioItem>
                 ))}
               </DropdownMenuRadioGroup>

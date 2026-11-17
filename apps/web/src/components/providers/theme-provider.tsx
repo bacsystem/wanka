@@ -3,20 +3,23 @@
 import { IconContext, type IconProps } from "@phosphor-icons/react";
 import { ThemeProvider as NextThemesProvider } from "next-themes";
 import type { ComponentProps } from "react";
-import { AppearanceProvider } from "@/components/providers/appearance-provider";
-import { MotionProvider } from "@/components/providers/motion-provider";
-import { ICON_WEIGHT } from "@/lib/icons";
+import { AparienciaProvider } from "khipu-design-system/apariencia";
+import { DisenoProvider } from "khipu-design-system/diseno";
+import { ProveedorMovimiento } from "khipu-design-system/movimiento";
+import { PESO_ICONO } from "@/lib/iconos";
 
-const ICONS: IconProps = { weight: ICON_WEIGHT };
+const ICONOS: IconProps = { weight: PESO_ICONO };
 
 export function ThemeProvider({ children, ...props }: ComponentProps<typeof NextThemesProvider>) {
   return (
     <NextThemesProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange {...props}>
-      <AppearanceProvider>
-        <IconContext.Provider value={ICONS}>
-          <MotionProvider>{children}</MotionProvider>
-        </IconContext.Provider>
-      </AppearanceProvider>
+      <DisenoProvider>
+        <AparienciaProvider>
+          <IconContext.Provider value={ICONOS}>
+            <ProveedorMovimiento>{children}</ProveedorMovimiento>
+          </IconContext.Provider>
+        </AparienciaProvider>
+      </DisenoProvider>
     </NextThemesProvider>
   );
 }

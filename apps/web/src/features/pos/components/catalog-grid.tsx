@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { CatalogItem } from "@/types/domain";
+import { TARJETA } from "@/lib/estilos";
 
 interface CatalogGridProps {
   items: CatalogItem[];
@@ -13,8 +14,8 @@ interface CatalogGridProps {
 
 /** Category chip colors (Stitch: services teal, supplies slate, drugs blue). */
 const categoryChip: Record<string, string> = {
-  Tratamientos: "bg-accent-soft text-accent-surface-text dark:text-accent-surface-text",
-  Consultas: "bg-accent-soft text-accent-surface-text dark:text-accent-surface-text",
+  Tratamientos: "bg-acento-suave text-acento-superficie-texto dark:text-acento-superficie-texto",
+  Consultas: "bg-acento-suave text-acento-superficie-texto dark:text-acento-superficie-texto",
   "Insumos clínicos": "bg-muted text-foreground/80",
   Medicamentos: "bg-info text-info-foreground",
 };
@@ -31,7 +32,7 @@ export function CatalogGrid({ items, onAdd }: CatalogGridProps) {
         const service = item.kind === "servicio";
         return (
           <li key={item.id}>
-            <div className="flex h-full flex-col gap-2 rounded-xl border border-card-border bg-card shadow-card p-4 shadow-xs transition-colors hover:border-primary/40">
+            <div className={cn(TARJETA, "flex h-full flex-col gap-2 p-4 transition-colors hover:border-primary/40")}>
               <div className="flex items-start justify-between gap-2">
                 <span className={cn("rounded px-2 py-0.5 text-[11px] font-medium", categoryChip[item.category] ?? "bg-muted text-foreground/80")}>{categoryShort[item.category] ?? item.category}</span>
                 <span className="font-mono text-xs text-muted-foreground">{item.sku}</span>

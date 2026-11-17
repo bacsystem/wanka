@@ -16,6 +16,7 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { cn } from "@/lib/utils";
 import type { Industry } from "@/types/domain";
 import { industryOptions, modulesByIndustry } from "../mocks/tenants";
+import { TARJETA } from "@/lib/estilos";
 
 const steps = [
   { id: 1, label: "Empresa y RUC", icon: Building2 },
@@ -72,7 +73,7 @@ export function OnboardingScreen() {
           })}
         </ol>
 
-        <section className="rounded-xl border border-card-border bg-card shadow-card p-5">
+        <section className={cn(TARJETA, "p-5")}>
           {step === 1 ? (
             <div className="flex flex-col gap-4">
               <div><h2 className="text-lg font-semibold">Datos de la empresa</h2><p className="text-sm text-muted-foreground">Consultamos el padrón SUNAT para completar tu razón social, régimen y domicilio fiscal.</p></div>
@@ -168,7 +169,7 @@ export function OnboardingScreen() {
         </section>
 
         <aside className="flex flex-col gap-4">
-          <div className="rounded-xl border border-card-border bg-card shadow-card p-4 text-sm">
+          <div className={cn(TARJETA, "p-4 text-sm")}>
             <div className="flex items-center justify-between"><h3 className="font-semibold">Resumen de empresa</h3>{company.validated ? <StatusBadge tone="success" label="Paso 1 validado" /> : <StatusBadge tone="warning" label="Sin validar" />}</div>
             <dl className="mt-3 flex flex-col gap-2 text-xs">
               <div><dt className="text-muted-foreground">Razón social</dt><dd className="font-medium">{company.name}</dd></div>

@@ -17,6 +17,7 @@ import { StatusBadge, type BadgeTone } from "@/components/shared/status-badge";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { quoteLinesFor, type Quote, type QuoteStatus } from "../mocks/quotes";
+import { TARJETA } from "@/lib/estilos";
 
 const statusMeta: Record<QuoteStatus, { label: string; tone: BadgeTone }> = {
   aprobada: { label: "Aprobada por cliente", tone: "success" },
@@ -57,7 +58,7 @@ export function QuotesBoard({ quotes }: { quotes: Quote[] }) {
             {(["todas", "aprobada", "enviada", "borrador", "vencida"] as const).map((k) => (
               <TabsTrigger key={k} value={k} className="capitalize">
                 {k === "todas" ? "Todas" : statusMeta[k].label.split(" ")[0]}
-                <span className={cn("ml-1.5 rounded-full px-1.5 font-mono text-[11px] tabular-nums", k === "vencida" ? "bg-destructive-soft text-destructive-text" : k === "aprobada" ? "bg-success text-success-foreground" : "bg-muted text-muted-foreground")}>{counts[k] ?? 0}</span>
+                <span className={cn("ml-1.5 rounded-full px-1.5 font-mono text-[11px] tabular-nums", k === "vencida" ? "bg-destructive-suave text-destructive-texto" : k === "aprobada" ? "bg-success text-success-foreground" : "bg-muted text-muted-foreground")}>{counts[k] ?? 0}</span>
               </TabsTrigger>
             ))}
           </TabsList>
@@ -66,7 +67,7 @@ export function QuotesBoard({ quotes }: { quotes: Quote[] }) {
       </div>
 
       <div className="grid items-start gap-4 xl:grid-cols-12">
-      <div className="min-w-0 rounded-xl border border-card-border bg-card shadow-card xl:col-span-7">
+      <div className={cn(TARJETA, "min-w-0 xl:col-span-7")}>
       <div className="flex items-center justify-between gap-2 border-b px-4 py-2.5 text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
         <span className="flex items-center gap-2">Listado operativo <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-foreground">{rows.length} registros</span></span>
         <span className="flex items-center gap-1">Filtro: orden descendente <ArrowUpDown className="size-3.5" /></span>
@@ -150,7 +151,7 @@ function QuoteSidePanel({ quote: q, onConvert }: { quote: Quote; onConvert: () =
   const igv = Math.round(base * 0.18 * 100) / 100;
   const meta = statusMeta[q.status];
   return (
-    <aside className="flex min-w-0 flex-col gap-4 rounded-xl border border-card-border bg-card shadow-card p-4 shadow-xs xl:col-span-5" aria-label="Detalle de cotización">
+    <aside className={cn(TARJETA, "flex min-w-0 flex-col gap-4 p-4 xl:col-span-5")} aria-label="Detalle de cotización">
       <div className="flex items-start justify-between gap-2">
         <div className="flex min-w-0 items-center gap-3">
           <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground"><ShieldCheck className="size-4" /></span>
@@ -184,7 +185,7 @@ function QuoteSidePanel({ quote: q, onConvert }: { quote: Quote; onConvert: () =
       <div className="flex flex-col gap-2">
         {q.status === "aprobada" ? <Button size="lg" className="font-semibold" onClick={onConvert}><Zap data-icon="inline-start" /> Aprobar y emitir factura electrónica F001</Button> : q.status === "vencida" ? <Button size="lg" variant="outline" className="font-semibold" onClick={() => toast.success(`${q.code} reactivada por 7 días`)}><RefreshCw data-icon="inline-start" /> Reactivar oferta</Button> : <Button size="lg" className="font-semibold" onClick={() => toast.success(`${q.code} enviada al cliente`)}><Send data-icon="inline-start" /> {q.status === "borrador" ? "Enviar al cliente" : "Reenviar propuesta"}</Button>}
         <div className="grid grid-cols-2 gap-2">
-          <Button variant="secondary" className="bg-accent-soft font-semibold text-accent-surface-text hover:bg-accent-soft dark:text-accent-surface-text" onClick={() => toast.success("Reenviado por WhatsApp")}><MessageCircle data-icon="inline-start" /> Reenviar WhatsApp</Button>
+          <Button variant="secondary" className="bg-acento-suave font-semibold text-acento-superficie-texto hover:bg-acento-suave dark:text-acento-superficie-texto" onClick={() => toast.success("Reenviado por WhatsApp")}><MessageCircle data-icon="inline-start" /> Reenviar WhatsApp</Button>
           <Button variant="secondary" className="bg-accent font-semibold text-primary hover:bg-accent/70 dark:bg-muted" onClick={() => toast.success("Correo enviado")}><Mail data-icon="inline-start" /> Enviar correo</Button>
         </div>
       </div>

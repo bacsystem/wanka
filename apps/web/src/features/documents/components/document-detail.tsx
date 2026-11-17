@@ -64,13 +64,13 @@ export function DocumentDetail({ doc }: { doc: SalesDocumentDetail }) {
             <Button render={<Link href={`/ventas/comprobantes/${doc.id}/nota-credito`} />} nativeButton={false}><FileMinus data-icon="inline-start" /> Emitir nota de crédito</Button>
           ) : null}
           <div className="flex flex-wrap items-center gap-1 rounded-lg bg-muted p-1">
-            <Button variant="ghost" size="sm" className="bg-card text-xs font-semibold shadow-xs" onClick={() => toast.info("Descargando PDF…")}><FileDown data-icon="inline-start" className="text-destructive-text" /> PDF</Button>
+            <Button variant="ghost" size="sm" className="bg-card text-xs font-semibold shadow-xs" onClick={() => toast.info("Descargando PDF…")}><FileDown data-icon="inline-start" className="text-destructive-texto" /> PDF</Button>
             <Button variant="ghost" size="sm" className="bg-card text-xs font-semibold shadow-xs"><FileCode data-icon="inline-start" className="text-primary" /> XML</Button>
             <Button variant="ghost" size="sm" className="bg-card text-xs font-semibold shadow-xs" disabled={!doc.cdr?.acceptedAt}><ShieldCheck data-icon="inline-start" className="text-primary" /> CDR</Button>
             <Button variant="ghost" size="sm" className="bg-card text-xs font-semibold shadow-xs" onClick={() => toast.success("Enviado por WhatsApp")}><MessageCircle data-icon="inline-start" className="text-success-foreground" /> WhatsApp</Button>
             <Button variant="ghost" size="sm" className="bg-card text-xs font-semibold shadow-xs" onClick={() => toast.success("Correo enviado")}><Mail data-icon="inline-start" /> Correo</Button>
             {doc.type !== "nota_credito" ? <Button variant="ghost" size="sm" className="bg-card text-xs font-semibold shadow-xs" render={<Link href={`/ventas/comprobantes/${doc.id}/nota-debito`} />} nativeButton={false}><FilePlus data-icon="inline-start" /> Nota de débito</Button> : null}
-            <Button variant="ghost" size="icon-sm" className="bg-destructive-soft text-destructive-text hover:bg-destructive-soft hover:text-destructive-text" aria-label="Anular comprobante" onClick={() => setVoidOpen(true)}><Ban /></Button>
+            <Button variant="ghost" size="icon-sm" className="bg-destructive-suave text-destructive-texto hover:bg-destructive-suave hover:text-destructive-texto" aria-label="Anular comprobante" onClick={() => setVoidOpen(true)}><Ban /></Button>
           </div>
         </>}
       />

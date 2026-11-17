@@ -41,7 +41,7 @@ export function TenantsTable({ tenants, compact }: { tenants: PlatformTenant[]; 
     { key: "name", header: "Empresa / RUC", cell: (t) => (
       <div className="flex items-center gap-3">
         <TenantAvatar code={t.code} vertical={t.vertical} />
-        <div className="min-w-0"><Link href={`/admin/empresas/${t.id}`} className="flex flex-wrap items-center gap-1.5 text-sm font-bold hover:text-primary hover:underline">{t.name}{t.tag ? <span className={cn("rounded px-1.5 py-0.5 text-[9px] font-bold tracking-wide uppercase", t.status === "suspendida" ? "bg-destructive-soft text-destructive-text" : t.status === "trial" ? "bg-info text-info-foreground" : t.status === "cuota" ? "bg-warning text-warning-foreground" : "bg-accent-soft text-accent-surface-text")}>{t.tag}</span> : <Tag label={t.id} className="font-mono" />}</Link><p className="font-mono text-xs text-muted-foreground">RUC: {t.ruc} • {t.city}</p></div>
+        <div className="min-w-0"><Link href={`/admin/empresas/${t.id}`} className="flex flex-wrap items-center gap-1.5 text-sm font-bold hover:text-primary hover:underline">{t.name}{t.tag ? <span className={cn("rounded px-1.5 py-0.5 text-[9px] font-bold tracking-wide uppercase", t.status === "suspendida" ? "bg-destructive-suave text-destructive-texto" : t.status === "trial" ? "bg-info text-info-foreground" : t.status === "cuota" ? "bg-warning text-warning-foreground" : "bg-acento-suave text-acento-superficie-texto")}>{t.tag}</span> : <Tag label={t.id} className="font-mono" />}</Link><p className="font-mono text-xs text-muted-foreground">RUC: {t.ruc} • {t.city}</p></div>
       </div>
     ), className: "max-w-80" },
     { key: "vertical", header: "Rubro", cell: (t) => <VerticalBadge vertical={t.vertical} /> },
@@ -75,7 +75,7 @@ export function TenantsTable({ tenants, compact }: { tenants: PlatformTenant[]; 
           </div>
           <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">Vistas rápidas:
             {([["odontologia", "Odontología (384)"], ["veterinaria", "Veterinarias (291)"], ["restaurante", "Restaurantes (472)"], ["retail", "Retail (335)"]] as const).map(([v, l]) => <button key={v} type="button" onClick={() => setVertical(v)} className={cn("rounded-full border px-2.5 py-1 font-medium transition-colors", vertical === v ? "border-primary bg-accent text-primary" : "bg-card hover:bg-muted")}>{l}</button>)}
-            <button type="button" onClick={() => setStatus("cuota")} className={cn("rounded-full border px-2.5 py-1 font-medium text-destructive transition-colors", status === "cuota" ? "border-transparent bg-destructive-soft" : "bg-card hover:bg-muted")}>Cuota CPE &gt; 90% (14)</button>
+            <button type="button" onClick={() => setStatus("cuota")} className={cn("rounded-full border px-2.5 py-1 font-medium text-destructive transition-colors", status === "cuota" ? "border-transparent bg-destructive-suave" : "bg-card hover:bg-muted")}>Cuota CPE &gt; 90% (14)</button>
           </div>
         </div>
         <DataTable columns={columns} rows={filtered} rowKey={(t) => t.id} minWidth="1200px" controlsSlot={<span>Mostrando: <strong className="text-foreground">{filtered.length}</strong> de 1,482 tenants</span>} emptyMessage="No hay ningún tenant que coincida con los filtros aplicados." mobileCard={(t) => (

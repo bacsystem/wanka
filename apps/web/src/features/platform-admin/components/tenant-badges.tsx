@@ -8,7 +8,7 @@ const verticalTone: Record<Vertical, string> = {
   odontologia: "border-info-foreground/20 bg-info text-info-foreground dark:border-info-foreground/20 dark:bg-info dark:text-info-foreground",
   veterinaria: "border-transparent bg-warning text-warning-foreground",
   restaurante: "border-transparent bg-success text-success-foreground",
-  retail: "border-accent-border bg-accent-soft text-accent-surface-text dark:border-accent-border dark:bg-accent-soft dark:text-accent-surface-text",
+  retail: "border-accent-border bg-acento-suave text-acento-superficie-texto dark:border-accent-border dark:bg-acento-suave dark:text-acento-superficie-texto",
 };
 const statusTone: Record<TenantStatus, BadgeTone> = { activa: "success", trial: "info", suspendida: "danger", cuota: "warning" };
 

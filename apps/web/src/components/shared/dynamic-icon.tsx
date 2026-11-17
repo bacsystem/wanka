@@ -12,10 +12,10 @@ export type IconState = "ok" | "warning" | "error" | "pending" | "syncing" | "of
 const map: Record<IconState, { icon: React.ComponentType<LucideProps>; className: string }> = {
   ok: { icon: CheckCircle2, className: "text-success-solid" },
   warning: { icon: AlertTriangle, className: "text-warning-solid motion-safe:animate-pulse" },
-  error: { icon: XCircle, className: "text-destructive-text motion-safe:animate-pulse" },
+  error: { icon: XCircle, className: "text-destructive-texto motion-safe:animate-pulse" },
   pending: { icon: Clock, className: "text-muted-foreground" },
   syncing: { icon: RefreshCw, className: "text-primary motion-safe:animate-spin [animation-duration:1.6s]" },
-  offline: { icon: WifiOff, className: "text-destructive-text" },
+  offline: { icon: WifiOff, className: "text-destructive-texto" },
 };
 
 export function StateIcon({ state, className, ...props }: { state: IconState } & LucideProps) {
@@ -26,7 +26,7 @@ export function StateIcon({ state, className, ...props }: { state: IconState } &
 /** Connection icon: wifi ↔ wifi-off. */
 export function ConnectionIcon({ online, className }: { online: boolean; className?: string }) {
   const Icon = online ? Wifi : WifiOff;
-  return <Icon className={cn("size-4", online ? "text-success-solid" : "text-destructive-text motion-safe:animate-pulse", className)} aria-hidden />;
+  return <Icon className={cn("size-4", online ? "text-success-solid" : "text-destructive-texto motion-safe:animate-pulse", className)} aria-hidden />;
 }
 
 /** Lock icon: lock ↔ lock-open. */
