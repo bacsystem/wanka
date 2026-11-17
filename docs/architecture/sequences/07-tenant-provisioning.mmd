@@ -13,13 +13,10 @@ sequenceDiagram
   S->>W: nueva empresa (RUC, razon social, rubro, plan, correo del propietario)
   W->>PA: POST /platform/v1/tenants Idempotency-Key (token wka_at, rol con tenants:create)
   PA->>PA: valida RUC (modulo 11), consulta padron SUNAT con timeout 3 s (si falla: continua y marca "por verificar")
-  PA->>DB: BEGIN (rol wanka_platform)
-  PA->>DB: INSERT org.tenants (UK ruc) status trial
-  PA->>DB: INSERT platform.subscriptions (plan) y modulos del rubro
-  PA->>DB: SELECT platform.provision_tenant(t, rubro) SECURITY DEFINER
-  Note over DB: La funcion fija app.tenant_id = t y crea: sede principal, almacen, caja, series por defecto, roles plantilla con permisos, configuracion
-  PA->>DB: INSERT iam.users (si no existe) + membership owner status invitado
-  PA->>DB: River InsertTx notify.owner_invite, INSERT audit (actor staff)
+  PA->>DB: BEGIN (rol wanka_platform, sin DML en iam ni org)
+  PA->>DB: SELECT platform_fn.provision_tenant(ruc, razon_social, rubro, plan, owner_email) SECURITY DEFINER, search_path fijo
+  Note over DB: La funcion crea org.tenants (UK ruc, trial), subscriptions y modulos del rubro, fija app.tenant_id y crea sede, almacen, caja, series, roles plantilla con permisos, configuracion, iam.users si no existe y la membresia owner invitada. Escribe audit.events del tenant (actor_type platform_staff).
+  PA->>DB: INSERT platform.audit_events (actor staff), River InsertTx notify.owner_invite
   PA->>DB: COMMIT
   PA-->>W: 201 {tenant, status: trial}
   WK->>N: correo de invitacion con token de un uso (72 h)

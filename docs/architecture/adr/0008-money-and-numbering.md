@@ -25,7 +25,7 @@ Dinero: opción 3 (escalas en [`data/data-model.md`](../data/data-model.md) §2:
 
 Numeración: opción 2, con el lock **intencional** sobre la fila de la serie. Por qué y cuánto cuesta:
 - El lock dura desde el `UPDATE` de la serie hasta el `COMMIT`. Se ubica al final de la transacción (todo lo demás antes), sin llamadas de red dentro, para que dure ~1-3 ms (a medir).
-- Con una serie por caja (configuración por defecto) dos cajas no compiten. Una caja hace a lo sumo una venta cada pocos segundos: la contención real se da solo si varias cajas comparten serie.
+- Con una serie por caja (configuración por defecto) dos cajas no compiten. La caja viaja en cada venta: la sesión queda ligada a `cash_register_id` (`POST /v1/auth/session/tenant`), `POST /v1/sales` exige `shiftId`, y la API toma la serie de `document_series` por `(cash_register_id, doc_type)` tras verificar que el turno esté abierto y sea de esa caja. Una caja hace a lo sumo una venta cada pocos segundos: la contención real se da solo si varias cajas comparten serie.
 - Con 3 ms de lock, una serie soporta ~300 ventas/s en serie; el supuesto por tenant es 0,5/s. Criterio de carga en [`capacity.md`](../capacity.md).
 - Sin huecos: si la transacción aborta, el incremento se deshace. Los números de CPE rechazados no se reutilizan (confirmado en la documentación de Khipu). Si Khipu rechaza con `422` antes de numerar, el documento se reenvía con el mismo número (ADR 0003).
 - El número viaja a Khipu en `correlativo`; las series de Wanka se registran en Khipu con `correlativo_inicial` y son exclusivas. Khipu procesa en orden las emisiones de una misma serie, así que tener una serie por caja también reparte esa cola.

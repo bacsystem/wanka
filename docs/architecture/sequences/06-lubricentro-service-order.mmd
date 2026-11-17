@@ -30,11 +30,11 @@ sequenceDiagram
   L->>V: CreateSale(tx, lines, customer, payments, source=service_order)
   V->>DB: libera reservas y descuenta stock, serie B001/F001, sale, electronic_document pendiente, job cpe.emit
   V-->>L: sale_id
-  L->>DB: UPDATE OT facturada, sale_id, programa maintenance_reminders (due_km = km_in + 5000, due_on segun regla)
+  L->>DB: UPDATE OT facturada, sale_id, reemplaza el recordatorio pendiente del vehiculo y crea uno nuevo (due_km = km_in + 5000 fijo, due_on estimada por km_per_day_est)
   L->>DB: COMMIT
   L-->>W: 201 {service_order, sale, document pendiente}
   Note over WK: Emision CPE identica a la venta POS (diagrama 02)
   loop diario 08:00 America/Lima (periodico, lider unico)
-    WK->>DB: por tenant con modulo lubricentro: recordatorios con due_on <= hoy+3 o km estimado >= due_km
-    WK->>WK: encola WhatsApp y correo, idempotentes por reminder_id, con lo que ocurra primero entre km y fecha
+    WK->>DB: por tenant con modulo lubricentro: recordatorios programados con due_on - 7 dias <= hoy o km estimado >= due_km
+    WK->>WK: por canal con consentimiento encola WhatsApp y correo (PK reminder+canal+intento, nunca dos veces), sin consentimiento pasa a lista de llamada, un unico reenvio si no vuelve
   end

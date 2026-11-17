@@ -14,7 +14,7 @@ sequenceDiagram
   Note over U,P: Nota de credito (07) sobre F001-842 aceptado
   U->>W: wizard NC: motivo catalogo 09, lineas y cantidades
   W->>A: POST /v1/einvoicing/documents/{id}/credit-notes Idempotency-Key
-  A->>A: permiso facturacion.cpe:void, origen aceptado/observado, suma de NC <= total origen, tipos de NC permitidos (sobre boleta no 04, 05, 08, 13)
+  A->>A: permiso facturacion.credit_notes:create, origen aceptado/observado, suma de NC <= total origen, tipos de NC permitidos (sobre boleta no 04, 05, 08, 13)
   A->>DB: BEGIN tenant, SELECT origen FOR UPDATE (serializa NC concurrentes del mismo origen)
   A->>DB: numero de serie FC01 o BC01 segun el origen (lock de la serie), INSERT electronic_documents 07 pendiente
   opt motivo devuelve mercaderia (01, 06, 07)

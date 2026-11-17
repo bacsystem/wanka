@@ -24,19 +24,22 @@ sequenceDiagram
   W->>A: POST /v1/auth/mfa/verify {challenge_token, code}
   A->>A: verifica TOTP (ventana +-1 paso, rechaza codigo ya usado)
   A->>DB: UPDATE sessions SET mfa_passed=true, emite access (15 min) + refresh (rotativo)
-  A-->>W: 200 {access_token, refresh_token, memberships:[{tenant, role, sites}]}
-  W->>W: Set-Cookie wk_at (httpOnly, Secure, SameSite=Lax), wk_rt (Path=/api/auth/refresh)
+  A->>DB: BEGIN, set_config app.user_id (sin app.tenant_id), SELECT iam.list_my_memberships() (politica own_memberships por app.user_id)
+  A-->>W: 200 {access_token, refresh_token, expiresAt, memberships:[{tenant, role, sites, cashRegisters}]}
+  W->>W: route handler: Set-Cookie wk_at, wk_at_exp, wk_rt (httpOnly, Secure, SameSite=Lax, wk_rt solo Path=/api/auth)
   W-->>U: redirige a /seleccionar-empresa
-  U->>W: elige empresa t y sede s
-  W->>A: POST /v1/auth/session/tenant {tenant_id, site_id}
-  A->>DB: SELECT membership (user, tenant activo, sede en alcance)
+  U->>W: elige empresa t, sede s y caja c (opcional)
+  W->>A: POST /v1/auth/session/tenant {tenantId, siteId, cashRegisterId?}
+  A->>DB: SELECT membership por app.user_id (tenant activo, sede en alcance, caja de esa sede)
   alt sin membresia o tenant suspendido
     A-->>W: 403 tenant_access_denied
+  else rol con requires_mfa y usuario sin 2FA activo
+    A-->>W: 403 mfa_enrollment_required
   else ok
-    A->>DB: revoca tokens actuales, nueva sesion ligada a tenant_id + site_id + authz_version
+    A->>DB: revoca tokens actuales, nueva sesion ligada a tenant_id + site_id + cash_register_id + authz_version
     A-->>W: 200 {access_token, refresh_token, tenant, site, permissions[], modules[]}
     W->>W: reemplaza cookies, borra cookie legacy tenant_id
     W-->>U: redirige a /
   end
-  Note over W,A: Refresh: POST /v1/auth/refresh con rotacion. Reuso de un refresh ya rotado revoca toda la familia (posible robo).
+  Note over W,A: Refresh solo en proxy.ts o en el route handler, con single-flight por sesion. Reuso del refresh anterior dentro de 10 s devuelve el par vigente. Fuera de esa gracia, el reuso revoca toda la familia (ADR 0004).
   Note over A: Recuperacion: POST /v1/auth/password/forgot (respuesta 202 siempre) -> token 15 min por correo -> POST /v1/auth/password/reset revoca todas las sesiones.

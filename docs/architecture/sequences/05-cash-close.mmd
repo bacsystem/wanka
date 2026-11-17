@@ -12,22 +12,22 @@ sequenceDiagram
 
   C->>W: Iniciar arqueo
   W->>A: POST /v1/cash/shifts/{id}/count-start
-  A->>DB: BEGIN tenant, UPDATE cash_shifts SET status = en_arqueo WHERE status = abierto
-  Note over A,DB: Desde aqui POST /v1/sales en esta caja responde 409 shift_not_open
-  A->>DB: totales teoricos por metodo (SUM cash_movements validos del turno), COMMIT
-  A-->>W: 200 {theoretical por metodo}
-  C->>W: conteo por denominacion y por canal (QR, tarjetas, transferencias)
+  A->>DB: BEGIN tenant, UPDATE cash_shifts SET status = en_arqueo WHERE id AND status = abierto
+  Note over A,DB: El UPDATE espera a las ventas en curso que tienen el turno FOR SHARE. Al confirmar, ninguna venta ni movimiento nuevo entra: ventas y movimientos exigen status = abierto con FOR SHARE y responden 409 shift_not_open
+  A->>DB: totales teoricos por metodo Y moneda (fondo inicial + SUM cash_movements validos), COMMIT
+  A-->>W: 200 {theoretical por metodo y moneda, sin convertir PEN y USD}
+  C->>W: conteo por moneda (denominaciones PEN y USD) y por canal (QR, tarjetas, transferencias)
   W->>A: PUT /v1/cash/shifts/{id}/counts
-  A->>DB: UPSERT cash_counts (numeric(14,2))
-  A-->>W: 200 {expected, counted, difference}
-  alt diferencia fuera de tolerancia de la empresa
-    W-->>C: requiere aprobacion de supervisor
+  A->>DB: UPSERT cash_counts por (metodo, moneda), numeric(14,2)
+  A-->>W: 200 {expected, counted, difference por metodo y moneda}
+  alt alguna diferencia distinta de 0
+    W-->>C: exige motivo (issue 66) y, fuera de tolerancia, aprobacion de supervisor
     S->>W: aprueba con su credencial (re-autenticacion + permiso finanzas.caja:approve)
   end
   W->>A: POST /v1/cash/shifts/{id}/close Idempotency-Key {supervisor_token?}
   A->>DB: BEGIN tenant, SELECT shift FOR UPDATE
   A->>DB: numero de serie Z (lock de la serie)
-  A->>DB: INSERT z_reports (snapshot inmutable + sha256), UPDATE shift cerrado
+  A->>DB: INSERT z_reports + z_report_totals por metodo y moneda (snapshot inmutable + sha256), UPDATE shift cerrado WHERE status = en_arqueo
   A->>DB: River InsertTx report.z_pdf, COMMIT
   A-->>W: 201 {z_report: Z-2026-0255}
   WK->>WK: genera PDF del Z (fuera de la tx, concurrencia limitada)
