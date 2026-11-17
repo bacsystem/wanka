@@ -44,7 +44,34 @@ function missingRefs(css: string): string[] {
   );
 }
 
+// Set at runtime by base-ui / Tailwind / recharts / inline styles, not declared in any stylesheet.
+const RUNTIME_ARBITRARY_VARS = new Set([
+  "--active-tab-top",
+  "--active-tab-left",
+  "--active-tab-width",
+  "--active-tab-height",
+  "--transform-origin",
+  "--anchor-width",
+  "--available-height",
+  "--sidebar-width",
+  "--sidebar-width-icon",
+  "--card-spacing",
+  "--skeleton-width",
+  "--color-bg",
+  "--color-border",
+]);
+
 describe("design tokens resolve", () => {
+  it("every -(--x) arbitrary-value reference in TSX points to a declared or runtime variable", () => {
+    const bad = new Set<string>();
+    for (const file of collectTsx(SRC)) {
+      for (const m of readFileSync(file, "utf8").matchAll(/[a-z-]+-\((--[a-z0-9-]+)\)/g)) {
+        if (!declared.has(m[1]) && !RUNTIME_ARBITRARY_VARS.has(m[1])) bad.add(`${relative(SRC, file)}: ${m[0]}`);
+      }
+    }
+    expect([...bad]).toEqual([]);
+  });
+
   it("no custom property references itself outside @theme", () => {
     const selfRefs = declarations(plainCss).filter((d) => new RegExp(`var\\(${d.name}[,)]`).test(d.value));
     expect(selfRefs.map((d) => `${d.name}: ${d.value}`)).toEqual([]);

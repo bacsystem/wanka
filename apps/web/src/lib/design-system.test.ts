@@ -66,11 +66,24 @@ describe("admin console palette", () => {
   it("is applied by the console only, without writing the user's saved palette", () => {
     expect(palette).not.toContain("setItem");
     expect(palette).toContain("savedPalette()");
+    expect(palette).toContain("lockPalette()");
     const files = collectTsx(resolve(SRC, "features/platform-admin")).filter((f) => readFileSync(f, "utf8").includes("<AdminPalette />"));
     expect(files.map((f) => relative(SRC, f)).sort()).toEqual([
       "features/platform-admin/components/admin-login-screen.tsx",
       "features/platform-admin/components/admin-shell.tsx",
     ]);
+  });
+
+  it("renders no <script>: React 19 reports one created during client-side navigation", () => {
+    for (const file of collectTsx(resolve(SRC, "features/platform-admin")).concat(collectTsx(resolve(SRC, "app/(admin)")), collectTsx(resolve(SRC, "app/(admin-auth)")))) {
+      expect(readFileSync(file, "utf8"), relative(SRC, file)).not.toMatch(/<script[\s>]/);
+    }
+  });
+
+  it("the appearance menu hides the palette group while the palette is forced", () => {
+    const toggle = readFileSync(resolve(SRC, "components/layout/theme-toggle.tsx"), "utf8");
+    expect(toggle).toContain("usePaletteLocked()");
+    expect(toggle).toContain("!paletteLocked");
   });
 
   it("the local .theme-admin overrides no longer exist", () => {

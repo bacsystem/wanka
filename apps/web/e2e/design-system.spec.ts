@@ -45,8 +45,8 @@ test.describe("palette", () => {
     await page.addInitScript(() => localStorage.setItem("khipu-paleta", "oceano"));
     await page.goto("/admin");
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
-    expect(await token(page, "--acento")).toBe(INDIGO);
     await expect(page.locator("html")).toHaveAttribute("data-paleta", "indigo");
+    expect(await token(page, "--acento")).toBe(INDIGO);
     // The derived tokens come from the same palette, not from the default one.
     expect(await token(page, "--sidebar-primary")).toBe(INDIGO);
     // The user's saved choice is untouched.
@@ -83,4 +83,34 @@ test("the mobile 'Nueva venta' FAB has its elevation (shadow-lg)", async ({ page
   const fab = page.locator('a[aria-label="Nueva venta"]');
   await expect(fab).toBeVisible();
   expect(await fab.evaluate((el) => getComputedStyle(el).boxShadow)).not.toBe("none");
+});
+
+test.describe("admin console palette", () => {
+  test("client-side navigation between the tenant app and the console raises no console error (no <script> in the React tree)", async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name === "mobile", "the link to the tenant app is hidden on mobile");
+    const errors: string[] = [];
+    page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
+    page.on("pageerror", (e) => errors.push(e.message));
+    await page.goto("/admin");
+    await expect(page.locator("html")).toHaveAttribute("data-paleta", "indigo");
+    await page.locator('a[href="/"]:visible').first().click();
+    await expect(page.locator("html")).toHaveAttribute("data-paleta", "lima");
+    await page.goBack();
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    await expect(page.locator("html")).toHaveAttribute("data-paleta", "indigo");
+    expect(errors).toEqual([]);
+  });
+
+  test("the appearance menu offers the palette in the tenant app but not in the console", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("button", { name: "Cambiar tema y apariencia" }).click();
+    await expect(page.getByRole("menuitemradio", { name: "Océano" })).toBeVisible();
+    await page.keyboard.press("Escape");
+
+    await page.goto("/admin");
+    await expect(page.locator("html")).toHaveAttribute("data-paleta", "indigo");
+    await page.getByRole("button", { name: "Cambiar tema y apariencia" }).click();
+    await expect(page.getByRole("menuitemradio", { name: "Inter" })).toBeVisible();
+    await expect(page.getByRole("menuitemradio", { name: "Océano" })).toHaveCount(0);
+  });
 });

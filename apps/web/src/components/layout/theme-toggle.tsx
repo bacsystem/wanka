@@ -3,6 +3,7 @@
 import { Monitor, Moon, Palette, Sun } from "lucide-react";
 import { useApariencia } from "khipu-design-system/apariencia";
 import { useTheme } from "next-themes";
+import { usePaletteLocked } from "@/components/layout/palette-lock";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -18,6 +19,7 @@ import {
 export function ThemeToggle() {
   const { theme = "system", setTheme } = useTheme();
   const { paleta, setPaleta, paletas, fuente, setFuente, fuentes } = useApariencia();
+  const paletteLocked = usePaletteLocked();
 
   return (
     <DropdownMenu>
@@ -40,7 +42,7 @@ export function ThemeToggle() {
             </DropdownMenuRadioItem>
           </DropdownMenuRadioGroup>
         </DropdownMenuGroup>
-        {paletas.length > 0 ? (
+        {paletas.length > 0 && !paletteLocked ? (
           <>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>

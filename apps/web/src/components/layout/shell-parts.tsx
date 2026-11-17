@@ -52,7 +52,7 @@ export function SidebarContextCard({ icon: Icon, title, chip, trailing = <Chevro
 export interface ShellNavItem { label: string; href: string; icon: IconoComponente; badge?: string; children?: ShellNavItem[] }
 export interface ShellNavSection { id: string; label: string; items: ShellNavItem[] }
 
-const activeButtonClass = "relative isolate overflow-visible rounded-full transition-colors duration-(--duration-fast) ease-salida data-active:bg-transparent data-active:font-semibold data-active:text-sidebar-primary-foreground data-active:[&>svg]:text-sidebar-primary-foreground";
+const activeButtonClass = "relative isolate overflow-visible rounded-full transition-colors duration-(--duracion-rapida) ease-salida data-active:bg-transparent data-active:font-semibold data-active:text-sidebar-primary-foreground data-active:[&>svg]:text-sidebar-primary-foreground";
 
 /** Sectioned navigation with collapsible groups; identical markup in both shells. */
 export function SidebarSections({ sections, isActive }: { sections: ShellNavSection[]; isActive: (pathname: string, href: string) => boolean }) {

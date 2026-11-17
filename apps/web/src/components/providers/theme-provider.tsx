@@ -8,14 +8,14 @@ import { DisenoProvider } from "khipu-design-system/diseno";
 import { ProveedorMovimiento } from "khipu-design-system/movimiento";
 import { PESO_ICONO } from "@/lib/iconos";
 
-const ICONOS: IconProps = { weight: PESO_ICONO };
+const ICONS: IconProps = { weight: PESO_ICONO };
 
 export function ThemeProvider({ children, ...props }: ComponentProps<typeof NextThemesProvider>) {
   return (
     <NextThemesProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange {...props}>
       <DisenoProvider>
         <AparienciaProvider>
-          <IconContext.Provider value={ICONOS}>
+          <IconContext.Provider value={ICONS}>
             <ProveedorMovimiento>{children}</ProveedorMovimiento>
           </IconContext.Provider>
         </AparienciaProvider>
