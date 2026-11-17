@@ -90,7 +90,7 @@ Never nest a `Button` inside a clickable tile rendered as `<button>` (hydration 
 
 ### Design system (pinned package)
 
-The tokens, the Tailwind theme, the recipes and the appearance preferences come from the **`khipu-design-system` package** (https://github.com/bacsystem/khipu-design-system), pinned by tag in `apps/web/package.json` (`github:bacsystem/khipu-design-system#v0.8.0`). Nothing of it is vendored in the repo: `src/styles/tokens.css` / `theme.css` no longer exist.
+The tokens, the Tailwind theme, the recipes and the appearance preferences come from the **`khipu-design-system` package** (https://github.com/bacsystem/khipu-design-system), pinned by tag in `apps/web/package.json` (`github:bacsystem/khipu-design-system#v0.9.0`). Nothing of it is vendored in the repo: `src/styles/tokens.css` / `theme.css` no longer exist.
 
 - `app/globals.css` is `@import "tailwindcss"; @import "khipu-design-system/styles.css";` (tw-animate-css, shadcn variants, `dark` variant, tokens, theme, `@source` of the package) plus Wanka-only CSS. Never redefine a DS token in a bare `:root` or declare `.dark` there: it would override the palette the user chose (only Wanka's own `--brand-panel` is allowed; `lib/design-system.test.ts` guards it).
 - **Fix it in the DS first, then bump the tag.** A change to a token, recipe or shared component goes to the DS repo, gets released as a tag, and reaches Wanka by changing the version in `apps/web/package.json` and running `pnpm install` (the package builds `dist/` in its `prepare` script; pnpm 9 runs it without extra approval; since v0.6.0 the package accepts Next 16 as a peer, so no `peerDependencyRules` override is needed; with `cacheComponents` the DS `nav/*` components must be wrapped in `<Suspense>`).

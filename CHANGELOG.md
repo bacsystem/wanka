@@ -9,10 +9,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - Clean builds no longer fail at random with `next/font/google queries have exactly one entry` (#125): the fonts are self-hosted with `next/font/local` (`apps/web/src/app/fonts/`: latin woff2 of Inter, JetBrains Mono, Plus Jakarta Sans, Manrope, DM Sans and Figtree, all variable fonts, with their SIL OFL licences). Same CSS variables and rendering; JetBrains Mono is declared with weight `100 600` so `font-bold` still renders as 600, as before. Known difference: only the `latin` subset is shipped, so latin-ext characters (e.g. Ł ř Ş ₡ ₲) fall back to the system font (adding latin-ext costs ~165 KB). `pnpm build` needs no network.
 
 ### Changed
+- `khipu-design-system` bumped from `v0.8.0` to `v0.9.0` (`Tabs` strip-only mode and tab icon sizing) and the 21 tab strips (`components/ui/tabs`) moved to `khipu-design-system/navegacion/tabs` (W2b, #146): `linea` for section/detail tabs, `segmentado` for filter strips; counters use the DS `contador`. Sections that switch whole content (customer, pet, tenant, staff, profile, supplier, management reports, clinical record) render their panels through `Tabs` (`role="tabpanel"`); filtering strips stay strip-only.
 - `khipu-design-system` bumped from `v0.6.0` to `v0.8.0` (tables with mobile cards, shell rail, `BarraInferior`; a runtime no-op for Wanka, which does not use `TablaListado` or `Shell` from the package yet: `tokens.css` and `shadcn.css` are unchanged, `theme.css` only adds the `rail:` variant and the `--khipu-reserva-inferior` rules). Two real but harmless effects: `ScriptDiseno` now injects the rail script on every page (reads `localStorage["khipu-sidebar-rail"]`, writes `html[data-rail]`; no-op without the key) and the compiled CSS grows about 8.4 KB (+4.7 %) from the package's `@source "./components"`. `docs/frontend-migration-khipu.md` records the DS-0/A/B status, W1a, W1c and the new DS-H.
 - `khipu-design-system` bumped from `v0.5.23` to `v0.6.0` (Next 16 peer support; `lucide-react` is no longer a peer of the package, Wanka keeps its own dependency until #123).
 
 ### Removed
+- `components/ui/tabs.tsx` (no consumers left after W2b) and the `size-4` workarounds for khipu-design-system#64.
 - The `pnpm.peerDependencyRules.allowedVersions` override for `next` in the root `package.json`: it existed only because the package declared Next 15.
 
 ## [0.2.0] - 2026-11-17
