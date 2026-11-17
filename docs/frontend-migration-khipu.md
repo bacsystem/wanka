@@ -46,10 +46,11 @@ Owner rules (fixed): the app only uses DS components; no exceptions; no styles o
 
 - ≥1280: DS floating sidebar 248 px; dashboard grid 2/3 + 1/3.
 - 768–1279: DS rail 64 px with tooltips. It is automatic; the user can expand it and the choice is remembered. Tables scroll inside their container (`anchoMinimo`).
-- ≤767: no sidebar, no hamburger. `BarraInferior` gets its entries as data: Wanka passes the four items from `getBottomNavHrefs(industry)` (`config/navigation.ts:161-165`), plus Más (a drawer with the full `SidebarContent`) and the "Nueva venta" FAB. The entries are:
+- ≤767: no sidebar, no hamburger. `BarraInferior` gets its entries as data: Wanka passes the four items whose hrefs come from `getBottomNavHrefs(industry)` (`config/navigation.ts:161-165`) and whose labels and icons come from `getNavigation(industry)`, plus Más (a drawer with the full `SidebarContent`) and the "Nueva venta" FAB. The entries are:
   - default: Inicio, Ventas, Clientes, Inventario;
-  - restaurante: Inicio, Salón, Cocina, Ventas;
-  - veterinaria: Inicio, Ventas, Mascotas, Agenda. KPIs use `FilaMetricas desplazable`; lists use `tarjetaMovil`.
+  - restaurante: Inicio, Salón y mesas, Comandas / cocina, Ventas;
+  - veterinaria: Inicio, Ventas, Mascotas, Agenda.
+- ≤767, all industries: KPIs use `FilaMetricas desplazable`; lists use `tarjetaMovil`.
 - The tenant selector, theme/appearance and the user menu live in the sidebar (DS), not in the top bar. Page titles stay in `CabeceraPagina`, so page actions keep their client state. The top bar holds search, notifications and global actions.
 
 ## 3. DS gaps: decision and API contract (Spanish names, DS conventions)
