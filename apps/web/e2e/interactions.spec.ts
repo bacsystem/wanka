@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page } from "./fixtures";
 
 /** Wait for hydration before the first interaction (client handlers are not attached on first paint). */
 async function settle(page: Page) {

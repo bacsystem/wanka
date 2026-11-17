@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 test("agenda: new appointment drawer validates and schedules; reschedule dialog", async ({ page }, testInfo) => {
   await page.goto("/agenda");
