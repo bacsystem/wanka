@@ -1,10 +1,10 @@
 import * as React from "react";
-import { Label } from "@/components/ui/label";
-import { cn } from "@/lib/utils";
+import { Campo } from "khipu-design-system/formularios/campo";
 
 /**
  * Label + control + optional help text. If the child is a single element without an `id`,
  * one is generated and wired to the label so the control is accessible by its label text.
+ * @deprecated Temporary W5a adapter over `Campo`. Use `Campo` directly (it needs the control's `id`); deleted in W8.
  */
 export function Field({
   label,
@@ -21,19 +21,15 @@ export function Field({
 }) {
   const autoId = React.useId();
   let control = children;
-  let id = htmlFor;
-  if (!id && React.isValidElement(children)) {
+  let id = htmlFor ?? autoId;
+  if (!htmlFor && React.isValidElement(children)) {
     const props = children.props as { id?: string };
     id = props.id ?? autoId;
     if (!props.id) control = React.cloneElement(children as React.ReactElement<{ id?: string }>, { id });
   }
   return (
-    <div className={cn("flex flex-col gap-1.5", className)}>
-      <Label htmlFor={id} className="text-xs font-medium text-muted-foreground">
-        {label}
-      </Label>
+    <Campo id={id} etiqueta={label} ayuda={help} className={className}>
       {control}
-      {help ? <p className="text-xs text-muted-foreground">{help}</p> : null}
-    </div>
+    </Campo>
   );
 }

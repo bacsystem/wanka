@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { cn } from "@/lib/utils";
+import { cn } from "khipu-design-system/utils";
 import { TARJETA } from "@/lib/estilos";
 
 interface EntityHeaderProps {
@@ -16,15 +16,19 @@ interface EntityHeaderProps {
   className?: string;
 }
 
-/** Standard header of detail screens (cliente, mascota, comprobante, orden, tenant…). */
+/**
+ * Standard header of detail screens (cliente, mascota, comprobante, orden, tenant…).
+ * @deprecated Temporary W5a adapter. The DS has no entity header (avatar, chips, meta rows, aside): this keeps the `TARJETA`
+ * recipe and the DS type scale, because `CabeceraPagina` cannot host the chips and meta rows without invalid nesting (DS gap). Deleted in W8.
+ */
 export function EntityHeader({ avatar, title, chips, meta, aside, actions, className }: EntityHeaderProps) {
   return (
     <header className={cn(TARJETA, "flex flex-col gap-4 p-4 md:p-5 lg:flex-row lg:items-center lg:justify-between", className)}>
       <div className="flex min-w-0 items-start gap-4">
         {avatar}
         <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2"><h1 className="text-xl font-bold tracking-tight md:text-2xl">{title}</h1>{chips}</div>
-          {meta ? <div className="mt-1.5 flex flex-col gap-1.5 text-xs text-muted-foreground">{meta}</div> : null}
+          <div className="flex flex-wrap items-center gap-2"><h1 className="text-titulo-pagina font-semibold text-foreground">{title}</h1>{chips}</div>
+          {meta ? <div className="mt-1.5 flex flex-col gap-1.5 text-etiqueta text-muted-foreground">{meta}</div> : null}
         </div>
       </div>
       {aside || actions ? (

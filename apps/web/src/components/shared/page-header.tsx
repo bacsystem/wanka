@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
-import { cn } from "@/lib/utils";
+import { CabeceraPagina } from "khipu-design-system/patrones/cabecera-pagina";
+import { ROTULO } from "@/lib/estilos";
 
 interface PageHeaderProps {
   eyebrow?: string;
@@ -10,18 +11,26 @@ interface PageHeaderProps {
   className?: string;
 }
 
+/**
+ * @deprecated Temporary W5a adapter over `CabeceraPagina`. Use it directly (module PRs, W6.x); deleted in W8.
+ * `CabeceraPagina` has no eyebrow slot, so the eyebrow goes in `volver` with the `ROTULO` recipe (DS gap).
+ */
 export function PageHeader({ eyebrow, title, description, actions, status, className }: PageHeaderProps) {
   return (
-    <div className={cn("flex flex-wrap items-start justify-between gap-3", className)}>
-      <div className="min-w-0">
-        {eyebrow ? <p className="text-xs text-muted-foreground">{eyebrow}</p> : null}
-        <div className="flex flex-wrap items-center gap-2">
-          <h1 className="text-xl font-bold tracking-tight md:text-2xl">{title}</h1>
-          {status}
-        </div>
-        {description ? <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{description}</p> : null}
-      </div>
-      {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
-    </div>
+    <CabeceraPagina
+      className={className}
+      volver={eyebrow ? <p className={ROTULO}>{eyebrow}</p> : undefined}
+      titulo={
+        status ? (
+          <>
+            {title} {status}
+          </>
+        ) : (
+          title
+        )
+      }
+      descripcion={description}
+      acciones={actions}
+    />
   );
 }

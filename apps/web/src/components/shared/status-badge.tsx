@@ -1,10 +1,12 @@
-import type { LucideIcon } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import { Chip, PillEstado } from "khipu-design-system/patrones/pill-estado";
+import type { IconoComponente } from "khipu-design-system/lib/iconos";
 
 export type BadgeTone = "success" | "warning" | "danger" | "info" | "neutral";
 
-/** Pastillas pastel del design system khipu 0.5 (sin borde en reposo, contraste WCAG AA). */
+/**
+ * Class map still imported by `features/documents/components/sunat-status-badge.tsx` (W6.3 moves it to `PillEstado`).
+ * @deprecated Removed with that module migration; do not use in new code.
+ */
 export const toneClass: Record<BadgeTone, string> = {
   success: "border-transparent bg-success text-success-foreground",
   warning: "border-transparent bg-warning text-warning-foreground",
@@ -13,40 +15,33 @@ export const toneClass: Record<BadgeTone, string> = {
   neutral: "border-transparent bg-secondary text-muted-foreground",
 };
 
+// `PillEstado` has no info tone (DS gap): "info" is an in-progress state, which the DS renders as neutral.
+const TONO = { success: "ok", warning: "aviso", danger: "error", info: "neutro", neutral: "neutro" } as const;
+
 interface StatusBadgeProps {
   tone: BadgeTone;
   label: string;
-  icon?: LucideIcon;
+  icon?: IconoComponente;
+  /** @deprecated No effect: `PillEstado` always shows a dot when it has no icon. */
   dot?: boolean;
   className?: string;
 }
 
-export function StatusBadge({ tone, label, icon: Icon, dot, className }: StatusBadgeProps) {
+/** @deprecated Temporary W5a adapter over `PillEstado`. Use it directly (`tono`); deleted in W8. */
+export function StatusBadge({ tone, label, icon, className }: StatusBadgeProps) {
   return (
-    <Badge variant="outline" className={cn("gap-1 rounded-full font-semibold", toneClass[tone], className)} data-tone={tone}>
-      {Icon ? <Icon strokeWidth={2} aria-hidden /> : null}
-      {dot ? <span className="size-1.5 rounded-full bg-current" aria-hidden /> : null}
+    <PillEstado tono={TONO[tone]} icon={icon} className={className}>
       {label}
-    </Badge>
+    </PillEstado>
   );
 }
 
-/** Chip compacto en mayúsculas ("PRINCIPAL", "ENTERPRISE", "OFICIAL"). */
-export function Tag({ tone = "neutral", label, className, solid }: { tone?: BadgeTone | "primary"; label: string; className?: string; solid?: boolean }) {
-  const cls =
-    tone === "primary"
-      ? solid
-        ? "bg-primary text-primary-foreground"
-        : "bg-acento-suave text-acento-superficie-texto"
-      : solid
-        ? // TODO(DS): solid fills use text-foreground/dark:text-background until khipu ships --*-solid-foreground tokens.
-          {
-            success: "bg-success-solid text-foreground dark:text-background",
-            warning: "bg-warning-solid text-foreground dark:text-background",
-            danger: "bg-destructive text-destructive-foreground",
-            info: "bg-acento-2-texto text-white",
-            neutral: "bg-foreground text-background",
-          }[tone]
-        : toneClass[tone];
-  return <span className={cn("inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[10px] font-bold tracking-wide uppercase", cls, className)}>{label}</span>;
+/**
+ * Compact label chip.
+ * @deprecated Temporary W5a adapter over `PillEstado`/`Chip`. `Chip` has no tones and no solid fill (DS gap), so info/primary/neutral
+ * render as a neutral `Chip` and `solid` is ignored. Deleted in W8.
+ */
+export function Tag({ tone = "neutral", label, className }: { tone?: BadgeTone | "primary"; label: string; className?: string; /** @deprecated No effect. */ solid?: boolean }) {
+  if (tone === "success" || tone === "warning" || tone === "danger") return <PillEstado tono={TONO[tone]} className={className}>{label}</PillEstado>;
+  return <Chip className={className}>{label}</Chip>;
 }
