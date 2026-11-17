@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 import { supportSummary as s, tickets, type Ticket } from "../mocks/ops";
 
 const statusMeta: Record<Ticket["status"], { label: string; tone: BadgeTone }> = { abierto: { label: "Abierto", tone: "danger" }, en_progreso: { label: "En progreso", tone: "info" }, esperando: { label: "Esperando cliente", tone: "warning" }, resuelto: { label: "Resuelto", tone: "success" } };
-const prioCls = { P1: "bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300", P2: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300", P3: "bg-muted text-muted-foreground" };
+const prioCls = { P1: "bg-destructive-suave text-destructive-texto ", P2: "bg-warning text-warning-foreground ", P3: "bg-muted text-muted-foreground" };
 const macros = ["Bypass a Bizlinks OSE", "Reintento de cobro Niubiz", "Guía renovación .pfx", "Ampliación de cuota CPE"];
 
 export function SupportScreen() {
@@ -28,16 +28,16 @@ export function SupportScreen() {
     <div className="flex min-w-0 flex-1 flex-col gap-4 p-4 md:gap-6 md:p-6">
       <PageHeader eyebrow="Soporte técnico · Mesa de tickets y SLA multi-tenant" title="Bandeja de tickets y monitor de SLA B2B SaaS" description="Gestión de incidentes tributarios SUNAT, integraciones OSE, pasarelas de pago y soporte operativo para 1,482 empresas clientes en Perú." status={<StatusBadge tone="success" label="SLA cumplido en 98.4% de 342 tickets este ciclo" className="rounded-md" />} actions={<><Button variant="outline" className="font-semibold" onClick={() => toast.success("Métricas exportadas")}><Download data-icon="inline-start" /> Exportar métricas CSV</Button><Button variant="outline" className="font-semibold">Políticas de SLA OSE</Button><Button className="font-semibold" onClick={() => toast.info("Nuevo ticket")}><Plus data-icon="inline-start" /> Crear incidente / ticket</Button></>} />
       <StatGrid>
-        <StatCard label="Tiempo 1ª respuesta" value={`${s.firstResponse}`} suffix="min" icon={Timer} tone="success" hint={<span className="font-semibold text-emerald-600">{s.firstResponseDelta}m vs semana anterior</span>} footer={<span className="flex w-full justify-between"><span>Objetivo SLA: &lt; 20 min</span><strong className="text-emerald-600">{s.slaMet}% cumplido</strong></span>} />
-        <StatCard label="Resolución promedio (MTTR)" value={s.mttr} icon={Clock} tone="info" hint={<span className="font-semibold text-emerald-600">{s.mttrDelta} optimizado</span>} footer={<span className="flex w-full justify-between"><span>Impacto en contingencia CDR</span><span>Récord {s.record}</span></span>} />
-        <StatCard label="Tickets en riesgo SLA" value={String(s.atRisk)} icon={Timer} tone="danger" emphasizeValue hint="< 30 min para breach" footer={<span className="flex w-full justify-between"><span>1 en SUNAT OSE · 1 en Niubiz</span><span className="text-emerald-600">{s.overdue} vencidos hoy</span></span>} />
-        <StatCard label="CSAT empresas clientes" value={String(s.csat)} suffix="/5" icon={Smile} tone="success" hint={<span className="flex items-center gap-1 font-semibold text-emerald-600"><Star className="size-3 fill-current" /> {s.positive}% positivos</span>} footer={`Encuestas respondidas: ${s.surveys}`} />
+        <StatCard label="Tiempo 1ª respuesta" value={`${s.firstResponse}`} suffix="min" icon={Timer} tone="success" hint={<span className="font-semibold text-success-foreground">{s.firstResponseDelta}m vs semana anterior</span>} footer={<span className="flex w-full justify-between"><span>Objetivo SLA: &lt; 20 min</span><strong className="text-success-foreground">{s.slaMet}% cumplido</strong></span>} />
+        <StatCard label="Resolución promedio (MTTR)" value={s.mttr} icon={Clock} tone="info" hint={<span className="font-semibold text-success-foreground">{s.mttrDelta} optimizado</span>} footer={<span className="flex w-full justify-between"><span>Impacto en contingencia CDR</span><span>Récord {s.record}</span></span>} />
+        <StatCard label="Tickets en riesgo SLA" value={String(s.atRisk)} icon={Timer} tone="danger" emphasizeValue hint="< 30 min para breach" footer={<span className="flex w-full justify-between"><span>1 en SUNAT OSE · 1 en Niubiz</span><span className="text-success-foreground">{s.overdue} vencidos hoy</span></span>} />
+        <StatCard label="CSAT empresas clientes" value={String(s.csat)} suffix="/5" icon={Smile} tone="success" hint={<span className="flex items-center gap-1 font-semibold text-success-foreground"><Star className="size-3 fill-current" /> {s.positive}% positivos</span>} footer={`Encuestas respondidas: ${s.surveys}`} />
       </StatGrid>
 
-      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-amber-300 border-l-4 bg-amber-50 p-4 text-sm dark:border-amber-800 dark:bg-amber-950/30">
+      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-warning-border border-l-4 bg-warning p-4 text-sm">
         <StateIcon state="warning" className="size-5" />
-        <div className="min-w-0 flex-1"><p className="font-bold text-amber-900 dark:text-amber-200">Alerta de mesa SRE: incidencia SUNAT Web Services directo (error 1033) <Tag label="INC-8421" className="ml-1 font-mono" /></p><p className="text-xs text-amber-800/80 dark:text-amber-300">Afecta a 4 empresas con certificado directo en Huancayo y Trujillo. Las respuestas automáticas sugieren activar bypass a Bizlinks OSE para evitar rechazos en facturas de contingencia de cierre diario.</p></div>
-        <Button className="bg-amber-600 font-semibold text-white hover:bg-amber-700" onClick={() => toast.success("Macro 'Bypass a Bizlinks OSE' enviada a 4 tenants")}><Wand2 data-icon="inline-start" /> Activar macro</Button>
+        <div className="min-w-0 flex-1"><p className="font-bold text-warning-foreground">Alerta de mesa SRE: incidencia SUNAT Web Services directo (error 1033) <Tag label="INC-8421" className="ml-1 font-mono" /></p><p className="text-xs text-warning-foreground/80 ">Afecta a 4 empresas con certificado directo en Huancayo y Trujillo. Las respuestas automáticas sugieren activar bypass a Bizlinks OSE para evitar rechazos en facturas de contingencia de cierre diario.</p></div>
+        <Button className="bg-warning font-semibold text-white hover:bg-warning" onClick={() => toast.success("Macro 'Bypass a Bizlinks OSE' enviada a 4 tenants")}><Wand2 data-icon="inline-start" /> Activar macro</Button>
       </div>
 
       <div className="grid gap-4 xl:grid-cols-5">
@@ -47,7 +47,7 @@ export function SupportScreen() {
               <li key={t.id}><button type="button" onClick={() => setSelectedId(t.id)} aria-pressed={sel.id === t.id} className={cn("flex w-full flex-col gap-2 px-4 py-3 text-left hover:bg-muted/40", sel.id === t.id && "border-l-4 border-l-primary bg-accent/40 dark:bg-accent/10")}>
                 <div className="flex flex-wrap items-center gap-2 text-xs"><span className={cn("rounded px-1.5 py-0.5 font-bold", prioCls[t.priority])}>{t.priority}</span><span className="font-mono font-semibold">{t.id}</span><StatusBadge tone={m.tone} dot label={m.label} /><span className="ml-auto flex items-center gap-1 text-muted-foreground"><MessageCircle className="size-3" /> {t.channel}</span></div>
                 <p className="text-sm font-semibold">{t.subject}</p>
-                <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground"><span>{t.tenant} · Agente: {t.agent}</span><span className={cn("flex items-center gap-1 font-mono font-semibold", risk ? "text-destructive" : t.status === "resuelto" ? "text-emerald-600" : "text-foreground")}><Timer className="size-3" /> {t.status === "resuelto" ? "SLA cumplido" : `SLA restante: ${sla(t.slaMin)}`}</span></div>
+                <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground"><span>{t.tenant} · Agente: {t.agent}</span><span className={cn("flex items-center gap-1 font-mono font-semibold", risk ? "text-destructive" : t.status === "resuelto" ? "text-success-foreground" : "text-foreground")}><Timer className="size-3" /> {t.status === "resuelto" ? "SLA cumplido" : `SLA restante: ${sla(t.slaMin)}`}</span></div>
               </button></li>
             ); })}
           </ul>

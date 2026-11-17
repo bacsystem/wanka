@@ -44,7 +44,7 @@ export function ReservationsScreen({ reservations: initial }: { reservations: Re
             <Field label="Fecha"><Input type="date" defaultValue="2026-09-12" /></Field>
             <Field label="Hora"><Select value={time} onValueChange={(v) => setTime(String(v))} items={slots.map((s) => ({ value: s, label: s }))}><SelectTrigger className="w-full"><SelectValue /></SelectTrigger><SelectContent>{slots.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></Field>
             <Field label="Ambiente preferido"><Select defaultValue="salon" items={[{ value: "salon", label: "Salón principal" }, { value: "terraza", label: "Terraza" }, { value: "barra", label: "Barra" }]}><SelectTrigger className="w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="salon">Salón principal</SelectItem><SelectItem value="terraza">Terraza</SelectItem><SelectItem value="barra">Barra</SelectItem></SelectContent></Select></Field>
-            <Field label="Mesa sugerida"><div className="flex h-8 items-center rounded-md border bg-muted/40 px-2.5 font-mono text-sm">{suggested}</div></Field>
+            <Field label="Mesa sugerida"><div className="flex h-8 items-center rounded-xl bg-secondary px-2.5 font-mono text-sm">{suggested}</div></Field>
             <Field label="Adelanto (opcional)"><Input placeholder="S/ 0.00" className="font-mono" /></Field>
             <Field label="Notas" className="sm:col-span-2"><Textarea rows={2} placeholder="Cumpleaños, silla para bebé, alergias…" /></Field>
             <label className="flex items-center gap-2 text-sm sm:col-span-2"><Checkbox defaultChecked /> Enviar confirmación por WhatsApp</label>

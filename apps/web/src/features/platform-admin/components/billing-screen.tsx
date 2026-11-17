@@ -44,7 +44,7 @@ export function BillingScreen() {
         <StatCard label="Por vencer (ciclo 7d)" value={formatCurrency(s.dueSoon)} icon={Clock} tone="info" footer={<span className="flex w-full flex-col"><span>{s.dueCompanies} empresas en ciclo</span><span>Débito auto activo: {s.autoDebit}</span></span>} />
         <StatCard label="Morosidad crítica" value={formatCurrency(s.overdue)} icon={Banknote} tone="danger" emphasizeValue footer={<span className="flex w-full flex-col"><span>{s.overdueTenants} tenants en riesgo</span><span className="text-destructive">Riesgo suspensión OSE inmediata</span></span>} />
         <StatCard label="Notas de crédito (NC)" value={formatCurrency(s.creditNotes)} icon={FileMinus} tone="warning" footer={<span className="flex w-full flex-col"><span>{s.creditNotesCount} ajustes por RUC / downgrade</span><span>0.5% del volumen facturado</span></span>} />
-        <StatCard label="Auto-conciliación" value={`${s.autoReconcile}%`} icon={RefreshCw} tone="success" emphasizeValue footer={<span className="flex w-full flex-col"><span>Niubiz y BCP API activo</span><span className="text-amber-700">{s.manualPending} manuales pendientes</span></span>} />
+        <StatCard label="Auto-conciliación" value={`${s.autoReconcile}%`} icon={RefreshCw} tone="success" emphasizeValue footer={<span className="flex w-full flex-col"><span>Niubiz y BCP API activo</span><span className="text-warning-foreground">{s.manualPending} manuales pendientes</span></span>} />
       </StatGrid>
 
       <SectionCard title={<span className="sr-only">Comprobantes emitidos</span>} className="[&>div:first-child]:hidden" contentClassName="p-0">

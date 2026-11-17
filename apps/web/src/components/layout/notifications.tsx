@@ -34,7 +34,7 @@ export function Notifications() {
     <Popover>
       <PopoverTrigger render={<Button variant="ghost" size="icon" aria-label={`Notificaciones${unread ? ` (${unread} sin leer)` : ""}`} className="relative" />}>
         <Bell className={cn(unread && "motion-safe:animate-[wiggle_1.2s_ease-in-out_1]")} />
-        {unread ? <span className="absolute top-1.5 right-1.5 size-2 rounded-full bg-rose-500 ring-2 ring-background" aria-hidden /> : null}
+        {unread ? <span className="absolute top-1.5 right-1.5 size-2 rounded-full bg-destructive ring-2 ring-background" aria-hidden /> : null}
       </PopoverTrigger>
       <PopoverContent align="end" className="w-[min(26rem,calc(100vw-2rem))] p-0">
         <div className="flex items-center justify-between gap-2 border-b px-3 py-2"><div><p className="text-sm font-semibold">Notificaciones operativas</p><p className="text-xs text-muted-foreground">{unread} alerta{unread === 1 ? "" : "s"} sin leer</p></div><Button variant="ghost" size="xs" onClick={() => setItems((it) => it.map((i) => ({ ...i, read: true })))}>Marcar leídas</Button></div>

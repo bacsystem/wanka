@@ -59,7 +59,7 @@ export function ReceptionScreen({ data }: { data: Reception }) {
             <div><p className="text-xs text-muted-foreground">Fecha de despacho</p><p className="font-medium">{formatDate(data.dispatchedAt)}</p><StatusBadge className="mt-1" tone="success" icon={QrCode} label="QR GRE validado" /></div>
           </SectionCard>
 
-          <form onSubmit={doScan} className="flex flex-wrap items-center gap-2 rounded-lg border bg-card p-3">
+          <form onSubmit={doScan} className="flex flex-wrap items-center gap-2 rounded-xl border border-borde-tarjeta bg-card shadow-tarjeta p-3">
             <div className="relative min-w-0 flex-1"><ScanLine className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-primary" /><Input value={scan} onChange={(e) => setScan(e.target.value)} placeholder="Escanear código QR / barras o escribir SKU / lote…" aria-label="Escanear código" className="pl-8" /></div>
             <Button type="submit" variant="outline"><QrCode data-icon="inline-start" /> Foco activo</Button>
             <Button type="button" variant="outline" onClick={() => toast.info("Cámara no disponible en esta demo")}><Camera data-icon="inline-start" /> Cámara</Button>
@@ -95,7 +95,7 @@ export function ReceptionScreen({ data }: { data: Reception }) {
 
         <div className="flex min-w-0 flex-col gap-4">
           <SectionCard title="Balance de recepción" contentClassName="grid grid-cols-2 gap-3 p-4">
-            {[["Total despachado", sent, ""], ["Conformes OK", received - damaged, "text-success"], ["Faltantes", missing, missing ? "text-warning" : ""], ["Dañados / merma", damaged, damaged ? "text-destructive" : ""]].map(([k, v, c]) => <div key={String(k)} className="rounded-lg border bg-muted/30 p-3"><p className="text-xs font-medium text-muted-foreground">{k}</p><p className={cn("text-2xl font-bold tabular-nums", String(c))} data-testid={String(k) === "Faltantes" ? "missing" : undefined}>{v}</p></div>)}
+            {[["Total despachado", sent, ""], ["Conformes OK", received - damaged, "text-success"], ["Faltantes", missing, missing ? "text-warning" : ""], ["Dañados / merma", damaged, damaged ? "text-destructive" : ""]].map(([k, v, c]) => <div key={String(k)} className="rounded-xl bg-secondary p-3"><p className="text-xs font-medium text-muted-foreground">{k}</p><p className={cn("text-2xl font-bold tabular-nums", String(c))} data-testid={String(k) === "Faltantes" ? "missing" : undefined}>{v}</p></div>)}
           </SectionCard>
           <SectionCard title="Conformidad del custodio" contentClassName="flex flex-col gap-3 p-4">
             <Field label="Nombre del receptor autorizado"><Input defaultValue="Dr. Fernando Zegarra" /></Field>

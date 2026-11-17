@@ -34,7 +34,7 @@ export function SidebarTenantCard({ tenant }: { tenant: Tenant }) {
   const choose = useChooseTenant(tenant);
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className="group flex w-full items-center justify-between gap-2 rounded-lg border bg-card p-2 text-left shadow-xs transition-colors hover:border-ring/40 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none" aria-label={`Empresa seleccionada: ${tenant.name}`}>
+      <DropdownMenuTrigger className="group flex w-full items-center justify-between gap-2 rounded-xl border border-borde-tarjeta bg-card shadow-tarjeta p-2 text-left shadow-xs transition-colors hover:border-ring/40 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none" aria-label={`Empresa seleccionada: ${tenant.name}`}>
         <span className="flex min-w-0 items-center gap-2">
           <span className="flex size-7 shrink-0 items-center justify-center rounded border border-primary/15 bg-accent text-primary"><Building className="size-3.5" /></span>
           <span className="flex min-w-0 flex-col leading-tight">

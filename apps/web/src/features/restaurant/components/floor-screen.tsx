@@ -17,9 +17,9 @@ import { cn } from "@/lib/utils";
 import { areas, menu, orderM7, type DiningTable, type OrderItem, type TableStatus } from "../mocks/floor";
 
 const statusMeta: Record<TableStatus, { label: string; tone: BadgeTone; card: string; dot: string; chip: string }> = {
-  libre: { label: "Libre", tone: "success", card: "border-emerald-200 bg-emerald-50/60 hover:bg-emerald-50 dark:border-emerald-900 dark:bg-emerald-950/30", dot: "bg-emerald-500 text-white", chip: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300" },
-  ocupada: { label: "Ocupada", tone: "warning", card: "border-amber-200 bg-amber-50/60 hover:bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30", dot: "bg-amber-500 text-white", chip: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300" },
-  por_cobrar: { label: "Por cobrar", tone: "info", card: "border-primary/50 bg-accent/60 hover:bg-accent dark:bg-accent/20", dot: "bg-primary text-primary-foreground", chip: "bg-teal-100 text-teal-900 dark:bg-teal-900/50 dark:text-teal-100" },
+  libre: { label: "Libre", tone: "success", card: "border-transparent bg-success hover:bg-success", dot: "bg-success-solid text-white", chip: "bg-success text-success-foreground " },
+  ocupada: { label: "Ocupada", tone: "warning", card: "border-transparent bg-warning hover:bg-warning", dot: "bg-warning-solid text-white", chip: "bg-warning text-warning-foreground " },
+  por_cobrar: { label: "Por cobrar", tone: "info", card: "border-primary/50 bg-accent/60 hover:bg-accent dark:bg-accent/20", dot: "bg-primary text-primary-foreground", chip: "bg-acento-suave text-acento-texto dark:text-acento-texto" },
   reservada: { label: "Reservada", tone: "neutral", card: "border-violet-200 bg-violet-50/60 hover:bg-violet-50 dark:border-violet-900 dark:bg-violet-950/30", dot: "bg-violet-500 text-white", chip: "bg-violet-100 text-violet-800 dark:bg-violet-950 dark:text-violet-300" },
   sucia: { label: "Sucia / limpieza", tone: "neutral", card: "border-border bg-muted/60 hover:bg-muted", dot: "bg-slate-400 text-white", chip: "bg-muted text-muted-foreground" },
 };
@@ -89,7 +89,7 @@ export function FloorScreen({ tables }: { tables: DiningTable[] }) {
       >
         <div className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-3">
           <Tabs value={area} onValueChange={(v) => setArea(String(v))}><TabsList>{areas.map((a) => <TabsTrigger key={a.id} value={a.id}>{a.label} <span className="ml-1 font-mono text-[11px] opacity-70">{a.count}</span></TabsTrigger>)}</TabsList></Tabs>
-          <div className="flex flex-wrap gap-1.5">{(Object.keys(statusMeta) as TableStatus[]).map((s) => <Badge key={s} variant="outline" className="gap-1"><span className={cn("size-1.5 rounded-full", s === "libre" && "bg-emerald-500", s === "ocupada" && "bg-amber-500", s === "por_cobrar" && "bg-primary", s === "reservada" && "bg-violet-500", s === "sucia" && "bg-slate-400")} />{statusMeta[s].label} ({counts[s]})</Badge>)}</div>
+          <div className="flex flex-wrap gap-1.5">{(Object.keys(statusMeta) as TableStatus[]).map((s) => <Badge key={s} variant="outline" className="gap-1"><span className={cn("size-1.5 rounded-full", s === "libre" && "bg-success-solid", s === "ocupada" && "bg-warning-solid", s === "por_cobrar" && "bg-primary", s === "reservada" && "bg-violet-500", s === "sucia" && "bg-slate-400")} />{statusMeta[s].label} ({counts[s]})</Badge>)}</div>
         </div>
         <ul className="grid grid-cols-3 gap-3 p-4 sm:grid-cols-4 lg:grid-cols-6">
           {tables.filter((t) => t.area === area).map((t) => (
@@ -107,7 +107,7 @@ export function FloorScreen({ tables }: { tables: DiningTable[] }) {
           ))}
         </ul>
       </SectionCard>
-      <aside aria-label="Detalle de mesa" className="hidden overflow-hidden rounded-xl border bg-card xl:block xl:min-h-[36rem]">{panel}</aside>
+      <aside aria-label="Detalle de mesa" className="hidden overflow-hidden rounded-xl border border-borde-tarjeta bg-card shadow-tarjeta xl:block xl:min-h-[36rem]">{panel}</aside>
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}><SheetContent side="bottom" className="h-[88svh] overflow-y-auto rounded-t-xl p-0 xl:hidden"><SheetHeader className="sr-only"><SheetTitle>Detalle de mesa</SheetTitle></SheetHeader>{panel}</SheetContent></Sheet>
     </div>
   );

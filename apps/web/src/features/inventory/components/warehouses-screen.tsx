@@ -17,9 +17,9 @@ import { NewWarehouseSheet } from "./new-warehouse-sheet";
 
 const kindMeta: Record<WarehouseKind, { label: string; tone: BadgeTone; icon: typeof Pill; border: string; box: string }> = {
   principal: { label: "Principal", tone: "success", icon: Pill, border: "border-l-primary", box: "bg-accent text-primary" },
-  subalmacen: { label: "Subalmacén operativo", tone: "info", icon: Armchair, border: "border-l-blue-500", box: "bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300" },
+  subalmacen: { label: "Subalmacén operativo", tone: "info", icon: Armchair, border: "border-l-blue-500", box: "bg-info text-info-foreground" },
   sucursal: { label: "Sucursal", tone: "info", icon: Building2, border: "border-l-teal-400", box: "bg-accent text-primary" },
-  restringido: { label: "Área restringida", tone: "danger", icon: ShieldAlert, border: "border-l-rose-500", box: "bg-rose-50 text-rose-600 dark:bg-rose-950/60 dark:text-rose-300" },
+  restringido: { label: "Área restringida", tone: "danger", icon: ShieldAlert, border: "border-l-rose-500", box: "bg-destructive-suave text-destructive-texto" },
 };
 const siteOptions = [{ value: "all", label: "Todas las sedes (2)" }, { value: "Sede Miraflores", label: "Sede Miraflores (principal)" }, { value: "Sede San Isidro", label: "Sede San Isidro" }];
 
@@ -66,7 +66,7 @@ export function WarehousesScreen({ cards, establishments, custodians, transfers 
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <h3 className="text-base font-bold">{c.name}</h3>
-                        <span className={cn("rounded-md px-2 py-0.5 text-[10px] font-bold tracking-wide uppercase", c.kind === "principal" ? "bg-primary text-primary-foreground" : c.kind === "restringido" ? "bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300" : "bg-accent text-primary dark:bg-muted")}>{m.label}</span>
+                        <span className={cn("rounded-md px-2 py-0.5 text-[10px] font-bold tracking-wide uppercase", c.kind === "principal" ? "bg-primary text-primary-foreground" : c.kind === "restringido" ? "bg-destructive-suave text-destructive-texto " : "bg-accent text-primary dark:bg-muted")}>{m.label}</span>
                         {c.sunatAnnex ? <Tag tone="info" label={`SUNAT Anexo: ${c.sunatAnnex}`} /> : null}
                       </div>
                       <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground"><MapPin className="size-3 shrink-0" /> {c.site} • {c.address}</p>

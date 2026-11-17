@@ -20,8 +20,8 @@ interface SectionCardProps {
 
 export function SectionCard({ title, description, icon: Icon, iconClassName, iconTone = "default", action, children, className, contentClassName }: SectionCardProps) {
   return (
-    <Card className={cn("min-w-0 gap-0 overflow-hidden rounded-xl py-0 shadow-xs", className)}>
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b px-4 py-3">
+    <Card className={cn("min-w-0 gap-0 overflow-hidden py-0", className)}>
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-border/60 px-4 py-3">
         <div className="flex min-w-0 items-center gap-2.5">
           {Icon ? (
             <span className={cn("flex size-7 shrink-0 items-center justify-center rounded-lg", toneBox[iconTone], iconClassName)}>

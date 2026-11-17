@@ -21,9 +21,9 @@ import { NewAppointmentSheet, RescheduleDialog, waitlist } from "./new-appointme
 
 const statusMeta: Record<AppointmentStatus, { label: string; tone: BadgeTone; card: string; text: string }> = {
   atendido: { label: "Atendido", tone: "success", card: "border-transparent bg-accent dark:bg-accent/30", text: "text-primary" },
-  en_silla: { label: "En silla", tone: "info", card: "border-transparent bg-teal-100 dark:bg-teal-900/40", text: "text-teal-900 dark:text-teal-100" },
-  en_espera: { label: "En espera", tone: "info", card: "border-transparent bg-blue-50 dark:bg-blue-950/40", text: "text-blue-700 dark:text-blue-300" },
-  confirmado: { label: "Confirmado", tone: "neutral", card: "border-transparent bg-indigo-50 dark:bg-indigo-950/40", text: "text-indigo-700 dark:text-indigo-300" },
+  en_silla: { label: "En silla", tone: "info", card: "border-transparent bg-acento-suave", text: "text-acento-texto dark:text-acento-texto" },
+  en_espera: { label: "En espera", tone: "info", card: "border-transparent bg-info", text: "text-info-foreground " },
+  confirmado: { label: "Confirmado", tone: "neutral", card: "border-transparent bg-acento-suave", text: "text-acento-texto dark:text-acento-texto" },
   agendado: { label: "Agendado", tone: "neutral", card: "border-transparent bg-muted", text: "text-muted-foreground" },
   cancelado: { label: "Bloqueado / cancelado", tone: "danger", card: "border-dashed bg-muted/40 opacity-70", text: "text-muted-foreground" },
 };
@@ -53,14 +53,14 @@ export function Agenda({ chairs, appointments, hours }: { chairs: Chair[]; appoi
   return (
     <div className="grid gap-4 xl:grid-cols-[1fr_22rem]">
       <div className="flex flex-wrap items-center gap-2 xl:col-span-2">
-        <div className="flex items-center gap-1 rounded-xl border bg-card p-1.5 shadow-xs">
+        <div className="flex items-center gap-1 rounded-xl border border-borde-tarjeta bg-card shadow-tarjeta p-1.5 shadow-xs">
           <Button variant="ghost" size="icon-xs" aria-label="Día anterior"><ChevronLeft /></Button>
           <Button variant="ghost" size="xs" className="font-semibold">Hoy</Button>
           <Button variant="ghost" size="icon-xs" aria-label="Día siguiente"><ChevronRight /></Button>
           <span className="ml-1 flex items-center gap-2 rounded-lg bg-accent px-3 py-1.5 text-sm font-semibold text-primary dark:bg-muted"><CalendarDays className="size-4" /> Viernes, 12 de setiembre 2026</span>
         </div>
         <Select defaultValue="miraflores" items={[{ value: "miraflores", label: "Sede Central – Miraflores" }, { value: "sanisidro", label: "Sede San Isidro" }]}>
-          <SelectTrigger className="h-auto w-60 rounded-xl border bg-card py-1.5 shadow-xs [&>span]:flex [&>span]:flex-col [&>span]:items-start" aria-label="Sede de atención"><Store className="size-4 text-muted-foreground" /><span className="flex flex-col text-left leading-tight"><span className="text-[10px] text-muted-foreground">Sede de atención</span><SelectValue /></span></SelectTrigger>
+          <SelectTrigger className="h-auto w-60 rounded-xl border border-borde-tarjeta bg-card shadow-tarjeta py-1.5 shadow-xs [&>span]:flex [&>span]:flex-col [&>span]:items-start" aria-label="Sede de atención"><Store className="size-4 text-muted-foreground" /><span className="flex flex-col text-left leading-tight"><span className="text-[10px] text-muted-foreground">Sede de atención</span><SelectValue /></span></SelectTrigger>
           <SelectContent><SelectItem value="miraflores">Sede Central – Miraflores</SelectItem><SelectItem value="sanisidro">Sede San Isidro</SelectItem></SelectContent>
         </Select>
         <div className="ml-auto flex flex-wrap items-center gap-2">
@@ -186,7 +186,7 @@ function posHref(a: Appointment) {
 function AppointmentDetail({ a, onReschedule }: { a: Appointment; onReschedule: () => void }) {
   const m = statusMeta[a.status];
   return (
-    <div className="flex flex-col gap-3 rounded-xl border bg-card p-4 shadow-xs">
+    <div className="flex flex-col gap-3 rounded-xl border border-borde-tarjeta bg-card shadow-tarjeta p-4 shadow-xs">
       <div className="flex items-center justify-between gap-2">
         <span className={cn("flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[11px] font-bold tracking-wide uppercase", a.status === "atendido" ? "bg-primary text-primary-foreground" : "bg-accent text-primary dark:bg-muted")}>{a.status === "atendido" ? <><CheckCircle2 className="size-3.5" /> Atendido · facturar</> : m.label}</span>
         <span className="text-xs text-muted-foreground">Cita #{a.code}</span>
@@ -199,7 +199,7 @@ function AppointmentDetail({ a, onReschedule }: { a: Appointment; onReschedule: 
         </div>
       </div>
       <div className="grid grid-cols-2 gap-2">
-        <Button variant="secondary" className="bg-teal-100 font-semibold text-teal-900 hover:bg-teal-200 dark:bg-teal-900/50 dark:text-teal-100" onClick={() => toast.info("Abriendo WhatsApp…")}><MessageCircle data-icon="inline-start" /> WhatsApp (+51)</Button>
+        <Button variant="secondary" className="bg-acento-suave font-semibold text-acento-texto hover:bg-acento-suave dark:text-acento-texto" onClick={() => toast.info("Abriendo WhatsApp…")}><MessageCircle data-icon="inline-start" /> WhatsApp (+51)</Button>
         <Button variant="secondary" className="bg-accent font-semibold hover:bg-accent/70 dark:bg-muted"><Phone data-icon="inline-start" /> 987 654 321</Button>
       </div>
       <div className="rounded-lg bg-muted/50 p-3 text-sm">

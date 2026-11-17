@@ -46,7 +46,7 @@ export function GuidesTable({ guides, openNew, onOpenNewChange }: { guides: Disp
   });
 
   const columns: Column<DispatchGuide>[] = [
-    { key: "number", header: "Serie y número", cell: (g) => <span className="flex items-center gap-2"><span className={cn("size-2 shrink-0 rounded-full", g.status === "en_transito" ? "bg-primary" : g.status === "aceptado" ? "bg-emerald-500" : g.status === "rechazado" ? "bg-rose-500" : "bg-slate-300")} /><TwoLine primary={<Link href={`/ventas/guias/${g.number}`} className="font-mono text-sm font-bold tabular-nums hover:text-primary hover:underline">{g.number}</Link>} secondary="GRE remitente" /></span> },
+    { key: "number", header: "Serie y número", cell: (g) => <span className="flex items-center gap-2"><span className={cn("size-2 shrink-0 rounded-full", g.status === "en_transito" ? "bg-primary" : g.status === "aceptado" ? "bg-success-solid" : g.status === "rechazado" ? "bg-destructive" : "bg-slate-300")} /><TwoLine primary={<Link href={`/ventas/guias/${g.number}`} className="font-mono text-sm font-bold tabular-nums hover:text-primary hover:underline">{g.number}</Link>} secondary="GRE remitente" /></span> },
     { key: "dates", header: "Emisión / traslado", cell: (g) => <TwoLine primary={formatDate(g.issuedAt)} secondary={`Inicio ${formatDate(g.transferAt)}`} mono />, className: "whitespace-nowrap" },
     { key: "reason", header: "Motivo", cell: (g) => <StatusBadge tone={reasonTone[g.reason]} label={reasonLabel[g.reason]} /> },
     { key: "modality", header: "Modalidad", cell: (g) => <span className="flex items-center gap-1.5">{g.modality === "privado" ? <Building2 className="size-4 text-primary" /> : <Truck className="size-4 text-primary" />}<TwoLine primary={g.modality === "privado" ? "Privado (interno)" : "Público"} secondary={g.modality === "publico" ? g.carrierDoc : undefined} /></span> },
@@ -130,9 +130,9 @@ function GuideTraceability({ guide: g }: { guide: DispatchGuide }) {
         <ol className="flex flex-col gap-3 lg:col-span-2">
           {steps.map((st, i) => (
             <li key={i} className="flex gap-3">
-              <span className={cn("mt-2 flex size-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold", st.done ? "bg-primary text-primary-foreground" : st.current ? "bg-blue-500 text-white" : "border bg-card text-muted-foreground")}>{st.done ? <CheckCircle2 className="size-3.5" /> : st.current ? "A" : <ClipboardCheck className="size-3" />}</span>
-              <div className={cn("flex-1 rounded-lg p-3", st.current ? "bg-blue-50 dark:bg-blue-950/30" : "bg-muted/50")}>
-                <div className="flex flex-wrap items-center justify-between gap-2"><p className={cn("text-sm font-bold", st.current && "text-blue-700 dark:text-blue-300")}>{st.title}</p><span className={cn("text-xs", st.current ? "font-semibold text-blue-700 dark:text-blue-300" : "text-muted-foreground")}>{st.at}</span></div>
+              <span className={cn("mt-2 flex size-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold", st.done ? "bg-primary text-primary-foreground" : st.current ? "bg-info text-white" : "border bg-card text-muted-foreground")}>{st.done ? <CheckCircle2 className="size-3.5" /> : st.current ? "A" : <ClipboardCheck className="size-3" />}</span>
+              <div className={cn("flex-1 rounded-lg p-3", st.current ? "bg-info" : "bg-muted/50")}>
+                <div className="flex flex-wrap items-center justify-between gap-2"><p className={cn("text-sm font-bold", st.current && "text-info-foreground ")}>{st.title}</p><span className={cn("text-xs", st.current ? "font-semibold text-info-foreground " : "text-muted-foreground")}>{st.at}</span></div>
                 <p className="mt-0.5 text-xs text-muted-foreground">{st.text}</p>
               </div>
             </li>

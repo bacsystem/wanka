@@ -175,7 +175,7 @@ function PaymentForm({ r, onClose }: { r: Receivable; onClose: () => void }) {
           <Field label="Monto a amortizar (S/)"><Input value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" className="font-mono" /></Field>
           <Field label="Fecha de pago"><Input type="date" defaultValue="2026-09-12" /></Field>
           {r.detraction ? (
-            <div className="rounded-md border bg-muted/40 p-3 text-sm sm:col-span-2">
+            <div className="rounded-xl bg-secondary p-3 text-sm sm:col-span-2">
               <p className="font-medium">Detracción {r.detraction.rate}% · {formatCurrency(r.detraction.amount)} (Cta. BN)</p>
               <p className="text-xs text-muted-foreground">{r.detraction.deposited ? "Constancia de depósito registrada." : "Aún sin constancia: el cliente debe depositar en el Banco de la Nación."}</p>
             </div>

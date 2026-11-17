@@ -148,7 +148,7 @@ export function DocumentsList({ documents }: { documents: SalesDocument[] }) {
       </FilterBar>
 
       {selected.size > 0 ? (
-        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-sm dark:border-blue-900 dark:bg-blue-950/40">
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-transparent bg-info px-3 py-2 text-sm">
           <Checkbox checked aria-label="Selección activa" onCheckedChange={() => setSelected(new Set())} />
           <span className="font-semibold">{selected.size} comprobante{selected.size === 1 ? "" : "s"} seleccionado{selected.size === 1 ? "" : "s"}</span>
           <span className="text-xs text-muted-foreground">({formatCurrency(selectedTotal)} total selec.)</span>
@@ -202,7 +202,7 @@ function RowActions({ doc }: { doc: SalesDocument }) {
   return (
     <div className="flex items-center justify-end gap-0.5 text-muted-foreground">
       {doc.sunatStatus === "pendiente" ? (
-        <Button size="xs" variant="secondary" className="bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-950/60 dark:text-blue-300" aria-label="Reintentar envío" onClick={() => toast.success(`${doc.id} reenviado a SUNAT`)}><RefreshCw data-icon="inline-start" /> Reintentar</Button>
+        <Button size="xs" variant="secondary" className="bg-info text-info-foreground hover:bg-info " aria-label="Reintentar envío" onClick={() => toast.success(`${doc.id} reenviado a SUNAT`)}><RefreshCw data-icon="inline-start" /> Reintentar</Button>
       ) : doc.sunatStatus === "rechazado" ? (
         <Button size="xs" variant="destructive" aria-label="Corregir" render={<Link href={`/ventas/comprobantes/${doc.id}`} />} nativeButton={false}>Corregir</Button>
       ) : null}

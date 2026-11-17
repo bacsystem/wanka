@@ -3,6 +3,7 @@
 import { ArrowRight, Fingerprint, KeyRound, Layers, Lock, ShieldAlert, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { DEMO_ADMIN_USER } from "@/config/demo-session";
 import * as React from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -17,20 +18,20 @@ export function AdminLoginScreen() {
   const [code, setCode] = React.useState("");
   return (
     <div className="theme-admin grid min-h-svh bg-background text-foreground lg:grid-cols-2">
-      <aside className="relative hidden flex-col justify-between overflow-hidden bg-brand-panel p-10 text-white lg:flex">
-        <div className="pointer-events-none absolute -top-24 -right-24 size-96 rounded-full bg-indigo-500/30 blur-3xl" />
+      <aside className="relative hidden flex-col justify-between overflow-hidden border-borde-tarjeta bg-card text-foreground shadow-tarjeta rounded-xl border p-10 lg:flex">
+        <div className="pointer-events-none absolute -top-24 -right-24 size-96 rounded-full bg-acento/40 blur-3xl" />
         <div>
-          <div className="flex items-center gap-3"><span className="flex size-11 items-center justify-center rounded-xl bg-indigo-500"><Layers className="size-5" /></span><div><p className="flex items-center gap-2 text-xl font-bold">Wanka <span className="rounded bg-white/15 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide">ADMIN</span></p><p className="text-xs text-white/70">Consola de administración de la plataforma</p></div></div>
+          <div className="flex items-center gap-3"><span className="flex size-11 items-center justify-center rounded-xl bg-acento text-acento-texto"><Layers className="size-5" /></span><div><p className="flex items-center gap-2 text-xl font-bold">Wanka <span className="rounded bg-acento-suave text-acento-texto px-1.5 py-0.5 text-[10px] font-semibold tracking-wide">ADMIN</span></p><p className="text-xs text-muted-foreground">Consola de administración de la plataforma</p></div></div>
           <h1 className="mt-12 max-w-md text-3xl font-bold tracking-tight">Operación central de 1,482 empresas, 4 conectores OSE y facturación del SaaS.</h1>
-          <p className="mt-3 max-w-md text-sm text-white/70">Acceso exclusivo para personal interno con rol asignado. Cada sesión queda registrada con IP, dispositivo y auditoría SIEM.</p>
-          <ul className="mt-8 flex flex-col gap-3 text-sm">{[["SSO Google Workspace", "Dominio @perusaas.pe verificado", ShieldCheck], ["2FA obligatorio", "TOTP o llave FIDO2 en cada inicio", KeyRound], ["Impersonación auditada", "Sesiones de soporte con expiración de 30 min", Fingerprint]].map(([t, d, I]) => { const Icon = I as typeof ShieldCheck; return <li key={String(t)} className="flex items-start gap-3 rounded-xl bg-white/10 p-3"><span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-white/15"><Icon className="size-4" /></span><span><span className="block font-semibold">{String(t)}</span><span className="text-xs text-white/70">{String(d)}</span></span></li>; })}</ul>
+          <p className="mt-3 max-w-md text-sm text-muted-foreground">Acceso exclusivo para personal interno con rol asignado. Cada sesión queda registrada con IP, dispositivo y auditoría SIEM.</p>
+          <ul className="mt-8 flex flex-col gap-3 text-sm">{[["SSO Google Workspace", "Dominio @perusaas.pe verificado", ShieldCheck], ["2FA obligatorio", "TOTP o llave FIDO2 en cada inicio", KeyRound], ["Impersonación auditada", "Sesiones de soporte con expiración de 30 min", Fingerprint]].map(([t, d, I]) => { const Icon = I as typeof ShieldCheck; return <li key={String(t)} className="flex items-start gap-3 rounded-xl bg-secondary text-foreground p-3"><span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-acento-suave text-acento-texto"><Icon className="size-4" /></span><span><span className="block font-semibold">{String(t)}</span><span className="text-xs text-muted-foreground">{String(d)}</span></span></li>; })}</ul>
         </div>
-        <p className="text-[11px] text-white/50">Cluster prod-lima-01 · SLA 99.98% · ISO/IEC 27001 · Lima, Perú</p>
+        <p className="text-[11px] text-muted-foreground">Cluster {DEMO_ADMIN_USER.cluster} · SLA 99.98% · ISO/IEC 27001 · Lima, Perú</p>
       </aside>
       <main className="relative flex flex-col items-center justify-center p-6">
         <div className="absolute top-4 right-4"><ThemeToggle /></div>
-        <div className="w-full max-w-md rounded-2xl border bg-card p-8 shadow-sm">
-          <div className="mb-6 flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200"><ShieldAlert className="size-4 shrink-0" /> Acceso restringido. Los intentos no autorizados se registran con IP <span className="font-mono">190.237.44.12</span> y se reportan al equipo de seguridad.</div>
+        <div className="w-full max-w-md rounded-xl border border-borde-tarjeta bg-card p-8 shadow-tarjeta">
+          <div className="mb-6 flex items-center gap-3 rounded-lg border bg-warning p-3 text-etiqueta text-warning-foreground"><ShieldAlert className="size-4 shrink-0" /> Acceso restringido. Los intentos no autorizados se registran con IP <span className="font-mono">{DEMO_ADMIN_USER.auditIp}</span> y se reportan al equipo de seguridad.</div>
           {step === "sso" ? (
             <>
               <h2 className="text-2xl font-bold tracking-tight">Ingreso a la consola</h2>

@@ -56,9 +56,9 @@ export function CustomersScreen({ customers, kpis }: { customers: Customer[]; kp
         </div>
       ),
     },
-    { key: "doc", header: "Documento identidad", cell: (c) => <span className="flex items-center gap-2"><Badge variant="outline" className="rounded bg-muted font-semibold">{c.documentType}</Badge><span className="font-mono text-sm font-medium tabular-nums">{c.documentNumber}</span></span> },
+    { key: "doc", header: "Documento identidad", cell: (c) => <span className="flex items-center gap-2"><Badge variant="outline" className="rounded-full bg-secondary font-semibold">{c.documentType}</Badge><span className="font-mono text-sm font-medium tabular-nums">{c.documentNumber}</span></span> },
     { key: "contact", header: "Contacto / canal", cell: (c) => <TwoLine primary={<span className="flex items-center gap-1">{c.phone ?? "—"}{c.phone ? <MessageCircle className="size-3 text-primary" /> : null}</span>} secondary={c.email} /> },
-    { key: "segment", header: "Segmentación", cell: (c) => <StatusBadge tone={c.segment?.includes("Convenio") ? "info" : c.segment?.includes("frecuente") ? "success" : "neutral"} label={c.segment ?? "—"} className="rounded-md" /> },
+    { key: "segment", header: "Segmentación", cell: (c) => <StatusBadge tone={c.segment?.includes("Convenio") ? "info" : c.segment?.includes("frecuente") ? "success" : "neutral"} label={c.segment ?? "—"} className="rounded-full" /> },
     { key: "last", header: "Última operación", cell: (c) => <span className="font-mono tabular-nums">{c.lastOperation ? formatDate(c.lastOperation) : "—"}</span> },
     { key: "billed", header: "Facturado (S/)", align: "right", cell: (c) => <span className="font-mono font-medium tabular-nums">{formatCurrency(c.billedTotal)}</span> },
     { key: "fiscal", header: "Estado", cell: (c) => <StatusBadge tone={fiscal[c.fiscalStatus].tone} dot label={fiscal[c.fiscalStatus].label} /> },

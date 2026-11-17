@@ -40,7 +40,7 @@ export function ManagementReports() {
   ];
   return (
     <>
-      <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-card p-3">
+      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-borde-tarjeta bg-card shadow-tarjeta p-3">
         <ToggleGroup value={[range]} onValueChange={(v) => v[0] && setRange(v[0])} variant="outline" size="sm" className="flex-wrap">{ranges.map((r) => <ToggleGroupItem key={r} value={r}>{r}</ToggleGroupItem>)}</ToggleGroup>
         <Badge variant="outline" className="font-mono">01/09/2026 – 18/09/2026</Badge>
         <Select defaultValue="all" items={[{ value: "all", label: "Sede: todas" }, { value: "mira", label: "Sede Miraflores" }, { value: "si", label: "Sede San Isidro" }]}><SelectTrigger className="w-44" aria-label="Sede"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Sede: todas</SelectItem><SelectItem value="mira">Sede Miraflores</SelectItem><SelectItem value="si">Sede San Isidro</SelectItem></SelectContent></Select>

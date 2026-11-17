@@ -42,7 +42,7 @@ export function AuditGlobalScreen() {
           {rows.map((e) => { const m = typeMeta[e.type]; return (
             <li key={e.id} className="flex gap-4 px-4 py-3">
               <div className="w-28 shrink-0 font-mono text-xs text-muted-foreground">{formatDate(e.at)}<br />{e.at.slice(11, 19)}</div>
-              <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-lg", e.risk === "alto" ? "bg-rose-50 text-rose-600 dark:bg-rose-950/60" : e.risk === "medio" ? "bg-amber-50 text-amber-600 dark:bg-amber-950/60" : "bg-accent text-accent-foreground")}><m.icon className="size-4" /></span>
+              <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-lg", e.risk === "alto" ? "bg-destructive-suave text-destructive-texto" : e.risk === "medio" ? "bg-warning text-warning-foreground" : "bg-accent text-accent-foreground")}><m.icon className="size-4" /></span>
               <div className="min-w-0 flex-1 text-sm"><p className="flex flex-wrap items-center gap-2 font-semibold">{m.label}<StatusBadge tone={riskTone[e.risk]} label={`Riesgo ${e.risk}`} />{e.tenant ? <span className="rounded bg-muted px-1.5 py-0.5 text-[11px] font-medium">{e.tenant}</span> : null}</p><p className="text-xs text-muted-foreground">{e.detail}</p><p className="mt-0.5 flex items-center gap-2 text-[11px] text-muted-foreground"><StateIcon state={e.risk === "alto" ? "error" : "ok"} className="size-3" /> {e.actor} · IP <span className="font-mono">{e.ip}</span></p></div>
             </li>
           ); })}

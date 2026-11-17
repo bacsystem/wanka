@@ -11,6 +11,7 @@ import { BottomNav } from "@/components/layout/bottom-nav";
 import { SidebarBrand, SidebarContextCard, SidebarSections, SidebarUserFooter, StatusPill } from "@/components/layout/shell-parts";
 import { SidebarAutoCollapse } from "@/components/layout/sidebar-auto-collapse";
 import { Topbar } from "@/components/layout/topbar";
+import { DEMO_ADMIN_USER } from "@/config/demo-session";
 import { ConnectionIcon } from "@/components/shared/dynamic-icon";
 import { adminNavigation, adminSectionLabel, isAdminActive } from "@/config/admin-navigation";
 import { AdminSidebarUser, AdminUserMenu } from "./admin-user-menu";
@@ -28,20 +29,20 @@ export function AdminShell({ children, defaultOpen = true, hasStoredState = fals
         <SidebarAutoCollapse hasStoredState={hasStoredState} />
         <Sidebar collapsible="icon">
           <SidebarBrand name="Wanka" tagline="Consola de plataforma" badge="ADMIN" href="/admin" />
-          <SidebarContextCard icon={Server} title="Cluster prod-lima-01" chip={<><span className="size-1.5 rounded-full bg-emerald-500" /> Producción · SLA 99.98%</>} trailing={<Tag tone="success" label="PE-Lima" />} />
+          <SidebarContextCard icon={Server} title={`Cluster ${DEMO_ADMIN_USER.cluster}`} chip={<><span className="size-1.5 rounded-full bg-success-solid" /> {DEMO_ADMIN_USER.sla}</>} trailing={<Tag tone="success" label={DEMO_ADMIN_USER.region} />} />
           <SidebarContent className="py-2">
             <SidebarSections sections={sections} isActive={isAdminActive} />
           </SidebarContent>
           <SidebarFooter className="border-t border-sidebar-border p-3 group-data-[collapsible=icon]:p-2">
-            <SidebarUserFooter initials="CB" name="Carlos M. Benavides" role="SRE / SuperAdmin N3" settingsHref="/admin/configuracion" menu={<AdminSidebarUser />} />
+            <SidebarUserFooter initials={DEMO_ADMIN_USER.initials} name={DEMO_ADMIN_USER.name} role={DEMO_ADMIN_USER.role} settingsHref="/admin/configuracion" menu={<AdminSidebarUser />} />
           </SidebarFooter>
           <SidebarRail />
         </Sidebar>
         <SidebarInset className="min-w-0 pb-28 md:pb-0">
           <Topbar
-            context={<><span className="flex h-8 shrink-0 items-center gap-1.5 rounded-lg px-2 text-xs font-semibold"><Server className="size-3.5 shrink-0 text-muted-foreground" /><span>prod-lima-01</span><span className="hidden rounded border bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground sm:inline">Producción</span></span><StatusPill tone="ok" icon={<ConnectionIcon online className="size-3.5" />} label="OSE / SUNAT en línea" detail="385 ms" /></>}
-            search={<><button type="button" onClick={() => toast.info("Búsqueda global de la consola")} className="relative hidden h-10 w-64 items-center rounded-lg border border-input bg-muted/50 pl-9 text-left text-xs text-muted-foreground transition-colors hover:bg-card xl:flex" aria-label="Buscar tenant, RUC o ticket (Ctrl+K)"><Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" /><span className="truncate">Buscar por RUC, razón social o ticket…</span><kbd className="pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] font-semibold">⌘K</kbd></button><Button variant="ghost" size="icon" aria-label="Buscar" className="xl:hidden" onClick={() => toast.info("Búsqueda global de la consola")}><Search /></Button></>}
-            notifications={<Button variant="ghost" size="icon" aria-label="Notificaciones (1 sin leer)" className="relative" onClick={() => toast.info("3 incidentes abiertos · 1 certificado vencido")}><Bell /><span className="absolute top-1.5 right-1.5 size-2 rounded-full bg-rose-500 ring-2 ring-background" /></Button>}
+            context={<><span className="flex h-8 shrink-0 items-center gap-1.5 rounded-lg px-2 text-xs font-semibold"><Server className="size-3.5 shrink-0 text-muted-foreground" /><span>{DEMO_ADMIN_USER.cluster}</span><span className="hidden rounded border bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground sm:inline">Producción</span></span><StatusPill tone="ok" icon={<ConnectionIcon online className="size-3.5" />} label="OSE / SUNAT en línea" detail="385 ms" /></>}
+            search={<><button type="button" onClick={() => toast.info("Búsqueda global de la consola")} className="relative hidden h-control w-64 items-center rounded-full border border-input bg-muted/50 pl-9 text-left text-xs text-muted-foreground transition-colors hover:bg-card xl:flex" aria-label="Buscar tenant, RUC o ticket (Ctrl+K)"><Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" /><span className="truncate">Buscar por RUC, razón social o ticket…</span><kbd className="pointer-events-none absolute top-1/2 right-2 -translate-y-1/2 rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] font-semibold">⌘K</kbd></button><Button variant="ghost" size="icon" aria-label="Buscar" className="xl:hidden" onClick={() => toast.info("Búsqueda global de la consola")}><Search /></Button></>}
+            notifications={<Button variant="ghost" size="icon" aria-label="Notificaciones (1 sin leer)" className="relative" onClick={() => toast.info("3 incidentes abiertos · 1 certificado vencido")}><Bell /><span className="absolute top-1.5 right-1.5 size-2 rounded-full bg-destructive ring-2 ring-background" /></Button>}
             userMenu={<AdminUserMenu />}
             action={<><Button variant="outline" className="hidden font-semibold 2xl:inline-flex" render={<Link href="/" />} nativeButton={false}><Building data-icon="inline-start" /> App de empresa <ExternalLink data-icon="inline-end" className="size-3" /></Button><Button variant="outline" size="icon" aria-label="Ir a la app de empresa" className="hidden md:inline-flex 2xl:hidden" render={<Link href="/" />} nativeButton={false}><Building /></Button><Button className="hidden text-xs font-semibold shadow-sm md:inline-flex" render={<Link href="/admin/empresas" />} nativeButton={false}><Plus data-icon="inline-start" /> Alta de empresa</Button></>}
           />

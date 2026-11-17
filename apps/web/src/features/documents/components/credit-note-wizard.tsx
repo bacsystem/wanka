@@ -98,7 +98,7 @@ export function CreditNoteWizard({ doc }: { doc: SalesDocumentDetail }) {
               <p className="flex items-center gap-1.5 text-xs text-muted-foreground"><ShieldCheck className="size-3.5 text-success" /> El XML se firmará con el certificado de la empresa y se transmitirá al OSE Digiflow (99.98% operativo).</p>
             </SectionCard>
           )}
-          <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-card p-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-borde-tarjeta bg-card shadow-tarjeta p-3">
             <Button variant="ghost" onClick={() => (step === 0 ? router.push(`/ventas/comprobantes/${doc.id}`) : setStep(step - 1))}>{step === 0 ? "Cancelar operación" : <><ArrowLeft data-icon="inline-start" /> Anterior</>}</Button>
             <div className="flex gap-2"><Button variant="outline" onClick={() => toast.info("Borrador guardado")}><Save data-icon="inline-start" /> Guardar borrador</Button><Button onClick={next}>{step < 2 ? <>Siguiente <ArrowRight data-icon="inline-end" /></> : <><Send data-icon="inline-start" /> Emitir y transmitir a SUNAT ({ncNumber})</>}</Button></div>
           </div>
