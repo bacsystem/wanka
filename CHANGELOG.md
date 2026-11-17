@@ -6,6 +6,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 ## [Unreleased]
 
 ### Changed
+- `khipu-design-system` bumped from `v0.6.0` to `v0.8.0` (tables with mobile cards, shell rail, `BarraInferior`; a runtime no-op for Wanka, which does not use `TablaListado` or `Shell` from the package yet: `tokens.css` and `shadcn.css` are unchanged, `theme.css` only adds the `rail:` variant and the `--khipu-reserva-inferior` rules). `docs/frontend-migration-khipu.md` records the DS-0/A/B status, W1a, W1c and the new DS-H.
 - `khipu-design-system` bumped from `v0.5.23` to `v0.6.0` (Next 16 peer support; `lucide-react` is no longer a peer of the package, Wanka keeps its own dependency until #123).
 
 ### Removed

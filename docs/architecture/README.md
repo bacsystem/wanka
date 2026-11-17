@@ -10,7 +10,7 @@ Decisiones fijadas por el usuario, que este diseño no reabre:
 - Autenticación propia.
 - Todos los módulos del producto, con prioridad para los rubros **lubricentro** y **librería**.
 
-> **Khipu y khipu-design-system.** *Khipu* es la **API del proveedor de facturación electrónica** (ADR 0003). *khipu-design-system* es el **sistema de diseño** que adopta el frontend de Wanka (PR #2, fijado en `github:bacsystem/khipu-design-system#v0.6.0`). Son la misma familia de productos: el portal web de Khipu (`bacsystem/khipu`, `portal/`) está construido sobre ese mismo paquete. En estos documentos, "Khipu" a secas es la API de facturación, y "khipu-design-system" es el paquete de UI.
+> **Khipu y khipu-design-system.** *Khipu* es la **API del proveedor de facturación electrónica** (ADR 0003). *khipu-design-system* es el **sistema de diseño** que adopta el frontend de Wanka (PR #2, fijado en `github:bacsystem/khipu-design-system#v0.8.0`). Son la misma familia de productos: el portal web de Khipu (`bacsystem/khipu`, `portal/`) está construido sobre ese mismo paquete. En estos documentos, "Khipu" a secas es la API de facturación, y "khipu-design-system" es el paquete de UI.
 
 Los diagramas son archivos Mermaid (`.mmd`). GitHub los renderiza al abrirlos y también se pueden previsualizar con la extensión de Mermaid. Todos se validaron con `@mermaid-js/mermaid-cli`; ver [Validación](#validación).
 
