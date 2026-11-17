@@ -95,6 +95,7 @@ export function SecurityScreen({ collaborators, roles, matrix, kpis }: Props & {
         }
       />
       {kpis}
+      {/* TODO(DS): khipu-design-system#64 (Tabs: modo solo tira + regla de svg) — quitar size-4 al subir a 0.9.0 */}
       <Tabs
         estilo="linea"
         defaultValor="users"

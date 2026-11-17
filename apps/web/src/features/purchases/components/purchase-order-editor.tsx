@@ -92,13 +92,13 @@ export function PurchaseOrderEditor({ suppliers }: { suppliers: Supplier[] }) {
 
           <SectionCard title={<span className="flex items-center gap-2">Ítems requeridos en orden de compra <StatusBadge tone="info" label={`${lines.length} insumos`} className="rounded-md" /></span>} icon={ListOrdered} action={<span className="text-xs text-muted-foreground">Costos sin IGV</span>} contentClassName="p-0">
             <div className="hidden overflow-x-auto md:block">
-              <Table className="min-w-[700px]">
+              <Table>
                 <TableHeader><TableRow><TableHead className="pl-4">SKU</TableHead><TableHead>Descripción</TableHead><TableHead className="text-right">Cant.</TableHead><TableHead>U.M.</TableHead><TableHead className="text-right">Costo unit.</TableHead><TableHead className="text-right">Desc.</TableHead><TableHead>IGV</TableHead><TableHead className="text-right">Total</TableHead><TableHead className="pr-4 text-right"><span className="sr-only">Acciones</span></TableHead></TableRow></TableHeader>
                 <TableBody>
                   {lines.map((l) => { const ed = editing === l.id; return (
                     <TableRow key={l.id}>
                       <TableCell className="pl-4 font-mono text-xs">{l.sku}</TableCell>
-                      <TableCell className="max-w-72 truncate font-medium">{l.name}</TableCell>
+                      <TableCell className="min-w-0 font-medium whitespace-normal">{l.name}</TableCell>
                       <TableCell className="text-right">{ed ? <NumberInput size="sm" value={l.qty} onValueChange={(n) => update(l.id, { qty: n })} className="ml-auto w-16 text-right font-mono" aria-label={`Cantidad ${l.sku}`} /> : <span className="font-mono">{l.qty}</span>}</TableCell>
                       <TableCell>{l.unit}</TableCell>
                       <TableCell className="text-right">{ed ? <NumberInput size="sm" value={l.cost} onValueChange={(n) => update(l.id, { cost: n })} className="ml-auto w-24 text-right font-mono" aria-label={`Costo ${l.sku}`} /> : <span className="font-mono">{l.cost.toFixed(2)}</span>}</TableCell>

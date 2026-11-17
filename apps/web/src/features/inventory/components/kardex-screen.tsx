@@ -78,8 +78,9 @@ export function KardexScreen({ item, rows }: { item: typeof KardexItemType; rows
           <Select defaultValue="0000" items={warehouses}><SelectTrigger className="w-60" aria-label="Establecimiento"><SelectValue /></SelectTrigger><SelectContent>{warehouses.map((w) => <SelectItem key={w.value} value={w.value}>{w.label}</SelectItem>)}</SelectContent></Select>
           <Select defaultValue="2026-09" items={periods}><SelectTrigger className="w-56" aria-label="Período"><SelectValue /></SelectTrigger><SelectContent>{periods.map((p) => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}</SelectContent></Select>
         </div>
+        <p className="px-4 pt-3 text-xs text-muted-foreground">Registro ancho: desplaza horizontalmente para ver todas las columnas.</p>
         <div className="overflow-x-auto">
-          <Table className="min-w-[1180px]">
+          <Table>
             <TableHeader className="bg-muted/40">
               <TableRow className="[&>th]:h-8 [&>th]:text-center [&>th]:text-[11px] [&>th]:font-semibold [&>th]:uppercase">
                 <TableHead colSpan={5} className="border-r pl-4! text-left!">1. Documento de traslado, venta o uso interno (tablas 10 y 12)</TableHead>

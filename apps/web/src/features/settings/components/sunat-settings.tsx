@@ -35,6 +35,7 @@ export function SunatSettings({ config }: { config: Config }) {
       className="min-w-0 max-w-full"
       onCambio={(v) => { if (v === "usuarios") router.push("/configuracion/usuarios"); }}
       items={[
+        // TODO(DS): khipu-design-system#64 (Tabs: modo solo tira + regla de svg) — quitar size-4 al subir a 0.9.0
         { id: "empresa", etiqueta: <><Building2 className="size-4" /> Datos de empresa y sedes</> },
         { id: "certificado", etiqueta: <><FileBadge2 className="size-4" /> Certificado digital y SOL SUNAT <span className="size-1.5 rounded-full bg-primary" /></> },
         { id: "series", etiqueta: <><ListOrdered className="size-4" /> Series y correlativos</> },

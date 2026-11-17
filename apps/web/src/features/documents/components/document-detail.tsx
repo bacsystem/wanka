@@ -106,7 +106,7 @@ export function DocumentDetail({ doc }: { doc: SalesDocumentDetail }) {
             </dl>
 
             <div className="overflow-x-auto">
-              <Table className="min-w-[720px]">
+              <Table>
                 <TableHeader className="bg-muted/50">
                   <TableRow>
                     <TableHead className="pl-5">Código</TableHead>
@@ -124,7 +124,7 @@ export function DocumentDetail({ doc }: { doc: SalesDocumentDetail }) {
                       <TableCell className="pl-5 font-mono text-xs tabular-nums">{l.code}</TableCell>
                       <TableCell className="text-right font-mono tabular-nums">{l.quantity}</TableCell>
                       <TableCell>{l.unit}</TableCell>
-                      <TableCell>
+                      <TableCell className="min-w-0 whitespace-normal">
                         <p className="font-medium">{l.description}</p>
                         {l.detail ? <p className="text-xs text-muted-foreground">{l.detail}</p> : null}
                       </TableCell>
