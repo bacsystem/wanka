@@ -118,6 +118,12 @@ Modelo y reglas en [`data/data-model.md`](data/data-model.md): `tenant_id` y RLS
 | [0008](adr/0008-money-and-numbering.md) | Dinero `numeric` y correlativos sin huecos | propuesto |
 | [0009](adr/0009-api-contract-openapi.md) | Contrato spec-first OpenAPI 3.1 | propuesto |
 
+**Proceso de los ADR, desde que este PR se mergea:**
+- Un ADR nuevo toma el siguiente número libre (`adr/NNNN-titulo-en-kebab.md`), con contexto, opciones, decisión, consecuencias (también las malas), estado y fecha. Se agrega a esta tabla en el mismo PR.
+- Un ADR en estado *aceptado* no se reescribe. Mientras está *propuesto*, se corrige en su PR de revisión.
+- Para revertirlo o reemplazarlo se escribe un ADR nuevo que lo cita, y el anterior pasa a *reemplazado por NNNN*. Lo único que se le edita al anterior es la línea de estado.
+- Las correcciones que no cambian la decisión (erratas, enlaces, números de línea) se pueden hacer en el mismo ADR.
+
 Las dependencias nuevas que proponen los ADR (River, sqlc, goose, oapi-codegen, shopspring/decimal, pquerna/otp, OpenTelemetry y el SDK de S3) **requieren aprobación del usuario** antes de agregarse.
 
 ## 10. Supuestos y preguntas abiertas

@@ -52,7 +52,7 @@ openapi/                   # contrato (ADR 0009)
 | S3 | `aws-sdk-go-v2/service/s3` (sirve para cualquier S3 compatible) | minio-go |
 | Validación | generada desde OpenAPI + reglas de dominio en Go | validator con tags |
 
-Versiones: Go estable vigente (1.25 o superior al iniciar), PostgreSQL 17.
+Versiones: Go estable vigente (1.25 o superior al iniciar) y **PostgreSQL 16**, la versión con que se verifica `data/rls-check/`. Pasar a otra versión mayor exige volver a correr esa verificación (exit 0) y registrar el cambio en un ADR nuevo.
 
 ## Consecuencias
 
