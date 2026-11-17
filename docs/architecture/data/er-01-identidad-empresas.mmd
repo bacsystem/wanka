@@ -95,7 +95,10 @@ erDiagram
     timestamptz rotated_at
     timestamptz refresh_expires_at
     boolean mfa_satisfied "true si paso la 2FA o si ningun rol la requeria al iniciar sesion"
-    text mfa_method "totp, recovery_code, none, platform (sesion impersonada: 2FA cumplida en el plano plataforma)"
+    text mfa_method "totp, recovery_code, none, platform; CHECK (mfa_method = platform) = (impersonator_id IS NOT NULL)"
+    uuid impersonator_id "staff que impersona; null en sesiones normales"
+    uuid membership_id "membresia elegida; null antes de elegir empresa"
+    bigint authz_version "copia de memberships.authz_version al resolver el rol; se compara en cada peticion"
     inet ip
     text user_agent
     timestamptz revoked_at

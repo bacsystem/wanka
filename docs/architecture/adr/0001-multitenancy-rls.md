@@ -39,9 +39,18 @@ CREATE POLICY tenant_isolation ON x
 
 - Hay un pool `pgxpool` por proceso. Todo acceso a datos de tenant pasa por un único helper:
   ```go
-  func (db *DB) InTenantTx(ctx context.Context, tenantID, userID uuid.UUID, fn func(pgx.Tx) error) error
-  // BEGIN; SELECT set_config('app.tenant_id', $1, true), set_config('app.user_id', $2, true); fn(tx); COMMIT
+  type Actor struct {
+      TenantID, UserID uuid.UUID
+      Kind             SessionKind // user | impersonated | system (jobs)
+      ImpersonatorID   *uuid.UUID  // solo si Kind == impersonated
+  }
+  func (db *DB) InTenantTx(ctx context.Context, a Actor, fn func(pgx.Tx) error) error
+  // BEGIN;
+  // SELECT set_config('app.tenant_id', $1, true), set_config('app.user_id', $2, true),
+  //        set_config('app.session_kind', $3, true), set_config('app.impersonator_id', coalesce($4, ''), true);
+  // fn(tx); COMMIT
   ```
+  `InTenantTx` **siempre** fija `app.session_kind`, y no compila sin un `Actor` con `Kind`: no hay un camino que deje la variable vacía. Las funciones `SECURITY DEFINER` que dependen del tipo de sesión **fallan cerradas**: si `app.session_kind` está vacío o no es el esperado, rechazan.
   `set_config(..., true)` equivale a `SET LOCAL`: el valor vale hasta el fin de la transacción. No queda estado entre peticiones, así que es compatible con pooling por transacción (PgBouncer en modo `transaction`, si se agrega).
 - El `tenant_id` sale de la sesión autenticada (ADR 0004). Nunca se toma del cuerpo, de la URL ni de una cabecera.
 - Las lecturas también van en transacción (`BEGIN READ ONLY`).
@@ -101,7 +110,7 @@ La revisión los reprodujo en PG16 (cero filas o `new row violates row-level sec
 2. **Webhook de Khipu** (`/webhooks/khipu/{routeId}`).
    - La ruta se resuelve con `ops.webhook_routes`, una tabla **sin RLS** con `route_id` (128 bits aleatorios), `tenant_id`, `provider`, `revoked_at` y `webhook_secret_enc` (el `whsec_` cifrado con **`WEBHOOK_SECRET_ENC_KEY`**, una clave distinta de `INTEGRATIONS_ENC_KEY`).
    - El servicio `webhooks` solo puede llamar a `ops.resolve_webhook_route(route_id)` (`SECURITY DEFINER`). La función devuelve `(tenant_id, webhook_secret_enc)` de **esa** ruta, o nada.
-   - Con eso verifica el HMAC, abre `InTenantTx(tenant)` e inserta el evento.
+   - Con eso verifica el HMAC, abre `InTenantTx(Actor{TenantID: tenant, Kind: system})` e inserta el evento.
    - **Ya no tiene acceso a `integ.provider_credentials`** ni recibe `INTEGRATIONS_ENC_KEY`: aunque se comprometa el único servicio Go expuesto, no se pueden descifrar las API keys `fk_` de nadie. Prueba: con el rol `wanka_webhooks`, `SELECT api_key_enc FROM integ.provider_credentials` debe fallar con `permission denied`.
    - Riesgo residual acotado: el rol puede fijar cualquier `app.tenant_id` e insertar un evento falso en `einv.provider_webhook_events`. Es inocuo, porque `cpe.sync` nunca confía en el contenido del evento: vuelve a consultar el estado en Khipu con la llave del tenant.
    - Conocer un `route_id` no da acceso a datos; solo permite intentar una firma que fallará sin el secreto.
@@ -141,13 +150,18 @@ La revisión los reprodujo en PG16 (cero filas o `new row violates row-level sec
      No recibe argumentos: el tenant sale de `app.current_tenant()`, que solo fija `InTenantTx`. Sin tenant fijado devuelve 0 filas. No devuelve el `exchange_token_hash` ni los datos del staff, salvo el ticket. `iam.decide_impersonation` aplica la misma condición.
    - **Una sesión impersonada no puede autorizar accesos de soporte ni gestionar identidad.** La sesión creada por `iam.redeem_impersonation` lleva `impersonator_id`.
      - **Permisos:** los del alcance del grant, nunca los de un rol del tenant. `read_only` tiene solo las acciones `read`. `full` tiene todas las acciones del catálogo **menos** `identidad.support_access:*`, `identidad.users:*`, `identidad.roles:*`, `identidad.sessions:*` y `empresas.einvoicing:update` (credenciales de Khipu).
-     - **Doble barrera:** el middleware arma el conjunto de permisos con esa lista de exclusión, y `iam.decide_impersonation` rechaza la llamada si la sesión actual tiene `impersonator_id` (la API le pasa `app.impersonator_id` con `set_config`, y la función lo verifica).
+     - **Doble barrera, que falla cerrada:**
+       1. El middleware arma el conjunto de permisos con esa lista de exclusión.
+       2. `iam.decide_impersonation` solo actúa si `NULLIF(current_setting('app.session_kind', true), '') = 'user'` **y** `app.impersonator_id` está vacío. Si `app.session_kind` no está fijado, vale `impersonated` o vale `system`, lanza `insufficient_privilege`: **ausencia de la variable = rechazo**, no aprobación. La revisión reprodujo el caso inverso (sin la variable, la versión anterior aprobaba).
+     - En la base: `iam.sessions` tiene `CHECK ((mfa_method = 'platform') = (impersonator_id IS NOT NULL))`. Una sesión con 2FA de plataforma es siempre impersonada, y viceversa, así que no puede existir una sesión de staff "normal" en el plano tenant.
      - Así, el staff no puede aprobar su propia solicitud ni otra.
    - Pruebas:
      - canjear un grant `solicitado` o vencido debe fallar;
      - con dos tenants, `iam.list_support_requests()` con `app.tenant_id = A` devuelve solo las solicitudes de A, y 0 filas sin tenant;
      - con el rol `wanka_app`, `SELECT FROM platform.impersonation_grants` da `permission denied`;
-     - canjear un grant `full` e intentar aprobar otra solicitud o crear un usuario responde `403 forbidden`.
+     - canjear un grant `full` e intentar aprobar otra solicitud o crear un usuario responde `403 forbidden`;
+     - llamar a `iam.decide_impersonation` en una transacción **sin** `app.session_kind`, o con `impersonated` o `system`, falla con `insufficient_privilege`; solo aprueba con `user`;
+     - insertar una sesión con `mfa_method = 'platform'` y sin `impersonator_id` viola el `CHECK`.
    - **Pregunta abierta al PO (no decidida):** si se admite una excepción para incidentes P1 sin consentimiento previo (por ejemplo con doble firma de staff y aviso inmediato a la empresa). Mientras no se decida, no hay excepción.
 7. **Purga de empresas cerradas** (5 años): la hace `platform_fn.purge_closed_tenant(tenant_id)`, que el worker ejecuta por lotes y con auditoría en plataforma.
 
@@ -155,7 +169,7 @@ Cada función `SECURITY DEFINER` tiene su prueba de integración, que también v
 
 ### Workers
 
-La tabla de jobs no es de tenant (no tiene RLS). Cada job lleva `tenant_id` en sus argumentos, y el handler abre `InTenantTx(job.TenantID, systemUser)` antes de tocar datos. Los jobs que recorren tenants (recordatorios diarios) obtienen la lista desde `platform.tenant_usage` y las suscripciones, y abren una transacción por tenant.
+La tabla de jobs no es de tenant (no tiene RLS). Cada job lleva `tenant_id` en sus argumentos, y el handler abre `InTenantTx(Actor{TenantID: job.TenantID, UserID: systemUser, Kind: system})` antes de tocar datos. Los jobs que recorren tenants (recordatorios diarios) obtienen la lista desde `platform.tenant_usage` y las suscripciones, y abren una transacción por tenant.
 
 ### Migraciones y pruebas
 
