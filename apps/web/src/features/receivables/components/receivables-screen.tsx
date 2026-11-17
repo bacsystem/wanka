@@ -114,7 +114,7 @@ export function ReceivablesScreen({ rows: all, weekly, spot, kpis }: Props & { k
 
       <SectionCard title={<span className="sr-only">Cartera de clientes</span>} className="[&>div:first-child]:hidden" contentClassName="p-0">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b p-3">
-          <Tabs estilo="segmentado" className="min-w-0 max-w-full" valor={tab} onCambio={setTab} items={[...([["all", "Todas las deudas"], ["por_vencer", "Por vencer"], ["vencido", "Vencidas / morosas"], ["judicial", "Cobranza judicial"]] as const).map(([id, l]) => ({ id: id as string, etiqueta: <>{l} ({count(id)})</> })), { id: "historial", etiqueta: "Historial de abonos" }]} />
+          <Tabs estilo="segmentado" className="min-w-0 max-w-full" valor={tab} onCambio={setTab} items={[...([["all", "Todas las deudas"], ["por_vencer", "Por vencer"], ["vencido", "Vencidas / morosas"], ["judicial", "Cobranza judicial"]] as const).map(([id, l]) => ({ id: id as string, etiqueta: l, contador: count(id) })), { id: "historial", etiqueta: "Historial de abonos" }]} />
           <div className="flex items-center gap-2"><SearchInput placeholder="Buscar cliente, RUC o N° factura…" value={query} onChange={setQuery} className="sm:w-64" /><Button variant="outline" size="sm" className="font-semibold"><SlidersHorizontal data-icon="inline-start" /> Filtros</Button></div>
         </div>
         <DataTable

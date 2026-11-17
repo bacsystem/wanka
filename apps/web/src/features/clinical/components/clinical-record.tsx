@@ -85,8 +85,10 @@ export function ClinicalRecord({ customer }: { customer: Customer }) {
         </SectionCard>
 
         <div className="flex min-w-0 flex-col gap-4 xl:col-span-2">
-          <Tabs estilo="segmentado" valor={tab} onCambio={setTab} items={[{ id: "soap", etiqueta: "Evolución SOAP" }, { id: "plan", etiqueta: "Plan de tratamiento" }, { id: "prev", etiqueta: "Evoluciones previas" }]} />
-          {tab === "soap" ? (
+          <Tabs estilo="segmentado" valor={tab} onCambio={setTab} items={[{ id: "soap", etiqueta: "Evolución SOAP" }, { id: "plan", etiqueta: "Plan de tratamiento" }, { id: "prev", etiqueta: "Evoluciones previas" }]}>
+            {(panel) => (
+              <>
+          {panel === "soap" ? (
             <SectionCard title={`Acto clínico · pieza ${selected}`} action={<Badge variant="outline" className="font-mono">K02.1</Badge>} contentClassName="flex flex-col gap-3 p-4">
               <Field label="Diagnóstico CIE-10"><Input defaultValue="K02.1 Caries de la dentina" /></Field>
               <Field label="Procedimiento del catálogo"><Input defaultValue="Restauración resina 3M Z350 XT · SRV-0012" /></Field>
@@ -98,7 +100,7 @@ export function ClinicalRecord({ customer }: { customer: Customer }) {
               <p className="text-xs text-muted-foreground">Odontólogo tratante: Dra. Claudia Ramos P. (COP 34892)</p>
               <Button onClick={() => toast.success(`Evolución registrada · pieza ${selected}`, { description: billToPos ? "Orden de cobro enviada a CAJA-01" : undefined })}><PenLine data-icon="inline-start" /> Firmar y registrar evolución</Button>
             </SectionCard>
-          ) : tab === "plan" ? (
+          ) : panel === "plan" ? (
             <SectionCard title="Plan de tratamiento" contentClassName="p-0">
               <ul className="divide-y">{treatmentPlan.map((t) => (<li key={t.step} className="flex items-center gap-3 px-4 py-2.5 text-sm"><span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-muted font-mono text-xs">{t.step}</span><div className="min-w-0 flex-1"><p className="truncate font-medium">{t.procedure}</p><p className="text-xs text-muted-foreground">{t.session} · prioridad {t.priority}</p></div><span className="font-mono text-xs tabular-nums">{t.cost ? formatCurrency(t.cost) : "—"}</span><StatusBadge tone={t.status === "Programado" ? "info" : "neutral"} label={t.status} /></li>))}</ul>
               <div className="flex justify-between border-t px-4 py-2 text-sm"><span className="text-muted-foreground">Presupuesto total</span><span className="font-mono font-semibold">{formatCurrency(treatmentPlan.reduce((s, t) => s + t.cost, 0))}</span></div>
@@ -108,6 +110,9 @@ export function ClinicalRecord({ customer }: { customer: Customer }) {
               <ul className="divide-y">{evolutions.map((e, i) => (<li key={i} className="px-4 py-3 text-sm"><div className="flex items-center justify-between gap-2"><p className="font-medium">{e.procedure}{e.tooth ? <span className="ml-1 font-mono text-xs text-muted-foreground">pieza {e.tooth}</span> : null}</p><span className="font-mono text-xs tabular-nums">{formatCurrency(e.amount)}</span></div><p className="mt-0.5 text-xs text-muted-foreground">{e.notes}</p><p className="mt-1 text-xs text-muted-foreground">{e.professional} · {e.document} · {formatDate(e.date)}</p></li>))}</ul>
             </SectionCard>
           )}
+              </>
+            )}
+          </Tabs>
         </div>
       </div>
     </div>

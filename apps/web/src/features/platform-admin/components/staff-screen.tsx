@@ -42,14 +42,16 @@ export function StaffScreen() {
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-4 p-4 md:gap-6 md:p-6">
       <PageHeader eyebrow="Gobernanza · Usuarios internos y roles" title="Personal interno y control de acceso (RBAC)" description="Administración de operadores de soporte, ejecutivos comerciales, auditores de finanzas e ingenieros con acceso a la infraestructura Wanka." status={<StatusBadge tone="success" icon={ShieldCheck} label="Políticas 2FA obligatorias activas" className="rounded-md" />} actions={<Button className="font-semibold" onClick={() => setInviteOpen(true)}><UserPlus data-icon="inline-start" /> Invitar usuario</Button>} />
-      <Tabs estilo="linea" valor={tab} onCambio={setTab} items={[{ id: "users", etiqueta: <><Users /> Usuarios staff ({s.total})</> }, { id: "roles", etiqueta: <><ShieldCheck /> Matriz de permisos por rol</> }]} />
+      <Tabs estilo="linea" valor={tab} onCambio={setTab} items={[{ id: "users", etiqueta: <><Users /> Usuarios staff</>, contador: s.total }, { id: "roles", etiqueta: <><ShieldCheck /> Matriz de permisos por rol</> }]}>
+        {(panel) => (
+          <>
       <StatGrid>
         <StatCard label="Total staff activo" value={String(s.total)} icon={Users} hint={<span className="font-semibold text-success-foreground">+{s.newMonth} este mes</span>} footer={`Distribuidos en ${s.areas} áreas operativas`} />
         <StatCard label="Cobertura 2FA (MFA)" value={`${s.mfa}%`} suffix={s.mfaCount} icon={ShieldCheck} tone="success" emphasizeValue footer={<span className="text-warning-foreground">1 usuario con gracia (vence hoy)</span>} />
         <StatCard label="Sesiones en vivo" value={String(s.sessions)} suffix={`${s.ips} IPs únicas`} icon={Globe} tone="info" footer="Monitoreo de geolocalización Lima / Cusco" />
         <StatCard label="Intentos fallidos 24h" value={String(s.failed24h)} suffix="0 bloqueados" icon={ShieldAlert} tone="warning" footer="Tasa de rechazo admisible: < 1%" />
       </StatGrid>
-      {tab === "users" ? (
+      {panel === "users" ? (
         <SectionCard title={<span className="sr-only">Usuarios</span>} className="[&>div:first-child]:hidden" contentClassName="p-0">
           <div className="flex flex-wrap items-center gap-2 border-b p-3">
             <SearchInput placeholder="Buscar por nombre o correo…" value={query} onChange={setQuery} className="flex-1 sm:max-w-none" />
@@ -64,6 +66,9 @@ export function StaffScreen() {
           <div className="overflow-x-auto"><Table className="min-w-[720px]"><TableHeader><TableRow><TableHead className="text-left">Capacidad</TableHead>{roleMatrix.roles.map((r) => <TableHead key={r} className="text-center">{r}</TableHead>)}</TableRow></TableHeader><TableBody>{roleMatrix.modules.map(([m, perms]) => <TableRow key={m}><TableCell className="px-4 py-2.5 font-medium">{m}</TableCell>{perms.map((p, i) => <TableCell key={i} className="px-3 py-2.5 text-center">{p ? <span className="inline-flex size-6 items-center justify-center rounded-full bg-success text-success-foreground "><Check className="size-3.5" /></span> : <span className="inline-flex size-6 items-center justify-center rounded-full bg-muted text-muted-foreground"><X className="size-3.5" /></span>}</TableCell>)}</TableRow>)}</TableBody></Table></div>
         </SectionCard>
       )}
+          </>
+        )}
+      </Tabs>
       <Sheet open={inviteOpen} onOpenChange={setInviteOpen}>
         <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-lg">
           <SheetHeader><SheetTitle>Invitar usuario interno</SheetTitle><SheetDescription>Recibirá un correo con enlace válido 48 h; el 2FA es obligatorio en el primer acceso.</SheetDescription></SheetHeader>

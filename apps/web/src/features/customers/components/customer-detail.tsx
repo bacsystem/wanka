@@ -79,13 +79,18 @@ export function CustomerDetail({ customer, detail }: { customer: Customer; detai
           { id: "cuenta", etiqueta: <><Wallet /> Cuenta corriente y pagos</> },
           { id: "documentos", etiqueta: <><FileText /> Documentos y consentimientos</> },
         ]}
-      />
+      >
+        {(panel) => (
+          <>
 
-      {tab === "resumen" ? <Summary detail={detail} customer={customer} /> : null}
-      {tab === "comprobantes" ? <DocumentsTable docs={detail.documents} /> : null}
-      {tab === "citas" ? <AppointmentsTab detail={detail} /> : null}
-      {tab === "cuenta" ? <LedgerTab detail={detail} /> : null}
-      {tab === "documentos" ? <FilesTab detail={detail} /> : null}
+      {panel === "resumen" ? <Summary detail={detail} customer={customer} /> : null}
+      {panel === "comprobantes" ? <DocumentsTable docs={detail.documents} /> : null}
+      {panel === "citas" ? <AppointmentsTab detail={detail} /> : null}
+      {panel === "cuenta" ? <LedgerTab detail={detail} /> : null}
+      {panel === "documentos" ? <FilesTab detail={detail} /> : null}
+          </>
+        )}
+      </Tabs>
     </div>
   );
 }

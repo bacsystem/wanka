@@ -33,8 +33,10 @@ export function ProfileScreen() {
   const sc = strength(pw);
   return (
     <>
-      <Tabs estilo="segmentado" valor={tab} onCambio={setTab} items={[{ id: "datos", etiqueta: "Datos y seguridad" }, { id: "sesiones", etiqueta: "Sesiones activas", contador: sessions.length }, { id: "prefs", etiqueta: "Preferencias y notificaciones" }, { id: "actividad", etiqueta: "Actividad reciente" }]} />
-      {tab === "datos" ? (
+      <Tabs estilo="segmentado" valor={tab} onCambio={setTab} items={[{ id: "datos", etiqueta: "Datos y seguridad" }, { id: "sesiones", etiqueta: "Sesiones activas", contador: sessions.length }, { id: "prefs", etiqueta: "Preferencias y notificaciones" }, { id: "actividad", etiqueta: "Actividad reciente" }]}>
+        {(panel) => (
+          <>
+      {panel === "datos" ? (
         <div className="grid gap-4 xl:grid-cols-2">
           <SectionCard title="Información de contacto profesional" contentClassName="grid gap-4 p-4 sm:grid-cols-2">
             <Field label="Nombres completos" className="sm:col-span-2"><Input defaultValue="Carlos Alberto Mendoza Ruiz" /></Field>
@@ -61,12 +63,12 @@ export function ProfileScreen() {
           </div>
         </div>
       ) : null}
-      {tab === "sesiones" ? (
+      {panel === "sesiones" ? (
         <SectionCard title="Sesiones activas" action={<Button size="sm" variant="outline" className="text-destructive" onClick={() => toast.success("Se cerraron las otras sesiones")}><LogOut data-icon="inline-start" /> Cerrar las demás</Button>} contentClassName="p-0">
           <ul className="divide-y">{sessions.map((s) => <li key={s.device} className="flex items-center gap-3 px-4 py-3 text-sm"><span className="flex size-9 items-center justify-center rounded-md bg-muted"><s.icon className="size-4" strokeWidth={1.5} /></span><div className="min-w-0 flex-1"><p className="font-medium">{s.device} {s.current ? <StatusBadge tone="success" dot label="Sesión actual" className="ml-1" /> : null}</p><p className="text-xs text-muted-foreground">{s.browser} · IP {s.ip} · {s.site} · {s.last}</p></div>{!s.current ? <Button size="xs" variant="outline" onClick={() => toast.success(`Sesión en ${s.device} cerrada`)}>Cerrar</Button> : null}</li>)}</ul>
         </SectionCard>
       ) : null}
-      {tab === "prefs" ? (
+      {panel === "prefs" ? (
         <div className="grid gap-4 xl:grid-cols-2">
           <SectionCard title="Apariencia" contentClassName="grid gap-3 p-4">
             <Field label="Tema"><div className="grid grid-cols-3 gap-2">{([["light", "Claro", Sun], ["dark", "Oscuro", Moon], ["system", "Sistema", Monitor]] as const).map(([v, l, I]) => <button key={v} type="button" onClick={() => setTheme(v)} aria-pressed={theme === v} className={cn("flex items-center justify-center gap-2 rounded-md border px-3 py-2 text-sm", theme === v && "border-primary bg-accent text-accent-foreground")}><I className="size-4" /> {l}</button>)}</div></Field>
@@ -77,9 +79,12 @@ export function ProfileScreen() {
           </SectionCard>
         </div>
       ) : null}
-      {tab === "actividad" ? (
+      {panel === "actividad" ? (
         <SectionCard title="Actividad reciente" contentClassName="p-0"><ul className="divide-y text-sm">{activity.map(([t, w, ip]) => <li key={t + w} className="flex items-center gap-3 px-4 py-2.5"><span className="w-24 shrink-0 font-mono text-xs text-muted-foreground">{t}</span><span className="flex-1">{w}</span><span className="font-mono text-xs text-muted-foreground">{ip}</span></li>)}</ul></SectionCard>
       ) : null}
+          </>
+        )}
+      </Tabs>
     </>
   );
 }

@@ -41,9 +41,11 @@ export function TenantDetail({ tenant: t }: { tenant: PlatformTenant }) {
         </>}
       />
 
-      <Tabs estilo="linea" className="min-w-0 max-w-full" valor={tab} onCambio={setTab} items={tabs.map((name) => ({ id: name, etiqueta: name === "Sedes y cajas" ? `${name} (${t.sites} / ${t.sites * 4})` : name === "Soporte y tickets" ? `${name} (1 resuelto)` : name, contador: name === "Usuarios" ? t.users : undefined }))} />
+      <Tabs estilo="linea" className="min-w-0 max-w-full" valor={tab} onCambio={setTab} items={tabs.map((name) => ({ id: name, etiqueta: name === "Sedes y cajas" ? `${name} (${t.sites} / ${t.sites * 4})` : name === "Soporte y tickets" ? `${name} (1 resuelto)` : name, contador: name === "Usuarios" ? t.users : undefined }))}>
+        {(panel) => (
+          <>
 
-      {tab === "Resumen" ? (
+      {panel === "Resumen" ? (
         <>
           <div className="flex flex-wrap items-center gap-3 rounded-xl border border-warning-border border-l-4 bg-warning p-4 text-sm">
             <StateIcon state="warning" className="size-5" />
@@ -75,10 +77,13 @@ export function TenantDetail({ tenant: t }: { tenant: PlatformTenant }) {
           </div>
         </>
       ) : (
-        <SectionCard title={tab} description="Vista del módulo dentro del expediente del tenant" contentClassName="p-6">
-          <div className="flex flex-col items-center gap-3 py-10 text-center text-sm text-muted-foreground"><RefreshCw className="size-6 text-primary" /><p>Contenido de <strong className="text-foreground">{tab}</strong> para {t.name}.</p><p className="text-xs">Último acceso: {formatDate(t.lastAccess)} {t.lastAccess.slice(11, 16)} · {t.users} usuarios · {t.sites} sedes.</p></div>
+        <SectionCard title={panel} description="Vista del módulo dentro del expediente del tenant" contentClassName="p-6">
+          <div className="flex flex-col items-center gap-3 py-10 text-center text-sm text-muted-foreground"><RefreshCw className="size-6 text-primary" /><p>Contenido de <strong className="text-foreground">{panel}</strong> para {t.name}.</p><p className="text-xs">Último acceso: {formatDate(t.lastAccess)} {t.lastAccess.slice(11, 16)} · {t.users} usuarios · {t.sites} sedes.</p></div>
         </SectionCard>
       )}
+          </>
+        )}
+      </Tabs>
     </div>
   );
 }
