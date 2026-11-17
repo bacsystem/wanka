@@ -1,5 +1,5 @@
 ---
-title: Login + 2FA TOTP + seleccion de empresa y sede
+title: Login + 2FA TOTP (la obligacion se decide en un solo punto) + seleccion de empresa, sede y caja
 ---
 sequenceDiagram
   autonumber
@@ -17,29 +17,41 @@ sequenceDiagram
     A-->>W: 401 invalid_credentials (mismo mensaje y tiempo para email inexistente)
     W-->>U: "Correo o contrasena incorrectos"
   else password ok (argon2id verify)
-    A->>DB: INSERT sessions (mfa_passed=false, tenant_id=null), tokens de un solo uso
-    A-->>W: 200 {status:"mfa_required", challenge_token} (TTL 5 min)
+    A->>DB: BEGIN, set_config app.user_id (sin tenant), SELECT iam.list_my_memberships() (own_memberships + member_read: rol, requires_mfa, sedes, cajas)
+    A->>A: PUNTO UNICO DE DECISION: mfa_obligatorio = algun rol de sus membresias activas o invitadas con requires_mfa
+    alt usuario con TOTP confirmado
+      A->>DB: INSERT sessions (mfa_passed=false, tenant_id=null)
+      A-->>W: 200 {status:"mfa_required", challenge_token} (TTL 5 min)
+      U->>W: codigo TOTP de 6 digitos
+      W->>A: POST /v1/auth/mfa/verify {challenge_token, code}
+      A->>A: verifica TOTP (ventana +-1 paso, rechaza codigo ya usado)
+      A->>DB: UPDATE sessions SET mfa_passed=true
+    else sin TOTP y mfa_obligatorio
+      A-->>W: 200 {status:"mfa_enrollment_required", enrollment_token} (TTL 10 min, solo sirve para enrolar)
+      U->>W: escanea el QR y escribe el primer codigo
+      W->>A: POST /v1/auth/mfa/totp/enroll y /confirm {enrollment_token, code}
+      A->>DB: INSERT user_totp (secreto cifrado), codigos de recuperacion, INSERT sessions mfa_passed=true
+    else sin TOTP y ningun rol lo exige
+      A->>DB: INSERT sessions (mfa_passed=false, tenant_id=null)
+    end
+    A->>DB: emite access (15 min) + refresh (rotativo)
+    A-->>W: 200 {access_token, refresh_token, expiresAt, memberships:[{tenant, role, requiresMfa, sites, cashRegisters}]}
+    W->>W: route handler: Set-Cookie wk_at, wk_at_exp, wk_rt (httpOnly, Secure, SameSite=Lax, Path=/)
+    W-->>U: redirige a /seleccionar-empresa
   end
-  U->>W: codigo TOTP de 6 digitos
-  W->>A: POST /v1/auth/mfa/verify {challenge_token, code}
-  A->>A: verifica TOTP (ventana +-1 paso, rechaza codigo ya usado)
-  A->>DB: UPDATE sessions SET mfa_passed=true, emite access (15 min) + refresh (rotativo)
-  A->>DB: BEGIN, set_config app.user_id (sin app.tenant_id), SELECT iam.list_my_memberships() (politica own_memberships por app.user_id)
-  A-->>W: 200 {access_token, refresh_token, expiresAt, memberships:[{tenant, role, sites, cashRegisters}]}
-  W->>W: route handler: Set-Cookie wk_at, wk_at_exp, wk_rt (httpOnly, Secure, SameSite=Lax, Path=/)
-  W-->>U: redirige a /seleccionar-empresa
   U->>W: elige empresa t, sede s y caja c (opcional)
   W->>A: POST /v1/auth/session/tenant {tenantId, siteId, cashRegisterId?}
   A->>DB: SELECT membership por app.user_id (tenant activo, sede en alcance, caja de esa sede)
   alt sin membresia o tenant suspendido
     A-->>W: 403 tenant_access_denied
-  else rol con requires_mfa y usuario sin 2FA activo
-    A-->>W: 403 mfa_enrollment_required
+  else rol con requires_mfa y sesion con mfa_passed=false
+    Note over A: solo pasa si la membresia se creo despues del login: es una guarda, la decision fue en el login
+    A-->>W: 403 mfa_required (el BFF vuelve a /login para cumplir la 2FA)
   else ok
     A->>DB: revoca tokens actuales, nueva sesion ligada a tenant_id + site_id + cash_register_id + authz_version
     A-->>W: 200 {access_token, refresh_token, tenant, site, permissions[], modules[]}
     W->>W: reemplaza cookies, borra cookie legacy tenant_id
     W-->>U: redirige a /
   end
-  Note over W,A: Refresh solo en proxy.ts o en el route handler, con single-flight por sesion. Reuso del refresh anterior dentro de 10 s devuelve el par vigente. Fuera de esa gracia, el reuso revoca toda la familia (ADR 0004).
+  Note over W,A: Refresh solo en proxy.ts o en route handlers, con single-flight por proceso. Si llega el refresh anterior dentro de 10 s desde la rotacion, la API devuelve SOLO un access nuevo y el BFF no toca wk_rt (el navegador ya tiene el refresh ganador). Fuera de la gracia, el reuso revoca toda la familia (ADR 0004).
   Note over A: Recuperacion: POST /v1/auth/password/forgot (respuesta 202 siempre) -> token 15 min por correo -> POST /v1/auth/password/reset revoca todas las sesiones.

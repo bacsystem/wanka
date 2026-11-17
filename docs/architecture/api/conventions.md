@@ -74,7 +74,7 @@ RFC 9457 (`application/problem+json`) con un `code` estable que el frontend trad
 | 400 | `malformed_request` | JSON inválido, tipo incorrecto |
 | 401 | `unauthenticated`, `session_expired`, `mfa_required` | sin sesión válida; el BFF intenta refresh una vez |
 | 402 | `subscription_inactive` | suscripción suspendida o morosa |
-| 403 | `forbidden` (falta permiso), `module_not_enabled`, `plan_limit_reached`, `tenant_access_denied`, `site_out_of_scope`, `tenant_read_only` (empresa cerrada: solo `GET` y exportes, ADR 0005), `mfa_enrollment_required` (rol con 2FA obligatorio sin 2FA activo) | |
+| 403 | `forbidden` (falta permiso), `module_not_enabled`, `plan_limit_reached`, `tenant_access_denied`, `site_out_of_scope`, `tenant_read_only` (empresa cerrada: solo `GET` y exportes, ADR 0005), `mfa_required` (guarda de `session/tenant`: la membresía exige 2FA y la sesión no la pasó; el enrolamiento se pide en el login con `status: mfa_enrollment_required`) | |
 | 404 | `not_found` | también cuando el recurso existe en otro tenant (no se revela) |
 | 409 | `conflict`, `insufficient_stock`, `shift_not_open`, `invalid_state_transition`, `request_in_progress` (solo por `lock_timeout` de idempotencia), `duplicate` | |
 | 412 | `version_mismatch` | `If-Match` no coincide |
