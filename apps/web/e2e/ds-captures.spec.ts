@@ -17,11 +17,15 @@ import { test } from "./fixtures";
  *   CAPTURES=1 CAPTURES_LABEL=after  E2E_PROD=1 pnpm --filter web exec playwright test ds-captures
  * Output: apps/web/captures/<label>/<project>/<theme>/<screen>.png (override the root with CAPTURES_DIR).
  * Compare (ImageMagick): magick compare -metric AE captures/before/desktop/light/home.png captures/after/desktop/light/home.png diff.png
+ * `magick compare -metric AE` prints the metric on stderr and exits 1 when the images differ (0 = identical).
+ * Mobile shot types: `<screen>.png` is full-page; the shell's bottom-anchored `position: fixed` elements (BottomNav, FAB)
+ * are moved to the end of the document for it, so they appear once and cover nothing. On mobile only,
+ * `<screen>.viewport.png` is the first viewport as the user sees it, with the bar fixed in place.
  * Narrow the run: `--project=mobile`, `-g "dark"`, `-g "comprobantes"`.
  */
 const enabled = process.env.CAPTURES === "1";
 const label = process.env.CAPTURES_LABEL ?? "current";
-const root = path.resolve(process.env.CAPTURES_DIR ?? "captures", label);
+const root = path.resolve(__dirname, "..", process.env.CAPTURES_DIR ?? "captures", label);
 
 // Pinned "now" for anything the client renders from the clock (Monday 2026-06-15 10:00 Lima).
 const FIXED_NOW = new Date("2026-06-15T15:00:00Z");
@@ -65,6 +69,21 @@ test.describe("ds captures", () => {
           await page.evaluate(() => new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r()))));
           const dir = path.join(root, info.project.name, theme);
           mkdirSync(dir, { recursive: true });
+          if (info.project.name === "mobile") {
+            await page.screenshot({ path: path.join(dir, `${s.name}.viewport.png`), animations: "disabled", caret: "hide" });
+          }
+          // Fixed bottom bars would be painted mid-page in a full-page shot: pin them to the document end instead.
+          await page.evaluate(() => {
+            const docH = document.documentElement.scrollHeight;
+            for (const el of Array.from(document.body.querySelectorAll<HTMLElement>("*"))) {
+              if (getComputedStyle(el).position !== "fixed") continue;
+              const r = el.getBoundingClientRect();
+              if (r.height === 0 || r.top < window.innerHeight / 2) continue;
+              el.style.position = "absolute";
+              el.style.bottom = "auto";
+              el.style.top = `${docH - (window.innerHeight - r.top)}px`;
+            }
+          });
           await page.screenshot({ path: path.join(dir, `${s.name}.png`), fullPage: true, animations: "disabled", caret: "hide" });
         });
       }
