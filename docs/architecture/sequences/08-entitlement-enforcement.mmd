@@ -10,7 +10,7 @@ sequenceDiagram
   participant H as handler del modulo
 
   W->>MW: POST /v1/lubricentro/service-orders Bearer wk_at_...
-  MW->>DB: rol wanka_app, SIN app.tenant_id ni app.user_id (aun no se conocen): SELECT * FROM iam.session_lookup(sha256(token)), SECURITY DEFINER con search_path fijo, devuelve la sesion (no revocada, no expirada, mfa_satisfied) + current_version y membership_status de iam.memberships. Siempre de la base, nunca de cache
+  MW->>DB: rol wanka_app, SIN app.tenant_id ni app.user_id (aun no se conocen): SELECT * FROM iam.session_lookup(sha256(token)), SECURITY DEFINER con search_path fijo, devuelve la sesion (no revocada, no expirada, filtra mfa_satisfied = true) con site_id, cash_register_id y mfa_method + current_version y membership_status de iam.memberships. Siempre de la base, nunca de cache
   alt sesion invalida o token de otro plano (prefijo wka_)
     MW-->>W: 401 unauthenticated
   end
