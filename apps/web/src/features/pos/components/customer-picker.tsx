@@ -2,7 +2,7 @@
 
 import { UserPlus, X } from "lucide-react";
 import * as React from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "khipu-design-system/ui/button";
 import { SearchInput } from "@/components/shared/toolbar";
 import { initials } from "@/lib/tenant";
 import type { Customer } from "@/types/domain";
@@ -36,7 +36,7 @@ export function CustomerPicker({ customers, value, generic, onChange }: Customer
           </p>
         </div>
         {value.id !== generic.id ? (
-          <Button variant="ghost" size="icon-sm" aria-label="Quitar cliente" onClick={() => onChange(generic)}>
+          <Button variant="ghost" size="icon" aria-label="Quitar cliente" onClick={() => onChange(generic)}>
             <X />
           </Button>
         ) : null}

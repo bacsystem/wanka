@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { DEMO_ADMIN_USER } from "@/features/auth/mocks/demo-session";
 import * as React from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { Button } from "khipu-design-system/ui/button";
 import { Input } from "@/components/ui/input";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { Field } from "@/components/shared/field";

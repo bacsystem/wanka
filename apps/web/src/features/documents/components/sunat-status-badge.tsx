@@ -1,5 +1,5 @@
 import { CheckCircle2, Clock, XCircle } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "khipu-design-system/ui/badge";
 import { toneClass } from "@/components/shared/status-badge";
 import { cn } from "@/lib/utils";
 import type { SunatStatus } from "@/types/domain";

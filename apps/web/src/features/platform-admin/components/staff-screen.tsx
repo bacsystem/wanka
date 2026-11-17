@@ -3,8 +3,8 @@
 import { Check, Download, Globe, KeyRound, MonitorSmartphone, ShieldAlert, ShieldCheck, UserPlus, Users, X } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Button } from "khipu-design-system/ui/button";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "khipu-design-system/ui/table";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -37,7 +37,7 @@ export function StaffScreen() {
     { key: "sessions", header: "Sesiones activas", align: "center", cell: (u) => <span className="font-mono font-semibold">{u.sessions}</span> },
     { key: "last", header: "Último acceso / IP", cell: (u) => <TwoLine primary={<span className="font-mono text-xs">{formatDate(u.lastAccess)} {u.lastAccess.slice(11, 16)}</span>} secondary={<span className="font-mono">{u.ip}</span>} /> },
     { key: "status", header: "Estado cuenta", cell: (u) => <StatusBadge tone={u.status === "activa" ? "success" : "danger"} dot label={u.status === "activa" ? "Activa" : "Suspendida"} /> },
-    { key: "actions", header: <span className="sr-only">Acciones</span>, align: "right", cell: (u) => <div className="flex justify-end gap-1"><Button size="icon-sm" variant="outline" aria-label="Restablecer credenciales" onClick={() => toast.success(`Enlace de restablecimiento enviado a ${u.email}`)}><KeyRound /></Button><Button size="icon-sm" variant="outline" aria-label="Cerrar sesiones" onClick={() => toast.info(`${u.sessions} sesiones cerradas`)}><MonitorSmartphone /></Button></div> },
+    { key: "actions", header: <span className="sr-only">Acciones</span>, align: "right", cell: (u) => <div className="flex justify-end gap-1"><Button size="icon" variant="outline" aria-label="Restablecer credenciales" onClick={() => toast.success(`Enlace de restablecimiento enviado a ${u.email}`)}><KeyRound /></Button><Button size="icon" variant="outline" aria-label="Cerrar sesiones" onClick={() => toast.info(`${u.sessions} sesiones cerradas`)}><MonitorSmartphone /></Button></div> },
   ];
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-4 p-4 md:gap-6 md:p-6">

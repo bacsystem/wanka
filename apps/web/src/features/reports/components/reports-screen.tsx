@@ -4,7 +4,7 @@ import { ArrowLeftRight, Calculator, Calendar, ClipboardList, Clock, Download, F
 import { useRouter } from "next/navigation";
 import * as React from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { Button } from "khipu-design-system/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DataTable, type Column } from "@/components/shared/data-table";
 import { PaginationBar } from "@/components/shared/pagination";
@@ -52,7 +52,7 @@ export function ReportsScreen({ types, rows: all, schedule }: Props) {
     { key: "exempt", header: "Exo. / inaf.", align: "right", cell: (r) => <span className="font-mono tabular-nums">{formatCurrency(r.exempt)}</span> },
     { key: "total", header: "Importe total", align: "right", cell: (r) => <span className={cn("font-mono font-medium tabular-nums", r.total < 0 && "text-destructive")}>{formatCurrency(r.total)}</span> },
     { key: "sire", header: "Estado SIRE", cell: (r) => <StatusBadge tone={sireMeta[r.sire].tone} label={sireMeta[r.sire].label} /> },
-    { key: "xml", header: "XML", align: "right", cell: () => <Button variant="ghost" size="icon-sm" aria-label="Descargar XML"><FileCode /></Button> },
+    { key: "xml", header: "XML", align: "right", cell: () => <Button variant="ghost" size="icon" aria-label="Descargar XML"><FileCode /></Button> },
   ];
 
   return (

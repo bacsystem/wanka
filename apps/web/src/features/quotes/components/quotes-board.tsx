@@ -4,8 +4,8 @@ import { ArrowUpDown, Building2, Bus, Copy, Download, Eye, FileDown, Factory, La
 import Link from "next/link";
 import * as React from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Button } from "khipu-design-system/ui/button";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "khipu-design-system/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -63,7 +63,7 @@ export function QuotesBoard({ quotes }: { quotes: Quote[] }) {
             ))}
           </TabsList>
         </Tabs>
-        <div className="flex items-center gap-2"><SearchInput placeholder="Buscar por cliente, RUC o N° cotización…" value={query} onChange={setQuery} className="sm:w-80 sm:max-w-none" /><Button variant="outline" size="icon-sm" aria-label="Exportar" onClick={() => toast.success("Listado exportado")}><Download /></Button></div>
+        <div className="flex items-center gap-2"><SearchInput placeholder="Buscar por cliente, RUC o N° cotización…" value={query} onChange={setQuery} className="sm:w-80 sm:max-w-none" /><Button variant="outline" size="icon" aria-label="Exportar" onClick={() => toast.success("Listado exportado")}><Download /></Button></div>
       </div>
 
       <div className="grid items-start gap-4 xl:grid-cols-12">
@@ -122,10 +122,10 @@ export function QuotesBoard({ quotes }: { quotes: Quote[] }) {
                     <Send data-icon="inline-start" /> {q.status === "borrador" ? "Enviar al cliente" : "Reenviar"}
                   </Button>
                 )}
-                <Button size="icon-sm" variant="outline" aria-label="Descargar PDF"><FileDown /></Button>
-                <Button size="icon-sm" variant="outline" aria-label="Editar" render={<Link href={`/ventas/proformas/${q.code}`} />} nativeButton={false}><Pencil /></Button>
-                <Button size="icon-sm" variant="outline" aria-label="Enviar por WhatsApp" onClick={() => toast.success("Enlace enviado por WhatsApp")}><MessageCircle /></Button>
-                <Button size="icon-sm" variant="outline" aria-label="Duplicar" onClick={() => toast.info(`Duplicada como borrador`)}><Copy /></Button>
+                <Button size="icon" variant="outline" aria-label="Descargar PDF"><FileDown /></Button>
+                <Button size="icon" variant="outline" aria-label="Editar" render={<Link href={`/ventas/proformas/${q.code}`} />} nativeButton={false}><Pencil /></Button>
+                <Button size="icon" variant="outline" aria-label="Enviar por WhatsApp" onClick={() => toast.success("Enlace enviado por WhatsApp")}><MessageCircle /></Button>
+                <Button size="icon" variant="outline" aria-label="Duplicar" onClick={() => toast.info(`Duplicada como borrador`)}><Copy /></Button>
                 </div>
               </div>
             </li>
@@ -157,7 +157,7 @@ function QuoteSidePanel({ quote: q, onConvert }: { quote: Quote; onConvert: () =
           <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground"><ShieldCheck className="size-4" /></span>
           <div className="min-w-0"><p className="flex flex-wrap items-center gap-2 font-mono text-base font-bold">{q.code} <StatusBadge tone={meta.tone} label={meta.label.split(" ")[0]} /></p><p className="text-xs text-muted-foreground">Generado por Dr. Marco Salcedo (Dir. Médico)</p></div>
         </div>
-        <div className="flex gap-1"><Button variant="outline" size="icon-sm" aria-label="Imprimir" onClick={() => toast.info("Imprimiendo…")}><Printer /></Button><Button variant="outline" size="icon-sm" aria-label="Descargar PDF"><Download /></Button></div>
+        <div className="flex gap-1"><Button variant="outline" size="icon" aria-label="Imprimir" onClick={() => toast.info("Imprimiendo…")}><Printer /></Button><Button variant="outline" size="icon" aria-label="Descargar PDF"><Download /></Button></div>
       </div>
       <div className="flex flex-wrap items-start justify-between gap-3 rounded-lg bg-muted/50 p-3 text-xs">
         <div><p className="text-[10px] font-semibold tracking-wide text-muted-foreground uppercase">Empresa cliente</p><p className="text-sm font-bold">{q.customerName}</p><p className="text-muted-foreground">RUC: {q.customerRuc} • Lima, Perú</p><p className="text-muted-foreground">Contacto: Lic. Patricia Valdivia (RRHH)</p></div>

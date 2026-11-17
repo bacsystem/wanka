@@ -4,7 +4,7 @@ import { ArrowRight, Building2, CheckCircle2, ClipboardCheck, Clock, Download, F
 import Link from "next/link";
 import * as React from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { Button } from "khipu-design-system/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -58,9 +58,9 @@ export function GuidesTable({ guides, openNew, onOpenNewChange }: { guides: Disp
       key: "actions", header: <span className="sr-only">Acciones</span>, align: "right",
       cell: (g) => (
         <div className="flex justify-end gap-0.5">
-          <Button variant="ghost" size="icon-sm" className="text-primary" aria-label="Ver QR" onClick={(e) => { e.stopPropagation(); toast.info(`QR de ${g.number}`); }}><QrCode /></Button>
-          <Button variant="ghost" size="icon-sm" className="text-primary" aria-label="Descargar XML" onClick={(e) => e.stopPropagation()}><FileCode /></Button>
-          <Button variant="ghost" size="icon-sm" aria-label="Imprimir" onClick={(e) => e.stopPropagation()}><Printer /></Button>
+          <Button variant="ghost" size="icon" className="text-primary" aria-label="Ver QR" onClick={(e) => { e.stopPropagation(); toast.info(`QR de ${g.number}`); }}><QrCode /></Button>
+          <Button variant="ghost" size="icon" className="text-primary" aria-label="Descargar XML" onClick={(e) => e.stopPropagation()}><FileCode /></Button>
+          <Button variant="ghost" size="icon" aria-label="Imprimir" onClick={(e) => e.stopPropagation()}><Printer /></Button>
         </div>
       ),
     },
@@ -88,7 +88,7 @@ export function GuidesTable({ guides, openNew, onOpenNewChange }: { guides: Disp
             <SelectTrigger className="w-48 bg-muted/50" aria-label="Estado SUNAT"><SelectValue /></SelectTrigger>
             <SelectContent>{statusOptions.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
           </Select>
-          <div className="ml-auto flex gap-1"><Button variant="secondary" size="icon-sm" aria-label="Limpiar filtros" onClick={() => { setQuery(""); setReason("all"); setStatus("all"); }}><FilterX /></Button><Button variant="secondary" size="icon-sm" aria-label="Actualizar" onClick={() => toast.success("Estados SUNAT actualizados")}><RefreshCw /></Button></div>
+          <div className="ml-auto flex gap-1"><Button variant="secondary" size="icon" aria-label="Limpiar filtros" onClick={() => { setQuery(""); setReason("all"); setStatus("all"); }}><FilterX /></Button><Button variant="secondary" size="icon" aria-label="Actualizar" onClick={() => toast.success("Estados SUNAT actualizados")}><RefreshCw /></Button></div>
         </div>
         <DataTable
           columns={columns} rows={rows} rowKey={(g) => g.id} minWidth="1100px" onRowClick={(g) => setSelectedId(g.id)} rowClassName={(g) => cn("cursor-pointer", selected?.id === g.id && "bg-accent/30")}

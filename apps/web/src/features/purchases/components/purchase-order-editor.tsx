@@ -4,14 +4,14 @@ import { AlertCircle, AlertTriangle, ArrowLeft, Building2, Calculator, CalendarC
 import Link from "next/link";
 import * as React from "react";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Badge } from "khipu-design-system/ui/badge";
+import { Button } from "khipu-design-system/ui/button";
 import { EntityHeader } from "@/components/shared/entity-header";
 import { Input } from "@/components/ui/input";
 import { NumberInput } from "@/components/shared/number-input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Separator } from "khipu-design-system/ui/separator";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "khipu-design-system/ui/table";
 import { Field } from "@/components/shared/field";
 import { SectionCard } from "@/components/shared/section-card";
 import { StatusBadge, Tag } from "@/components/shared/status-badge";
@@ -105,7 +105,7 @@ export function PurchaseOrderEditor({ suppliers }: { suppliers: Supplier[] }) {
                       <TableCell className="text-right">{ed ? <NumberInput size="sm" value={l.discount} onValueChange={(n) => update(l.id, { discount: n })} className="ml-auto w-14 text-right font-mono" aria-label={`Descuento ${l.sku}`} /> : <span className="font-mono">{l.discount}%</span>}</TableCell>
                       <TableCell><Badge variant="outline">{l.taxable ? "Gravado" : "Inafecto"}</Badge></TableCell>
                       <TableCell className="text-right font-mono font-medium">{formatCurrency(r2(l.qty * l.cost * (1 - l.discount / 100)))}</TableCell>
-                      <TableCell className="pr-3 text-right"><div className="flex justify-end gap-0.5"><Button variant="ghost" size="icon-sm" aria-label={ed ? "Guardar" : "Editar"} onClick={() => setEditing(ed ? null : l.id)}>{ed ? <Check /> : <Pencil />}</Button><Button variant="ghost" size="icon-sm" aria-label={`Quitar ${l.sku}`} onClick={() => setLines((ls) => ls.filter((x) => x.id !== l.id))}><Trash2 /></Button></div></TableCell>
+                      <TableCell className="pr-3 text-right"><div className="flex justify-end gap-0.5"><Button variant="ghost" size="icon" aria-label={ed ? "Guardar" : "Editar"} onClick={() => setEditing(ed ? null : l.id)}>{ed ? <Check /> : <Pencil />}</Button><Button variant="ghost" size="icon" aria-label={`Quitar ${l.sku}`} onClick={() => setLines((ls) => ls.filter((x) => x.id !== l.id))}><Trash2 /></Button></div></TableCell>
                     </TableRow>
                   ); })}
                 </TableBody>

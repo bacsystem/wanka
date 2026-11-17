@@ -3,7 +3,7 @@
 import { Download, KeyRound, LogIn, Settings2, ShieldAlert, ShieldCheck, Upload } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { Button } from "khipu-design-system/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { StateIcon } from "@/components/shared/dynamic-icon";
 import { PageHeader } from "@/components/shared/page-header";

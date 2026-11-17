@@ -3,7 +3,7 @@
 import { ArrowRightLeft, Columns3, Download, Filter, History, MoreHorizontal, Package, Send, SlidersHorizontal, Trash2, Truck, Warehouse } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { Button } from "khipu-design-system/ui/button";
 import { PageHeader } from "@/components/shared/page-header";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -60,9 +60,9 @@ export function StockScreen({ items, warehouses, categories, kpis }: Props & { k
       key: "actions", header: <span className="sr-only">Acciones</span>, align: "right",
       cell: (i) => (
         <div className="flex justify-end gap-0.5">
-          <Button variant="ghost" size="icon-sm" className="text-primary" aria-label="Transferir" onClick={() => setTransferOpen(true)}><Send /></Button>
-          <Button variant="ghost" size="icon-sm" aria-label="Kardex" onClick={() => toast.info(`Kardex de ${i.sku}`)}><History /></Button>
-          <Button variant="ghost" size="icon-sm" aria-label="Más"><MoreHorizontal /></Button>
+          <Button variant="ghost" size="icon" className="text-primary" aria-label="Transferir" onClick={() => setTransferOpen(true)}><Send /></Button>
+          <Button variant="ghost" size="icon" aria-label="Kardex" onClick={() => toast.info(`Kardex de ${i.sku}`)}><History /></Button>
+          <Button variant="ghost" size="icon" aria-label="Más"><MoreHorizontal /></Button>
         </div>
       ),
     },

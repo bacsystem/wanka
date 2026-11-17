@@ -4,7 +4,7 @@ import { Clock, FileCode, RefreshCw } from "lucide-react";
 import * as React from "react";
 import { StateIcon } from "@/components/shared/dynamic-icon";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { Button } from "khipu-design-system/ui/button";
 import { SectionCard } from "@/components/shared/section-card";
 import type { SunatQueueItem } from "@/types/domain";
 

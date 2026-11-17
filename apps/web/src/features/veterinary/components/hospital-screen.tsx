@@ -4,8 +4,8 @@ import { Activity, AlertTriangle, Check, LogOut, Pill, Plus, Sparkles } from "lu
 import Link from "next/link";
 import * as React from "react";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Badge } from "khipu-design-system/ui/badge";
+import { Button } from "khipu-design-system/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";

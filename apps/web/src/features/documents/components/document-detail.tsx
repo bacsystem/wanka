@@ -4,11 +4,11 @@ import { ArrowLeft, Ban, CheckCircle2, Clock, Cloud, Copy, Download, FileCode, F
 import Link from "next/link";
 import * as React from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { Button } from "khipu-design-system/ui/button";
 import { EntityHeader } from "@/components/shared/entity-header";
-import { Card, CardContent } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Card, CardContent } from "khipu-design-system/ui/card";
+import { Separator } from "khipu-design-system/ui/separator";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "khipu-design-system/ui/table";
 import { SectionCard } from "@/components/shared/section-card";
 import { StatusBadge, Tag } from "@/components/shared/status-badge";
 import { formatCurrency, formatDate, formatDocumentNumber } from "@/lib/format";
@@ -70,7 +70,7 @@ export function DocumentDetail({ doc }: { doc: SalesDocumentDetail }) {
             <Button variant="ghost" size="sm" className="bg-card text-xs font-semibold shadow-xs" onClick={() => toast.success("Enviado por WhatsApp")}><MessageCircle data-icon="inline-start" className="text-success-foreground" /> WhatsApp</Button>
             <Button variant="ghost" size="sm" className="bg-card text-xs font-semibold shadow-xs" onClick={() => toast.success("Correo enviado")}><Mail data-icon="inline-start" /> Correo</Button>
             {doc.type !== "nota_credito" ? <Button variant="ghost" size="sm" className="bg-card text-xs font-semibold shadow-xs" render={<Link href={`/ventas/comprobantes/${doc.id}/nota-debito`} />} nativeButton={false}><FilePlus data-icon="inline-start" /> Nota de débito</Button> : null}
-            <Button variant="ghost" size="icon-sm" className="bg-destructive-suave text-destructive-texto hover:bg-destructive-suave hover:text-destructive-texto" aria-label="Anular comprobante" onClick={() => setVoidOpen(true)}><Ban /></Button>
+            <Button variant="ghost" size="icon" className="bg-destructive-suave text-destructive-texto hover:bg-destructive-suave hover:text-destructive-texto" aria-label="Anular comprobante" onClick={() => setVoidOpen(true)}><Ban /></Button>
           </div>
         </>}
       />

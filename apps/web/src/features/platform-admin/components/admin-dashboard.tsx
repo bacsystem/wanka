@@ -4,7 +4,7 @@ import { AlertTriangle, Building2, FileText, Plus, Settings2, TrendingUp, UserMi
 import Link from "next/link";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { Button } from "khipu-design-system/ui/button";
 import { PageHeader } from "@/components/shared/page-header";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { StateIcon } from "@/components/shared/dynamic-icon";

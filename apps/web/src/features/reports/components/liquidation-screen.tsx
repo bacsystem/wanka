@@ -5,10 +5,10 @@ import Link from "next/link";
 import * as React from "react";
 import { toast } from "sonner";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
-import { Button } from "@/components/ui/button";
-import { Table, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Button } from "khipu-design-system/ui/button";
+import { Table, TableHead, TableHeader, TableRow } from "khipu-design-system/ui/table";
 import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
-import { Progress } from "@/components/ui/progress";
+import { ProgresoLineal } from "khipu-design-system/feedback/progreso";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Field } from "@/components/shared/field";
 import { DataTable } from "@/components/shared/data-table";
@@ -43,7 +43,7 @@ export function LiquidationScreen({ pdt, kardex }: { pdt: typeof PdtType; kardex
         <SectionCard title="Cronograma de obligaciones" icon={CalendarClock} contentClassName="flex flex-col gap-3 p-4 text-sm">
           <p className="text-xs text-muted-foreground">Anexo I SUNAT · último dígito de RUC <span className="font-mono font-semibold text-foreground">{pdt.dueDigit}</span></p>
           <div className="rounded-md border p-3"><p className="text-xs text-muted-foreground">Fecha límite de vencimiento</p><p className="font-mono text-2xl font-semibold tabular-nums">{formatDate(pdt.dueDate)}</p><StatusBadge className="mt-1" tone="success" dot label="En plazo reglamentario" /></div>
-          <div><div className="flex justify-between text-xs"><span className="text-muted-foreground">Faltan</span><span className="font-mono font-medium">{pdt.daysLeft} días</span></div><Progress value={100 - (pdt.daysLeft / 46) * 100} className="mt-1" /></div>
+          <div><div className="flex justify-between text-xs"><span className="text-muted-foreground">Faltan</span><span className="font-mono font-medium">{pdt.daysLeft} días</span></div><ProgresoLineal valor={100 - (pdt.daysLeft / 46) * 100} className="mt-1" /></div>
           <p className="flex items-center gap-1.5 text-xs text-muted-foreground"><ShieldCheck className="size-3.5 text-success" /> Clave SOL conectada · último sync SIRE hoy 08:35</p>
         </SectionCard>
       </div>
