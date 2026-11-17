@@ -37,10 +37,10 @@ const RESTRICTED_PATTERNS = {
   ],
   // Alias and relative spellings (`@/components/ui/x`, `../../components/ui/x`).
   ui: [
-    { regex: "^(@/|(\\.\\./)+)components/ui(/|$)", message: `Local components/ui is being replaced: import from ${DS}/ui/*. / components/ui local se reemplaza: importa de ${DS}/ui/*.` },
+    { regex: "^(@/components/|(\\.\\./)+(components/)?)ui(/|$)", message: `Local components/ui is being replaced: import from ${DS}/ui/*. / components/ui local se reemplaza: importa de ${DS}/ui/*.` },
   ],
   shared: [
-    { regex: "^(@/|(\\.\\./)+)components/shared(/|$)", message: `components/shared is a temporary adapter layer: use the ${DS} component. / components/shared es una capa temporal: usa el componente de ${DS}.` },
+    { regex: "^(@/components/|(\\.\\./)+(components/)?)shared(/|$)", message: `components/shared is a temporary adapter layer: use the ${DS} component. / components/shared es una capa temporal: usa el componente de ${DS}.` },
   ],
 };
 
