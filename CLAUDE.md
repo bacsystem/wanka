@@ -113,12 +113,12 @@ The backend is not built yet. Its design lives in `docs/architecture/`; `README.
 
 `CLAUDE.md` (this file) is the **single source of truth** for project context. Every other agent context file only imports it, so edit `CLAUDE.md` and never copy its content elsewhere.
 
-- **Claude Code** loads `CLAUDE.md` at the root, plus `apps/web/CLAUDE.md` when it works under `apps/web` (that file only contains `@AGENTS.md`).
+- **Claude Code** loads `CLAUDE.md` at the root, plus `apps/web/CLAUDE.md` when it works under `apps/web` (that file only contains `@AGENTS.md`). `apps/web/GEMINI.md` (`@./AGENTS.md`) is the same for Gemini CLI.
 - **Gemini CLI**:
   - loads the root `GEMINI.md`, which imports this file with `@./CLAUDE.md`;
-  - `.gemini/settings.json` sets `context.fileName` to `["GEMINI.md", "AGENTS.md"]`, so it also picks up `apps/web/AGENTS.md` when a tool touches that folder.
+  - it picks up `apps/web/GEMINI.md` when a tool touches that folder. `AGENTS.md` is deliberately **not** in `context.fileName`: Gemini CLI would also load the `AGENTS.md` files that packages ship inside `node_modules` (`next` does), which is a prompt-injection surface from dependencies.
 - **Antigravity**:
-  - loads the root `GEMINI.md`, where `@[CLAUDE.md](./CLAUDE.md)` inlines this file (Antigravity's `@./path` only inserts a reference, and Gemini CLI ignores the `@[label](path)` form);
-  - it reads `AGENTS.md` and `GEMINI.md` from the workspace folder and its parents, never from subfolders, so `apps/web/AGENTS.md` only applies when the workspace is opened at `apps/web`;
-  - keep each rule file under 24 000 bytes after includes, or it gets truncated.
+  - loads the root `GEMINI.md`, whose second import line (an at-sign followed by a Markdown link to `./CLAUDE.md`) inlines this file. Antigravity's plain at-sign path form only inserts a reference, and Gemini CLI ignores the Markdown-link form. This file must never contain that Markdown-link include syntax itself, because Antigravity would expand it (the test checks this);
+  - it reads `AGENTS.md` and `GEMINI.md` from the workspace folder and its parents, never from subfolders, so `apps/web/AGENTS.md` only applies when the workspace is opened at `apps/web` (that is why `apps/web/GEMINI.md` has no Markdown-link include);
+  - it truncates each rule file above 24 000 bytes after includes. `pnpm test` runs `apps/web/src/test/agent-context.test.ts`, which expands the root `GEMINI.md` and **fails above 22 000 bytes**. If it fails, move detail from `CLAUDE.md` into a linked doc instead of raising the limit.
 - `apps/web/AGENTS.md` is generated and re-added by `next dev`; do not edit it by hand. There is no root `AGENTS.md`, to avoid confusing it with that file.
