@@ -44,8 +44,9 @@ Estado: propuesto (2026-11-17). Aplica a `api` (plano tenant, `/v1`) y `platform
 - Tabla `ops.idempotency_keys (tenant_id, key)` con hash del cuerpo y la respuesta, retención 24 h.
 - Misma clave + mismo cuerpo → se devuelve la respuesta guardada (mismo código y cuerpo) con `Idempotent-Replayed: true`.
 - Misma clave + cuerpo distinto → `422 idempotency_key_reused`.
-- Misma clave mientras la primera sigue en curso → `409 request_in_progress` con `Retry-After: 1`.
-- La clave se inserta en la **misma transacción** que el efecto: si la transacción aborta, la clave no queda registrada y el reintento se ejecuta.
+- La clave se inserta **primero**, en la misma transacción que el efecto (`INSERT ... ON CONFLICT DO NOTHING`). Si la transacción aborta, la clave no queda registrada y el reintento se ejecuta.
+- Misma clave mientras la primera sigue en curso: el `INSERT` de la segunda **espera** el lock del índice único de la primera, porque la fila no confirmada ya ocupa la clave. Si la primera confirma, la segunda ve el conflicto y devuelve la respuesta guardada. Si aborta, la segunda continúa como nueva. La espera está acotada por `lock_timeout = 3s` en esa sentencia: si se vence, la API responde `409 request_in_progress` con `Retry-After: 1`. Es el único caso en que aparece ese código.
+- Todas las respuestas de la API usan los mismos códigos: un cuerpo distinto con la misma clave es siempre `422 idempotency_key_reused`, nunca 409.
 - El BFF no reintenta `POST` sin `Idempotency-Key`; con clave, como máximo 1 reintento ante error de red.
 
 ## 4. Formato de error
@@ -73,11 +74,11 @@ RFC 9457 (`application/problem+json`) con un `code` estable que el frontend trad
 | 400 | `malformed_request` | JSON inválido, tipo incorrecto |
 | 401 | `unauthenticated`, `session_expired`, `mfa_required` | sin sesión válida; el BFF intenta refresh una vez |
 | 402 | `subscription_inactive` | suscripción suspendida o morosa |
-| 403 | `forbidden` (falta permiso), `module_not_enabled`, `plan_limit_reached`, `tenant_access_denied`, `site_out_of_scope` | |
+| 403 | `forbidden` (falta permiso), `module_not_enabled`, `plan_limit_reached`, `tenant_access_denied`, `site_out_of_scope`, `tenant_read_only` (empresa cerrada: solo `GET` y exportes, ADR 0005), `mfa_enrollment_required` (rol con 2FA obligatorio sin 2FA activo) | |
 | 404 | `not_found` | también cuando el recurso existe en otro tenant (no se revela) |
-| 409 | `conflict`, `insufficient_stock`, `shift_not_open`, `invalid_state_transition`, `request_in_progress`, `duplicate` | |
+| 409 | `conflict`, `insufficient_stock`, `shift_not_open`, `invalid_state_transition`, `request_in_progress` (solo por `lock_timeout` de idempotencia), `duplicate` | |
 | 412 | `version_mismatch` | `If-Match` no coincide |
-| 422 | `validation_failed`, `totals_mismatch`, `idempotency_key_reused`, `void_window_expired` | regla de negocio |
+| 422 | `validation_failed`, `totals_mismatch`, `idempotency_key_reused`, `void_window_expired`, `exchange_rate_required`, `discount_exceeds_role_limit` | regla de negocio |
 | 429 | `rate_limited` | con `Retry-After` |
 | 503 | `overloaded`, `dependency_unavailable` | backpressure; con `Retry-After` |
 | 500 | `internal` | sin detalles internos; solo `requestId` |
@@ -105,8 +106,11 @@ Un fallo de Khipu **nunca** se propaga como 500 en la petición del usuario: la 
 | Cantidades | string decimal: `"2.5000"` o normalizado `"2.5"` (a fijar en OpenAPI) |
 | Instantes | ISO-8601 con zona: `"2026-09-12T11:42:00-05:00"` |
 | Fechas fiscales | `"2026-09-12"` |
-| Moneda | `"PEN"` / `"USD"` |
-| Número de CPE | `series` + `number` (entero) por separado; `display` opcional `"F001-00000842"` (el frontend ya formatea con `lib/format.ts`) |
+| Moneda | `"PEN"` / `"USD"`. **Obligatoria en todo request y recurso con dinero** (PEN y USD desde R1) |
+| Tipo de cambio | `exchangeRate`: string con 3 decimales (`"3.756"`), obligatorio si la moneda es USD y prohibido si es PEN (igual que `tipo_cambio` de Khipu, ADR 0003) |
+| Importes de request | `MoneyPositive` (> 0) para importes y pagos, `MoneyNonNegative` (>= 0) para descuentos, `Money` con signo solo para diferencias calculadas por el servidor; coinciden con los `CHECK` de la base |
+| Medios de pago | `efectivo`, `tarjeta`, `yape`, `plin`, `transferencia`, `credito` (solo factura). El `yape_plin` de `types/domain.ts` es una agrupación de UI que se separa al integrar |
+| Número de CPE | `series` + `number` (entero) por separado; `display` opcional `"F001-00000842"`. `number` y `display` son `null` en una GRE hasta que Khipu la numera |
 | Estados | string en minúsculas, valores de los mocks (`aceptado`, `pendiente`, `rechazado`, ...) |
 
 ## 7. Límites y protección

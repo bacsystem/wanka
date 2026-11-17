@@ -6,6 +6,7 @@ Convenciones (cursor, errores, idempotencia, dinero como string): [`conventions.
 
 Ajustes de forma respecto a los mocks, comunes a todos los recursos:
 - Importes `number` → string decimal; IDs → UUID string.
+- **Todo recurso o petición con dinero lleva `currency` (`PEN` | `USD`)** y, si es USD, `exchangeRate` (string con 3 decimales, como `tipo_cambio` de Khipu). Ventas, pagos, proformas, notas, OC, compras, CxC/CxP y sus pagos, movimientos y arqueos de caja, y consignaciones.
 - Relaciones por id + nombre de visualización: los mocks traen solo nombres (`supplier: string`, `warehouse: string`); la API devuelve `supplierId` y `supplierName`.
 - Textos ya formateados en los mocks (`lastAccess: "Hoy 10:42"`, `valueLabel`, `sitesNote`, `detail`) no existen en la API: llegan los datos crudos y el frontend formatea.
 
@@ -35,7 +36,7 @@ Ajustes de forma respecto a los mocks, comunes a todos los recursos:
 | `GET/POST/PATCH /v1/cash-registers` | selección de caja, config | `tenantSites[].cashboxes` | `empresas.sites:update` |
 | `GET/POST/PATCH /v1/document-series` | `/configuracion/sunat` series | `sunatConfig.series` | `empresas.series:*` |
 | `GET/PUT /v1/onboarding` (pasos 1..6) | `/onboarding` | `industryOptions`, `modulesByIndustry` | propietario |
-| `GET/PUT /v1/einvoicing/credentials` | conexión con Khipu: el propietario pega la API key `fk_…` de su empresa en Khipu; Wanka la cifra, la verifica con `GET /v1/empresa` de Khipu y registra las series con `correlativo_inicial` | `sunatConfig.connection`, solo metadatos (entorno BETA/PRODUCCION, verificado, prefijo de la llave; la llave nunca se devuelve). El certificado y la clave SOL se cargan **en Khipu**, no en Wanka | `empresas.config:update` |
+| `GET/PUT /v1/einvoicing/credentials` (permiso `empresas.einvoicing:update`) | conexión con Khipu: el propietario pega la API key `fk_…` de su empresa en Khipu; Wanka la cifra, la verifica con `GET /v1/empresa` de Khipu y registra las series con `correlativo_inicial` | `sunatConfig.connection`, solo metadatos (entorno BETA/PRODUCCION, verificado, prefijo de la llave; la llave nunca se devuelve). El certificado y la clave SOL se cargan **en Khipu**, no en Wanka | `empresas.config:update` |
 
 ## clientes (`crm`)
 
@@ -71,13 +72,16 @@ Ajustes de forma respecto a los mocks, comunes a todos los recursos:
 | `GET /v1/inventory/kardex?variant=&warehouse=&period=` | `/inventario/kardex` (13.1) | `KardexRow`, `kardexItem` | read / export |
 | `POST /v1/inventory/transfers` **(I)**, `GET /v1/inventory/transfers` | traslados, `transfersInTransit` | — | `inventario.transfers:create` |
 | `POST /v1/inventory/transfers/{id}/receipts` **(I)** | `/inventario/recepcion/[guia]` | `ReceptionLine`, `receptionMock` | `inventario.transfers:update` |
-| `POST /v1/inventory/counts`, `PUT .../lines`, `POST .../close` **(I)** | `/inventario/toma-fisica` | `CountLine` | `inventario.counts:*` |
+| `POST /v1/inventory/counts`, `PUT .../lines`, `POST .../submit`, `POST .../approve` **(I)** | `/inventario/toma-fisica` | `CountLine` | `inventario.counts:create`, `:update`, `:approve` |
+| `GET/POST /v1/inventory/consignments` **(I)**, `GET /{id}` | consignación con distribuidoras (issue #112; flag `inventario.consignacion`, librería primero) | `er-02` `CONSIGNMENTS` | `inventario.consignments:read`, `:create` |
+| `POST /v1/inventory/consignments/{id}/settlements` **(I)** | liquidación de lo vendido (crea la CxP vía fachada de compras/finanzas) | `CONSIGNMENT_SETTLEMENTS` | `inventario.consignments:update` |
+| `GET/POST /v1/inventory/supplier-returns` **(I)** | devoluciones al proveedor con plazo | `SUPPLIER_RETURNS` | `inventario.supplier_returns:read`, `:create` |
 
 ## ventas (`sales`)
 
 | Método y ruta | Pantalla / uso | Forma (mock) | Permiso |
 |---|---|---|---|
-| `POST /v1/sales` **(I)** | `/ventas/nueva` (POS) | `CartLine`, `PaymentMethod`; responde venta + CPE `pendiente` | `ventas.pos:create` |
+| `POST /v1/sales` **(I)** | `/ventas/nueva` (POS); exige `shiftId`, `currency` | `CartLine`, `PaymentMethod`; responde venta + CPE `pendiente` | `ventas.pos:create`; con descuento `ventas.discounts:create`, y sobre el tope del rol `ventas.discounts:approve` de un supervisor |
 | `GET /v1/sales/{id}` | reimpresión | — | `ventas.pos:read` |
 | `GET /v1/quotes`, `/summary` | `/ventas/proformas` | `Quote`, `quotesSummary` | `ventas.quotes:read` |
 | `POST /v1/quotes` **(I)**, `PATCH /v1/quotes/{id}` (If-Match) | `/ventas/proformas/nueva`, `/[id]` | `quoteDetailMock`, `QuoteLine` | create/update |
@@ -91,10 +95,11 @@ Ajustes de forma respecto a los mocks, comunes a todos los recursos:
 | `GET /v1/einvoicing/documents?type=&status=&from=&to=&q=` | `/ventas/comprobantes`, dashboard | `SalesDocument`, `documentsSummary` | `facturacion.cpe:read` |
 | `GET /v1/einvoicing/documents/{id}` | `/ventas/comprobantes/[id]` | `SalesDocumentDetail` (lines, cdr, timeline) | read |
 | `GET /v1/einvoicing/documents/{id}/files/{xml\|cdr\|pdf}` | descargas | 302 a URL prefirmada (5 min) | read |
-| `POST /v1/einvoicing/documents/{id}/credit-notes` **(I)** | `/nota-credito` (catálogo 09) | `SalesDocumentDetail` | `facturacion.cpe:void` |
-| `POST /v1/einvoicing/documents/{id}/debit-notes` **(I)** | `/nota-debito` (catálogo 10, serie FD01) | idem | `facturacion.cpe:create` |
+| `POST /v1/einvoicing/documents/{id}/credit-notes` **(I)** | `/nota-credito` (catálogo 09) | `SalesDocumentDetail` | `facturacion.credit_notes:create` |
+| `POST /v1/einvoicing/documents/{id}/debit-notes` **(I)** | `/nota-debito` (catálogo 10, serie FD01) | idem | `facturacion.debit_notes:create` |
 | `POST /v1/einvoicing/documents/{id}/void` **(I)** | diálogo comunicación de baja | — | `facturacion.cpe:void` |
-| `POST /v1/einvoicing/documents/{id}/retry` | cola SUNAT, reintento manual | — | `facturacion.cpe:update` |
+| `POST /v1/einvoicing/documents/{id}/retry` | cola SUNAT, reintento manual | — | `facturacion.cpe:retry` |
+| `POST /v1/einvoicing/documents/{id}/send` | enviar al cliente por correo o WhatsApp (issue #81) | — | `facturacion.cpe:send` |
 | `GET /v1/einvoicing/queue` | dashboard "cola SUNAT" | `SunatQueueItem` | read |
 | `GET /v1/dispatch-guides`, `/{id}`, `POST` **(I)** | `/ventas/guias`, `/[id]` | `DispatchGuide`, `guideDetailMock` | `facturacion.gre:*` |
 | `POST /v1/dispatch-guides/{id}/events` | seguimiento e incidencia | `guideDetailMock.timeline` | `facturacion.gre:update` |
@@ -109,9 +114,6 @@ Ajustes de forma respecto a los mocks, comunes a todos los recursos:
 | `GET/POST/PATCH /v1/suppliers`, `GET /{id}` | `/compras/proveedores`, `/[id]` | `Supplier` | `compras.suppliers:*` |
 | `GET/POST /v1/purchase-orders` **(I)**, `PATCH /{id}` | `/compras/ordenes`, `/nueva` | `PurchaseOrder` | `compras.orders:*` |
 | `POST /v1/purchase-orders/{id}/receipts` **(I)** | recepción contra OC (entrada de stock) | — | `inventario.stock:update` |
-| `GET/POST /v1/consignments` **(I)**, `GET /{id}` | consignación con distribuidoras (librería primero; flag `compras.consignacion`) | `er-04` `CONSIGNMENTS` | `compras.consignments:*` |
-| `POST /v1/consignments/{id}/settlements` **(I)** | liquidación de lo vendido | — | `compras.consignments:update` |
-| `GET/POST /v1/supplier-returns` **(I)** | devoluciones al proveedor con plazo | `SUPPLIER_RETURNS` | `compras.returns:*` |
 
 ## finanzas (`fin`)
 
@@ -152,7 +154,7 @@ Ajustes de forma respecto a los mocks, comunes a todos los recursos:
 | `GET/POST/PATCH /v1/lubricentro/vehicles`, `GET ?plate=` | recepción por placa (pantalla por diseñar) | ver `data/er-06-rubros.mmd` | `rubro.lubricentro` |
 | `POST /v1/lubricentro/vehicles/{id}/odometer` | lectura de km | — | idem |
 | `GET/POST /v1/lubricentro/service-orders` **(I)**, `PATCH /{id}` (If-Match), `POST /{id}/checkout` **(I)** | OT → venta | — | idem |
-| `GET/PUT /v1/lubricentro/service-rules`, `GET /v1/lubricentro/reminders` | recordatorios por km | — | idem |
+| `GET /v1/lubricentro/reminders?status=`, `POST /{id}/call-result` | recordatorios (+5 000 km fijo, aviso 7 días antes) y lista de llamada | `er-06` `MAINTENANCE_REMINDERS` | idem |
 | `GET/PUT /v1/libreria/books/{itemId}`, `GET /v1/libreria/books?isbn=&author=` | ficha de libro | `book_details` | `rubro.libreria` |
 | `GET/POST/PATCH /v1/libreria/school-lists`, `POST /{id}/to-quote` **(I)** | listas escolares | — | idem |
 | `GET /v1/restaurant/tables`, `PATCH /{id}`, `GET/POST /v1/restaurant/orders`, `GET /v1/restaurant/kds` | `/salon`, `/salon/cocina` | `DiningTable`, `OrderItem`, `KdsTicket` | `rubro.restaurante` |
@@ -180,3 +182,74 @@ Ajustes de forma respecto a los mocks, comunes a todos los recursos:
 | `GET /platform/v1/audit` | `/admin/auditoria` | `AuditEvent` (`ops.ts`) | superadmin |
 
 Nota: el mock de monitoreo muestra varios OSE (`providers`, `OseProvider`). Con Khipu como proveedor único, `monitoring/providers` reporta la salud del adaptador Khipu (latencia, cola, rechazos); la lista multi-OSE del diseño queda como visión futura si se agrega un segundo `InvoicingProvider`.
+
+## Catálogo de permisos (fuente de verdad)
+
+Formato `modulo.recurso:accion`. Este catálogo es la **fuente de verdad**: se carga en `iam.permissions` por migración, y cada ruta lo declara en el OpenAPI con `x-permission` (ADR 0004 y 0009). Acciones: `read`, `read_all` (ver lo de otros usuarios), `create`, `update`, `void`, `export`, `import`, `approve`, `send`, `retry`.
+
+| Módulo | Permisos |
+|---|---|
+| identidad | `identidad.users:read/create/update`, `identidad.roles:read/create/update`, `identidad.sessions:read/void` |
+| empresas | `empresas.config:read/update`, `empresas.sites:read/create/update`, `empresas.series:read/create/update`, `empresas.einvoicing:read/update` |
+| clientes | `clientes.customers:read/create/update/export/import` |
+| catalogo | `catalogo.items:read/create/update/import/export`, `catalogo.categories:read/create/update`, `catalogo.prices:read/update` |
+| inventario | `inventario.warehouses:read/create/update`, `inventario.stock:read/update/export`, `inventario.transfers:read/create/update`, `inventario.counts:read/create/update/approve`, `inventario.consignments:read/create/update`, `inventario.supplier_returns:read/create` |
+| ventas | `ventas.pos:read/create`, `ventas.discounts:create/approve`, `ventas.quotes:read/create/update/send` |
+| facturacion | `facturacion.cpe:read/create/void/retry/send/export`, `facturacion.credit_notes:create`, `facturacion.debit_notes:create`, `facturacion.gre:read/create/update` |
+| compras | `compras.suppliers:read/create/update`, `compras.orders:read/create/update`, `compras.documents:read/create/update/export` |
+| finanzas | `finanzas.cash:read/read_all/create/update/approve/export`, `finanzas.receivables:read/create/update`, `finanzas.payables:read/create/update` |
+| reportes | `reportes.dashboard:read`, `reportes.management:read/export`, `reportes.tax:read/export` |
+| agenda | `agenda.appointments:read/create/update` |
+| integraciones | `integraciones.config:read/update` |
+| auditoria | `auditoria.events:read/export` |
+| notificaciones | `notificaciones.reminders:read/update` |
+| lubricentro | `lubricentro.vehicles:read/create/update`, `lubricentro.service_orders:read/create/update/void` |
+| libreria | `libreria.books:read/create/update/import`, `libreria.school_lists:read/create/update` |
+| odontologia, veterinaria | `odontologia.records:read/update`, `veterinaria.records:read/update`, `veterinaria.hospital:read/update` |
+| restaurante, retail | `restaurante.tables:read/update`, `restaurante.orders:read/create/update`, `retail.variants:read/update` |
+
+## Correspondencia: código de historia → catálogo
+
+Los issues usan 37 códigos abreviados (relevados con `gh issue list --limit 200 --json number,body`). El PO los actualiza con esta tabla. Cuando un código de historia agrupa varios permisos, el rol plantilla recibe todos.
+
+| Código en la historia | Issues | Permisos del catálogo |
+|---|---|---|
+| `agenda.editar` | #75 | `agenda.appointments:create`, `:update` |
+| `auditoria.ver` | #79, #80 | `auditoria.events:read` |
+| `caja.operar` | #66, #67 | `finanzas.cash:create` (abrir), `finanzas.cash:update` (arqueo y cierre) |
+| `caja.ver_todos` | #68 | `finanzas.cash:read_all` |
+| `catalogo.editar` | #37, #38, #39, #104 | `catalogo.items:create`, `:update`, `catalogo.categories:create`, `:update`, `catalogo.prices:update` (y `libreria.books:update` en #104) |
+| `catalogo.importar` | #106 | `catalogo.items:import`, `libreria.books:import` |
+| `clientes.editar` | #34 | `clientes.customers:create`, `:update` |
+| `clientes.importar` | #36 | `clientes.customers:import` |
+| `clinica.editar` | #117, #119 | `odontologia.records:update` o `veterinaria.records:update` según el rubro |
+| `compras.editar` | #62, #63, #64 | `compras.suppliers:create/update`, `compras.orders:create/update`, `compras.documents:create/update` |
+| `comprobantes.enviar` | #81 | `facturacion.cpe:send` |
+| `cpe.baja` | #60 | `facturacion.cpe:void` |
+| `cpe.emitir` | #56 | `facturacion.cpe:create` |
+| `cpe.nota_credito` | #58 | `facturacion.credit_notes:create` |
+| `cpe.nota_debito` | #59 | `facturacion.debit_notes:create` |
+| `cpe.reintentar` | #57 | `facturacion.cpe:retry` |
+| `cxc.gestionar` | #69 | `finanzas.receivables:read`, `:create`, `:update` |
+| `cxp.gestionar` | #70 | `finanzas.payables:read`, `:create`, `:update` |
+| `empresa.editar` | #32, #33 | `empresas.config:update`, `empresas.sites:create`, `:update` |
+| `gre.emitir` | #61 | `facturacion.gre:create` |
+| `integraciones.gestionar` | #77, #78 | `integraciones.config:read`, `:update` |
+| `inventario.aprobar` | #46 | `inventario.counts:approve` |
+| `inventario.editar` | #41 | `inventario.warehouses:create`, `:update` |
+| `inventario.mover` | #43, #44, #65 | `inventario.stock:update`, `inventario.transfers:create`, `:update` |
+| `notificaciones.gestionar` | #82 | `notificaciones.reminders:update` |
+| `ordenes.crear` | #96 | `lubricentro.service_orders:create` |
+| `ordenes.editar` | #97, #98 | `lubricentro.service_orders:update` |
+| `proformas.crear` | #53 | `ventas.quotes:create`, `:update`, `:send` |
+| `reportes.dashboard` | #71 | `reportes.dashboard:read` |
+| `reportes.tributarios` | #73, #74 | `reportes.tax:read`, `:export` |
+| `reportes.ver` | #72 | `reportes.management:read` |
+| `roles.gestionar` | #29 | `identidad.roles:create`, `:update` |
+| `sunat.configurar` | #55 | `empresas.einvoicing:update`, `empresas.series:create`, `:update` |
+| `usuarios.gestionar` | #28 | `identidad.users:create`, `:update` |
+| `vehiculos.editar` | #94 | `lubricentro.vehicles:create`, `:update` |
+| `ventas.crear` | #48, #49 | `ventas.pos:create` |
+| `ventas.descuento` | #51 | `ventas.discounts:create`; sobre el tope del rol, `ventas.discounts:approve` del supervisor que autoriza |
+
+La consignación (#112) no tenía código propio: usa `inventario.consignments:*`.

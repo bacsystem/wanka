@@ -34,10 +34,10 @@ Los diagramas son archivos Mermaid (`.mmd`). GitHub los renderiza al abrirlos y 
 | empresas | `internal/empresas` | `org` | tenant, sedes, cajas, onboarding, configuración, **series**. La asignación de correlativos es un servicio de este módulo que usan facturación, ventas, compras, finanzas y lubricentro |
 | clientes | `internal/clientes` | `crm` | |
 | catalogo | `internal/catalogo` | `catalog` | **las variantes son core** (talla/color, EAN, listas de precio), no del rubro retail: las usan retail y librería |
-| inventario | `internal/inventario` | `inv` | almacenes, stock, reservas, movimientos, kardex, toma física, traslados; stock en **consignación** |
+| inventario | `internal/inventario` | `inv` | almacenes, stock, reservas, movimientos, kardex, toma física, traslados; **consignación con distribuidoras y devoluciones a proveedor** (flag `inventario.consignacion`, issue #112) |
 | ventas | `internal/ventas` | `sales` | POS, proformas |
 | facturacion-electronica | `internal/facturacion` | `einv` | CPE, NC/ND, bajas, GRE, **adaptador Khipu** |
-| compras | `internal/compras` | `purch` | proveedores, OC, registro de compras SIRE, **consignación y devoluciones a proveedor** (flag `compras.consignacion`) |
+| compras | `internal/compras` | `purch` | proveedores, OC, registro de compras SIRE; aporta proveedor y comprobante a la liquidación de consignación vía fachada |
 | finanzas | `internal/finanzas` | `fin` | caja/turnos/Z, CxC, CxP |
 | reportes | `internal/reportes` | `rpt` (lectura) | gestión, tributarios, PDT 621, exportes asíncronos |
 | agenda | `internal/agenda` | `agenda` | recursos (sillón, consultorio, bahía), citas |
@@ -47,7 +47,7 @@ Los diagramas son archivos Mermaid (`.mmd`). GitHub los renderiza al abrirlos y 
 | plataforma | `internal/plataforma` | `platform` | tenants, planes, suscripciones, facturación del SaaS, flags, monitoreo, soporte, impersonación |
 | rubros | `internal/rubros/{lubricentro,libreria,restaurante,veterinaria,odontologia,retail}` | `lube`, `books`, `resto`, `vet`, `dental` | extienden entidades core por FK; el core no los conoce |
 
-Los dos cambios de frontera (variantes y consignación al core) ya se comunicaron a coordinación para que el PO etiquete esas historias como `catalogo`, `compras` e `inventario`.
+Fronteras ya alineadas con el PO: las variantes son core `catalogo`, y la consignación es core `inventario` (decisión del dueño, issue #112 con etiqueta `modulo:inventario`).
 
 ## 3. Diagramas C4
 
@@ -69,9 +69,9 @@ Modelo y reglas en [`data/data-model.md`](data/data-model.md): `tenant_id` y RLS
 | ER | Archivo |
 |---|---|
 | identidad + empresas | [`data/er-01-identidad-empresas.mmd`](data/er-01-identidad-empresas.mmd) |
-| clientes + catálogo + inventario | [`data/er-02-clientes-catalogo-inventario.mmd`](data/er-02-clientes-catalogo-inventario.mmd) |
+| clientes + catálogo + inventario (con consignación) | [`data/er-02-clientes-catalogo-inventario.mmd`](data/er-02-clientes-catalogo-inventario.mmd) |
 | ventas + facturación electrónica | [`data/er-03-ventas-facturacion.mmd`](data/er-03-ventas-facturacion.mmd) |
-| compras + finanzas (con consignación) | [`data/er-04-compras-finanzas.mmd`](data/er-04-compras-finanzas.mmd) |
+| compras + finanzas (PEN y USD, arqueo por método y moneda) | [`data/er-04-compras-finanzas.mmd`](data/er-04-compras-finanzas.mmd) |
 | plataforma + transversales | [`data/er-05-plataforma-transversal.mmd`](data/er-05-plataforma-transversal.mmd) |
 | rubros (lubricentro, librería) | [`data/er-06-rubros.mmd`](data/er-06-rubros.mmd) |
 
@@ -125,14 +125,16 @@ Las dependencias nuevas que proponen los ADR (River, sqlc, goose, oapi-codegen, 
 Khipu. La documentación de Khipu no responde estos puntos; detalle en el ADR 0003:
 1. ¿Una cuenta de Khipu para todos los tenants, o una por tenant? Con una sola cuenta, la cuota mensual se comparte entre todos.
 2. ¿Habrá una API de integrador para dar de alta empresa, API key y webhook? Hoy ese alta solo se hace desde el portal.
+   - **Verificación en BETA antes del #56: redondeo.** Los totales de `pricing.Compute` deben ser iguales a los de `POST /v1/facturas/calcular` en al menos 200 carritos (data-model §2, ADR 0003).
+   - **Verificación en BETA antes del #56: orden y huecos por serie.** Comprobar si Khipu acepta el correlativo N+1 antes que N; de eso depende la política de hueco (ADR 0003 y 0006).
 3. ¿Se puede usar la GRE en el release 1? Está marcada como experimental y no existe en BETA.
-4. Timeouts y latencia típica de las llamadas, si se envía `Retry-After`, qué restricciones tiene `correlativo` (por ejemplo, si un hueco bloquea la serie) y cuál es el cuerpo del webhook de una baja.
+4. Timeouts y latencia típica de las llamadas; si se envía `Retry-After`; qué significa `PENDIENTE_AGRUPACION`; si los webhooks de GRE y de bajas usan los eventos `comprobante.*`. La cuota de BETA (`LIMITE_PRUEBAS`) también se comparte entre las empresas de una cuenta.
 
 Producto (PO):
 5. Esperar hasta 3 s a que llegue el hash para imprimir el ticket completo, o imprimir siempre "pendiente".
 6. Venta con stock negativo (`allow_negative_stock`).
 7. En consignación, qué unidad se vende primero: la propia o la consignada.
-8. Intervalo en días para el próximo cambio de aceite.
+8. Fecha estimada del próximo cambio de aceite cuando el vehículo no tiene historial de km (el intervalo es fijo: +5 000 km, #100; el aviso sale 7 días antes, #101).
 9. Fuente del tipo de cambio y del DNI.
 10. 2FA por SMS (no propuesto).
 11. Paginación numerada frente a cursor (cambio de UX en `PaginationBar`).

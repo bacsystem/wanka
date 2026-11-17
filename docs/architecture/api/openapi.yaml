@@ -21,6 +21,8 @@ paths:
     post:
       tags: [ventas]
       operationId: createSale
+      x-module: ventas
+      x-permission: ventas.pos:create
       summary: Registra una venta POS y encola la emisión del CPE
       description: |
         Rol: cualquiera con permiso ventas.pos:create y turno de caja abierto
@@ -52,6 +54,8 @@ paths:
     get:
       tags: [facturacion-electronica]
       operationId: listDocuments
+      x-module: facturacion-electronica
+      x-permission: facturacion.cpe:read
       summary: Lista comprobantes del tenant de la sesión
       parameters:
         - { name: type, in: query, schema: { type: array, items: { $ref: '#/components/schemas/DocumentType' } }, explode: true }
@@ -106,16 +110,29 @@ components:
         application/problem+json:
           schema: { $ref: '#/components/schemas/Problem' }
   schemas:
-    Money:
+    MoneyPositive:
       type: string
-      pattern: '^-?\d{1,12}\.\d{2}$'
+      description: Importe mayor que cero (CHECK amount > 0 / total > 0 en la base).
+      pattern: '^(?!0+\.00$)\d{1,12}\.\d{2}$'
       examples: ['118.00']
+    MoneyNonNegative:
+      type: string
+      description: Importe mayor o igual que cero (descuentos; CHECK >= 0).
+      pattern: '^\d{1,12}\.\d{2}$'
+      examples: ['0.00']
     UnitPrice:
       type: string
-      pattern: '^\d{1,10}(\.\d{1,4})?$'
+      description: Precio unitario con IGV, mayor que cero (Khipu y SUNAT rechazan precio cero o negativo).
+      pattern: '^(?!0+(\.0{1,4})?$)\d{1,10}(\.\d{1,4})?$'
     Quantity:
       type: string
-      pattern: '^\d{1,10}(\.\d{1,4})?$'
+      description: Cantidad mayor que cero.
+      pattern: '^(?!0+(\.0{1,4})?$)\d{1,10}(\.\d{1,4})?$'
+    ExchangeRate:
+      type: string
+      description: Soles por USD con exactamente 3 decimales, hasta 3 enteros (igual que tipo_cambio de Khipu). Obligatorio si currency = USD y prohibido si PEN.
+      pattern: '^\d{1,3}\.\d{3}$'
+      examples: ['3.756']
     Currency:
       type: string
       enum: [PEN, USD]
@@ -128,7 +145,8 @@ components:
       enum: [pendiente, enviado, aceptado, observado, rechazado, anulado]
     PaymentMethod:
       type: string
-      enum: [efectivo, tarjeta, yape_plin, transferencia, credito]
+      description: credito solo en factura (Khipu emite la boleta al contado).
+      enum: [efectivo, tarjeta, yape, plin, transferencia, credito]
     PageInfo:
       type: object
       required: [hasMore]
@@ -156,14 +174,27 @@ components:
               meta: { type: object, additionalProperties: true }
     CreateSaleRequest:
       type: object
-      required: [documentType, lines, payments, expectedTotal]
+      description: |
+        La caja y la sede salen de la sesión; shiftId debe ser el turno abierto de esa caja
+        (409 shift_not_open si no). La serie se toma de (caja, documentType).
+      required: [shiftId, documentType, currency, lines, payments, expectedTotal]
       properties:
+        shiftId: { type: string, format: uuid }
         documentType: { type: string, enum: [boleta, factura] }
+        currency: { $ref: '#/components/schemas/Currency' }
+        exchangeRate:
+          description: Obligatorio si currency = USD (422 exchange_rate_required); prohibido si PEN.
+          oneOf:
+            - $ref: '#/components/schemas/ExchangeRate'
+            - type: 'null'
         customerId:
           type: [string, 'null']
           format: uuid
-          description: Obligatorio para factura; null = cliente varios (boleta en soles hasta S/ 700.00, límite de Khipu).
+          description: Obligatorio para factura. null = cliente varios (boleta en soles hasta S/ 700.00, límite de Khipu).
         quoteId: { type: [string, 'null'], format: uuid }
+        discountApprovalToken:
+          type: [string, 'null']
+          description: Token de re-autenticación del supervisor si algún descuento supera el tope del rol (ventas.discounts:approve).
         lines:
           type: array
           minItems: 1
@@ -175,40 +206,53 @@ components:
               variantId: { type: string, format: uuid }
               quantity: { $ref: '#/components/schemas/Quantity' }
               unitPrice: { $ref: '#/components/schemas/UnitPrice' }
-              discount: { $ref: '#/components/schemas/Money' }
+              discount: { $ref: '#/components/schemas/MoneyNonNegative' }
+              discountReason: { type: string, maxLength: 200, description: Obligatorio si discount > 0. }
         payments:
           type: array
           minItems: 1
           maxItems: 10
           items:
             type: object
-            required: [method, amount]
+            required: [method, currency, amount]
             properties:
               method: { $ref: '#/components/schemas/PaymentMethod' }
-              amount: { $ref: '#/components/schemas/Money' }
+              currency: { $ref: '#/components/schemas/Currency' }
+              amount: { $ref: '#/components/schemas/MoneyPositive' }
+              exchangeRate:
+                description: Obligatorio si la moneda del pago difiere de la de la venta.
+                oneOf:
+                  - $ref: '#/components/schemas/ExchangeRate'
+                  - type: 'null'
               reference: { type: string, maxLength: 64 }
         expectedTotal:
-          $ref: '#/components/schemas/Money'
+          $ref: '#/components/schemas/MoneyPositive'
     SaleCreated:
       type: object
-      required: [saleId, total, document]
+      required: [saleId, total, currency, change, document]
       properties:
         saleId: { type: string, format: uuid }
-        total: { $ref: '#/components/schemas/Money' }
-        change: { $ref: '#/components/schemas/Money' }
+        total: { $ref: '#/components/schemas/MoneyPositive' }
+        currency: { $ref: '#/components/schemas/Currency' }
+        change: { $ref: '#/components/schemas/MoneyNonNegative' }
         document: { $ref: '#/components/schemas/SalesDocument' }
     SalesDocument:
       type: object
-      description: Forma de types/domain.ts SalesDocument con importes como string.
+      description: Forma de SalesDocument de types/domain.ts, con importes como string. number es null en una GRE hasta que Khipu la numera.
       required: [id, type, series, number, customerName, customerDocument, total, currency, sunatStatus, issuedAt]
       properties:
         id: { type: string, format: uuid }
         type: { $ref: '#/components/schemas/DocumentType' }
         series: { type: string, pattern: '^[A-Z0-9]{4}$' }
-        number: { type: integer, minimum: 1, maximum: 99999999 }
+        number: { type: [integer, 'null'], minimum: 1, maximum: 99999999 }
+        display: { type: [string, 'null'], examples: ['F001-00000842'] }
         customerName: { type: string }
         customerDocument: { type: string }
-        total: { $ref: '#/components/schemas/Money' }
+        total: { $ref: '#/components/schemas/MoneyNonNegative' }
         currency: { $ref: '#/components/schemas/Currency' }
+        exchangeRate:
+          oneOf:
+            - $ref: '#/components/schemas/ExchangeRate'
+            - type: 'null'
         sunatStatus: { $ref: '#/components/schemas/CpeStatus' }
         issuedAt: { type: string, format: date-time }
