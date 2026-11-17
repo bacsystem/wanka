@@ -13,24 +13,24 @@ interface PageHeaderProps {
 
 /**
  * @deprecated Temporary W5a adapter over `CabeceraPagina`. Use it directly (module PRs, W6.x); deleted in W8.
- * `CabeceraPagina` has no eyebrow slot, so the eyebrow goes in `volver` with the `ROTULO` recipe (DS gap).
+ * `CabeceraPagina` has no eyebrow or status slots (DS gap): the eyebrow goes in `volver` with the `ROTULO` recipe, and the status badge
+ * goes first among the actions, so the `h1` keeps its exact accessible name.
  */
 export function PageHeader({ eyebrow, title, description, actions, status, className }: PageHeaderProps) {
   return (
     <CabeceraPagina
       className={className}
       volver={eyebrow ? <p className={ROTULO}>{eyebrow}</p> : undefined}
-      titulo={
-        status ? (
-          <>
-            {title} {status}
-          </>
-        ) : (
-          title
-        )
-      }
+      titulo={title}
       descripcion={description}
-      acciones={actions}
+      acciones={
+        status || actions ? (
+          <>
+            {status}
+            {actions}
+          </>
+        ) : undefined
+      }
     />
   );
 }
