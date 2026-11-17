@@ -18,7 +18,7 @@ flowchart LR
     bucket[("Bucket S3 compatible<br/>XML, CDR, PDF, adjuntos")]
   end
 
-  secrets["Variables de entorno por servicio (solo nombres):<br/>DATABASE_URL_APP (api), DATABASE_URL_WORKER (worker),<br/>DATABASE_URL_WEBHOOKS (webhooks), DATABASE_URL_PLATFORM (platform-api),<br/>DATABASE_URL_MIGRATOR (pre-deploy), DB_POOL_MAX_CONNS, HTTP_READ_TIMEOUT,<br/>S3_ENDPOINT, S3_BUCKET, S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY,<br/>KHIPU_BASE_URL, INTEGRATIONS_ENC_KEY (api, worker, webhooks: cifra fk_ y whsec_ por tenant en la BD),<br/>TOTP_ENC_KEY, TOKEN_PEPPER,<br/>SMTP_URL, WHATSAPP_API_TOKEN,<br/>API_INTERNAL_URL, PLATFORM_API_INTERNAL_URL,<br/>OTEL_EXPORTER_OTLP_ENDPOINT, LOG_LEVEL, APP_ENV"]
+  secrets["Variables de entorno por servicio (solo nombres):<br/>DATABASE_URL_APP (api), DATABASE_URL_WORKER (worker),<br/>DATABASE_URL_WEBHOOKS (webhooks), DATABASE_URL_PLATFORM (platform-api),<br/>DATABASE_URL_MIGRATOR (pre-deploy),<br/>DB_POOL_MAX_CONNS por servicio: api 20, worker 10, webhooks 5, platform-api 5 (suma 41 con el pre-deploy, menor que max_connections), HTTP_READ_TIMEOUT,<br/>S3_ENDPOINT, S3_BUCKET, S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY,<br/>KHIPU_BASE_URL, INTEGRATIONS_ENC_KEY (SOLO api y worker: cifra las API keys fk_),<br/>WEBHOOK_SECRET_ENC_KEY (api al conectar Khipu y webhooks: cifra los whsec_; webhooks NO recibe INTEGRATIONS_ENC_KEY),<br/>TOTP_ENC_KEY, TOKEN_PEPPER,<br/>SMTP_URL, WHATSAPP_API_TOKEN,<br/>API_INTERNAL_URL, PLATFORM_API_INTERNAL_URL,<br/>OTEL_EXPORTER_OTLP_ENDPOINT, LOG_LEVEL, APP_ENV"]
 
   user --> dns --> web
   khipu --> dns --> webhooks

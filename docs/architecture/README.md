@@ -122,11 +122,13 @@ Las dependencias nuevas que proponen los ADR (River, sqlc, goose, oapi-codegen, 
 
 ## 10. Supuestos y preguntas abiertas
 
+Verificaciones en BETA de Khipu, criterios previos al issue #56 (no son preguntas: se cierran con una prueba):
+- **Redondeo.** Los totales de `pricing.Compute` deben ser idénticos a los de `POST /v1/facturas/calcular` en al menos 200 carritos (`data/data-model.md` §2, ADR 0003).
+- **Orden y huecos por serie.** Comprobar si Khipu acepta el correlativo N+1 antes que N. De eso depende la política de hueco (ADR 0003 y 0006).
+
 Khipu. La documentación de Khipu no responde estos puntos; detalle en el ADR 0003:
 1. ¿Una cuenta de Khipu para todos los tenants, o una por tenant? Con una sola cuenta, la cuota mensual se comparte entre todos.
 2. ¿Habrá una API de integrador para dar de alta empresa, API key y webhook? Hoy ese alta solo se hace desde el portal.
-   - **Verificación en BETA antes del #56: redondeo.** Los totales de `pricing.Compute` deben ser iguales a los de `POST /v1/facturas/calcular` en al menos 200 carritos (data-model §2, ADR 0003).
-   - **Verificación en BETA antes del #56: orden y huecos por serie.** Comprobar si Khipu acepta el correlativo N+1 antes que N; de eso depende la política de hueco (ADR 0003 y 0006).
 3. ¿Se puede usar la GRE en el release 1? Está marcada como experimental y no existe en BETA.
 4. Timeouts y latencia típica de las llamadas; si se envía `Retry-After`; qué significa `PENDIENTE_AGRUPACION`; si los webhooks de GRE y de bajas usan los eventos `comprobante.*`. La cuota de BETA (`LIMITE_PRUEBAS`) también se comparte entre las empresas de una cuenta.
 

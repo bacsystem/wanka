@@ -9,7 +9,7 @@ C4Container
     Container(api, "api", "Go, net/http", "Sin dominio publico (solo red privada). Modular monolith hexagonal. Plano tenant /v1. Valida sesion, resuelve tenant, aplica RLS, RBAC y feature flags.")
     Container(platformApi, "platform-api", "Go, misma imagen, --plane=platform", "Plano super-admin /platform/v1. Rol de BD distinto. Sin acceso a datos de tenant salvo vistas agregadas e impersonacion auditada.")
     Container(webhooks, "webhooks", "Go, misma imagen, --plane=webhooks", "Unico servicio Go con dominio publico. Solo monta /webhooks/khipu/{routeId} y health. Rol wanka_webhooks.")
-    Container(worker, "worker", "Go, misma imagen, River", "Jobs: emision CPE, polling, webhooks entrantes, recordatorios, reportes pesados, limpieza. Un solo lider para periodicos.")
+    Container(worker, "worker", "Go, misma imagen, River", "Jobs: emision CPE (un emisor por serie con arrendamiento), cpe.sync de los eventos que encola el servicio webhooks, conciliacion, recordatorios, reportes pesados, limpieza. Un solo lider para periodicos.")
     ContainerDb(pg, "PostgreSQL", "PostgreSQL 17", "Esquemas por bounded context. RLS por tenant_id. Cola River y outbox en la misma BD.")
     ContainerDb(objects, "Object storage", "S3 compatible", "XML firmado, CDR, PDF, adjuntos. Claves con prefijo tenant_id.")
   }
