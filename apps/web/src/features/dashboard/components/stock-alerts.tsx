@@ -1,6 +1,6 @@
 import { AlertTriangle, Layers } from "lucide-react";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { Button } from "khipu-design-system/ui/button";
 import { Tag } from "@/components/shared/status-badge";
 import { SectionCard } from "@/components/shared/section-card";
 import { cn } from "@/lib/utils";

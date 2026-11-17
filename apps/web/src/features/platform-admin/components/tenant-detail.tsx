@@ -5,7 +5,7 @@ import Link from "next/link";
 import * as React from "react";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { Button } from "khipu-design-system/ui/button";
 import { EntityHeader } from "@/components/shared/entity-header";
 import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";

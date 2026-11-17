@@ -3,7 +3,7 @@
 import { Clock, Download, MessageCircle, Plus, Send, Smile, Star, Timer, Wand2 } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { Button } from "khipu-design-system/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { StateIcon } from "@/components/shared/dynamic-icon";
 import { PageHeader } from "@/components/shared/page-header";

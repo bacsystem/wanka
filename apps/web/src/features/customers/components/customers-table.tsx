@@ -4,8 +4,8 @@ import { Download, Mail, MessageCircle, MoreHorizontal, Phone, ShieldCheck, Shop
 import Link from "next/link";
 import * as React from "react";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Badge } from "khipu-design-system/ui/badge";
+import { Button } from "khipu-design-system/ui/button";
 import { InitialsAvatar } from "@/components/shared/initials-avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
@@ -66,11 +66,11 @@ export function CustomersScreen({ customers, kpis }: { customers: Customer[]; kp
       key: "actions", header: <span className="sr-only">Acciones</span>, align: "right",
       cell: (c) => (
         <div className="flex justify-end gap-0.5">
-          <Button variant="ghost" size="icon-sm" aria-label="WhatsApp" onClick={() => toast.info(`Abriendo WhatsApp de ${c.name}`)}><MessageCircle /></Button>
-          <Button variant="ghost" size="icon-sm" aria-label="Nueva venta" render={<Link href="/ventas/nueva" />} nativeButton={false}><ShoppingCart /></Button>
-          {c.clinicalRecord ? <Button variant="ghost" size="icon-sm" aria-label="Historia clínica" render={<Link href={`/clientes/${c.id}/historia`} />} nativeButton={false}><Stethoscope /></Button> : null}
+          <Button variant="ghost" size="icon" aria-label="WhatsApp" onClick={() => toast.info(`Abriendo WhatsApp de ${c.name}`)}><MessageCircle /></Button>
+          <Button variant="ghost" size="icon" aria-label="Nueva venta" render={<Link href="/ventas/nueva" />} nativeButton={false}><ShoppingCart /></Button>
+          {c.clinicalRecord ? <Button variant="ghost" size="icon" aria-label="Historia clínica" render={<Link href={`/clientes/${c.id}/historia`} />} nativeButton={false}><Stethoscope /></Button> : null}
           <DropdownMenu>
-            <DropdownMenuTrigger render={<Button variant="ghost" size="icon-sm" aria-label="Más acciones" />}><MoreHorizontal /></DropdownMenuTrigger>
+            <DropdownMenuTrigger render={<Button variant="ghost" size="icon" aria-label="Más acciones" />}><MoreHorizontal /></DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem><Phone /> Llamar</DropdownMenuItem>
               <DropdownMenuItem><Mail /> Enviar estado de cuenta</DropdownMenuItem>

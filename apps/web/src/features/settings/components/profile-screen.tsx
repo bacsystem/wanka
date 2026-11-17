@@ -5,10 +5,10 @@ import * as React from "react";
 import { useTheme } from "next-themes";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Button } from "khipu-design-system/ui/button";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "khipu-design-system/ui/table";
 import { Input } from "@/components/ui/input";
-import { Progress } from "@/components/ui/progress";
+import { ProgresoLineal } from "khipu-design-system/feedback/progreso";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Field } from "@/components/shared/field";
@@ -49,7 +49,7 @@ export function ProfileScreen() {
             <SectionCard title="Seguridad de la contraseña" icon={KeyRound} action={<span className="text-xs text-muted-foreground">Último cambio hace 42 días</span>} contentClassName="grid gap-3 p-4">
               <Field label="Contraseña actual"><Input type="password" /></Field>
               <Field label="Nueva contraseña"><Input type="password" value={pw} onChange={(e) => setPw(e.target.value)} /></Field>
-              <div><div className="flex justify-between text-xs"><span className="text-muted-foreground">Fortaleza</span><span className={cn("font-medium", sc >= 75 ? "text-success" : sc >= 50 ? "text-warning" : "text-destructive")}>{sc >= 75 ? "Muy fuerte" : sc >= 50 ? "Aceptable" : "Débil"} ({sc}/100)</span></div><Progress value={sc} className="mt-1" /></div>
+              <div><div className="flex justify-between text-xs"><span className="text-muted-foreground">Fortaleza</span><span className={cn("font-medium", sc >= 75 ? "text-success" : sc >= 50 ? "text-warning" : "text-destructive")}>{sc >= 75 ? "Muy fuerte" : sc >= 50 ? "Aceptable" : "Débil"} ({sc}/100)</span></div><ProgresoLineal valor={sc} className="mt-1" /></div>
               <ul className="grid gap-1 text-xs text-muted-foreground sm:grid-cols-2">{[["Mínimo 10 caracteres", pw.length >= 10], ["Números y mayúsculas", /[A-Z]/.test(pw) && /\d/.test(pw)], ["Carácter especial", /[^A-Za-z0-9]/.test(pw)], ["Sin palabras comunes ni RUC", !/20608941235|clinica|sonrisa/i.test(pw)]].map(([l, ok]) => <li key={String(l)} className={cn("flex items-center gap-1", ok && "text-success")}><Check className="size-3" /> {l}</li>)}</ul>
               <Field label="Confirmar nueva contraseña"><Input type="password" /></Field>
               <div className="flex items-center justify-between"><label className="flex items-center gap-2 text-sm"><Switch defaultChecked aria-label="Exigir cambio cada 90 días" /> Exigir cambio cada 90 días</label><Button disabled={sc < 50} onClick={() => { toast.success("Contraseña actualizada"); setPw(""); }}>Actualizar contraseña</Button></div>

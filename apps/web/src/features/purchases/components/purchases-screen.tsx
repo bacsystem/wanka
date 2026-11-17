@@ -5,7 +5,7 @@ import Link from "next/link";
 import * as React from "react";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
+import { Button } from "khipu-design-system/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -62,9 +62,9 @@ export function PurchasesScreen({ purchases, discrepancy, tabCounts, kpis }: { p
       key: "actions", header: <span className="sr-only">Acciones</span>, align: "right",
       cell: (p) => (
         <div className="flex justify-end gap-0.5">
-          <Button variant="ghost" size="icon-sm" aria-label="Ver detalle"><Eye /></Button>
-          {p.sire === "discrepancia" ? <Button variant="ghost" size="icon-sm" aria-label="Ajustar a propuesta SIRE" onClick={() => toast.success(`${p.number} ajustado a la propuesta SIRE`)}><Wand2 /></Button> : null}
-          <Button variant="ghost" size="icon-sm" aria-label="Más"><MoreHorizontal /></Button>
+          <Button variant="ghost" size="icon" aria-label="Ver detalle"><Eye /></Button>
+          {p.sire === "discrepancia" ? <Button variant="ghost" size="icon" aria-label="Ajustar a propuesta SIRE" onClick={() => toast.success(`${p.number} ajustado a la propuesta SIRE`)}><Wand2 /></Button> : null}
+          <Button variant="ghost" size="icon" aria-label="Más"><MoreHorizontal /></Button>
         </div>
       ),
     },

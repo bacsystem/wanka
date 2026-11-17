@@ -6,9 +6,9 @@ import { useRouter } from "next/navigation";
 import * as React from "react";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
+import { Button } from "khipu-design-system/ui/button";
 import { Input } from "@/components/ui/input";
-import { Progress } from "@/components/ui/progress";
+import { ProgresoLineal } from "khipu-design-system/feedback/progreso";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Field } from "@/components/shared/field";
@@ -178,7 +178,7 @@ export function OnboardingScreen() {
               <div><dt className="text-muted-foreground">Domicilio fiscal</dt><dd>{company.address}</dd></div>
               <div><dt className="text-muted-foreground">Rubro</dt><dd>{industryOptions.find((o) => o.id === industry)?.label} · {activeCount} módulos</dd></div>
             </dl>
-            <div className="mt-3"><div className="flex justify-between text-xs"><span className="text-muted-foreground">Avance general</span><span className="font-mono">{progress}% ({step - 1} de 6)</span></div><Progress value={progress} className="mt-1" /></div>
+            <div className="mt-3"><div className="flex justify-between text-xs"><span className="text-muted-foreground">Avance general</span><span className="font-mono">{progress}% ({step - 1} de 6)</span></div><ProgresoLineal valor={progress} className="mt-1" /></div>
           </div>
           <div className="rounded-xl border bg-muted/30 p-4 text-xs text-muted-foreground">
             <p className="font-medium text-foreground">Vistas previas de siguientes pasos</p>

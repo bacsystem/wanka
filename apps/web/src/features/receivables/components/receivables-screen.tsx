@@ -4,7 +4,7 @@ import { Banknote, BarChart3, Download, FileText, MessageCircle, MessageSquare, 
 import * as React from "react";
 import { toast } from "sonner";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
-import { Button } from "@/components/ui/button";
+import { Button } from "khipu-design-system/ui/button";
 import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -67,8 +67,8 @@ export function ReceivablesScreen({ rows: all, weekly, spot, kpis }: Props & { k
       cell: (r) => (
         <div className="flex justify-end gap-0.5">
           <Button size="xs" onClick={() => setPaying(r)}><Banknote data-icon="inline-start" /> Abonar</Button>
-          <Button variant="ghost" size="icon-sm" aria-label="Estado de cuenta"><FileText /></Button>
-          <Button variant="ghost" size="icon-sm" aria-label="Recordatorio WhatsApp" onClick={() => toast.success(`Recordatorio enviado a ${r.customer}`)}><MessageCircle /></Button>
+          <Button variant="ghost" size="icon" aria-label="Estado de cuenta"><FileText /></Button>
+          <Button variant="ghost" size="icon" aria-label="Recordatorio WhatsApp" onClick={() => toast.success(`Recordatorio enviado a ${r.customer}`)}><MessageCircle /></Button>
         </div>
       ),
     },

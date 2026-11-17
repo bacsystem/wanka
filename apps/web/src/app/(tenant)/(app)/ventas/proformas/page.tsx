@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { CheckCircle2, Clock, FileText, Gauge, PlusCircle, SlidersHorizontal } from "lucide-react";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { Button } from "khipu-design-system/ui/button";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard, StatGrid } from "@/components/shared/stat-card";
 import { StatusBadge } from "@/components/shared/status-badge";

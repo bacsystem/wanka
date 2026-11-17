@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Bike, Clock, Receipt, Users } from "lucide-react";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { Button } from "khipu-design-system/ui/button";
 import { PageHeader } from "@/components/shared/page-header";
 import { StatCard, StatGrid } from "@/components/shared/stat-card";
 import { DeliveryScreen } from "@/features/restaurant/components/delivery-screen";

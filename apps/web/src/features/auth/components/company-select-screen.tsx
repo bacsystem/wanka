@@ -5,8 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Badge } from "khipu-design-system/ui/badge";
+import { Button } from "khipu-design-system/ui/button";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { SITE_COOKIE, TENANT_COOKIE, setClientCookie } from "@/features/auth/lib/tenant-cookie";
 import { initials } from "@/lib/tenant";
@@ -45,7 +45,7 @@ export function CompanySelectScreen({ tenants, currentId }: { tenants: TenantOpt
     <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-8 px-4 py-6 md:px-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2"><span className="flex size-9 items-center justify-center rounded-md bg-primary font-mono text-lg font-bold text-primary-foreground">S</span><div><p className="font-semibold leading-tight">Wanka</p><p className="text-xs text-muted-foreground">Acceso seguro SSL · autenticación 2FA activa</p></div></div>
-        <div className="flex items-center gap-2 text-sm"><span className="flex size-8 items-center justify-center rounded-full bg-accent font-mono text-xs font-semibold text-accent-foreground">CM</span><div className="hidden sm:block"><p className="font-medium leading-tight">Carlos Mendoza</p><p className="text-xs text-muted-foreground">carlos.mendoza@clinicasonrisa.pe</p></div><Button variant="ghost" size="icon-sm" aria-label="Cerrar sesión" render={<Link href="/login" />} nativeButton={false}><LogOut /></Button></div>
+        <div className="flex items-center gap-2 text-sm"><span className="flex size-8 items-center justify-center rounded-full bg-accent font-mono text-xs font-semibold text-accent-foreground">CM</span><div className="hidden sm:block"><p className="font-medium leading-tight">Carlos Mendoza</p><p className="text-xs text-muted-foreground">carlos.mendoza@clinicasonrisa.pe</p></div><Button variant="ghost" size="icon" aria-label="Cerrar sesión" render={<Link href="/login" />} nativeButton={false}><LogOut /></Button></div>
       </header>
 
       <section aria-labelledby="step1">

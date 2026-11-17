@@ -3,13 +3,13 @@
 import { Building2, History, KeyRound, LockOpen, MoreHorizontal, RotateCcw, Save, ShieldCheck, Smartphone, Store, UserPlus, Users } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { Button } from "khipu-design-system/ui/button";
+import { Tabs } from "khipu-design-system/navegacion/tabs";
 import { InitialsAvatar } from "@/components/shared/initials-avatar";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "khipu-design-system/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DataTable, TwoLine, type Column } from "@/components/shared/data-table";
 import { PaginationBar } from "@/components/shared/pagination";
 import { PageHeader } from "@/components/shared/page-header";
@@ -64,10 +64,10 @@ export function SecurityScreen({ collaborators, roles, matrix, kpis }: Props & {
       key: "actions", header: <span className="sr-only">Acciones</span>, align: "right",
       cell: (c) => (
         <div className="flex justify-end gap-0.5">
-          <Button variant="ghost" size="icon-sm" aria-label="Restablecer contraseña" onClick={() => toast.success(`Enlace de restablecimiento enviado a ${c.email}`)}><KeyRound /></Button>
-          <Button variant="ghost" size="icon-sm" aria-label="Forzar 2FA" onClick={() => toast.info("OTP de configuración enviado al móvil")}><Smartphone /></Button>
+          <Button variant="ghost" size="icon" aria-label="Restablecer contraseña" onClick={() => toast.success(`Enlace de restablecimiento enviado a ${c.email}`)}><KeyRound /></Button>
+          <Button variant="ghost" size="icon" aria-label="Forzar 2FA" onClick={() => toast.info("OTP de configuración enviado al móvil")}><Smartphone /></Button>
           <DropdownMenu>
-            <DropdownMenuTrigger render={<Button variant="ghost" size="icon-sm" aria-label="Más" />}><MoreHorizontal /></DropdownMenuTrigger>
+            <DropdownMenuTrigger render={<Button variant="ghost" size="icon" aria-label="Más" />}><MoreHorizontal /></DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem>Editar rol y sedes</DropdownMenuItem>
               <DropdownMenuItem><History /> Ver auditoría</DropdownMenuItem>
@@ -82,7 +82,7 @@ export function SecurityScreen({ collaborators, roles, matrix, kpis }: Props & {
   ];
 
   return (
-    <Tabs defaultValue="users" className="min-w-0 max-w-full gap-4">
+    <div className="flex min-w-0 max-w-full flex-col gap-4">
       <PageHeader
         eyebrow="Configuración y seguridad · Usuarios, roles y permisos multisede"
         title="Gobierno de identidad y control de accesos"
@@ -95,14 +95,21 @@ export function SecurityScreen({ collaborators, roles, matrix, kpis }: Props & {
         }
       />
       {kpis}
-      <TabsList variant="card">
-        <TabsTrigger value="users"><Users /> Colaboradores y usuarios ({collaborators.length})</TabsTrigger>
-        <TabsTrigger value="roles"><ShieldCheck /> Roles y matriz de permisos ({roles.length} roles)</TabsTrigger>
-        <TabsTrigger value="sites"><Building2 /> Sedes y cajas asignadas (3 sedes)</TabsTrigger>
-        <TabsTrigger value="audit"><History /> Registro de auditoría (audit log)</TabsTrigger>
-      </TabsList>
+      {/* TODO(DS): khipu-design-system#64 (Tabs: modo solo tira + regla de svg) — quitar size-4 al subir a 0.9.0 */}
+      <Tabs
+        estilo="linea"
+        defaultValor="users"
+        items={[
+          { id: "users", etiqueta: <><Users className="size-4" /> Colaboradores y usuarios ({collaborators.length})</> },
+          { id: "roles", etiqueta: <><ShieldCheck className="size-4" /> Roles y matriz de permisos ({roles.length} roles)</> },
+          { id: "sites", etiqueta: <><Building2 className="size-4" /> Sedes y cajas asignadas (3 sedes)</> },
+          { id: "audit", etiqueta: <><History className="size-4" /> Registro de auditoría (audit log)</> },
+        ]}
+      >
+        {(tab) => (
+          <>
 
-      <TabsContent value="users">
+            {tab === "users" ? (
         <SectionCard title={<span className="sr-only">Colaboradores y usuarios</span>} className="[&>div:first-child]:hidden" contentClassName="p-0">
           <Toolbar>
             <SearchInput placeholder="Buscar por nombre o correo" value={query} onChange={setQuery} />
@@ -123,14 +130,13 @@ export function SecurityScreen({ collaborators, roles, matrix, kpis }: Props & {
           />
           <PaginationBar from={1} to={rows.length} total={collaborators.length} label="colaboradores" />
         </SectionCard>
-      </TabsContent>
+            ) : null}
 
-      <TabsContent value="roles">
+            {tab === "roles" ? (
         <PermissionMatrix roles={roles} matrix={matrix} />
-      </TabsContent>
+            ) : null}
 
-      <InviteCollaboratorSheet open={inviteOpen} onOpenChange={setInviteOpen} />
-      <TabsContent value="audit">
+            {tab === "audit" ? (
         <SectionCard title="Registro de auditoría (últimas 24 h)" contentClassName="p-0">
           <ul className="divide-y text-sm">
             {[
@@ -149,8 +155,12 @@ export function SecurityScreen({ collaborators, roles, matrix, kpis }: Props & {
             ))}
           </ul>
         </SectionCard>
-      </TabsContent>
-    </Tabs>
+            ) : null}
+          </>
+        )}
+      </Tabs>
+      <InviteCollaboratorSheet open={inviteOpen} onOpenChange={setInviteOpen} />
+    </div>
   );
 }
 
