@@ -40,7 +40,7 @@ erDiagram
   }
   SITES {
     uuid id PK
-    uuid tenant_id FK "RLS"
+    uuid tenant_id FK "RLS: tenant_isolation + member_read (sedes del alcance de app.user_id, solo SELECT)"
     text code "UK tenant_id+code"
     text name
     text sunat_annex "codigo de establecimiento anexo, 4 digitos"
@@ -49,7 +49,7 @@ erDiagram
   }
   CASH_REGISTERS {
     uuid id PK
-    uuid tenant_id FK "RLS"
+    uuid tenant_id FK "RLS: tenant_isolation + member_read (cajas de esas sedes, solo SELECT)"
     uuid site_id FK
     text code "UK tenant_id+code, ej. CAJA-01"
     boolean active
@@ -91,7 +91,7 @@ erDiagram
     timestamptz access_expires_at
     bytea refresh_hash UK
     uuid refresh_family
-    bytea prev_refresh_hash "refresh anterior: reuso dentro de 10 s devuelve el par vigente"
+    bytea prev_refresh_hash "refresh anterior: reuso dentro de 10 s devuelve SOLO un access nuevo, nunca un refresh"
     timestamptz rotated_at
     timestamptz refresh_expires_at
     boolean mfa_passed
@@ -109,7 +109,7 @@ erDiagram
   }
   ROLES {
     uuid id PK
-    uuid tenant_id FK "RLS; plantillas del sistema copiadas al provisionar"
+    uuid tenant_id FK "RLS: tenant_isolation + member_read (solo el rol de las membresias propias); plantillas copiadas al provisionar"
     text name "UK tenant_id+name"
     boolean system
     boolean requires_mfa "true en propietario, administrador, contador"

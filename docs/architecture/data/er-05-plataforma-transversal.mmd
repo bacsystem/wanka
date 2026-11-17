@@ -9,6 +9,7 @@ erDiagram
   MODULES ||--o{ TENANT_MODULE_OVERRIDES : ajusta
   FEATURE_FLAGS ||--o{ TENANT_FLAG_OVERRIDES : ajusta
   PLATFORM_USERS ||--o{ PLATFORM_SESSIONS : abre
+  PLATFORM_ROLE_PERMISSIONS }o--|| PLATFORM_PERMISSIONS : concede
   PLATFORM_USERS ||--o{ IMPERSONATION_GRANTS : solicita
   PLATFORM_USERS ||--o{ TICKETS : atiende
   PLATFORM_USERS ||--o{ PLATFORM_AUDIT_EVENTS : registra
@@ -73,6 +74,14 @@ erDiagram
     text password_hash
     text role "superadmin, soporte, finanzas, ventas, ingenieria"
     boolean totp_required "siempre true"
+  }
+  PLATFORM_PERMISSIONS {
+    text code PK "plataforma.recurso:accion, catalogo separado del de tenant"
+    text description
+  }
+  PLATFORM_ROLE_PERMISSIONS {
+    text role PK "superadmin, soporte, finanzas, ventas, ingenieria"
+    text permission_code PK, FK
   }
   PLATFORM_SESSIONS {
     uuid id PK
