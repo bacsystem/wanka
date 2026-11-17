@@ -14,7 +14,8 @@ flowchart LR
     W0["W0 fix cn"]
     W1a["W1a ESLint + suppressions"]
     W1b["W1b lint:ds"]
-    W2["W2 primitives basic"]
+    W2a["W2a primitives basic"]
+    W2b["W2b tab strips"]
     W3["W3 form primitives"]
     W4["W4 overlays + toast"]
     W5a["W5a shared adapters"]
@@ -27,8 +28,8 @@ flowchart LR
   DSG --> W1b
   W1a --> W1b
   W1a --> W1c["W1c captures"]
-  DSH --> W2
-  W1a --> W2 --> W3 --> W4
+  DSH --> W2b
+  W1a --> W2a --> W2b --> W3 --> W4
   W1a --> W5a
   DSE --> W3
   DSD --> W4
