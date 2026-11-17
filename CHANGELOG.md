@@ -5,6 +5,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Fixed
+- Clean builds no longer fail at random with `next/font/google queries have exactly one entry` (#125): the fonts are self-hosted with `next/font/local` (`apps/web/src/app/fonts/`: latin woff2 of Inter, JetBrains Mono 400/500/600, Plus Jakarta Sans, Manrope, DM Sans and Figtree, with their SIL OFL licences). Same CSS variables, same rendering; `pnpm build` needs no network.
+
 ### Changed
 - `khipu-design-system` bumped from `v0.5.23` to `v0.6.0` (Next 16 peer support; `lucide-react` is no longer a peer of the package, Wanka keeps its own dependency until #123).
 
