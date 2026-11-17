@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 test("login → 2FA → company selection → dashboard with the chosen tenant", async ({ page }) => {
   await page.goto("/login");

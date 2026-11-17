@@ -19,9 +19,6 @@ importers:
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
-      cn:
-        specifier: ^0.2.6
-        version: 0.2.6
       khipu-design-system:
         specifier: github:bacsystem/khipu-design-system#v0.5.23
         version: https://codeload.github.com/bacsystem/khipu-design-system/tar.gz/0bfec88253610e601f4ae57a9ef7b0fda53fd054(@base-ui/react@1.8.0(@types/react@19.3.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(lucide-react@1.45.0(react@19.2.8))(next-themes@0.4.6(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(next@16.3.5(@babel/core@7.29.7)(@playwright/test@1.63.0)(@types/node@24.13.4)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(tailwindcss@4.3.3)
@@ -1256,11 +1253,6 @@ packages:
   clsx@2.1.1:
     resolution: {integrity: sha512-eYm0QWBtUrBWZWG0d386OGAw16Z995PiOVo2B7bjWSbHedGl5e0ZWaq65kOGgUSNesEIDkB9ISbTg/JK9dhCZA==}
     engines: {node: '>=6'}
-
-  cn@0.2.6:
-    resolution: {integrity: sha512-+i4L0zUGgRcEnhsxueVrP7iBGxBx5iD0WOTYg1MwFEu2ZyCmH5Ov2V1cul2Ht5UchRQQgftCf4be/RxspuW6QQ==}
-    engines: {node: '>=20'}
-    hasBin: true
 
   cn@0.3.3:
     resolution: {integrity: sha512-OEiyJkSpYm2kOuNOKQ+c2wmzZRG8orrb9fnObtHTbCGNx/E9KLnGcmcocItOzREKk5KzQN5I2e3BUCj563KEpw==}
@@ -3978,8 +3970,6 @@ snapshots:
   client-only@0.0.1: {}
 
   clsx@2.1.1: {}
-
-  cn@0.2.6: {}
 
   cn@0.3.3: {}
 

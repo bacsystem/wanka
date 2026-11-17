@@ -28,7 +28,7 @@ export function AdminDashboard() {
       <div className="flex flex-wrap items-center gap-3 rounded-xl border border-warning-border border-l-4 bg-warning p-4 text-sm">
         <StateIcon state="warning" className="size-5" />
         <div className="min-w-0 flex-1"><p className="font-bold text-warning-foreground">Alerta OSE SUNAT: degradación de respuesta en proveedor directo</p><p className="text-xs text-warning-foreground/80 ">SUNAT Directo reporta colas de procesamiento con latencia media de 1,420 ms (+85% respecto a la media). El failover a Bizlinks se encuentra en espera automática.</p></div>
-        <Button className="bg-warning font-semibold text-white hover:bg-warning" render={<Link href="/admin/soporte" />} nativeButton={false}>Ver incidentes (3)</Button>
+        <Button className="bg-warning font-semibold text-warning-foreground hover:bg-warning" render={<Link href="/admin/soporte" />} nativeButton={false}>Ver incidentes (3)</Button>
       </div>
 
       <section aria-label="Métricas clave de la plataforma" className="flex flex-col gap-3">

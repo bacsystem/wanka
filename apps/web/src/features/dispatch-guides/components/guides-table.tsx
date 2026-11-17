@@ -130,7 +130,7 @@ function GuideTraceability({ guide: g }: { guide: DispatchGuide }) {
         <ol className="flex flex-col gap-3 lg:col-span-2">
           {steps.map((st, i) => (
             <li key={i} className="flex gap-3">
-              <span className={cn("mt-2 flex size-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold", st.done ? "bg-primary text-primary-foreground" : st.current ? "bg-info text-white" : "border bg-card text-muted-foreground")}>{st.done ? <CheckCircle2 className="size-3.5" /> : st.current ? "A" : <ClipboardCheck className="size-3" />}</span>
+              <span className={cn("mt-2 flex size-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold", st.done ? "bg-primary text-primary-foreground" : st.current ? "bg-info text-info-foreground" : "border bg-card text-muted-foreground")}>{st.done ? <CheckCircle2 className="size-3.5" /> : st.current ? "A" : <ClipboardCheck className="size-3" />}</span>
               <div className={cn("flex-1 rounded-lg p-3", st.current ? "bg-info" : "bg-muted/50")}>
                 <div className="flex flex-wrap items-center justify-between gap-2"><p className={cn("text-sm font-bold", st.current && "text-info-foreground ")}>{st.title}</p><span className={cn("text-xs", st.current ? "font-semibold text-info-foreground " : "text-muted-foreground")}>{st.at}</span></div>
                 <p className="mt-0.5 text-xs text-muted-foreground">{st.text}</p>
