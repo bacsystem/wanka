@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# khipu migration visual captures (e2e/ds-captures.spec.ts)
+/captures/
