@@ -1,4 +1,4 @@
-import { expect, test } from "./fixtures";
+import { expect, test, waitForHydration } from "./fixtures";
 
 const screens: { path: string; heading: RegExp }[] = [
   { path: "/admin", heading: /Panel maestro de operaciones/ },
@@ -32,14 +32,13 @@ test("admin login: SSO → 2FA → dashboard; console is themed and separate fro
   await page.getByRole("button", { name: /Continuar con Google Workspace/ }).click();
   await page.getByLabel("Código TOTP").fill("123456");
   await page.getByRole("button", { name: /Verificar e ingresar/ }).click();
-  await expect(page).toHaveURL(/\/admin$/);
+  await page.waitForURL(/\/admin$/);
   await expect(page.getByRole("heading", { level: 1, name: /Panel maestro de operaciones/ })).toBeVisible();
   if (testInfo.project.name === "desktop") await expect(page.getByRole("button", { name: /app de empresa/i }).first()).toBeVisible();
-  // /admin/login and /admin are different root layouts (full page load): retry the click until the page is hydrated.
-  await expect(async () => {
-    await page.getByRole("button", { name: "Menú de usuario" }).click();
-    await expect(page.getByRole("menuitem", { name: "Mi perfil" })).toBeVisible({ timeout: 1500 });
-  }).toPass();
+  // /admin/login and /admin are different root layouts (full page load): wait for hydration before clicking.
+  await waitForHydration(page);
+  await page.getByRole("button", { name: "Menú de usuario" }).click();
+  await expect(page.getByRole("menuitem", { name: "Mi perfil" })).toBeVisible();
   await page.getByRole("menuitem", { name: "Mi perfil" }).click();
   await expect(page).toHaveURL(/\/admin\/perfil$/);
   await expect(page.getByRole("heading", { level: 1, name: /Mi perfil y seguridad/ })).toBeVisible();

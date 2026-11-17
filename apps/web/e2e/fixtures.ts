@@ -1,43 +1,76 @@
-import { expect, test as base, type Page } from "@playwright/test";
+import { expect, test as base, type Locator, type Page } from "@playwright/test";
 
 /**
- * React attaches `__reactProps$…` to a DOM node only once it has hydrated it, so a control
- * without that key has no event handlers yet. Playwright's `click()` succeeds on it and the
- * click is silently lost (tabs not switching, navigation buttons doing nothing). While a
- * Suspense boundary is still re-rendering on the client, the server HTML and the client copy
- * can also coexist briefly (two inputs with the same label), so we wait until every control
- * is hydrated, which also means the stale server copy is gone.
+ * Hydration gate for E2E.
+ *
+ * React attaches an internal `__reactProps$<random>` property to a DOM node only once it has
+ * hydrated it, so a control without it has no event handlers yet. Playwright's `click()` succeeds
+ * on it and the click is silently lost (tabs not switching, buttons doing nothing). While a
+ * Suspense boundary re-renders on the client the stale server copy can also coexist with the
+ * client copy (two inputs with the same label, see issue #132); waiting until every control is
+ * hydrated also waits that out.
+ *
+ * RISK: `__reactProps$` is a React internal, not public API. If a React upgrade renames it,
+ * `waitForHydration` fails loudly with "React hydration key not found" (and `hydration.spec.ts`
+ * smoke-checks it on a known page) instead of passing vacuously.
+ *
+ * Zero controls: a page with no interactive control has nothing to lose a click on, so
+ * `waitForHydration` resolves immediately after the load event.
+ *
+ * Covers full page loads: `goto`, `reload`, `goBack`, `goForward`. After a navigation triggered
+ * by a click that crosses root layouts (e.g. /admin/login -> /admin), call
+ * `await page.waitForURL(...)` then `await waitForHydration(page)`.
  */
-export async function waitForHydration(page: Page) {
-  await page.waitForFunction(
-    () => {
-      const controls = document.querySelectorAll("button, a[href], input, select, textarea, [role=tab]");
-      if (controls.length === 0) return false;
-      return Array.from(controls).every((el) => Object.keys(el).some((k) => k.startsWith("__reactProps$")));
-    },
-    undefined,
-    { timeout: 15_000 },
-  );
+const CONTROLS = "button, a[href], input, select, textarea, [role=tab]";
+
+export async function waitForHydration(page: Page, timeout = 15_000) {
+  try {
+    await page.waitForFunction(
+      (selector) =>
+        Array.from(document.querySelectorAll(selector)).every((el) =>
+          Object.keys(el).some((k) => k.startsWith("__reactProps$")),
+        ),
+      CONTROLS,
+      { timeout },
+    );
+  } catch (cause) {
+    const info = await page.evaluate((selector) => {
+      const has = (el: Element) => Object.keys(el).some((k) => k.startsWith("__reactProps$"));
+      return {
+        anyHydrated: Array.from(document.querySelectorAll("*")).some(has),
+        unhydrated: Array.from(document.querySelectorAll(selector))
+          .filter((el) => !has(el))
+          .slice(0, 3)
+          .map((el) => el.outerHTML.slice(0, 200)),
+      };
+    }, CONTROLS);
+    const where = `at ${page.url()}`;
+    if (!info.anyHydrated) {
+      throw new Error(`React hydration key not found — React internals changed; see e2e/fixtures.ts (${where})`, { cause });
+    }
+    throw new Error(
+      `Page not hydrated after ${timeout} ms ${where}. First unhydrated controls:\n${info.unhydrated.join("\n")}`,
+      { cause },
+    );
+  }
 }
 
-/** Same `test`, but every full page load (goto/reload) resolves only after the page is hydrated. */
+type Nav = "goto" | "reload" | "goBack" | "goForward";
+
+/** Same `test`, but every full page load resolves only after the page is hydrated. */
 export const test = base.extend({
   page: async ({ page }, provide) => {
-    const goto = page.goto.bind(page);
-    const reload = page.reload.bind(page);
-    page.goto = (async (...args: Parameters<Page["goto"]>) => {
-      const res = await goto(...args);
-      await waitForHydration(page);
-      return res;
-    }) as Page["goto"];
-    page.reload = (async (...args: Parameters<Page["reload"]>) => {
-      const res = await reload(...args);
-      await waitForHydration(page);
-      return res;
-    }) as Page["reload"];
+    for (const name of ["goto", "reload", "goBack", "goForward"] as Nav[]) {
+      const original = (page[name] as (...a: unknown[]) => Promise<unknown>).bind(page);
+      (page as unknown as Record<Nav, unknown>)[name] = async (...args: unknown[]) => {
+        const res = await original(...args);
+        await waitForHydration(page);
+        return res;
+      };
+    }
     await provide(page);
   },
 });
 
 export { expect };
-export type { Page };
+export type { Locator, Page };
