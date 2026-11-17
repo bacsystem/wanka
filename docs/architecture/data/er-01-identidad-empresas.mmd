@@ -95,7 +95,7 @@ erDiagram
     timestamptz rotated_at
     timestamptz refresh_expires_at
     boolean mfa_satisfied "true si paso la 2FA o si ningun rol la requeria al iniciar sesion"
-    text mfa_method "totp, recovery_code, none"
+    text mfa_method "totp, recovery_code, none, platform (sesion impersonada: 2FA cumplida en el plano plataforma)"
     inet ip
     text user_agent
     timestamptz revoked_at

@@ -26,7 +26,13 @@ sequenceDiagram
   else limite de plan alcanzado (ej. CPE del mes, usuarios, sedes)
     MW-->>W: 403 plan_limit_reached {limit, used}
   else ok
-    MW->>DB: permisos del membership (cache por membership_id + authz_version)
+    MW->>DB: rol y permisos del membership (cache por membership_id + authz_version)
+    alt rol vigente con requires_mfa y sesion con mfa_method = none (ej. cajero ascendido)
+      MW->>DB: revoca la sesion de tenant
+      MW-->>W: 403 mfa_required (el BFF lleva a /login para enrolarse)
+    else sesion impersonada (impersonator_id)
+      MW->>MW: permisos = alcance del grant menos identidad.support_access, users, roles, sessions y empresas.einvoicing:update
+    end
     alt falta lubricentro.service_order:create
       MW-->>W: 403 forbidden {permission}
     else autorizado
