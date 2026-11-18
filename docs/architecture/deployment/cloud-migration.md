@@ -11,7 +11,7 @@ Diagrama: [`railway.mmd`](railway.mmd). Decisión: [ADR 0007](../adr/0007-deploy
 - Health checks: `GET /livez` (proceso vivo, no toca la base) y `GET /readyz` (ping a Postgres con timeout 1 s, River iniciado). Railway usa `readyz` para el corte de tráfico en despliegues.
 - Apagado ordenado: ante `SIGTERM`, `readyz` pasa a 503, `http.Server.Shutdown` con plazo 20 s, el worker deja de tomar jobs y espera los que están en curso (River `StopAndCancel` tras el plazo). El `drainingSeconds` de Railway se configura mayor que ese plazo.
 - Secretos: variables de entorno por servicio (solo nombres en el diagrama). Cada servicio recibe únicamente las suyas: `platform-api` no tiene `DATABASE_URL_APP` y `api` no tiene `DATABASE_URL_PLATFORM`.
-- Backups: los del Postgres gestionado + `pg_dump` diario lógico a object storage de otro proveedor (prueba de restauración mensual). RPO/RTO objetivo a fijar con producto.
+- Backups: los del Postgres gestionado + `pg_dump` diario lógico a un proveedor compatible con S3 fuera de AWS (por ejemplo, Cloudflare R2 o Backblaze B2), a definir por devops, con el SDK de S3 ya aprobado (ADR 0002) o la herramienta que corresponda; prueba de restauración mensual (decisión del dueño, 2026-11-17). RPO/RTO objetivo a fijar con producto.
 - Escala: inicialmente 1 réplica de `api`, 1 de `worker`, 2 de `web`. Como las capas son sin estado (sesiones en Postgres, jobs en Postgres, artefactos de CPE en Khipu), subir réplicas no exige rediseño; lo único que cambia es el rate limit en memoria (ver ADR 0007).
 
 ## Camino a una nube mayor (AWS, GCP o Azure)

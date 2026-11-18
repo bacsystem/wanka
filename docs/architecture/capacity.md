@@ -42,7 +42,7 @@ Las cuentas: **una cuenta por usuario virtual** (si no, se mide el lock de una s
 - Pool de conexiones lleno más de 200 ms → la API responde `503 overloaded` con `Retry-After: 1` en vez de encolar indefinidamente (`pgxpool` con `context` de 200 ms para adquirir conexión).
 - Cola CPE con edad del más antiguo > 15 min → alerta; > `send_deadline - 24 h` → alerta crítica al tenant y a soporte.
 - Khipu caído → las ventas siguen (CPE `pendiente`), el ticket se imprime con estado pendiente (decisión del usuario), el dashboard muestra la cola.
-- Descargas de artefactos: se traen de Khipu al momento, por streaming y sin guardarse, con 2 simultáneas por tenant y 16 por réplica de `api`. Exportes y PDF del Z: se generan al momento, con 2 por tenant y 4 por réplica, como máximo un mes y 50 000 filas, con `statement_timeout` de 20 s por lote del cursor y el exporte completo acotado por el `context` de 25 s. Todo con un tope de 25 s desde la llegada (ADR 0003, «Artefactos: Khipu los conserva»). No hay 202 ni notificación.
+- Descargas de artefactos: se traen de Khipu al momento, por streaming y sin guardarse, con 2 simultáneas por tenant y 16 por réplica de `api`. Exportes (CSV por decisión del dueño, más el TXT del PLE que exige SUNAT; sin PDF ni XLSX): se generan al momento, con 2 por tenant y 4 por réplica, como máximo un mes y 50 000 filas, con `statement_timeout` de 20 s por lote del cursor y el exporte completo acotado por el `context` de 25 s. Todo con un tope de 25 s desde la llegada (ADR 0003, «Artefactos: Khipu los conserva»). No hay 202 ni notificación.
 
 ## 4. Observabilidad mínima
 

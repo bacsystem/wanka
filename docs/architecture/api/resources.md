@@ -37,7 +37,7 @@ Ajustes de forma respecto a los mocks, comunes a todos los recursos:
 | `GET/POST/PATCH /v1/cash-registers` | selección de caja, config | `tenantSites[].cashboxes` | `empresas.sites:update` |
 | `GET/POST/PATCH /v1/document-series` | `/configuracion/sunat` series | `sunatConfig.series` | `empresas.series:*` |
 | `GET/PUT /v1/onboarding` (pasos 1..6) | `/onboarding` | `industryOptions`, `modulesByIndustry` | propietario |
-| `GET/PUT /v1/einvoicing/credentials` (permiso `empresas.einvoicing:update`) | conexión con Khipu: el propietario pega la API key `fk_…` de su empresa en Khipu; Wanka la cifra, la verifica con `GET /v1/empresa` de Khipu y registra las series con `correlativo_inicial` | `sunatConfig.connection`, solo metadatos (entorno BETA/PRODUCCION, verificado, prefijo de la llave; la llave nunca se devuelve). El certificado y la clave SOL se cargan **en Khipu**, no en Wanka | `empresas.config:update` |
+| `GET/PUT /v1/einvoicing/credentials` (permiso `empresas.einvoicing:update`) | conexión con Khipu: estado de la activación (#31) y carga del certificado, las credenciales SOL y las series con `correlativo_inicial`, que Wanka reenvía a Khipu con la API key de la empresa. La API key y el `whsec_` **no** se cargan aquí: los carga el operador de Khipu con el comando `wanka einvoicing activate` (ADR 0003, «Alta asistida»; temporal hasta #86) | `sunatConfig.connection`, solo metadatos (entorno BETA/PRODUCCION, plan, activada, lista para emitir; la llave nunca se pide ni se devuelve). El certificado y la clave SOL se guardan **en Khipu**, no en Wanka | `empresas.config:update` |
 
 ## clientes (`crm`)
 
@@ -136,7 +136,7 @@ Ajustes de forma respecto a los mocks, comunes a todos los recursos:
 | `GET /v1/reports/management?from=&to=&site=` | `/reportes/gestion` | `management.ts` | `reportes.management:read` |
 | `GET /v1/reports/sales-register?period=` | `/reportes` RVIE | `SalesRegisterRow`, `reportsSummary` | `reportes.tax:read` |
 | `GET /v1/reports/pdt621?period=` | `/reportes/liquidacion` | `pdt621`, `kardexConsolidated` | `reportes.tax:read` |
-| `GET /v1/exports?type=&period=` | exportar Excel/PDF/TXT SUNAT | `200` con el archivo generado al momento por streaming, sin copia guardada. Lectura repetible, sin `Idempotency-Key`. Máximo un mes calendario y 50 000 filas (`422 validation_failed` si se excede). 25 s desde la llegada (ADR 0003) | `*:export` del módulo |
+| `GET /v1/exports?type=&period=` | exportar CSV (decisión del dueño) y el TXT del PLE que exige SUNAT (sin PDF ni XLSX, ADR 0003) | `200` con el archivo generado al momento por streaming, sin copia guardada. Lectura repetible, sin `Idempotency-Key`. Máximo un mes calendario y 50 000 filas (`422 validation_failed` si se excede). 25 s desde la llegada (ADR 0003) | `*:export` del módulo |
 
 ## agenda, integraciones, auditoria, notificaciones
 

@@ -29,5 +29,5 @@ sequenceDiagram
   A->>DB: INSERT z_reports + z_report_totals por metodo y moneda (snapshot inmutable + sha256), UPDATE shift cerrado WHERE status = en_arqueo
   A->>DB: COMMIT
   A-->>W: 201 {z_report: Z-2026-0255}
-  Note over W,A: el PDF del Z se genera al pedirlo, desde el snapshot inmutable, por streaming y sin guardarse (ADR 0003)
+  Note over W,A: el Z no genera PDF, se ve en pantalla desde el snapshot inmutable y se imprime desde el navegador con estilos de impresion (ADR 0003)
   Note over C,DB: CPE pendientes del turno no bloquean el cierre: el Z los lista con su estado.
