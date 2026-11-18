@@ -30,7 +30,7 @@ flowchart TB
 
     subgraph bff["BFF (src/lib/server, import server-only)"]
       session["session.ts<br/>cookies wk_at, wk_rt, wk_at_exp (tenant) o wka_* (admin);<br/>refrescarUnaVez: candado por sesion a nivel de modulo"]
-      apiClient["lib/api/*.ts: funciones a mano por recurso,<br/>tipadas con components de openapi-typescript<br/>(spec-first con required explicito: los tipos generados son exactos);<br/>timeout 12 s, X-Request-Id, reintento de POST solo con Idempotency-Key"]
+      apiClient["lib/api/*.ts: funciones a mano por recurso,<br/>tipadas con components de openapi-typescript<br/>(spec-first con required explicito: los tipos generados son exactos);<br/>timeout 12 s (27 s en descargas y exportes por streaming), X-Request-Id, reintento de POST solo con Idempotency-Key"]
       adminClient["lib/api/admin/*.ts<br/>base URL y cookies distintas"]
       csrf["Chequeo Origin/Host en mutaciones<br/>+ SameSite=Lax"]
     end

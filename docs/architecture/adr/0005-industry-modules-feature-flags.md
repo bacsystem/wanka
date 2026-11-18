@@ -28,7 +28,7 @@ Opción 3.
 
 Desactivar un módulo **no borra datos**: sus endpoints responden 403 y sus jobs no corren; reactivarlo recupera todo.
 
-**Empresa cerrada** (decisión del usuario: datos conservados 5 años en solo lectura): `org.tenants.status = cerrada`. Los entitlements pasan a modo lectura: el middleware rechaza todo método distinto de `GET` con `403 tenant_read_only`, salvo `POST /v1/exports`, y no corre ningún job del tenant excepto los exportes. A los 5 años de `closed_at`, un job de plataforma purga los datos de forma auditada.
+**Empresa cerrada** (decisión del usuario: datos conservados 5 años en solo lectura): `org.tenants.status = cerrada`. Los entitlements pasan a modo lectura: el middleware rechaza todo método distinto de `GET` con `403 tenant_read_only` (los exportes son `GET /v1/exports` y siguen disponibles), y no corre ningún job del tenant. A los 5 años de `closed_at`, un job de plataforma purga los datos de forma auditada.
 
 ## Consecuencias
 

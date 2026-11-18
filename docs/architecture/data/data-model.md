@@ -98,7 +98,7 @@ RETURNING series, last_number;
 | Datos de una empresa cerrada | 5 años en solo lectura (decisión del usuario) | `org.tenants.status = cerrada` y `closed_at`; pasados 5 años, el job `org.purge_closed_tenants` borra por tenant, en lotes y con auditoría |
 | `inv.stock_reservations` | hasta `expires_at` | job cada 5 min |
 
-XML, CDR y PDF van a object storage (no a la base) con clave `tenants/{tenant_id}/cpe/{yyyy}/{mm}/{doc_id}.{xml|zip|pdf}`.
+El XML, el CDR y el PDF de los CPE no se guardan en Wanka: Khipu los conserva 5 años con el plan Emprende o superior (requisito, ADR 0003) y se piden bajo demanda ([ADR 0003](../adr/0003-einvoicing-khipu-port.md), «Artefactos: Khipu los conserva»). La base guarda solo `provider_ref`, `hash` y `xml_sha256` (este último se fija en la primera descarga; el CDR y el PDF no llevan huella). En R1 no hay bucket: el puerto `BlobStore` queda en el kernel sin adaptador, y el bucket de Railway o S3 entra más adelante, según el crecimiento. Los adjuntos esperan a ese adaptador. Los exportes se generan al momento y no se guardan.
 
 ## 6. Migraciones
 

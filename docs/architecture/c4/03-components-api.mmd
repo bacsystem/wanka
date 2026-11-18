@@ -47,7 +47,7 @@ flowchart TB
       outbox["jobs: River (encolado transaccional,<br/>reintentos con jitter, periodicos con lider)"]
       money["money: decimal escala fija"]
       flags["entitlements: plan + flags por tenant"]
-      blob["blob: S3 adapter"]
+      blob["BlobStore: puerto sin adaptador en R1<br/>(bucket S3 compatible mas adelante)"]
     end
 
     port["Puerto InvoicingProvider"]
