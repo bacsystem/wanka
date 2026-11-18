@@ -1,6 +1,6 @@
 # ADR 0006: Trabajo asíncrono con outbox transaccional en PostgreSQL (River)
 
-- Estado: propuesto (River es una dependencia nueva: requiere aprobación del usuario vía tech-lead)
+- Estado: propuesto (River quedó aprobado por el dueño el 2026-11-17, ADR 0002)
 - Fecha: 2026-11-17
 
 ## Contexto

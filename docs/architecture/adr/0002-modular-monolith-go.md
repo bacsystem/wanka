@@ -1,6 +1,6 @@
 # ADR 0002: Monolito modular hexagonal en Go y librerías base
 
-- Estado: aceptado (2026-11-17: el dueño aprobó River, sqlc, goose, oapi-codegen, shopspring/decimal, pquerna/otp, OpenTelemetry y el SDK de S3; Go y PostgreSQL ya eran decisión del usuario)
+- Estado: aceptado (2026-11-17: el dueño aprobó River, sqlc, goose, oapi-codegen, shopspring/decimal, pquerna/otp, OpenTelemetry y el SDK de S3, y también pgx/v5, golang.org/x/crypto y go-arch-lint; Go y PostgreSQL ya eran decisión del usuario)
 - Fecha: 2026-11-17
 
 ## Contexto
@@ -33,11 +33,11 @@ internal/plataforma/       # solo se monta con --plane=platform
 migrations/                # goose, SQL
 openapi/                   # contrato (ADR 0009)
 ```
-- Un módulo importa de otro **solo** su `Facade` (paquete raíz del módulo). Prohibido importar `domain`, `app` o `adapters` ajenos y leer tablas ajenas. Verificado en CI con `go-arch-lint` (o una prueba con `go list -deps`, si no se aprueba la dependencia).
+- Un módulo importa de otro **solo** su `Facade` (paquete raíz del módulo). Prohibido importar `domain`, `app` o `adapters` ajenos y leer tablas ajenas. Verificado en CI con `go-arch-lint`.
 - Transacción compartida: la fachada recibe el `pgx.Tx` (o un `ctx` que lo transporta) del caso de uso que orquesta, p. ej. `ventas.CreateSale` llama a `inventario.Decrement(ctx, tx, ...)`, `empresas.NextNumber(ctx, tx, ...)`, `facturacion.CreatePending(ctx, tx, ...)`. Integraciones asíncronas entre módulos van por jobs (ADR 0006).
 - `--plane=platform` monta solo `plataforma` + lecturas permitidas; `--plane=tenant` nunca monta `plataforma`.
 
-**Librerías** (todas maduras y con licencia permisiva). Aprobadas por el dueño el 2026-11-17: `oapi-codegen`, `sqlc`, `goose`, `River`, `shopspring/decimal`, `pquerna/otp`, OpenTelemetry Go SDK y `aws-sdk-go-v2/service/s3`. Cualquier dependencia que no esté en esa lista (incluidas `pgx`, `golang.org/x/crypto` y `go-arch-lint`, que no figuraban en la lista sometida a aprobación) necesita la aprobación del dueño antes de agregarse:
+**Librerías** (todas maduras y con licencia permisiva). Aprobadas por el dueño el 2026-11-17: `oapi-codegen`, `sqlc`, `goose`, `River`, `shopspring/decimal`, `pquerna/otp`, OpenTelemetry Go SDK, `aws-sdk-go-v2/service/s3`, `jackc/pgx/v5`, `golang.org/x/crypto` (argon2) y `go-arch-lint`. Cualquier dependencia que no esté en esa lista necesita la aprobación del dueño antes de agregarse:
 | Necesidad | Elección | Alternativa descartada |
 |---|---|---|
 | HTTP | `net/http` (patrones de ruta de Go 1.22+) + `oapi-codegen` strict server | chi, echo, gin: no hacen falta con el mux estándar |
