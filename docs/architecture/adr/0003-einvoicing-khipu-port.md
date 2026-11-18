@@ -71,7 +71,7 @@ Respondidas con el código de Khipu ([código], repo público bacsystem/khipu @5
 9. Conservación por plan. **Resuelta** ([código]): Emprende, Negocio y Pro conservan 5 años, y no hay purga automática. **Queda abierto**, como pregunta a Khipu, el compromiso contractual de no introducir una purga mientras Wanka use el servicio, y de configurar el volumen o el bucket que usa para que conserve los archivos al menos ese plazo, porque la conservación física depende de esa configuración del operador ([código], `S3DocumentStorage`).
 10. Conservación del PDF. **Resuelta** ([código]): Khipu lo genera bajo demanda y lo guarda junto al XML. Sus bytes cambian si cambia el diseño.
 11. Exportación en bloque. **Resuelta** ([código]): ZIP por rango de fechas, con un tope de 500 por petición. La baja de la cuenta no borra nada; la suspensión corta las descargas.
-12. Si el alta asistida puede registrar también el webhook y cómo se entregan la API key y el `whsec_` a Wanka por un canal seguro. **Pregunta a Khipu.**
+12. Si el alta asistida puede registrar también el webhook, para no depender de la sesión del portal en el paso 4. **Pregunta a Khipu.**
 
 ## Opciones
 
@@ -105,20 +105,34 @@ Decisión del dueño (2026-11-17): las empresas las crea el **operador de Khipu*
 
 | Paso | Quién | Cómo |
 |---|---|---|
-| 1. Pedir el alta con RUC, razón social y entorno (BETA o PRODUCCION) | soporte de Wanka | manual, al operador de Khipu, indicando el plan Emprende o superior; el tenant queda «pendiente de Khipu» en el onboarding (#31) |
-| 2. Crear la cuenta (Emprende o superior), la empresa, su serie inicial y la API key `fk_`, y entregar la llave | operador de Khipu | `POST /v1/admin/cuentas`, manual desde el lado de Khipu, en un máximo de 24 horas |
-| 3. Registrar el webhook hacia `/webhooks/khipu/{routeId}` y entregar el `whsec_` | operador de Khipu, con el `routeId` que genera Wanka (#55) | manual: `/v1/webhooks` exige una sesión del portal de la cuenta, no la API key (ver la pregunta 12) |
-| 4. Cargar la API key y el `whsec_` en Wanka | usuario del tenant con `empresas.einvoicing:update`, acompañado por soporte de Wanka | `/configuracion/sunat` (#55); Wanka verifica la llave con una lectura y guarda ambos cifrados |
-| 5. Subir el certificado, las credenciales SOL y API SUNAT y los datos fiscales, y crear una serie por caja con `correlativo_inicial` | Wanka, automático con la API key | #55 |
+| 1. Pedir el alta con RUC, razón social y entorno (BETA o PRODUCCION) | soporte de Wanka | manual, al operador de Khipu, indicando el plan Emprende o superior. El tenant queda en «Pendiente de activación de facturación» (#31) |
+| 2. Crear la cuenta (Emprende o superior), la empresa, su serie inicial y la API key `fk_` | operador de Khipu | `POST /v1/admin/cuentas`, manual desde el lado de Khipu, en un máximo de 24 horas |
+| 3. Crear la ruta del webhook en Wanka | operador de Khipu | comando `wanka einvoicing route --tenant <id>`: crea la fila de `ops.webhook_routes` sin secreto y muestra la URL `/webhooks/khipu/{routeId}` |
+| 4. Registrar el webhook en Khipu con esa URL y obtener el `whsec_` | operador de Khipu | manual: `/v1/webhooks` exige una sesión del portal de la cuenta, no la API key (ver la pregunta 12) |
+| 5. Activar la facturación en Wanka | operador de Khipu | comando `wanka einvoicing activate` (ver abajo): carga la API key, el `whsec_` y el plan, y rechaza un plan inferior a Emprende |
+| 6. Cargar el certificado, las credenciales SOL y API SUNAT, los datos fiscales y una serie por caja con `correlativo_inicial` | dueño de la empresa, con `empresas.einvoicing:update` | `/configuracion/sunat` (#55). Wanka los envía a Khipu con la API key; el dueño nunca ve la llave ni el `whsec_` |
 
-- **Activación de la facturación en R1, sin consola (#86 es de R4).** No hay comando ni función definer de operador: la activación la registra el propio `api` cuando el tenant completa el paso 4 y el paso 5 termina bien, dentro de `InTenantTx` y con su fila en `audit.events` (actor: el usuario del tenant). Se registra en `integ.provider_credentials`:
-  - `verified_at`: la llave respondió a una lectura;
-  - `activated_at`: llave verificada, `whsec_` guardado y series creadas. Con esto el onboarding de #31 pasa a «activación completada» y se habilita la emisión;
-  - `webhook_verified_at`: primer evento firmado que llega por la ruta. Lo escribe el `worker` en `cpe.sync`, dentro de `InTenantTx`: el servicio `webhooks` (rol `wanka_webhooks`) no tiene acceso a `integ.provider_credentials` (ADR 0001), y no hace falta un GRANT nuevo. No bloquea la activación, porque la conciliación cubre la falta de webhooks, pero mientras sea nulo hay una alerta para soporte.
-  - `provider_company_ref`: el id de la empresa en Khipu. El `api` lo lee con la API key al verificarla en el paso 4 (el endpoint exacto se confirma en [ref]). Si ninguna lectura con la API key lo devuelve, lo entrega el operador junto con la llave en el paso 2.
+- **Comando de activación (temporal hasta la consola de R4, #86).** Decisión del dueño (2026-11-17, opción A): el operador de Khipu registra la activación también en Wanka con un comando interno y auditado del binario, `wanka einvoicing activate --tenant <id> --environment BETA|PRODUCCION --plan emprende|negocio|pro --company-ref <id> --operator <correo>`.
+  - **Entrada de secretos.** La API key y el `whsec_` se leen de la entrada estándar, nunca de argumentos, variables ni historial, y no se escriben en logs.
+  - **Validaciones.** El comando rechaza la activación, sin escribir nada y con el motivo «Plan de facturación insuficiente», si se pide PRODUCCION con un plan inferior a Emprende (#55). En BETA la empresa puede activarse para pruebas y sigue en BETA. Además verifica la llave con `GET /v1/empresa` de Khipu (3 s de conexión, 10 s en total) y comprueba que exista la ruta del paso 3. El plan es una declaración del operador: con la API key no se puede leer el plan de la cuenta.
+  - **Dónde corre y con qué permisos (ADR 0001, sin `BYPASSRLS`).** Corre en el servicio `api`, el único que tiene `INTEGRATIONS_ENC_KEY` y `WEBHOOK_SECRET_ENC_KEY`, con el rol `wanka_app` (`DATABASE_URL_APP`) y dentro de `InTenantTx(Actor{TenantID: <id>, Kind: system})`. `wanka_app` ya tiene, con la política estándar `tenant_isolation`, `INSERT/UPDATE` en `integ.provider_credentials`, `INSERT/UPDATE` en `ops.webhook_routes` e `INSERT` en `audit.events`. Por eso **no hace falta una política, un rol, un GRANT ni una función `SECURITY DEFINER` nuevos**, y `data/rls-check/` no cambia.
+    - Se usa `Kind: system` y no un tipo de sesión nuevo para no tocar el `Actor` del ADR 0001, que está aceptado. Las funciones definer que dependen del tipo de sesión ya rechazan `system` (por ejemplo, `iam.decide_impersonation`).
+    - Se descartó una función `platform_fn.*` llamada por `wanka_platform`: obligaría a dar `INTEGRATIONS_ENC_KEY` a `platform-api` y a sumar una función definer, con su prueba en `rls-check`, para un mecanismo temporal.
+  - **Qué escribe**, en una sola transacción:
+    - en `integ.provider_credentials`: `api_key_enc`, `environment`, `provider_plan`, `provider_company_ref`, `verified_at`, `activated_at` y `activated_by` (el correo del operador);
+    - el `whsec_` cifrado en `ops.webhook_routes`;
+    - una fila en `audit.events` con `actor_type = platform_staff`, `action = einvoicing:activate` y el operador como referencia, igual que las acciones del staff que afectan a un tenant (ADR 0001).
 
-  Los pasos 1 a 3 quedan fuera de Wanka; soporte los sigue con el estado «pendiente de Khipu» del onboarding. Si pasan más de 24 horas desde el pedido sin que el tenant pueda cargar la llave, se genera una alerta para soporte.
-- La API key la ve una sola vez quien la crea, así que la entrega del paso 2 al paso 4 va por un canal seguro acordado con Khipu, nunca por correo en claro. Wanka nunca la escribe en variables ni en logs.
+    Con `activated_at`, #31 pasa a «Activación completada: configura certificado y SOL» y se habilita #55.
+  - **Quién puede correrlo.** Solo quien tiene acceso al shell del servicio `api` en Railway. Ese control es más débil que el de una consola con 2FA y permisos, y es la razón por la que el comando es temporal: con #86, la activación pasa a la consola de plataforma, con `platform.audit_events`, y el comando se retira.
+- **Estados de la facturación del tenant** en `integ.provider_credentials`:
+  - sin fila o sin `activated_at`: «Pendiente de activación de facturación». La emisión está bloqueada y no se consume ningún correlativo (#31);
+  - `activated_at`: «Activación completada: configura certificado y SOL»;
+  - `emission_ready_at`: el dueño cargó el certificado, SOL y las series, y la prueba de conexión dio «Conexión correcta» (#55). Recién entonces se puede emitir;
+  - `webhook_verified_at`: primer evento firmado que llega por la ruta. Lo escribe el `worker` en `cpe.sync`, dentro de `InTenantTx`, porque el servicio `webhooks` (rol `wanka_webhooks`) no tiene acceso a `integ.provider_credentials` (ADR 0001); no hace falta un GRANT nuevo. No bloquea la emisión, porque la conciliación cubre la falta de webhooks, pero mientras sea nulo hay una alerta para soporte.
+
+  Los pasos 1, 2 y 4 ocurren fuera de Wanka. Si pasan más de 24 horas desde el pedido sin `activated_at`, el dueño sigue viendo el estado pendiente con un medio de contacto y soporte recibe una alerta (#31).
+- La API key la ve una sola vez quien la crea, y la carga en Wanka el mismo operador con el comando del paso 5, sin pasar por terceros ni por correo. Wanka nunca la escribe en variables ni en logs.
 - Khipu no limita el ritmo de emisión (solo hay cuota mensual por cuenta): Wanka limita el suyo (concurrencia fija de la cola `cpe` y un emisor por serie). Como cada tenant tiene su cuenta, la cuota mensual y la de BETA son por tenant, no compartidas.
 
 ### Credenciales por tenant

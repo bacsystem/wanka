@@ -37,7 +37,7 @@ Ajustes de forma respecto a los mocks, comunes a todos los recursos:
 | `GET/POST/PATCH /v1/cash-registers` | selección de caja, config | `tenantSites[].cashboxes` | `empresas.sites:update` |
 | `GET/POST/PATCH /v1/document-series` | `/configuracion/sunat` series | `sunatConfig.series` | `empresas.series:*` |
 | `GET/PUT /v1/onboarding` (pasos 1..6) | `/onboarding` | `industryOptions`, `modulesByIndustry` | propietario |
-| `GET/PUT /v1/einvoicing/credentials` (permiso `empresas.einvoicing:update`) | conexión con Khipu: el propietario pega la API key `fk_…` de su empresa en Khipu; Wanka la cifra, la verifica con `GET /v1/empresa` de Khipu y registra las series con `correlativo_inicial` | `sunatConfig.connection`, solo metadatos (entorno BETA/PRODUCCION, verificado, prefijo de la llave; la llave nunca se devuelve). El certificado y la clave SOL se cargan **en Khipu**, no en Wanka | `empresas.config:update` |
+| `GET/PUT /v1/einvoicing/credentials` (permiso `empresas.einvoicing:update`) | conexión con Khipu: estado de la activación (#31) y carga del certificado, las credenciales SOL y las series con `correlativo_inicial`, que Wanka reenvía a Khipu con la API key de la empresa. La API key y el `whsec_` **no** se cargan aquí: los carga el operador de Khipu con el comando `wanka einvoicing activate` (ADR 0003, «Alta asistida»; temporal hasta #86) | `sunatConfig.connection`, solo metadatos (entorno BETA/PRODUCCION, plan, activada, lista para emitir; la llave nunca se pide ni se devuelve). El certificado y la clave SOL se guardan **en Khipu**, no en Wanka | `empresas.config:update` |
 
 ## clientes (`crm`)
 
