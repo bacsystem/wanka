@@ -87,7 +87,7 @@ Modelo y reglas en [`data/data-model.md`](data/data-model.md): `tenant_id` y RLS
 | Cierre de caja (arqueo, Z) | [`sequences/05-cash-close.mmd`](sequences/05-cash-close.mmd) | bloqueo de ventas en arqueo, aprobación del supervisor, Z inmutable con hash |
 | Lubricentro: OT → venta | [`sequences/06-lubricentro-service-order.mmd`](sequences/06-lubricentro-service-order.mmd) | placa, km, diagnóstico de filtros, cobro al contado, recordatorio a +5 000 km o fecha por WhatsApp y correo |
 | Alta de tenant desde la consola | [`sequences/07-tenant-provisioning.mmd`](sequences/07-tenant-provisioning.mmd) | función `SECURITY DEFINER` acotada; conexión con Khipu hoy manual |
-| Plan, flags y permisos por petición | [`sequences/08-entitlement-enforcement.mmd`](sequences/08-entitlement-enforcement.mmd) | 401 → 402 → 403 módulo/límite/permiso, con caché invalidada por `NOTIFY` |
+| Plan, flags y permisos por petición | [`sequences/08-entitlement-enforcement.mmd`](sequences/08-entitlement-enforcement.mmd) | 401 → 403 empresa cerrada → 402 suscripción inactiva → 403 módulo/límite/permiso, con caché invalidada por `NOTIFY` |
 
 ## 6. Despliegue
 
@@ -145,10 +145,10 @@ Producto (PO):
 6. Venta con stock negativo (`allow_negative_stock`).
 7. En consignación, qué unidad se vende primero: la propia o la consignada.
 8. Fecha estimada del próximo cambio de aceite cuando el vehículo no tiene historial de km (el intervalo es fijo: +5 000 km, #100; el aviso sale 7 días antes, #101).
-9. Fuente del tipo de cambio y del DNI.
+9. Fuente del tipo de cambio (#170 y su job de ingesta) y del DNI (#34). **Pendiente de decisión del dueño**; no bloquea el contrato congelado (`api/conventions.md` §8).
 10. 2FA por SMS (no propuesto).
    - Impersonación de soporte en incidentes P1: ¿se admite alguna excepción al consentimiento previo de la empresa (#90), por ejemplo con doble firma de staff y aviso inmediato? No está decidida; mientras tanto no hay excepción (ADR 0001).
-11. Paginación numerada frente a cursor (cambio de UX en `PaginationBar`).
+11. Paginación numerada frente a cursor. **Resuelta el 2026-11-18** (decisión del dueño): cursor en todos los listados (`api/conventions.md` §5); `PaginationBar` pasa a anterior/siguiente en #178.
 12. Si el despacho físico requiere la GRE aceptada.
 
 Infraestructura (tech-lead):

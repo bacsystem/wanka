@@ -153,6 +153,13 @@ components:
       properties:
         nextCursor: { type: [string, 'null'] }
         hasMore: { type: boolean }
+        total:
+          type: integer
+          minimum: 0
+          description: Solo si el endpoint lo declara y la petición trae includeTotal=true (conventions.md §5).
+        totalIsEstimate:
+          type: boolean
+          description: Presente junto con total; true si es una estimación o un conteo con tope.
     Problem:
       type: object
       required: [type, title, status, code, requestId]
@@ -160,7 +167,10 @@ components:
         type: { type: string, format: uri }
         title: { type: string }
         status: { type: integer }
-        code: { type: string, examples: [insufficient_stock] }
+        code:
+          type: string
+          description: Uno de la lista cerrada de conventions.md §4; un valor desconocido se trata por status y title.
+          examples: [insufficient_stock]
         detail: { type: string }
         requestId: { type: string }
         errors:

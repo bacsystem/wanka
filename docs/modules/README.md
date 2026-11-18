@@ -217,8 +217,8 @@ En la columna «Respaldo», una regla con enlace ya está en los docs de arquite
 
 ## Decisiones pendientes del dueño
 
-- **Librerías Go** (River, sqlc, goose, oapi-codegen, shopspring/decimal, pquerna/otp, OpenTelemetry, SDK de S3): **bloquean la ola 0**. Sin River, la alternativa es un outbox propio ([ADR 0006](../architecture/adr/0006-async-jobs-outbox.md)), que suma trabajo al kernel.
+- ~~Librerías Go (River, sqlc, goose, oapi-codegen, shopspring/decimal, pquerna/otp, OpenTelemetry, SDK de S3)~~ **Decidido (2026-11-17):** el dueño las aprobó y el [ADR 0002](../architecture/adr/0002-modular-monolith-go.md) quedó aceptado; ya no bloquean la ola 0.
 - ~~Mover #61 (GRE) a R2~~ **Decidido (2026-11-17):** la GRE pasa a R2, en la ola 4 (ADR 0003).
 - **Milestone de deuda técnica** para los issues de plataforma y frontend sin milestone (por ejemplo #123, #132, #140, #141, #145, #148), fuera de las épicas.
-- **Paginación por cursor o numerada:** cambia el contrato de todos los listados desde la ola 1 ([`api/conventions.md`](../architecture/api/conventions.md)) y la UX de `PaginationBar`.
+- ~~Paginación por cursor o numerada~~ **Decidido (2026-11-18):** cursor en todos los listados ([`api/conventions.md`](../architecture/api/conventions.md) §5); `PaginationBar` pasa a anterior/siguiente en #178.
 - **Stock negativo** (`allow_negative_stock`): define el descuento de stock de la ola 3 ([data-model §4](../architecture/data/data-model.md)).
