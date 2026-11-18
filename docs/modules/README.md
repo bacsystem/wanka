@@ -203,7 +203,7 @@ En la columna «Respaldo», una regla con enlace ya está en los docs de arquite
 |---|---|---|---|
 | Migraciones (goose) | dos ramas con el mismo número de versión chocan al mergear | solo hacia adelante y cambios destructivos en expandir → migrar → contraer | [data-model §6](../architecture/data/data-model.md#6-migraciones) |
 | | | versiones con timestamp, un solo dueño por esquema y FK entre esquemas solo hacia tablas de olas anteriores | propuesta, pendiente de ADR |
-| `org.document_series` | es una fila caliente que usan facturación, ventas, compras, finanzas y lubricentros | el `UPDATE` de la serie va al final de la transacción, sin llamadas de red dentro; una serie por caja | [data-model §3](../architecture/data/data-model.md#3-series-y-correlativos-numeración-concurrente) |
+| `org.document_series` | es una fila caliente que usan facturación, ventas, compras, finanzas y lubricentros | todo lo que no necesita el lock va antes; el `UPDATE` de la serie es la penúltima sentencia, justo antes de los `INSERT` del documento y del `COMMIT`, sin llamadas de red dentro; una serie por caja | [data-model §3](../architecture/data/data-model.md#3-series-y-correlativos-numeración-concurrente) |
 | | | acceso solo por `empresas.NextNumber` | [ADR 0002](../architecture/adr/0002-modular-monolith-go.md) (fachadas y transacción compartida) |
 | | | el `CHECK` de `doc_type` se siembra completo desde el inicio (01, 03, 07, 08, 09, PRO, OC, Z, OT) | propuesta, pendiente de ADR |
 | Catálogo de permisos | un solo archivo y una sola semilla en `iam` | los códigos salen solo del catálogo | [`api/resources.md`](../architecture/api/resources.md#catálogo-de-permisos-fuente-de-verdad) |
@@ -211,7 +211,7 @@ En la columna «Respaldo», una regla con enlace ya está en los docs de arquite
 | RLS | las funciones `SECURITY DEFINER` y las políticas extra cambian `rls-check` | toda tabla de tenant usa la política estándar; un cambio de políticas, roles, grants o funciones definer actualiza `rls-check` y pasa `sh docs/architecture/data/rls-check/run.sh` | [data-model §1](../architecture/data/data-model.md#1-reglas-comunes-a-toda-tabla-de-tenant), [ADR 0001](../architecture/adr/0001-multitenancy-rls.md) |
 | | | login, webhooks, alta de tenant y `platform_rw` se cambian de a uno | propuesta, pendiente de ADR |
 | `openapi.yaml` | un solo archivo editado por todos | partirlo por tag (un archivo por módulo con `$ref`) antes de abrir la ola 1 | propuesta, pendiente de ADR |
-| Transacción de la venta POS | cruza cinco fachadas; un orden de locks distinto produce deadlocks | stock en orden de `variant_id` y la serie al final | [data-model §4](../architecture/data/data-model.md#4-stock) y [§3](../architecture/data/data-model.md#3-series-y-correlativos-numeración-concurrente) |
+| Transacción de la venta POS | cruza cinco fachadas; un orden de locks distinto produce deadlocks | primero el stock, en orden de `variant_id`; después el `UPDATE` de la serie, justo antes de los `INSERT` del documento y del `COMMIT` | [data-model §4](../architecture/data/data-model.md#4-stock) y [§3](../architecture/data/data-model.md#3-series-y-correlativos-numeración-concurrente) |
 | | | ventas es dueño de la prueba integrada y de ese orden | propuesta, pendiente de ADR |
 | `org.tenant_settings` | varias configuraciones leídas por varios módulos | solo empresas la escribe; los demás la leen por su fachada | propuesta, pendiente de ADR |
 
