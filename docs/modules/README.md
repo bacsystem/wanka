@@ -166,7 +166,7 @@ Dependencias fuertes en «Depende de»; las parciales van entre paréntesis.
 | P0-M03 | [#6 Catálogo](https://github.com/bacsystem/wanka/issues/6) | 2 | empresas | solo tenant y RBAC; las variantes son core del catálogo |
 | P0-M04 | [#5 Clientes](https://github.com/bacsystem/wanka/issues/5) | 2 | empresas | solo tenant y RBAC |
 | P0-M05 | [#11 Finanzas y caja](https://github.com/bacsystem/wanka/issues/11) | 2-5 | empresas | la caja usa `cash_registers` y la serie Z; la CxC y la CxP (ola 5) las alimentan ventas y compras por la fachada de finanzas |
-| P0-M06 | [#9 Facturación electrónica](https://github.com/bacsystem/wanka/issues/9) | 2-3 | empresas (inventario) | numera con `org.document_series`; la base con Khipu va en la ola 2 y la emisión en la 3; la GRE (#61) necesita los traslados |
+| P0-M06 | [#9 Facturación electrónica](https://github.com/bacsystem/wanka/issues/9) | 2-3 | empresas (inventario) | numera con `org.document_series`; la base con Khipu va en la ola 2 y la emisión en la 3; la GRE (#61) es de R2 (ola 4) y necesita los traslados |
 | P0-M07 | [#7 Inventario](https://github.com/bacsystem/wanka/issues/7) | 3 | catálogo, empresas | `stock_levels` y `stock_movements` referencian `item_variants`; la consignación (#112) ve los proveedores por un puerto que implementa compras |
 | P0-M08 | [#8 Ventas y POS](https://github.com/bacsystem/wanka/issues/8) | 3 | catálogo, clientes, inventario, empresas, facturación, finanzas | la venta POS es una sola transacción que descuenta stock, numera, crea el CPE pendiente y exige el turno abierto ([ADR 0002](../architecture/adr/0002-modular-monolith-go.md)) |
 | P1-M09 | [#15 Auditoría](https://github.com/bacsystem/wanka/issues/15) | 2 | identidad | el escritor está en el kernel; la bitácora y el historial de accesos (#79, #80) leen sesiones |
@@ -191,7 +191,7 @@ Una ola se abre cuando su contrato está publicado en la épica, para que el mó
 - **Ola 1 (identidad ∥ empresas).** El DDL de `org.tenants`, `sites`, `cash_registers`, `document_series` y `tenant_settings`; `/v1/auth/*`, `/v1/auth/session/tenant` y `/v1/me/entitlements`; la firma de `empresas.NextNumber(ctx, tx, cashRegisterID, docType)`. El correo va detrás de un puerto `Mailer` con un stub hasta la ola 4.
 - **Ola 2 (catálogo ∥ clientes ∥ caja ∥ auditoría ∥ base de facturación).** El DTO de `facturacion.CreatePending`; `finanzas.AssertShiftOpen` y `finanzas.RecordPayment`; las tablas `items`, `item_variants` y `customers`, a las que apuntan las FK compuestas de la ola 3.
 - **Ola 3 (inventario ∥ ventas ∥ emisión ∥ dashboard).** `inventario.Decrement` y `inventario.Reserve`, con locks en orden de `variant_id`; `POST /v1/sales` y `GET /v1/einvoicing/documents` (ya en el esqueleto del openapi).
-- **Ola 4 (notificaciones ∥ compras ∥ lubricentros ∥ librerías ∥ GRE).** La fachada de proveedores (#62) antes de la consignación (#112); los traslados (#44) antes de la GRE (#61); el puerto de envío de notificaciones.
+- **Ola 4 (notificaciones ∥ compras ∥ lubricentros ∥ librerías ∥ GRE, todo R2).** La fachada de proveedores (#62) antes de la consignación (#112); los traslados (#44) antes de la GRE (#61); el puerto de envío de notificaciones.
 - **Ola 5 (CxC y CxP ∥ reportes ∥ integraciones).** Las vistas o fachadas de lectura de `rpt` y el catálogo de eventos de los webhooks salientes.
 - **Ola 6 (plataforma ∥ agenda ∥ rubros).** `/platform/v1` ([`api/resources.md`](../architecture/api/resources.md), «Plano plataforma») y `GET /v1/agenda/resources` y `appointments`.
 
@@ -218,7 +218,7 @@ En la columna «Respaldo», una regla con enlace ya está en los docs de arquite
 ## Decisiones pendientes del dueño
 
 - **Librerías Go** (River, sqlc, goose, oapi-codegen, shopspring/decimal, pquerna/otp, OpenTelemetry, SDK de S3): **bloquean la ola 0**. Sin River, la alternativa es un outbox propio ([ADR 0006](../architecture/adr/0006-async-jobs-outbox.md)), que suma trabajo al kernel.
-- **Mover #61 (GRE) a R2:** está en R1, pero la GRE de Khipu es experimental y no existe en BETA, y depende de los traslados (#44).
+- ~~Mover #61 (GRE) a R2~~ **Decidido (2026-11-17):** la GRE pasa a R2, en la ola 4 (ADR 0003).
 - **Milestone de deuda técnica** para los issues de plataforma y frontend sin milestone (por ejemplo #123, #132, #140, #141, #145, #148), fuera de las épicas.
 - **Paginación por cursor o numerada:** cambia el contrato de todos los listados desde la ola 1 ([`api/conventions.md`](../architecture/api/conventions.md)) y la UX de `PaginationBar`.
 - **Stock negativo** (`allow_negative_stock`): define el descuento de stock de la ola 3 ([data-model §4](../architecture/data/data-model.md)).

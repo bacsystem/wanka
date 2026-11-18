@@ -129,15 +129,16 @@ El dueño aprobó el 2026-11-17 las librerías del [ADR 0002](adr/0002-modular-m
 
 ## 10. Supuestos y preguntas abiertas
 
-Verificaciones en BETA de Khipu, criterios previos al issue #56 (no son preguntas: se cierran con una prueba). **Ya figuran como criterios de aceptación en el #56**, así que el gate vive en el issue:
-- **Redondeo.** Los totales de `pricing.Compute` deben ser idénticos a los de `POST /v1/facturas/calcular` en al menos 200 carritos (`data/data-model.md` §2, ADR 0003).
-- **Orden y huecos por serie.** Comprobar si Khipu acepta el correlativo N+1 antes que N. De eso depende la política de hueco (ADR 0003 y 0006).
+Verificaciones en BETA de Khipu, criterios del issue #56 (el código de Khipu ya respondió lo que estaba en duda; ADR 0003, «Supuestos y verificaciones en BETA»):
+- **Redondeo.** `pricing.Compute` replica el algoritmo de Khipu, incluido el cambio de modo por comprobante; los 200 carritos contra `POST /v1/facturas/calcular` quedan como regresión (`data/data-model.md` §2).
+- **Orden y huecos por serie.** Khipu acepta N+1 antes que N; la política es seguir con N+1. En BETA, una confirmación ligera.
+- **Baja rechazada sin webhook.** Se resuelve sondeando `GET /v1/bajas/{id}`.
 
-Khipu. La documentación de Khipu no responde estos puntos; detalle en el ADR 0003:
-1. ¿Una cuenta de Khipu para todos los tenants, o una por tenant? Con una sola cuenta, la cuota mensual se comparte entre todos.
-2. ¿Habrá una API de integrador para dar de alta empresa, API key y webhook? Hoy ese alta solo se hace desde el portal.
-3. ¿Se puede usar la GRE en el release 1? Está marcada como experimental y no existe en BETA.
-4. Timeouts y latencia típica de las llamadas; si se envía `Retry-After`; qué significa `PENDIENTE_AGRUPACION`; si los webhooks de GRE y de bajas usan los eventos `comprobante.*`. La cuota de BETA (`LIMITE_PRUEBAS`) también se comparte entre las empresas de una cuenta.
+Khipu. Respondidas con el código de Khipu (repo público bacsystem/khipu @53bd4bc) y decisiones del dueño (2026-11-17); detalle en el ADR 0003:
+1. Modelo de cuentas. **Resuelta:** las empresas las crea el operador de Khipu con el alta asistida, sin cuenta propia por tenant ni tope de RUC por plan (ADR 0003, «Alta asistida»).
+2. API de integrador. **Resuelta:** no existe para terceros; queda para más adelante. Sigue abierta con Khipu la pregunta 12 del ADR 0003 (registro del webhook y entrega segura de las llaves).
+3. GRE en R1. **Resuelta:** la GRE (#61) pasa a R2; es experimental y su envío viene apagado.
+4. Timeouts, `Retry-After`, `PENDIENTE_AGRUPACION`, webhooks de GRE y bajas, y cuota BETA. **Resuelta** en el ADR 0003 (puntos 3, 4 y 8 y la fila «Límites»). Solo falta medir la latencia típica en la prueba de carga de #56.
 
 Producto (PO):
 5. Esperar hasta 3 s a que llegue el hash para imprimir el ticket completo, o imprimir siempre "pendiente".

@@ -159,7 +159,10 @@ erDiagram
     text provider PK "khipu"
     bytea api_key_enc "fk_... cifrada AES-GCM con INTEGRATIONS_ENC_KEY; sin GRANT para wanka_webhooks"
     text environment "BETA, PRODUCCION"
-    timestamptz verified_at
+    text provider_company_ref "id de la empresa en Khipu, del alta asistida"
+    timestamptz verified_at "llave verificada con una lectura"
+    timestamptz activated_at "llave verificada, whsec_ guardado y series creadas; lo fija el api, con audit.events"
+    timestamptz webhook_verified_at "primer evento firmado recibido; mientras sea null, alerta"
   }
   WEBHOOK_ROUTES {
     text route_id PK "ops.webhook_routes SIN RLS: 128 bits aleatorios; wanka_webhooks solo via ops.resolve_webhook_route()"

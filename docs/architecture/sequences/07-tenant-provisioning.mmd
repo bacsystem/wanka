@@ -20,4 +20,4 @@ sequenceDiagram
   PA->>DB: COMMIT
   PA-->>W: 201 {tenant, status: trial}
   WK->>N: correo de invitacion con token de un uso (72 h)
-  Note over S,N: El propietario completa /onboarding (6 pasos): datos fiscales, sedes, usuarios y conexion con Khipu. Hoy la empresa, la API key fk_ y el webhook se crean solo en el portal de Khipu (pregunta abierta: API de integrador). Se pega la llave, Wanka la verifica, registra las series con correlativo_inicial y guarda cifrado el whsec_ del webhook.
+  Note over S,N: El propietario completa /onboarding (6 pasos): datos fiscales, sedes, usuarios y conexion con Khipu. La empresa, su serie inicial y la API key fk_ las crea el operador de Khipu con el alta asistida (POST /v1/admin/cuentas), y registra el webhook, a confirmar con Khipu (ADR 0003, Alta asistida, pregunta 12). Un usuario del tenant carga la llave y el whsec_ en /configuracion/sunat, Wanka verifica la llave, crea las series por caja con correlativo_inicial y marca la facturacion activada.

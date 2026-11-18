@@ -25,41 +25,44 @@ El usuario decidió que **el POS no espera la aceptación**: el ticket se imprim
 | Tema | Hecho | Fuente |
 |---|---|---|
 | Autenticación | `X-Api-Key: fk_…`. **Una llave pertenece a una única empresa (RUC)** | [ref] *Autenticación* |
-| Operaciones solo del portal | El alta de empresa, de API key y de webhook (`POST /v1/empresas`, `POST /v1/empresa/api-keys`, `POST /v1/webhooks`) exige sesión del portal. Con una API key responden `403` (`REQUIERE_SESION`) | [ref]; [guía] *Webhooks* |
+| Operaciones solo del portal | El alta de empresa, de API key y de webhook (`POST /v1/empresas`, `POST /v1/empresa/api-keys`, `POST /v1/webhooks`) exige sesión del portal. Con una API key responden `403` (`REQUIERE_SESION`). Con la API key sí se cargan el certificado, las credenciales SOL y API SUNAT y los datos fiscales, y se crean series. No hay API de integrador para terceros; el operador de Khipu tiene un **alta asistida**, `POST /v1/admin/cuentas` (`X-Platform-Key`, con `Idempotency-Key` de 1 h), que crea cuenta, empresa, serie y API key | [ref]; [guía] *Webhooks*; [código] |
 | URL | `https://api-khipu.bacsystemsolutions.com`, la misma en BETA y PRODUCCION. El entorno es una propiedad de la empresa | [guía]; [entornos] |
 | Firma | **Khipu firma el XML** con el `.p12/.pfx` de la empresa (`POST /v1/empresa/certificado`) | [guía] *Firma y certificados* |
 | Factura y boleta | `POST /v1/facturas` valida, numera, firma y envía en la misma llamada. `precio_unitario` incluye IGV y es mayor que 0; Khipu calcula el IGV y los totales con tolerancia ±1 | [ref] `POST /v1/facturas` |
 | Cálculo sin emitir | `POST /v1/facturas/calcular`: mismo cuerpo y mismas reglas, sin numerar ni consumir cupo | [ref] |
-| Numeración propia | `correlativo` opcional (int64 > 0) en facturas y notas. Si ya existe: `409 DUPLICADO`. Series con `correlativo_inicial`. Un número rechazado no se reasigna. **"Las emisiones sobre una misma serie se procesan en orden"** | [ref]; [entornos] |
+| Numeración propia | `correlativo` opcional (int64 > 0) en facturas y notas. Si ya existe: `409 DUPLICADO`. Series con `correlativo_inicial`. **Acepta N+1 antes que N, y N después**: solo rechaza duplicados y sube la serie con `GREATEST(ultimo_numero, n)`. Un `422` no consume el número. Un comprobante `RECHAZADO` por SUNAT conserva su número: reenviarlo da `409 DUPLICADO`. **"Las emisiones sobre una misma serie se procesan en orden"** | [ref]; [entornos]; [código] |
 | Tipo de cambio | `tipo_cambio` de hasta 3 enteros y 3 decimales, solo fuera de PEN (en PEN: `422 TIPO_CAMBIO_INVALIDO`) | [ref] `FacturaRequest.tipo_cambio` |
 | Notas | `POST /v1/notas` sobre un comprobante aceptado. La serie lleva la letra del documento de origen (`FC`/`FD` o `BC`/`BD`). Sobre boleta no se admiten NC 04, 05, 08 ni 13 | [ref] |
 | Baja | `POST /v1/facturas/{id}/baja`: Khipu arma la RA o el RC. Solo comprobantes aceptados, hasta el día 7 en hora de Lima. **Sin idempotencia**; una baja en curso bloquea otra. Estados de la baja: `GENERADA → ENVIADA → ACEPTADA / RECHAZADA`, más `ERROR_ENVIO` | [ref] `BajaResponse.estado` |
 | Resumen diario | Lo gestiona Khipu. Una boleta que pasó el envío individual se informa en un resumen (`baja.condicion = ALTA`) | [ref] |
-| GRE | `POST /v1/guias-remision` con `Idempotency-Key`. Khipu numera. Estados `FIRMADO`, `ERROR_ENVIO`, `ENVIANDO`, `ENVIADO_PENDIENTE_TICKET`, `ACEPTADO`, `ACEPTADO_CON_OBS`, `RECHAZADO`. **Experimental** y sin envío en BETA | [ref] `GuiaRemisionResponse.estado`; [guía] |
+| GRE | `POST /v1/guias-remision` con `Idempotency-Key`. Khipu numera. Estados `FIRMADO`, `ERROR_ENVIO`, `ENVIANDO`, `ENVIADO_PENDIENTE_TICKET`, `ACEPTADO`, `ACEPTADO_CON_OBS`, `RECHAZADO`. **Experimental**: el envío viene apagado en el servidor (`422 GRE_NO_DISPONIBLE`), no hay envío en BETA y no emite webhooks | [ref] `GuiaRemisionResponse.estado`; [guía]; [código] |
 | Respuesta | `201` con `estado_documento`, `hash`, `fecha_limite_envio`, `cdr`, `totales` y `enlaces` (PDF con QR desde `FIRMADO`) | [ref] `ComprobanteResponse` |
 | Conservación de artefactos | XML y CDR: Gratis 1 año; Emprende, Negocio y Pro 5 años (el seed de planes dice que «heredan la de Emprende»). El plazo solo se guarda y se muestra: **no hay purga automática** de XML, CDR ni PDF. El PDF se genera la primera vez que se pide y se guarda junto al XML; si cambia el diseño, se regenera con otra clave | [planes]; [código] |
 | Salida en bloque | `GET /v1/facturas/descarga`: ZIP por streaming con XML, PDF y CDR, filtrado por fecha, estado o serie, con un tope de 500 por petición (`422 DESCARGA_EXCEDE_EL_TOPE`). Dar de baja la cuenta no borra nada; la suspensión bloquea toda llamada con la API key (`403 CUENTA_SUSPENDIDA`); el plan vencido solo bloquea la emisión (`402 PLAN_VENCIDO`) | [código] |
 | Estados del comprobante | Enum de `GET /v1/facturas?estado`: `RECIBIDO`, `INVALIDO`, `FIRMADO`, `ERROR_ENVIO`, `PENDIENTE_AGRUPACION`, `ENVIADO`, `ACEPTADO`, `ACEPTADO_CON_OBS`, `RECHAZADO`, `ANULADO`, `FUERA_DE_PLAZO`, `DESCARTADO` | [ref] `GET /v1/facturas` |
-| Reintentos hacia SUNAT | Los hace Khipu: hasta 20 en ~74 h. Forzado con `POST /v1/facturas/{id}/enviar` (`409 ENVIO_EN_CURSO` si hay un envío en vuelo) | [entornos]; [ref] |
+| Reintentos hacia SUNAT | Los hace Khipu: hasta 20 en ~74 h (dato de la documentación, no confirmado en el código). Forzado con `POST /v1/facturas/{id}/enviar` (`409 ENVIO_EN_CURSO` si hay un envío en vuelo). Con `enviar_automatico`, `POST /v1/facturas` llama a SUNAT dentro de la misma petición, con 15 s de timeout. Khipu **no envía `Retry-After`** | [entornos]; [ref]; [código] |
 | Idempotencia | `Idempotency-Key` en facturas, notas y guías. Vigencia 24 h. Mismo cuerpo: `200`. Otro cuerpo: `422 IDEMPOTENCIA_INVALIDA` | [errores] |
 | Búsqueda por número | `GET /v1/facturas?serie=&numero=` | [ref] |
-| Webhooks | Solo estados finales: `comprobante.aceptado`, `.aceptado_con_obs`, `.rechazado`, `.error_envio`, `.fuera_de_plazo`, `.anulado`, `.descartado`. Firma `X-Khipu-Signature: t=..,v1=..` (HMAC-SHA256 de `t.cuerpo`). Deduplicación por `X-Khipu-Delivery`. **Sin orden garantizado.** 8 intentos en ~22 h; pausa tras 10 fallos | [guía] *Webhooks* |
-| Límites | Sin tope por segundo. **Cuota mensual del plan sumada entre todas las empresas de la cuenta** (`429 LIMITE_PLAN`, `402 PLAN_VENCIDO`). **BETA: 1 000 documentos por RUC al mes, también sumados entre las empresas en BETA de la cuenta** (`429 LIMITE_PRUEBAS`). Consulta RUC: 60/min y 5 000/día por empresa | [entornos] |
+| Webhooks | Solo cambios de estado de un comprobante: `comprobante.aceptado`, `.aceptado_con_obs`, `.rechazado`, `.error_envio`, `.fuera_de_plazo`, `.anulado`, `.descartado`. **La GRE no emite webhooks, y una baja rechazada o en error tampoco** (la aceptada llega como `comprobante.anulado`). Firma `X-Khipu-Signature: t=..,v1=..` (HMAC-SHA256 de `t.cuerpo`). Deduplicación por `X-Khipu-Delivery`. **Sin orden garantizado.** Reintentos con esperas crecientes (1 min, 5 min, 15 min, 1 h…); pausa tras 10 fallos seguidos; el log de entregas dura **30 días**; hasta 5 endpoints por empresa | [guía] *Webhooks*; [código] |
+| Límites | **Sin limitador de tasa** en la emisión. Cuota mensual del plan sumada entre todas las empresas de la cuenta (`429 LIMITE_PLAN`, `402 PLAN_VENCIDO`). BETA: 1 000 documentos por RUC al mes, sumados entre las empresas en BETA de la cuenta (`429 LIMITE_PRUEBAS`). Las empresas sin cuenta (creadas por el operador para integraciones) no tienen tope de plan. Consulta RUC: 60/min y 5 000/día por empresa | [entornos]; [código] |
 | Errores | Sobre `{estado, datos, codigo, mensaje, errores}`; `trace_id` en los 500; un 502 puede no ser JSON | [ref]; [errores] |
 
 ## Supuestos y verificaciones en BETA (antes del issue #56)
 
-1. **Redondeo.** El algoritmo de totales de Khipu no está documentado. **Verificación en BETA:** el set de carritos de `data/data-model.md` §2, enviado a `POST /v1/facturas/calcular`, debe dar totales idénticos a `pricing.Compute`.
-2. **Orden y huecos por serie.** No se sabe si Khipu acepta un `correlativo` N+1 cuando N todavía no llegó (por ejemplo, N bloqueado por un `422`). **Verificación en BETA:** enviar N+1 antes que N, y N después. El diseño de abajo funciona en ambos casos.
-3. **`PENDIENTE_AGRUPACION`.** Está en el enum, pero sin descripción. Supuesto: la boleta espera su resumen diario. Se trata como "en curso".
-4. Timeouts y latencia típica; si se envía `Retry-After`.
-5. El modelo de cuentas: una cuenta para todos los tenants (comparten la cuota mensual y la de BETA) o una por tenant. **Pregunta al usuario.**
-6. Cómo automatizar el alta en Khipu, que hoy solo se hace desde el portal. **Pregunta al usuario.**
-7. Disponibilidad de la GRE en el release 1. **Pregunta al usuario.**
-8. Si los webhooks de GRE y de bajas usan los mismos eventos `comprobante.*`.
+Respondidas con el código de Khipu ([código], repo público bacsystem/khipu @53bd4bc) y con decisiones del dueño (2026-11-17):
+
+1. **Redondeo. Resuelta** ([código]). Khipu calcula todo desde `precio_unitario` (con IGV en las gravadas). Por línea: valor unitario = precio / (1 + tasa) a 10 decimales HALF_UP; base = valor × cantidad a 2 decimales HALF_UP; IGV a 2 decimales HALF_UP. En el modo «precio exacto», el IGV de la línea es lo que falta para llegar a precio × cantidad; si la suma de los desvíos frente a base × tasa pasa de 0,50, **todo el comprobante** vuelve al modo base × tasa. `pricing.Compute` replica ese algoritmo, incluido el cambio de modo por comprobante. Los 200 carritos contra `POST /v1/facturas/calcular` quedan como **prueba de regresión**, no como descubrimiento.
+2. **Orden y huecos por serie. Resuelta** ([código]): Khipu acepta N+1 antes que N, y N después. La política de hueco es la de «seguir con N+1» (ver «Numeración y orden por serie»). En BETA queda una **confirmación ligera**: enviar N+1 antes que N una vez.
+3. **`PENDIENTE_AGRUPACION`. Resuelta** ([código]): está en el enum, pero ningún servicio lo asigna. Tratarlo como «en curso» es correcto e inofensivo.
+4. **Timeouts y `Retry-After`. Resuelta** ([código]): Khipu llama a SUNAT dentro de la petición con 15 s de timeout; los 30 s de Wanka cubren eso y la firma. Khipu no envía `Retry-After`: el backoff es siempre el de Wanka. La latencia típica no está medida: se mide en la prueba de carga de #56.
+5. **Modelo de cuentas. Resuelta** (decisión del dueño): ver «Alta asistida».
+6. **Automatizar el alta. Resuelta** (decisión del dueño): no hay API de integrador; el alta la hace el operador de Khipu con el alta asistida. La API de integrador queda para más adelante.
+7. **GRE en R1. Resuelta** (decisión del dueño, [código]): la GRE (#61) pasa a R2. Es experimental, su envío viene apagado y no existe en BETA.
+8. **Webhooks de GRE y de bajas. Resuelta** ([código]): la GRE no emite webhooks, así que su estado sale de la conciliación. Una baja rechazada o en error no emite evento: se resuelve sondeando `GET /v1/bajas/{id}` (ver «Bajas»).
 9. Conservación por plan. **Resuelta** ([código]): Emprende, Negocio y Pro conservan 5 años, y no hay purga automática. **Queda abierto**, como pregunta a Khipu, el compromiso contractual de no introducir una purga mientras Wanka use el servicio, y de configurar el volumen o el bucket que usa para que conserve los archivos al menos ese plazo, porque la conservación física depende de esa configuración del operador ([código], `S3DocumentStorage`).
 10. Conservación del PDF. **Resuelta** ([código]): Khipu lo genera bajo demanda y lo guarda junto al XML. Sus bytes cambian si cambia el diseño.
 11. Exportación en bloque. **Resuelta** ([código]): ZIP por rango de fechas, con un tope de 500 por petición. La baja de la cuenta no borra nada; la suspensión corta las descargas.
+12. Si el alta asistida puede registrar también el webhook y cómo se entregan la API key y el `whsec_` a Wanka por un canal seguro. **Pregunta a Khipu.**
 
 ## Opciones
 
@@ -86,6 +89,28 @@ type InvoicingProvider interface {
     VerifyWebhook(secret []byte, header http.Header, rawBody []byte, now time.Time) (WebhookEvent, error)
 }
 ```
+
+### Alta asistida (modelo de cuentas)
+
+Decisión del dueño (2026-11-17): las empresas las crea el **operador de Khipu** con el alta asistida (`POST /v1/admin/cuentas`), sin una cuenta propia de Khipu por tenant y sin tope de RUC por plan. La API de integrador queda para más adelante. Pasos del alta de un tenant (#31 y #55):
+
+| Paso | Quién | Cómo |
+|---|---|---|
+| 1. Pedir el alta con RUC, razón social y entorno (BETA o PRODUCCION) | soporte de Wanka | manual, al operador de Khipu; el tenant queda «pendiente de Khipu» en el onboarding (#31) |
+| 2. Crear la empresa, su serie inicial y la API key `fk_` | operador de Khipu | `POST /v1/admin/cuentas`, manual desde el lado de Khipu |
+| 3. Registrar el webhook hacia `/webhooks/khipu/{routeId}` y entregar el `whsec_` | operador de Khipu, con el `routeId` que genera Wanka (#55) | manual: `/v1/webhooks` exige sesión del portal, que una empresa sin cuenta propia no tiene (ver la pregunta 12) |
+| 4. Cargar la API key y el `whsec_` en Wanka | usuario del tenant con `facturacion.config:update`, acompañado por soporte de Wanka | `/configuracion/sunat` (#55); Wanka verifica la llave con una lectura y guarda ambos cifrados |
+| 5. Subir el certificado, las credenciales SOL y API SUNAT y los datos fiscales, y crear una serie por caja con `correlativo_inicial` | Wanka, automático con la API key | #55 |
+
+- **Activación de la facturación en R1, sin consola (#86 es de R4).** No hay comando ni función definer de operador: la activación la registra el propio `api` cuando el tenant completa el paso 4 y el paso 5 termina bien, dentro de `InTenantTx` y con su fila en `audit.events` (actor: el usuario del tenant). Se registra en `integ.provider_credentials`:
+  - `verified_at`: la llave respondió a una lectura;
+  - `activated_at`: llave verificada, `whsec_` guardado y series creadas. Con esto el onboarding de #31 pasa a «activación completada» y se habilita la emisión;
+  - `webhook_verified_at`: primer evento firmado que llega por la ruta. No bloquea la activación, porque la conciliación cubre la falta de webhooks, pero mientras sea nulo hay una alerta para soporte.
+
+  Los pasos 1 a 3 quedan fuera de Wanka; soporte los sigue con el estado «pendiente de Khipu» del onboarding.
+- La API key la ve una sola vez quien la crea, así que la entrega del paso 2 al paso 4 va por un canal seguro acordado con Khipu, nunca por correo en claro. Wanka nunca la escribe en variables ni en logs.
+- Sin tope de plan, Khipu tampoco limita el ritmo: Wanka limita el suyo (concurrencia fija de la cola `cpe` y un emisor por serie).
+- **Conservación.** Si la empresa queda sin cuenta, no hay un plan que fije el plazo de 5 años. La conservación descansa en que Khipu no purga ([código]) y en el compromiso contractual de la pregunta 9, que tiene que cubrir de forma explícita a las empresas del alta asistida.
 
 ### Credenciales por tenant
 
@@ -126,17 +151,16 @@ La API key `fk_…` se guarda cifrada con AES-GCM (`INTEGRATIONS_ENC_KEY`) en `i
     - el mismo doble respondiendo **503 durante 1 minuto**: se cuentan las llamadas por serie (una por escalón de backoff) y se verifica que llegan en orden de número;
     - un test que **venza el arrendamiento a mitad del drenaje** y compruebe que el drenador viejo aborta en la siguiente renovación y que nunca hay dos `holder` emitiendo;
     - un N+1 encolado justo cuando el drenaje termina, **contra River real**, que debe salir en menos de 5 s.
-- **Política de hueco.** Un documento bloqueado por `422` se aparta (`blocked_reason = validation`) y el drenaje sigue con N+1.
-  - Si la verificación en BETA del punto 2 muestra que Khipu **rechaza** un N+1 cuando N falta, la política cambia a "detener la serie": la serie queda en pausa, con alerta inmediata y una acción "corregir" en la UI.
-  - En ese caso las demás cajas siguen con sus series, y la caja afectada puede pasar temporalmente a una serie de contingencia configurada.
+- **Política de hueco.** Un documento bloqueado por `422` se aparta (`blocked_reason = validation`) y el drenaje sigue con N+1. Khipu lo acepta ([código], punto 2), y el `422` no consume el número allá, así que el documento corregido sale después con el mismo número.
+- **Número rechazado por SUNAT.** Queda consumido: reenviarlo con el mismo número da `409 DUPLICADO` ([código]). Se emite un comprobante nuevo con otro número, y el rechazado queda en la serie como hueco documentado (`rechazado`).
 
 ### Artefactos: Khipu los conserva
 
 Decisión del dueño (2026-11-17): Khipu almacena y sirve el PDF, el XML y el CDR de los CPE durante 5 años, con el plan Emprende o superior. Wanka no los guarda, y en R1 no hay bucket.
 
-- **Requisito de plan.** Según [planes] y [código], Gratis conserva 1 año y Emprende, Negocio y Pro, 5 años. Las cuentas de Khipu que use Wanka tienen que estar en Emprende o en un plan superior. Cómo se cumple depende del modelo de cuentas (pregunta 5):
-  - con una cuenta compartida, esa cuenta está en Emprende o superior;
-  - con una cuenta por tenant, el alta (#31) y la conexión con Khipu (#55) exigen ese plan y lo registran. Guardar una copia propia para los tenants en Gratis necesitaría el adaptador de bucket del `BlobStore`, que no existe en R1, así que no se ofrece.
+- **Requisito de plan.** Según [planes] y [código], Gratis conserva 1 año y Emprende, Negocio y Pro, 5 años. Con el alta asistida (ver «Alta asistida»), si el alta crea una cuenta, esa cuenta tiene que estar en Emprende o en un plan superior; si la empresa queda sin cuenta, no hay plan que fije el plazo y vale lo que dice «Alta asistida», en «Conservación»:
+  - no se usa una cuenta compartida entre tenants;
+  - guardar una copia propia necesitaría el adaptador de bucket del `BlobStore`, que no existe en R1, así que no se ofrece.
 
   Hoy Khipu no borra artefactos de ningún plan: no hay purga automática ([código]). Su política de privacidad dice que los conserva mientras la cuenta exista y la normativa lo exija ([docs]). La conservación física depende del volumen o del bucket que configure el operador de Khipu: «versionado y retención se configuran en el bucket» ([código], `S3DocumentStorage`). Que siga así es un compromiso contractual, no técnico: ver la pregunta 9.
 - **Qué guarda Wanka.** Por documento guarda `provider_ref`, `hash` (el resumen del XML firmado que devuelve Khipu) y `xml_sha256`.
@@ -150,11 +174,11 @@ Decisión del dueño (2026-11-17): Khipu almacena y sirve el PDF, el XML y el CD
 - **Descarga bajo demanda.** Reimprimir, reenviar y descargar (#52) piden el artefacto a Khipu por `provider_ref` (el endpoint exacto se confirma en [ref]). El `api` hace de proxy por **streaming**, sin guardar el archivo ni cargarlo entero en memoria.
   - **Fuera de `http.TimeoutHandler`.** La ruta `GET /v1/einvoicing/documents/{id}/files/{xml|cdr|pdf}` no pasa por ese handler, que guardaría la respuesta entera en memoria, y tiene su propio presupuesto, declarado en `api/conventions.md`. Todos los plazos se cuentan **desde que llega la petición**: 3 s para conectar con Khipu y 8 s para recibir sus encabezados. Si no llegan, la API responde `503 dependency_unavailable` (RFC 9457) con `Retry-After`. La descarga completa tiene un tope de **25 s**, también contados desde la llegada. Así el peor caso queda por debajo de los 27 s del BFF y los 30 s del borde. Si el tope se alcanza a mitad del streaming, la conexión se corta sin el fragmento final, y el BFF lo trata como error, no como archivo completo.
   - **Sin reintentos en el adaptador** (ADR 0006: reintentos en una sola capa). La petición interactiva falla rápido con el `503`. Para enviar el comprobante por correo o WhatsApp (#81), el job de notificaciones pide el archivo a Khipu al enviarlo, y los reintentos son los de River.
-  - **Concurrencia.** Hasta 2 descargas simultáneas por tenant (el mismo cupo de «exportes y PDF» de `api/conventions.md`) y un tope global de 16 por réplica de `api`, con un límite propio, separado de la cola de emisión. Al llenarse, la API responde `429 rate_limited` (por tenant) o `503 overloaded` (global), con `Retry-After`. El cupo se ocupa durante toda la descarga, así que en la ley de Little (L = λ·W) W es la duración completa, no solo la espera de los encabezados. Con un p95 supuesto de 4 s, 16 cupos sostienen unas 4 descargas/s por réplica; en el peor caso (25 s, un cliente lento), unas 0,64/s, y el resto recibe `503 overloaded`. El valor se ajusta con el p95 medido en la prueba de carga de #52, que incluye clientes lentos y mide el porcentaje de `503 overloaded`.
+  - **Concurrencia.** Hasta 2 descargas simultáneas por tenant (el cupo de descargas de `api/conventions.md`) y un tope global de 16 por réplica de `api`, con un límite propio, separado de la cola de emisión. Al llenarse, la API responde `429 rate_limited` (por tenant) o `503 overloaded` (global), con `Retry-After`. El cupo se ocupa durante toda la descarga, así que en la ley de Little (L = λ·W) W es la duración completa, no solo la espera de los encabezados. Con un p95 supuesto de 4 s, 16 cupos sostienen unas 4 descargas/s por réplica; en el peor caso (25 s, un cliente lento), unas 0,64/s, y el resto recibe `503 overloaded`. El valor se ajusta con el p95 medido en la prueba de carga de #52, que incluye clientes lentos y mide el porcentaje de `503 overloaded`.
   - El ticket del POS no depende de Khipu: se imprime con los datos de Wanka.
 - **PDF.** Lo genera Khipu bajo demanda la primera vez que se pide (desde `FIRMADO`) y lo guarda junto al XML. Si cambia el diseño, lo regenera con otra clave ([código]). Wanka no genera el PDF.
 - **Salida al terminar el servicio.** `GET /v1/facturas/descarga` devuelve un ZIP por streaming con XML, PDF y CDR, filtrado por rango de fechas, con un tope de 500 comprobantes por petición (por eso se descarga por tramos). Dar de baja la cuenta no borra nada ni corta el acceso; **suspenderla sí corta todas las llamadas, también las descargas** (`403 CUENTA_SUSPENDIDA`), mientras que un plan vencido solo bloquea la emisión ([código]). La herramienta de exportación por tramos no entra en R1.
-- **Exportes y PDF internos.** Libros electrónicos, reportes, exportes y el PDF del reporte Z se generan en el `api` al momento, desde Postgres, por streaming y sin guardarse. El PDF del Z sale del snapshot inmutable de `z_reports` (`sequences/05-cash-close.mmd`); no es un CPE, así que no viene de Khipu.
+- **Exportes.** Libros electrónicos, reportes y exportes se generan en el `api` al momento, desde Postgres, por streaming y sin guardarse. Sin librería de PDF (decisión del dueño, 2026-11-17): en R1 los exportes son **CSV** (y TXT para los formatos de SUNAT). XLSX necesitaría una librería que no está aprobada (por ejemplo, excelize), así que queda como pregunta al dueño. El reporte Z no genera PDF: se ve en pantalla y se imprime desde el navegador con estilos de impresión (`sequences/05-cash-close.mmd`).
   - **Ruta.** `GET /v1/exports?type=&period=` es una lectura sin efectos: se puede repetir sin `Idempotency-Key` y no guarda copia.
   - **Rango máximo.** Un periodo tributario (un mes calendario) y 50 000 filas, lo que se alcance primero. Se valida antes de generar, en la misma transacción `REPEATABLE READ READ ONLY` que el exporte, para que el conteo y el archivo vean la misma foto de los datos:
     - el periodo, con los parámetros de la petición;
@@ -211,13 +235,14 @@ Las transiciones solo suben de rango: `UPDATE ... SET status = $s, status_rank =
 ### Bajas
 
 Wanka crea `einv.voidings` (con un índice único parcial: una baja en curso por documento) y el job `cpe.void`.
-- Antes de cada intento consulta `ListVoids`, porque la baja no tiene idempotencia; si ya hay una baja en curso, la adopta.
+- Antes de cada intento consulta `ListVoids`, porque la baja no tiene idempotencia ([código]: sin clave; una baja en curso bloquea otra); si ya hay una baja en curso, la adopta.
+- **Resultado de la baja.** Una baja aceptada llega por el webhook `comprobante.anulado`. Una rechazada o en error **no emite webhook** ([código]), así que el job sondea `GET /v1/bajas/{id}` con backoff (1, 5, 15 y 60 min, luego cada hora hasta 24 h) mientras la baja esté `GENERADA` o `ENVIADA`, y la conciliación periódica cubre lo que quede.
 - La API valida antes: el documento está aceptado u observado, y no pasaron más de 7 días.
 - **Una boleta ya entregada al cliente no se anula: corresponde una nota de crédito.** La UI lo pregunta.
 
 ### GRE
 
-Mismo patrón, con `Idempotency-Key`. El traslado no depende de la aceptación de la GRE para registrarse (ver `sequences/04-transfer-gre.mmd`).
+Pasa a R2 (decisión del dueño, 2026-11-17): es experimental en Khipu, su envío viene apagado y no existe en BETA ([código]). Mismo patrón, con `Idempotency-Key`. Como no emite webhooks, su estado sale solo de la conciliación (`/{id}/ticket`). El traslado no depende de la aceptación de la GRE para registrarse (ver `sequences/04-transfer-gre.mmd`).
 
 ### Ticket del POS
 
@@ -229,10 +254,12 @@ El ticket muestra la serie y el número que asignó Wanka, con el CPE "pendiente
 |---|---|---|
 | Khipu lento o caído | cola `cpe` con concurrencia fija y backoff; alerta a los 15 min | ticket "pendiente"; panel "cola SUNAT"; píldora SUNAT en advertencia |
 | SUNAT caída (`ERROR_ENVIO`) | Khipu reintenta; Wanka concilia | CPE "enviado" |
-| Validación (`422`) | `blocked_reason`; la serie sigue o se detiene según la verificación 2 | "corregir y reenviar" |
+| Validación (`422`) | `blocked_reason`; la serie sigue con N+1 (Khipu lo acepta) | "corregir y reenviar" |
+| Rechazo de SUNAT | el número queda consumido; se emite uno nuevo | "emitir de nuevo" con otro número |
+| Baja rechazada o en error (sin webhook) | sondeo de `GET /v1/bajas/{id}` con backoff y conciliación | la baja muestra «rechazada» con el motivo de SUNAT |
 | Cuota (`LIMITE_PLAN`, `LIMITE_PRUEBAS`) | pausa y alerta crítica | aviso en el dashboard |
 | Credenciales o configuración | pausa del tenant | banner en `/configuracion/sunat` |
-| Webhooks pausados | la conciliación cubre el hueco; alerta para reactivarlos | nada |
+| Webhooks pausados (tras 10 fallos seguidos) | la conciliación cubre el hueco; alerta para reactivarlos. El log de entregas de Khipu dura 30 días: un hueco más largo solo se recupera por conciliación | nada |
 | Khipu lento o caído al descargar un artefacto | `503 dependency_unavailable` con `Retry-After`, sin reintentos; alerta si sube la tasa de error | «documento no disponible por ahora»; el ticket del POS se reimprime igual |
 | Cuenta de Khipu suspendida (`403 CUENTA_SUSPENDIDA`) | alerta crítica: se cortan la emisión y las descargas | banner en `/configuracion/sunat`; los documentos ya emitidos no se pueden descargar hasta reactivar la cuenta |
 
@@ -242,15 +269,19 @@ El ticket muestra la serie y el número que asignó Wanka, con el CPE "pendiente
 - Malas:
   - el ticket "pendiente";
   - las series son exclusivas de Wanka;
-  - el alta en Khipu es manual mientras no exista una API de integrador;
-  - la cuota es compartida si se usa una sola cuenta;
+  - el alta en Khipu es manual y depende del operador de Khipu (alta asistida) mientras no exista una API de integrador;
+  - la baja no tiene idempotencia: se consulta antes de cada intento;
+  - un número rechazado por SUNAT queda consumido;
+  - Khipu no limita el ritmo de emisión: el límite lo pone Wanka;
+  - el log de webhooks de Khipu dura 30 días;
   - un emisor por serie limita el throughput de una serie a 1 / latencia de Khipu;
   - el XML, el CDR y el PDF dependen de Khipu: que no introduzca una purga (pregunta 9), que esté disponible al descargarlos y que la cuenta no esté suspendida, porque la suspensión corta también las descargas.
 - Qué haría cambiar la decisión:
   - una API de integrador de Khipu: se automatiza el alta sin cambiar el puerto;
-  - si Khipu acepta correlativos fuera de orden, se puede relajar el emisor único por serie;
+  - Khipu acepta correlativos fuera de orden ([código]), así que se podría relajar el emisor único por serie si el throughput de una serie lo pide; no se cambia sin una medición;
   - si Khipu no asume el compromiso de no purgar, o si una suspensión de cuenta resulta un riesgo real: se activa el adaptador de bucket del `BlobStore` y un job que copie los artefactos con `GET /v1/facturas/descarga`.
 - **Criterios de aceptación con el sistema externo** (issues de facturación, empezando por #56):
   - emisión de factura y boleta, `422`, nota de crédito, baja y webhook firmado en **BETA de Khipu**;
-  - las verificaciones en BETA 1 (redondeo) y 2 (orden y huecos por serie);
-  - el CDR y la GRE no existen en BETA ([entornos]), así que su prueba es un criterio aparte.
+  - la regresión de redondeo (200 carritos contra `/calcular`, punto 1) y la confirmación ligera de N+1 antes que N (punto 2);
+  - una baja rechazada sin webhook, resuelta sondeando `GET /v1/bajas/{id}`;
+  - el CDR no existe en BETA ([entornos]), así que su prueba es un criterio aparte; la GRE va en R2.
