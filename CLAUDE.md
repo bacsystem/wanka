@@ -4,7 +4,7 @@ Guidance for coding agents in this repository: Claude Code reads it directly; Ge
 
 ## Project
 
-SaaS de gestión empresarial multirubro para Perú (restaurantes, veterinarias, odontologías, retail): clientes, catálogo, inventario multialmacén, ventas/POS, facturación electrónica SUNAT (boleta, factura, nota de crédito, proforma, guía de remisión) y reportes. Código e identificadores en inglés; textos de UI en español (Perú), moneda `S/`, fechas `dd/mm/aaaa`.
+SaaS de gestión empresarial multirubro para Perú (restaurantes, veterinarias, odontologías, retail): clientes, catálogo, inventario multialmacén, ventas/POS, facturación electrónica SUNAT (boleta, factura, nota de crédito, proforma, guía de remisión) y reportes. Código, identificadores y mensajes de log y de error en inglés; comentarios en español (los existentes se pasan al tocar el archivo); textos de UI en español (Perú), moneda `S/`, fechas `dd/mm/aaaa`.
 
 pnpm workspace monorepo. Only app so far: `apps/web` (Next.js 16 App Router, React 19, TypeScript, Tailwind v4, shadcn/ui on Base UI, Phosphor icons (lucide-react in legacy screens, see Icons), Recharts). Design system: the pinned package `khipu-design-system` (see Design system).
 
