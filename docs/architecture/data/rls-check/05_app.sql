@@ -3,6 +3,7 @@
 \set ON_ERROR_STOP on
 \echo '== A1. session_lookup sin variables: sesion en version 1, membresia en version 2 y activa =='
 SELECT test.assert(current_user = 'wanka_app' AND NULLIF(current_setting('app.tenant_id', true),'') IS NULL, 'rol wanka_app y sin tenant');
+SELECT test.assert(current_setting('statement_timeout') = '5s', 'wanka_app hereda statement_timeout 5s del bootstrap');
 SELECT test.assert((SELECT session_authz_version = 1 AND current_authz_version = 2 AND membership_status = 'activo'
                            AND site_id = 'a5000000-0000-0000-0000-0000000000a1' AND cash_register_id = 'ca000000-0000-0000-0000-0000000000a1'
                            AND mfa_satisfied AND mfa_method = 'none'

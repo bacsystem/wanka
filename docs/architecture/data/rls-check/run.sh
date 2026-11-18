@@ -3,8 +3,9 @@
 # DESECHABLE de PostgreSQL 16, con los roles reales:
 #   - wanka_migrator (NOBYPASSRLS) crea esquema, politicas y funciones;
 #   - wanka_definer (NOLOGIN, NOBYPASSRLS) es duenio de todas las funciones SECURITY DEFINER;
+#   - los demas son LOGIN: cada servicio se conecta con su rol (ADR 0001, «Creacion de los roles»);
 #   - wanka_app, wanka_platform, wanka_webhooks y wanka_worker ejecutan cada caso.
-# El superusuario solo crea los roles (01_schema.sql). No usa datos reales.
+# El superusuario solo corre el bootstrap de roles (01_schema.sql, dos veces: es idempotente). No usa datos reales.
 # Cada caso compara contra su valor esperado (test.assert / test.expect_error); el primer fallo aborta
 # psql (ON_ERROR_STOP) y el script termina con exit distinto de 0.
 # Uso:  sh docs/architecture/data/rls-check/run.sh                                  -> exit 0
@@ -20,7 +21,8 @@ for i in $(seq 1 30); do docker exec "$N" pg_isready -U postgres -d wanka -h 127
 P="docker exec $N psql -h 127.0.0.1 -d wanka -X -q -v VERBOSITY=terse"
 step() { label=$1; shift; echo "### $label"; "$@" || { echo "FAILED at: $label"; cleanup; exit 1; }; }
 docker exec "$N" psql -h 127.0.0.1 -U postgres -d wanka -X -At -c 'select version()'
-step "superusuario: crea roles"            $P -U postgres -f /sql/01_schema.sql
+step "superusuario: bootstrap de roles"    $P -U postgres -f /sql/01_schema.sql
+step "superusuario: bootstrap otra vez (idempotente)" $P -U postgres -f /sql/01_schema.sql
 step "wanka_migrator: migracion"           $P -U wanka_migrator -f /sql/02_migrate.sql
 if [ -n "${MUTATION:-}" ]; then
   step "wanka_migrator: MUTACION $MUTATION" $P -U wanka_migrator -f "/sql/mutations/$MUTATION.sql"

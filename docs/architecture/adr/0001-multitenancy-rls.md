@@ -1,7 +1,7 @@
 # ADR 0001: Multi-tenancy con base única, `tenant_id` y Row-Level Security
 
 - Estado: aceptado (decisión del usuario); los detalles de implementación son una propuesta
-- Fecha: 2026-11-17 (revisado tras la revisión del PR #124: caminos que RLS bloqueaba, `NULLIF`, matriz de permisos por rol)
+- Fecha: 2026-11-17 (revisado tras la revisión del PR #124: caminos que RLS bloqueaba, `NULLIF`, matriz de permisos por rol; 2026-11-18: creación de los roles, épica #154)
 
 ## Contexto
 
@@ -59,7 +59,7 @@ CREATE POLICY tenant_isolation ON x
 
 ### Roles de base de datos y permisos (GRANT)
 
-Ningún rol de aplicación tiene `BYPASSRLS` ni es dueño de tablas. Todos son `NOLOGIN` salvo por su usuario de conexión. Las funciones `SECURITY DEFINER` tienen su propio dueño, `wanka_definer` (`NOLOGIN`, `NOBYPASSRLS`, sin tablas propias), descrito en la sección «Funciones `SECURITY DEFINER`: dueño y patrón».
+Ningún rol de aplicación tiene `BYPASSRLS` ni es dueño de tablas. Cada servicio se conecta **con su propio rol, que es `LOGIN`**: no hay roles de grupo con usuarios de conexión aparte. El único `NOLOGIN` es `wanka_definer` (corrección del 2026-11-18: el texto anterior decía «`NOLOGIN` salvo por su usuario de conexión», que no coincidía con `data/rls-check/`; ver «Creación de los roles»). Las funciones `SECURITY DEFINER` tienen su propio dueño, `wanka_definer` (`NOLOGIN`, `NOBYPASSRLS`, sin tablas propias), descrito en la sección «Funciones `SECURITY DEFINER`: dueño y patrón».
 
 | Esquema / objeto | `wanka_migrator` | `wanka_app` (api) | `wanka_worker` | `wanka_webhooks` | `wanka_platform` (platform-api) |
 |---|---|---|---|---|---|
@@ -76,6 +76,19 @@ Ningún rol de aplicación tiene `BYPASSRLS` ni es dueño de tablas. Todos son `
 | Funciones `SECURITY DEFINER` (`platform_fn.*`, `iam.*`, `ops.*`) | las crea; **dueño: `wanka_definer`** | EXECUTE de `iam.session_lookup` (búsqueda de sesión antes de conocer el tenant, ADR 0004), `iam.redeem_impersonation`, `iam.decide_impersonation`, `iam.list_support_requests` (sin GRANT sobre el esquema `platform`) | EXECUTE de `platform_fn.purge_closed_tenant` | EXECUTE de `ops.resolve_webhook_route` | EXECUTE de `platform_fn.provision_tenant`, `suspend_tenant`, `request_impersonation` |
 
 \* `org.tenants` tiene la fila propia del tenant y se trata aparte (siguiente sección).
+
+### Creación de los roles (bootstrap fuera de goose)
+
+Detalle de implementación fijado el 2026-11-18 (épica #154, historia #162).
+
+- **Modelo: un rol `LOGIN` por servicio** (`wanka_migrator`, `wanka_app`, `wanka_worker`, `wanka_webhooks`, `wanka_platform`) y `wanka_definer` `NOLOGIN`. Todos `NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS`.
+  - Opción descartada por ahora: roles de grupo `NOLOGIN` con los GRANT, más usuarios `LOGIN` que heredan. Su única ventaja es rotar la contraseña sin corte (dos usuarios por servicio, se alterna). Su costo: `current_user` deja de ser el nombre del rol (las pruebas de `rls-check` y cualquier auditoría lo usan), el migrador tendría que hacer `SET ROLE wanka_migrator` en cada sesión para que los objetos no queden a nombre de su usuario de conexión, y hay el doble de roles que mantener.
+  - Es reversible sin migrar datos: si hiciera falta rotar sin corte, se crea `wanka_app_a` con `IN ROLE wanka_app` y se pasa `wanka_app` a `NOLOGIN`. Los GRANT y las políticas `TO wanka_app` siguen valiendo para los miembros.
+- **Quién los crea: un bootstrap idempotente fuera de goose**, ejecutado por el superusuario. La migración no puede hacerlo: `CREATE ROLE` exige `CREATEROLE`, `ALTER ROLE ... SET` también, y darle `CREATEROLE` a `wanka_migrator` le daría en cada despliegue la capacidad de crear roles con `LOGIN` y administrarlos, que solo se usa al crear un entorno (menor privilegio). El bootstrap crea los roles que faltan, vuelve a fijar sus atributos en cada ejecución, `GRANT wanka_definer TO wanka_migrator`, `GRANT CREATE ON DATABASE` a `wanka_migrator` y `ALTER ROLE wanka_app SET statement_timeout = '5s'`. Termina comprobándose a sí mismo contra `pg_roles`. Referencia ejecutable: [`data/rls-check/01_schema.sql`](../data/rls-check/01_schema.sql), que `run.sh` corre dos veces seguidas.
+- **No fija contraseñas.** El admin las pone con `\password <rol>` en `psql`, que envía el hash SCRAM: el texto no queda en el repo, en el script ni en el historial del shell.
+- **Orden en un entorno nuevo:** bootstrap → contraseñas → variables en Railway → primer despliegue (el pre-deploy `wanka migrate up` corre como `wanka_migrator`). Si falta un rol, la migración falla en su `GRANT ... TO` y el despliegue no avanza: falla cerrada. Una release que agregue un rol actualiza el bootstrap y se vuelve a correr antes de desplegarla.
+- **Railway** ([ADR 0007](0007-deployment-railway.md)): el bootstrap lo corre el admin con el usuario administrador del servicio Postgres, una vez por entorno (`staging`, `production`). Esa credencial no se inyecta en ningún servicio. Cada servicio recibe solo su URL: `DATABASE_URL_MIGRATOR` (pre-deploy), `DATABASE_URL_APP` (api), `DATABASE_URL_WORKER`, `DATABASE_URL_WEBHOOKS` y `DATABASE_URL_PLATFORM`.
+- **Rotación** (con un solo usuario por rol): se guarda la variable nueva en Railway sin desplegar, `ALTER ROLE ... PASSWORD` (con `\password`) y se despliega enseguida. Las conexiones ya abiertas del pool siguen vivas; solo fallan las conexiones nuevas durante esos segundos, y el `/readyz` lo muestra. Si eso deja de ser aceptable, se pasa al modelo de grupo descrito arriba.
 
 ### Caminos que no tienen un tenant fijado
 

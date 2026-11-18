@@ -10,13 +10,27 @@ sequenceDiagram
   participant H as handler del modulo
 
   W->>MW: POST /v1/lubricentro/service-orders Bearer wk_at_...
+  alt falta Authorization, formato invalido o prefijo de otro plano (wka_at_)
+    MW-->>W: 401 unauthenticated, sin consultar la base
+  end
   MW->>DB: rol wanka_app, SIN app.tenant_id ni app.user_id (aun no se conocen): SELECT * FROM iam.session_lookup(sha256(token)), SECURITY DEFINER con search_path fijo, devuelve la sesion (no revocada, no expirada, filtra mfa_satisfied = true) con site_id, cash_register_id y mfa_method + current_version y membership_status de iam.memberships. Siempre de la base, nunca de cache
-  alt sesion invalida o token de otro plano (prefijo wka_)
+  alt sin conexion libre del pool en 200 ms
+    MW-->>W: 503 overloaded, Retry-After 1
+  else la base falla en session_lookup (error de conexion, statement_timeout o deadline de 1 s del contexto)
+    MW-->>W: 503 dependency_unavailable, Retry-After 1. Nunca 401 ni 500: no se sabe si la sesion es valida, y un 401 haria que el BFF refresque (otra consulta a la base caida) y mande al usuario a /login
+  else sesion invalida (session_lookup sin fila)
     MW-->>W: 401 unauthenticated
+  else sesion de tenant NO impersonada con current_version NULL o membresia no activa (borrada, suspendida)
+    MW->>DB: revoca la sesion (si el UPDATE falla igual responde 401: la siguiente busqueda vuelve a denegar)
+    MW-->>W: 401 session_expired (nunca se trata como sin cambios). Se decide aqui, en el paso de sesion: usa las columnas que ya devolvio session_lookup, sin otra consulta ni cache, y antes de los entitlements para no revelar a un ex miembro el estado de la empresa (402, 403)
   end
   MW->>E: Entitlements(tenant_id)
   alt cache vencida
     E->>DB: org.tenants.status + subscription activa + plan_modules + tenant_module_overrides + flags + tenant_usage
+    alt la base no responde
+      E-->>MW: error
+      MW-->>W: 503 dependency_unavailable, Retry-After 1
+    end
     E-->>MW: {modules, flags, limits, usage, version}
   end
   alt empresa cerrada y metodo distinto de GET
@@ -28,10 +42,7 @@ sequenceDiagram
   else limite de plan alcanzado (ej. CPE del mes, usuarios, sedes)
     MW-->>W: 403 plan_limit_reached {limit, used}
   else ok
-    alt sesion de tenant NO impersonada con current_version NULL o membresia no activa (borrada, suspendida)
-      MW->>DB: revoca la sesion
-      MW-->>W: 401 session_expired (nunca se trata como sin cambios)
-    else current_version distinta de s.authz_version (rol cambiado desde la ultima peticion)
+    alt current_version distinta de s.authz_version (rol cambiado desde la ultima peticion)
       MW->>DB: re-resuelve el rol (requires_mfa) y los permisos, UPDATE sessions SET authz_version = current_version
     else igual
       MW->>MW: rol y permisos de la cache, clave membership_id + current_version (una cache caliente con la version vieja no se usa)

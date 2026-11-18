@@ -17,6 +17,8 @@ flowchart LR
     pg[("Postgres<br/>servicio gestionado Railway<br/>volumen + backups")]
   end
 
+  bootstrap["bootstrap de roles (no es un servicio)<br/>el admin, una vez por entorno, con el usuario<br/>administrador de Postgres: roles LOGIN por servicio,<br/>wanka_definer NOLOGIN, contrasenas con el comando password de psql<br/>idempotente, antes del primer migrate up"]
+
   secrets["Variables de entorno por servicio (solo nombres):<br/>DATABASE_URL_APP (api), DATABASE_URL_WORKER (worker),<br/>DATABASE_URL_WEBHOOKS (webhooks), DATABASE_URL_PLATFORM (platform-api),<br/>DATABASE_URL_MIGRATOR (pre-deploy),<br/>DB_POOL_MAX_CONNS por servicio: api 20, worker 10, webhooks 5, platform-api 5 (suma 41 con el pre-deploy, menor que max_connections), HTTP_READ_TIMEOUT,<br/>KHIPU_BASE_URL, INTEGRATIONS_ENC_KEY (SOLO api y worker: cifra las API keys fk_),<br/>WEBHOOK_SECRET_ENC_KEY (api al conectar Khipu y webhooks: cifra los whsec_; webhooks NO recibe INTEGRATIONS_ENC_KEY),<br/>TOTP_ENC_KEY, TOKEN_PEPPER,<br/>SMTP_URL, WHATSAPP_API_TOKEN,<br/>API_INTERNAL_URL, PLATFORM_API_INTERNAL_URL,<br/>OTEL_EXPORTER_OTLP_ENDPOINT, LOG_LEVEL, APP_ENV"]
 
   user --> dns --> web
@@ -28,6 +30,7 @@ flowchart LR
   worker --> pg
   webhooks --> pg
   migrate --> pg
+  bootstrap -.->|"psql, fuera de goose"| pg
   api -->|"HTTPS: XML, CDR y PDF bajo demanda"| khipu
   worker -->|"HTTPS"| khipu
   secrets -.-> api

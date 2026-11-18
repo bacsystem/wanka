@@ -87,7 +87,7 @@ Modelo y reglas en [`data/data-model.md`](data/data-model.md): `tenant_id` y RLS
 | Cierre de caja (arqueo, Z) | [`sequences/05-cash-close.mmd`](sequences/05-cash-close.mmd) | bloqueo de ventas en arqueo, aprobación del supervisor, Z inmutable con hash |
 | Lubricentro: OT → venta | [`sequences/06-lubricentro-service-order.mmd`](sequences/06-lubricentro-service-order.mmd) | placa, km, diagnóstico de filtros, cobro al contado, recordatorio a +5 000 km o fecha por WhatsApp y correo |
 | Alta de tenant desde la consola | [`sequences/07-tenant-provisioning.mmd`](sequences/07-tenant-provisioning.mmd) | función `SECURITY DEFINER` acotada; conexión con Khipu hoy manual |
-| Plan, flags y permisos por petición | [`sequences/08-entitlement-enforcement.mmd`](sequences/08-entitlement-enforcement.mmd) | 401 → 403 empresa cerrada → 402 suscripción inactiva → 403 módulo/límite/permiso, con caché invalidada por `NOTIFY` |
+| Plan, flags y permisos por petición | [`sequences/08-entitlement-enforcement.mmd`](sequences/08-entitlement-enforcement.mmd) | sesión (401, o 503 si la base falla; incluye la membresía borrada o inactiva) → 403 empresa cerrada → 402 suscripción inactiva → 403 módulo/límite/permiso, con caché invalidada por `NOTIFY` |
 
 ## 6. Despliegue
 
