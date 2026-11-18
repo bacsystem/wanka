@@ -5,7 +5,7 @@
 
 ## Contexto
 
-Necesitan ejecución diferida y garantizada: emisión y conciliación de CPE (ADR 0003), procesamiento de webhooks, notificaciones (invitaciones, recordatorios por km del lubricentro, citas), PDF de reportes Z y exportes, sincronización SIRE, agregados para la consola (`platform.tenant_usage`) y limpiezas (sesiones, idempotencia, reservas). El encolado debe ser **atómico con el cambio de datos** (si la venta se confirma, su emisión queda encolada; si aborta, no). Con varias réplicas, los periódicos no deben correr N veces.
+Necesitan ejecución diferida y garantizada: emisión y conciliación de CPE (ADR 0003), procesamiento de webhooks, notificaciones (invitaciones, recordatorios por km del lubricentro, citas), sincronización SIRE, agregados para la consola (`platform.tenant_usage`) y limpiezas (sesiones, idempotencia, reservas). El encolado debe ser **atómico con el cambio de datos** (si la venta se confirma, su emisión queda encolada; si aborta, no). Con varias réplicas, los periódicos no deben correr N veces.
 
 ## Opciones
 

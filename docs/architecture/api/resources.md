@@ -95,7 +95,7 @@ Ajustes de forma respecto a los mocks, comunes a todos los recursos:
 |---|---|---|---|
 | `GET /v1/einvoicing/documents?type=&status=&from=&to=&q=` | `/ventas/comprobantes`, dashboard | `SalesDocument`, `documentsSummary` | `facturacion.cpe:read` |
 | `GET /v1/einvoicing/documents/{id}` | `/ventas/comprobantes/[id]` | `SalesDocumentDetail` (lines, cdr, timeline) | read |
-| `GET /v1/einvoicing/documents/{id}/files/{xml\|cdr\|pdf}` | descargas | 302 a URL prefirmada (5 min) | read |
+| `GET /v1/einvoicing/documents/{id}/files/{xml\|cdr\|pdf}` | descargas | `200` con el archivo traído de Khipu por streaming, sin guardarlo (ADR 0003); `503 dependency_unavailable` con `Retry-After` si Khipu falla | read |
 | `POST /v1/einvoicing/documents/{id}/credit-notes` **(I)** | `/nota-credito` (catálogo 09) | `SalesDocumentDetail` | `facturacion.credit_notes:create` |
 | `POST /v1/einvoicing/documents/{id}/debit-notes` **(I)** | `/nota-debito` (catálogo 10, serie FD01) | idem | `facturacion.debit_notes:create` |
 | `POST /v1/einvoicing/documents/{id}/void` **(I)** | diálogo comunicación de baja | — | `facturacion.cpe:void` |
@@ -136,7 +136,7 @@ Ajustes de forma respecto a los mocks, comunes a todos los recursos:
 | `GET /v1/reports/management?from=&to=&site=` | `/reportes/gestion` | `management.ts` | `reportes.management:read` |
 | `GET /v1/reports/sales-register?period=` | `/reportes` RVIE | `SalesRegisterRow`, `reportsSummary` | `reportes.tax:read` |
 | `GET /v1/reports/pdt621?period=` | `/reportes/liquidacion` | `pdt621`, `kardexConsolidated` | `reportes.tax:read` |
-| `POST /v1/exports` **(I)**, `GET /v1/exports/{id}` | exportar Excel/PDF/TXT SUNAT | 202 + URL prefirmada al terminar | `*:export` del módulo |
+| `POST /v1/exports` **(I)** | exportar Excel/PDF/TXT SUNAT | `200` con el archivo generado al momento por streaming, sin URL prefirmada ni copia guardada; rango acotado (`422 validation_failed` si excede) | `*:export` del módulo |
 
 ## agenda, integraciones, auditoria, notificaciones
 

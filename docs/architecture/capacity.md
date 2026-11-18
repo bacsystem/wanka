@@ -42,7 +42,7 @@ Las cuentas: **una cuenta por usuario virtual** (si no, se mide el lock de una s
 - Pool de conexiones lleno más de 200 ms → la API responde `503 overloaded` con `Retry-After: 1` en vez de encolar indefinidamente (`pgxpool` con `context` de 200 ms para adquirir conexión).
 - Cola CPE con edad del más antiguo > 15 min → alerta; > `send_deadline - 24 h` → alerta crítica al tenant y a soporte.
 - Khipu caído → las ventas siguen (CPE `pendiente`), el ticket se imprime con estado pendiente (decisión del usuario), el dashboard muestra la cola.
-- Exportes y PDF: cola `reports` con concurrencia 2 por réplica de worker; el usuario recibe 202 y una notificación.
+- Exportes y descargas de PDF: se generan o se traen de Khipu al momento, por streaming y sin guardarse, con 2 simultáneos por tenant y 16 por réplica de `api` (ADR 0003, «Artefactos: Khipu los conserva»). No hay 202 ni notificación.
 
 ## 4. Observabilidad mínima
 

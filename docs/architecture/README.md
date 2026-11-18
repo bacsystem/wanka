@@ -39,7 +39,7 @@ Los diagramas son archivos Mermaid (`.mmd`). GitHub los renderiza al abrirlos y 
 | facturacion-electronica | `internal/facturacion` | `einv` | CPE, NC/ND, bajas, GRE, **adaptador Khipu** |
 | compras | `internal/compras` | `purch` | proveedores, OC, registro de compras SIRE; aporta proveedor y comprobante a la liquidación de consignación vía fachada |
 | finanzas | `internal/finanzas` | `fin` | caja/turnos/Z, CxC, CxP |
-| reportes | `internal/reportes` | `rpt` (lectura) | gestión, tributarios, PDT 621, exportes asíncronos |
+| reportes | `internal/reportes` | `rpt` (lectura) | gestión, tributarios, PDT 621, exportes generados al momento (ADR 0003) |
 | agenda | `internal/agenda` | `agenda` | recursos (sillón, consultorio, bahía), citas |
 | integraciones | `internal/integraciones` | `integ` | conectores de terceros (pasarelas, WhatsApp, exportes, webhooks salientes) y bóveda de credenciales cifradas por tenant. El adaptador de Khipu vive en facturación |
 | auditoria | `internal/auditoria` | `audit` | eventos de solo inserción |
@@ -151,7 +151,7 @@ Producto (PO):
 12. Si el despacho físico requiere la GRE aceptada.
 
 Infraestructura (tech-lead):
-13. Almacenamiento de artefactos. **Resuelta el 2026-11-17** (ADR 0003, «Artefactos: Khipu los conserva»): sin bucket en R1, porque Khipu conserva el XML, el CDR y el PDF; el puerto `BlobStore` queda en el kernel sin adaptador, y el bucket de Railway o S3 entra más adelante, según el crecimiento. Siguen abiertas, con Khipu, las preguntas 9 a 11 del ADR 0003.
+13. Almacenamiento de artefactos. **Resuelta el 2026-11-17** (ADR 0003, «Artefactos: Khipu los conserva»): sin bucket en R1, porque Khipu conserva el XML, el CDR y el PDF; el puerto `BlobStore` queda en el kernel sin adaptador, y el bucket de Railway o S3 entra más adelante, según el crecimiento. Queda abierto con Khipu el compromiso contractual de no introducir una purga (ADR 0003, pregunta 9).
 14. Plan de Postgres de Railway: máximo de conexiones, PITR y extensiones.
 15. Backend de observabilidad.
 16. Licencia del OpenAPI.

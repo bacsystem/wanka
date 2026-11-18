@@ -83,7 +83,7 @@ RFC 9457 (`application/problem+json`) con un `code` estable que el frontend trad
 | 503 | `overloaded`, `dependency_unavailable` | backpressure; con `Retry-After` |
 | 500 | `internal` | sin detalles internos; solo `requestId` |
 
-Un fallo de Khipu **nunca** se propaga como 500 en la petición del usuario: la emisión es asíncrona y el estado del CPE refleja el problema.
+Un fallo de Khipu **nunca** se propaga como 500 en la petición del usuario: la emisión es asíncrona y el estado del CPE refleja el problema. **Excepción:** la descarga de XML, CDR y PDF depende de Khipu de forma síncrona (ADR 0003, «Artefactos: Khipu los conserva»). Si falla, responde `503 dependency_unavailable` con `Retry-After`, nunca `500`.
 
 ## 5. Paginación, filtros y orden
 
@@ -118,4 +118,4 @@ Un fallo de Khipu **nunca** se propaga como 500 en la petición del usuario: la 
 - Rate limit por sesión y por tenant en la aplicación (token bucket; en memoria mientras haya una réplica, en Postgres/Redis al escalar, ver [ADR 0007](../adr/0007-deployment-railway.md)), y por IP en el borde.
 - Endpoints con cuota más estricta: `auth/login` (5/min por IP+email), `auth/password/forgot` (3/h por email), exportes y PDF (2 concurrentes por tenant), búsquedas `q=` (10/s por sesión).
 - Cuerpo máximo 1 MB. Los adjuntos irán por URL prefirmada directa al bucket cuando exista su adaptador (`BlobStore`); en R1 no hay bucket (data-model §5).
-- Timeouts (el de quien llama siempre mayor que el del llamado): Postgres `statement_timeout` 5 s para el rol de la app → handler de la API 10 s (`http.TimeoutHandler`; lectura de cabeceras 5 s) → BFF 12 s hacia la API → proxy/borde 30 s. `IdleTimeout` del servidor Go (120 s) mayor que el keep-alive del proxy de Railway (supuesto 60 s; medir).
+- Timeouts (el de quien llama siempre mayor que el del llamado): Postgres `statement_timeout` 5 s para el rol de la app → handler de la API 10 s (`http.TimeoutHandler`; lectura de cabeceras 5 s) → BFF 12 s hacia la API → proxy/borde 30 s. Excepción: las descargas de artefactos y los exportes van por streaming **fuera** de `http.TimeoutHandler`, con su propio presupuesto. Hacia Khipu: 3 s de conexión y 8 s hasta los encabezados (si no, `503 dependency_unavailable` RFC 9457). Una vez empezado el streaming: 25 s en total → BFF 27 s → borde 30 s. `IdleTimeout` del servidor Go (120 s) mayor que el keep-alive del proxy de Railway (supuesto 60 s; medir).
