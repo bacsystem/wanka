@@ -6,10 +6,26 @@
 # internal/<module>/, add its pair of components to this file following that
 # fixture: <module> (the facade, package internal/<module>) and <module>_inner
 # (domain, app, adapters), so no other module can import its inner packages.
+#
+# workdir es la raíz del módulo para que entren al grafo los paquetes que
+# embeben archivos SQL, que deben estar junto a ellos (migrations/, bootstrap/).
+# El fixture conserva workdir internal: solo ejercita la regla entre módulos.
 version: 3
-workdir: internal
+workdir: .
 components:
-  platform: { in: platform/** }
+  platform: { in: internal/platform/** }
+  main: { in: cmd/** }
+  migrations: { in: migrations }
+  bootstrap: { in: bootstrap }
+vendors:
+  pgx: { in: [github.com/jackc/pgx/v5, github.com/jackc/pgx/v5/**] }
+  goose: { in: [github.com/pressly/goose/v3, github.com/pressly/goose/v3/**] }
 deps:
   platform:
-    mayDependOn: [platform]
+    mayDependOn: [platform, migrations, bootstrap]
+    canUse: [pgx, goose]
+  main:
+    mayDependOn: [platform, migrations]
+    canUse: [pgx]
+exclude:
+  - testdata

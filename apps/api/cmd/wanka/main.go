@@ -17,8 +17,10 @@ import (
 	"time"
 
 	"github.com/bacsystem/wanka/apps/api/internal/platform/config"
+	"github.com/bacsystem/wanka/apps/api/internal/platform/db"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/httpx"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/logging"
+	"github.com/bacsystem/wanka/apps/api/migrations"
 )
 
 const (
@@ -29,7 +31,12 @@ const (
 	shutdownTimeout = 10 * time.Second
 )
 
-var planes = map[string]bool{"tenant": true, "platform": true, "webhooks": true}
+// planes asocia cada plano con el servicio (rol de base de datos) que lo atiende.
+var planes = map[string]config.Service{
+	"tenant":   config.API,
+	"platform": config.Platform,
+	"webhooks": config.Webhooks,
+}
 
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
@@ -71,30 +78,45 @@ func run(ctx context.Context, args []string, getenv func(string) string, stdout,
 		}
 		return exitUsage
 	}
-	if fs.NArg() > 0 {
+	if sub == "migrate" {
+		if fs.NArg() != 1 || fs.Arg(0) != "up" {
+			fmt.Fprintln(stderr, "wanka migrate: the only action is \"up\"")
+			return exitUsage
+		}
+	} else if fs.NArg() > 0 {
 		fmt.Fprintf(stderr, "wanka %s: unexpected argument %q\n", sub, fs.Arg(0))
 		return exitUsage
 	}
-	if sub == "serve" && !planes[plane] {
-		if plane == "" {
-			fmt.Fprintln(stderr, "wanka serve: --plane is required (tenant, platform or webhooks)")
-		} else {
-			fmt.Fprintf(stderr, "wanka serve: unknown plane %q (want tenant, platform or webhooks)\n", plane)
+	svc := config.Worker
+	switch sub {
+	case "migrate":
+		svc = config.Migrator
+	case "serve":
+		var ok bool
+		if svc, ok = planes[plane]; !ok {
+			if plane == "" {
+				fmt.Fprintln(stderr, "wanka serve: --plane is required (tenant, platform or webhooks)")
+			} else {
+				fmt.Fprintf(stderr, "wanka serve: unknown plane %q (want tenant, platform or webhooks)\n", plane)
+			}
+			return exitUsage
 		}
-		return exitUsage
 	}
 
-	cfg, err := config.Load(getenv)
+	cfg, err := config.Load(getenv, svc)
 	if err != nil {
 		fmt.Fprintf(stderr, "wanka %s: configuration error: %v\n", sub, err)
 		return exitError
 	}
 	log := logging.New(stdout, cfg.LogLevel).With("command", sub)
 
-	if sub == "serve" {
-		err = serve(ctx, log, cfg, plane)
-	} else {
-		err = idle(ctx, log, sub)
+	switch sub {
+	case "serve":
+		err = serve(ctx, log, cfg, svc, plane)
+	case "migrate":
+		err = migrate(ctx, log, cfg)
+	default:
+		err = worker(ctx, log, cfg, svc)
 	}
 	if err != nil {
 		log.Error("terminated with error", "err", err.Error())
@@ -105,11 +127,25 @@ func run(ctx context.Context, args []string, getenv func(string) string, stdout,
 
 // serve runs the HTTP server of one plane until ctx is cancelled, then shuts
 // it down gracefully.
-func serve(ctx context.Context, log *slog.Logger, cfg config.Config, plane string) error {
+func serve(ctx context.Context, log *slog.Logger, cfg config.Config, svc config.Service, plane string) error {
 	log = log.With("plane", plane)
+	// El pool no conecta al abrirse: con la base caída el proceso arranca
+	// igual y /readyz responde 503 hasta que la base conteste.
+	pool, err := db.Open(ctx, cfg.DatabaseURL, db.Options{MaxConns: cfg.DBPoolMax, AppName: "wanka-" + svc.Name})
+	if err != nil {
+		return fmt.Errorf("opening database pool: %w", err)
+	}
+	defer pool.Close()
+	ready := func(ctx context.Context) error {
+		err := pool.Ping(ctx)
+		if err != nil {
+			log.WarnContext(ctx, "readiness check failed", "err", err.Error())
+		}
+		return err
+	}
 	// Every plane mounts only the health routes for now; the module routes
 	// arrive with their stories (tenant never mounts plataforma, ADR 0002).
-	handler := httpx.Chain(httpx.NewMux(httpx.NotReady), log)
+	handler := httpx.Chain(httpx.NewMux(ready), log)
 	srv := httpx.NewServer(cfg.HTTPAddr, handler)
 
 	ln, err := net.Listen("tcp", cfg.HTTPAddr)
@@ -139,11 +175,27 @@ func serve(ctx context.Context, log *slog.Logger, cfg config.Config, plane strin
 	return nil
 }
 
-// idle is the stub for worker and migrate: it starts, waits for the stop
-// signal and exits cleanly. Their real work lands with the jobs and database
-// stories.
-func idle(ctx context.Context, log *slog.Logger, name string) error {
-	log.Info("started", "note", name+" is a stub until its story lands")
+// migrate aplica las migraciones pendientes como wanka_migrator y termina.
+// Correrlo otra vez no cambia nada.
+func migrate(ctx context.Context, log *slog.Logger, cfg config.Config) error {
+	n, err := db.Migrate(ctx, cfg.DatabaseURL, migrations.FS, log)
+	if err != nil {
+		return fmt.Errorf("migrating: %w", err)
+	}
+	log.Info("migrations up to date", "applied", n)
+	return nil
+}
+
+// worker es el stub del ejecutor de jobs: abre su pool (una URL o un tamaño
+// inválidos lo detienen al arrancar), espera la señal de parada y sale limpio.
+// Los jobs llegan con su historia.
+func worker(ctx context.Context, log *slog.Logger, cfg config.Config, svc config.Service) error {
+	pool, err := db.Open(ctx, cfg.DatabaseURL, db.Options{MaxConns: cfg.DBPoolMax, AppName: "wanka-" + svc.Name})
+	if err != nil {
+		return fmt.Errorf("opening database pool: %w", err)
+	}
+	defer pool.Close()
+	log.Info("started", "note", "worker is a stub until its story lands")
 	<-ctx.Done()
 	log.Info("stopped")
 	return nil
@@ -153,6 +205,6 @@ func usage(w io.Writer) {
 	fmt.Fprint(w, `usage:
   wanka serve --plane=tenant|platform|webhooks
   wanka worker
-  wanka migrate
+  wanka migrate up
 `)
 }

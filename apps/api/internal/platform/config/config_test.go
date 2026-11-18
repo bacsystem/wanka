@@ -13,21 +13,79 @@ func env(m map[string]string) func(string) string {
 }
 
 func TestLoadMissingRequiredNamesVariable(t *testing.T) {
-	_, err := config.Load(env(nil))
-	if err == nil {
-		t.Fatal("expected error")
+	for _, svc := range []config.Service{config.Migrator, config.API, config.Platform, config.Worker, config.Webhooks} {
+		t.Run(svc.Name, func(t *testing.T) {
+			// La URL de otro servicio no debe satisfacer a este.
+			other := map[string]string{"DATABASE_URL": "x", "DATABASE_URL_OTHER": "x"}
+			_, err := config.Load(env(other), svc)
+			if err == nil {
+				t.Fatal("expected error")
+			}
+			if !strings.Contains(err.Error(), svc.URLVar) {
+				t.Fatalf("error %q does not name %s", err, svc.URLVar)
+			}
+		})
 	}
-	if !strings.Contains(err.Error(), config.EnvDatabaseURL) {
-		t.Fatalf("error %q does not name %s", err, config.EnvDatabaseURL)
+}
+
+func TestServiceVariablesAndPoolDefaults(t *testing.T) {
+	cases := []struct {
+		svc  config.Service
+		name string
+		pool int32
+	}{
+		{config.API, "DATABASE_URL_APP", 20},
+		{config.Worker, "DATABASE_URL_WORKER", 10},
+		{config.Webhooks, "DATABASE_URL_WEBHOOKS", 5},
+		{config.Platform, "DATABASE_URL_PLATFORM", 5},
+		{config.Migrator, "DATABASE_URL_MIGRATOR", 1},
+	}
+	for _, tc := range cases {
+		t.Run(tc.svc.Name, func(t *testing.T) {
+			if tc.svc.URLVar != tc.name {
+				t.Fatalf("URLVar = %q, want %q", tc.svc.URLVar, tc.name)
+			}
+			cfg, err := config.Load(env(map[string]string{tc.name: "postgres://x"}), tc.svc)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if cfg.DatabaseURL != "postgres://x" || cfg.DBPoolMax != tc.pool {
+				t.Fatalf("unexpected config: %+v", cfg)
+			}
+		})
+	}
+}
+
+func TestPoolMaxOverrideAndValidation(t *testing.T) {
+	base := map[string]string{"DATABASE_URL_APP": "x"}
+	with := func(v string) map[string]string {
+		m := map[string]string{config.EnvDBPoolMax: v}
+		for k, val := range base {
+			m[k] = val
+		}
+		return m
+	}
+	cfg, err := config.Load(env(with("7")), config.API)
+	if err != nil || cfg.DBPoolMax != 7 {
+		t.Fatalf("override: %+v, %v", cfg, err)
+	}
+	for _, bad := range []string{"0", "-1", "abc", "1.5", "201", "9999999999"} {
+		_, err := config.Load(env(with(bad)), config.API)
+		if err == nil || !strings.Contains(err.Error(), config.EnvDBPoolMax) {
+			t.Fatalf("%q: want error naming %s, got %v", bad, config.EnvDBPoolMax, err)
+		}
+		if strings.Contains(err.Error(), bad) && len(bad) > 3 {
+			t.Fatalf("%q: error echoes the value: %v", bad, err)
+		}
 	}
 }
 
 func TestLoadNeverPrintsValues(t *testing.T) {
 	const secret = "postgres://user:s3cr3t-pass@db/x"
-	cfg, err := config.Load(env(map[string]string{
-		config.EnvDatabaseURL: secret,
-		config.EnvLogLevel:    secret, // invalid level carrying a secret-looking value
-	}))
+	_, err := config.Load(env(map[string]string{
+		config.API.URLVar:  secret,
+		config.EnvLogLevel: secret, // nivel inválido que lleva un valor con apariencia de secreto
+	}), config.API)
 	if err == nil {
 		t.Fatal("expected error for invalid log level")
 	}
@@ -38,19 +96,17 @@ func TestLoadNeverPrintsValues(t *testing.T) {
 		t.Fatalf("error %q does not name %s", err, config.EnvLogLevel)
 	}
 
-	cfg, err = config.Load(env(map[string]string{config.EnvDatabaseURL: secret}))
+	cfg, err := config.Load(env(map[string]string{config.API.URLVar: secret}), config.API)
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, s := range []string{cfg.String()} {
-		if strings.Contains(s, "s3cr3t") {
-			t.Fatalf("String leaks the secret: %q", s)
-		}
+	if s := cfg.String(); strings.Contains(s, "s3cr3t") {
+		t.Fatalf("String leaks the secret: %q", s)
 	}
 }
 
 func TestLoadDefaultsAndOverrides(t *testing.T) {
-	cfg, err := config.Load(env(map[string]string{config.EnvDatabaseURL: "x"}))
+	cfg, err := config.Load(env(map[string]string{config.API.URLVar: "x"}), config.API)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -58,8 +114,8 @@ func TestLoadDefaultsAndOverrides(t *testing.T) {
 		t.Fatalf("unexpected defaults: %+v", cfg)
 	}
 	cfg, err = config.Load(env(map[string]string{
-		config.EnvDatabaseURL: "x", config.EnvHTTPAddr: "127.0.0.1:9", config.EnvLogLevel: "DEBUG",
-	}))
+		config.API.URLVar: "x", config.EnvHTTPAddr: "127.0.0.1:9", config.EnvLogLevel: "DEBUG",
+	}), config.API)
 	if err != nil {
 		t.Fatal(err)
 	}
