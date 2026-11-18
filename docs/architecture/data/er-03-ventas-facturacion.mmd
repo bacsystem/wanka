@@ -161,7 +161,7 @@ erDiagram
     bytea api_key_enc "fk_... cifrada AES-GCM con INTEGRATIONS_ENC_KEY; sin GRANT para wanka_webhooks"
     text environment "BETA, PRODUCCION"
     text provider_company_ref "id de la empresa en Khipu, lo da el operador en el comando de activacion"
-    text provider_plan "emprende, negocio, pro: declarado por el operador; PRODUCCION exige emprende o superior (CHECK)"
+    text provider_plan "gratis, emprende, negocio, pro: declarado por el operador; CHECK environment BETA o plan distinto de gratis"
     timestamptz verified_at "llave verificada con una lectura"
     timestamptz activated_at "lo fija el comando wanka einvoicing activate (temporal hasta la consola, issue 86), con audit.events"
     text activated_by "correo del operador de Khipu que corrio el comando"
@@ -172,7 +172,7 @@ erDiagram
     text route_id PK "ops.webhook_routes SIN RLS: 128 bits aleatorios; wanka_webhooks solo via ops.resolve_webhook_route()"
     uuid tenant_id "a que tenant pertenece la ruta"
     text provider "khipu"
-    bytea webhook_secret_enc "whsec_ cifrado con WEBHOOK_SECRET_ENC_KEY (clave propia, no INTEGRATIONS_ENC_KEY); null hasta el comando de activacion"
+    bytea webhook_secret_enc "whsec_ cifrado con WEBHOOK_SECRET_ENC_KEY (clave propia, no INTEGRATIONS_ENC_KEY); NOT NULL, la fila la crea completa el comando de activacion"
     timestamptz revoked_at
   }
   PROVIDER_WEBHOOK_EVENTS {

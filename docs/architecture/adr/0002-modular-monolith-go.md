@@ -53,6 +53,9 @@ openapi/                   # contrato (ADR 0009)
 | S3 | `aws-sdk-go-v2/service/s3` (sirve para cualquier S3 compatible) | minio-go |
 | Validación | generada desde OpenAPI + reglas de dominio en Go | validator con tags |
 
+Aprobaciones posteriores (registro de la regla de arriba: cada dependencia nueva la aprueba el dueño, y se anota aquí con fecha y referencia, sin cambiar la decisión):
+- 2026-11-17: `golang.org/x/term`, para leer secretos sin eco en el comando temporal `wanka einvoicing activate` (ADR 0003, «Alta asistida»; PR #158).
+
 Versiones: Go estable vigente (1.25 o superior al iniciar) y **PostgreSQL 16**, la versión con que se verifica `data/rls-check/`. Pasar a otra versión mayor exige volver a correr esa verificación (exit 0) y registrar el cambio en un ADR nuevo.
 
 ## Consecuencias
