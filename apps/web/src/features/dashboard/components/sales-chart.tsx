@@ -42,7 +42,7 @@ export function SalesChartCard({ data }: { data: DailySales[] }) {
         series={[{ nombre: "Ventas", valores: rows.map((r) => r.total) }]}
         formato={formatCurrency}
         destacado={rows.findIndex((r) => r.date === peak?.date)}
-        rotuloVisible={(i) => i % 7 === 0 || i === rows.length - 1}
+        rotuloVisible={(i) => i % 7 === 0}
         tituloDeCategoria={(i) => formatDate(rows[i].date)}
         descripcion={`Facturación neta de ${rows.length} días: ${formatCurrency(total)}; el pico fue el ${formatDate(peak.date)} con ${formatCurrency(peak.total)}.`}
       />
