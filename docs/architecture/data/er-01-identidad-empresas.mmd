@@ -60,8 +60,7 @@ erDiagram
     uuid site_id FK
     uuid cash_register_id FK "nullable"
     text doc_type "01,03,07,08,09 o interno: PRO, OC, Z, OT"
-    text environment "BETA, PRODUCCION en CPE; null en series internas"
-    text series "UK tenant_id+environment+doc_type+series NULLS NOT DISTINCT, CHECK formato"
+    text series "UK tenant_id+doc_type+series, CHECK formato"
     bigint last_number "CHECK >= 0, fila caliente"
     boolean active
   }

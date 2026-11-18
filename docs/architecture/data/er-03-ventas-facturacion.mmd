@@ -98,8 +98,7 @@ erDiagram
     text doc_type "01 factura, 03 boleta, 07 NC, 08 ND, 09 GRE"
     uuid series_id FK
     text series
-    text environment "BETA, PRODUCCION: copiado de la serie; los de BETA no entran en RVIE, PLE ni reportes"
-    bigint number "UK tenant_id+environment+doc_type+series+number; null en GRE hasta que Khipu numere"
+    bigint number "UK tenant_id+doc_type+series+number; null en GRE hasta que Khipu numere"
     text issuer_ruc
     uuid source_sale_id "nullable"
     uuid related_document_id FK "NC/ND"
@@ -160,7 +159,7 @@ erDiagram
     uuid tenant_id PK "esquema integ, RLS"
     text provider PK "khipu"
     bytea api_key_enc "fk_... cifrada AES-GCM con INTEGRATIONS_ENC_KEY; sin GRANT para wanka_webhooks"
-    text environment "BETA, PRODUCCION"
+    text environment "BETA, PRODUCCION: fijo desde activate, no cambia en la vida del tenant"
     text provider_company_ref "id de la empresa en Khipu, lo da el operador en el comando de activacion"
     text provider_plan "gratis, emprende, negocio, pro: declarado por el operador; CHECK environment BETA o plan distinto de gratis"
     timestamptz verified_at "llave verificada con una lectura"

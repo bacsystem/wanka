@@ -59,7 +59,7 @@ Decisión en [ADR 0008](../adr/0008-money-and-numbering.md).
 
 ## 3. Series y correlativos (numeración concurrente)
 
-Tabla `org.document_series` (una fila por `tenant_id + environment + doc_type + series`; `environment` es `BETA` o `PRODUCCION` en las series de CPE y nulo en las internas, con `NULLS NOT DISTINCT` en la UK). Sirve a CPE (`01`, `03`, `07`, `08`, `09`) y a numeraciones internas (`PRO` proformas, `OC` órdenes de compra, `Z` reportes Z, `OT` órdenes de servicio). Hoy los mocks muestran 6 series para un tenant (`settings/mocks/settings.ts`, `sunatConfig.series`) con `last` como último número.
+Tabla `org.document_series` (una fila por `tenant_id + doc_type + series`). Sirve a CPE (`01`, `03`, `07`, `08`, `09`) y a numeraciones internas (`PRO` proformas, `OC` órdenes de compra, `Z` reportes Z, `OT` órdenes de servicio). Hoy los mocks muestran 6 series para un tenant (`settings/mocks/settings.ts`, `sunatConfig.series`) con `last` como último número.
 
 Asignación dentro de la misma transacción que inserta el documento:
 
@@ -73,7 +73,7 @@ RETURNING series, last_number;
 - El `UPDATE` toma un lock de fila que dura hasta el `COMMIT`. Si la transacción aborta, el número no se consume: **sin huecos**, que es lo que SUNAT espera de un correlativo. Por eso no se usa `SEQUENCE` (no es transaccional: deja huecos en cada rollback).
 - Coste: la serie es una fila caliente. Todo lo que no necesite el lock va **antes** del `UPDATE` (validación, cálculo, lectura de precios, descuento de stock). El `UPDATE` de la serie es la penúltima sentencia antes de los `INSERT` del documento y el `COMMIT`. Ninguna llamada de red ocurre dentro de la transacción.
 - Partición natural del recurso: SUNAT permite varias series por tipo; la configuración por defecto asigna **una serie por caja** (B001 caja 1, B002 caja 2), así dos cajas no compiten por la misma fila. Para que esto funcione, la caja viaja en cada venta: la sesión queda ligada a `cash_register_id` al entrar (`POST /v1/auth/session/tenant`), la venta exige `shiftId`, y la API verifica que el turno esté abierto, sea de esa caja y de esa sede. La serie se toma de `document_series` por `(cash_register_id, doc_type)`. Ver criterio de carga en [`capacity.md`](../capacity.md).
-- `UNIQUE (tenant_id, environment, doc_type, series, number)` en `einv.electronic_documents` es la última barrera contra duplicados. Incluye el entorno para que las series de PRODUCCION arranquen limpias tras usar BETA. `NextNumber` solo toma series activas del entorno vigente del tenant, y los reportes tributarios filtran `environment = 'PRODUCCION'` (ADR 0003, «Entorno de los documentos»).
+- `UNIQUE (tenant_id, doc_type, series, number)` en `einv.electronic_documents` es la última barrera contra duplicados.
 - Un CPE rechazado conserva su número (no se reutiliza); se emite uno nuevo. Confirmado por Khipu: "el rechazado conserva el suyo" (ADR 0003).
 - Khipu acepta el número de Wanka en el campo `correlativo` (facturas, boletas, notas). Por eso cada serie se registra en Khipu con `correlativo_inicial` y es **exclusiva de Wanka**. Si Khipu rechaza con `422` antes de numerar, el número no se consumió allá: el documento se corrige y se reenvía con el mismo número, sin hueco. Las GRE las numera Khipu (su endpoint no admite `correlativo`); `number` queda nulo hasta su respuesta.
 
