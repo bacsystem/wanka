@@ -143,7 +143,7 @@ erDiagram
     uuid tenant_id PK
     text key PK
     bytea request_hash
-    int status_code
+    int status_code "solo 2xx: CHECK status_code BETWEEN 200 AND 299"
     jsonb response
     timestamptz created_at "limpieza a las 24 h"
   }

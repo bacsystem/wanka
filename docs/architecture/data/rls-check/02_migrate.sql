@@ -253,3 +253,7 @@ BEGIN
 END $$;
 GRANT USAGE ON SCHEMA test TO wanka_app, wanka_platform, wanka_webhooks, wanka_worker;
 GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA test TO wanka_app, wanka_platform, wanka_webhooks, wanka_worker;
+
+-- ===== Bootstrap fuera de goose (ADR 0001, «Creación de los roles») =====
+\echo '== M1. wanka_migrator no puede crear roles: los crea el bootstrap del superusuario, no la migracion =='
+SELECT test.expect_error('CREATE ROLE wanka_intruso LOGIN', '42501', 'wanka_migrator sin CREATEROLE');

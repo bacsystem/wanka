@@ -108,6 +108,7 @@ Herramienta: **goose** (`github.com/pressly/goose/v3`), migraciones SQL en `apps
 - Cambios destructivos en 3 despliegues: **expandir** (columna nueva nullable o tabla nueva; la app escribe en ambas) → **migrar** (backfill por lotes con `id > :ultimo LIMIT 5000`, job reanudable) → **contraer** (quitar lo viejo cuando ninguna versión desplegada lo lee).
 - Índices sobre tablas con datos: `CREATE INDEX CONCURRENTLY` en archivo propio con `-- +goose NO TRANSACTION`.
 - Corren como **pre-deploy command** en Railway con el rol `wanka_migrator` (dueño de los objetos); la app nunca es dueña de tablas (si lo fuera, RLS no se aplicaría sin `FORCE`).
+- **Los roles no los crea goose.** Los crea un bootstrap idempotente que corre el superusuario antes de la primera migración (`CREATE ROLE` y `ALTER ROLE ... SET` exigen `CREATEROLE`, que `wanka_migrator` no tiene). Un rol `LOGIN` por servicio y `wanka_definer` `NOLOGIN`: [ADR 0001](../adr/0001-multitenancy-rls.md), «Creación de los roles». La migración inicial crea esquemas y funciones `app.*`, y da los GRANT a roles que ya existen.
 - Prueba en CI que bloquea el merge: consulta a `pg_catalog` que falla si alguna tabla con columna `tenant_id` no tiene `relrowsecurity` y `relforcerowsecurity` y al menos una política; otra que falla si una FK no tiene índice.
 - `lock_timeout = '5s'` y `statement_timeout` en la sesión del migrador, para que una migración que espera un lock no congele la producción.
 

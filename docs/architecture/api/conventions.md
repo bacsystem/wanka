@@ -54,6 +54,8 @@ Este documento y [`resources.md`](resources.md) están congelados desde el 2026-
 - Misma clave + mismo cuerpo → se devuelve la respuesta guardada (mismo código y cuerpo) con `Idempotent-Replayed: true`.
 - Misma clave + cuerpo distinto → `422 idempotency_key_reused`.
 - La clave se inserta **primero**, en la misma transacción que el efecto (`INSERT ... ON CONFLICT DO NOTHING`). Si la transacción aborta, la clave no queda registrada y el reintento se ejecuta.
+- **Solo se guardan respuestas `2xx`** (aclaración del 2026-11-18, épica #154). Toda respuesta `4xx` o `5xx` de una ruta con clave implica `ROLLBACK` de su transacción, y con él se va la clave: el reintento con la misma clave se ejecuta de nuevo y puede responder distinto (por ejemplo, `409 shift_not_open` y, tras abrir el turno, `201`). Es intencional: el cliente reusa la clave en todos los reintentos de la misma operación (se genera al iniciarla), así que guardar un `4xx` dejaría la operación bloqueada en ese error durante 24 h. No hay doble efecto, porque un `4xx` no confirmó nada. Los códigos que produce la propia idempotencia (`422 idempotency_key_reused`, `409 request_in_progress`) tampoco se guardan.
+- Una clave con más de 24 h que el job horario aún no borró **se sigue tratando como completada** (se repite su respuesta): la retención es un mínimo, no un máximo.
 - Misma clave mientras la primera sigue en curso: el `INSERT` de la segunda **espera** el lock del índice único de la primera, porque la fila no confirmada ya ocupa la clave. Si la primera confirma, la segunda ve el conflicto y devuelve la respuesta guardada. Si aborta, la segunda continúa como nueva. La espera está acotada por `lock_timeout = 3s` en esa sentencia: si se vence, la API responde `409 request_in_progress` con `Retry-After: 1`. Es el único caso en que aparece ese código.
 - Todas las respuestas de la API usan los mismos códigos: un cuerpo distinto con la misma clave es siempre `422 idempotency_key_reused`, nunca 409.
 - El BFF no reintenta `POST` sin `Idempotency-Key`; con clave, como máximo 1 reintento ante error de red.
@@ -78,7 +80,7 @@ RFC 9457 (`application/problem+json`) con un `code` estable que el frontend trad
 
 (El dominio del `type` es ilustrativo; se fija al publicar la documentación.)
 
-**Lista cerrada de `code`.** Un handler o middleware solo devuelve códigos de esta tabla; agregar uno es un PR de contrato (§0). La columna «Lo emite» dice quién lo produce: «kernel» son los middlewares y la base HTTP comunes a todas las rutas, en el orden de la [secuencia 08](../sequences/08-entitlement-enforcement.mmd) (sesión → empresa cerrada → suscripción → módulo → límite → 2FA → permiso; gana el primero que falla).
+**Lista cerrada de `code`.** Un handler o middleware solo devuelve códigos de esta tabla; agregar uno es un PR de contrato (§0). La columna «Lo emite» dice quién lo produce: «kernel» son los middlewares y la base HTTP comunes a todas las rutas, en el orden de la [secuencia 08](../sequences/08-entitlement-enforcement.mmd) (sesión → empresa cerrada → suscripción → módulo → límite → 2FA → permiso; gana el primero que falla). El paso «sesión» incluye la membresía: una membresía borrada o no activa responde `401 session_expired` ahí, antes de los entitlements, con los datos que ya devolvió `iam.session_lookup`.
 
 | HTTP | `code` | Lo emite | Significado |
 |---|---|---|---|
@@ -111,7 +113,7 @@ RFC 9457 (`application/problem+json`) con un `code` estable que el frontend trad
 | 422 | `discount_exceeds_role_limit` | ventas | el descuento supera el tope del rol y no viene la aprobación de un supervisor |
 | 429 | `rate_limited` | kernel | cuota por cliente o tenant superada (§7); con `Retry-After` |
 | 503 | `overloaded` | kernel | backpressure: cola o pool llenos; con `Retry-After` |
-| 503 | `dependency_unavailable` | kernel y módulo | una dependencia no responde: la base al leer los entitlements, o Khipu en las descargas síncronas. Con `Retry-After` |
+| 503 | `dependency_unavailable` | kernel y módulo | una dependencia no responde: la base al buscar la sesión (`iam.session_lookup`) o al leer los entitlements, o Khipu en las descargas síncronas. Con `Retry-After` (`1` en el kernel). Un fallo de la base al buscar la sesión nunca es `401` ni `500`; un pool sin conexión libre es `503 overloaded` |
 | 500 | `internal` | kernel | error no previsto; sin detalles internos, solo `requestId` |
 
 ### Suscripción inactiva: bloqueo total salvo exportar (decisión del dueño, 2026-11-18)
