@@ -64,3 +64,17 @@ func TestLevelFilter(t *testing.T) {
 		t.Fatalf("info should be filtered: %q", buf.String())
 	}
 }
+
+func TestRedactsWhenGroupNameIsSensitive(t *testing.T) {
+	for _, g := range []string{"authorization", "Cookie", "api_token", "password"} {
+		t.Run(g, func(t *testing.T) {
+			var buf bytes.Buffer
+			log := logging.New(&buf, slog.LevelInfo)
+			log.Info("x", slog.Group(g, "value", "SENSITIVE-VALUE", slog.Group("inner", "deep", "SENSITIVE-VALUE")))
+			log.With(slog.Group(g, "value", "SENSITIVE-VALUE")).Info("y")
+			if strings.Contains(buf.String(), "SENSITIVE-VALUE") {
+				t.Fatalf("group %q leaked: %s", g, buf.String())
+			}
+		})
+	}
+}

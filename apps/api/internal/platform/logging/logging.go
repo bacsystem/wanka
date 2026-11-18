@@ -1,5 +1,11 @@
 // Package logging builds the process logger: JSON from log/slog, with the
 // request id taken from the context and sensitive attributes redacted by name.
+//
+// Redaction is by key name only: an attribute is redacted when its key, or the
+// name of any group that contains it, looks sensitive. It does not look inside
+// values, so a struct such as {Token: x} or an error whose text embeds a secret
+// (for example a connection string like postgres://user:pass@host/db) is logged
+// as is. Do not log such values; sanitize errors before logging them.
 package logging
 
 import (
@@ -37,19 +43,28 @@ var (
 	personal    = map[string]bool{"email": true, "dni": true, "ruc": true, "phone": true, "telefono": true, "address": true, "direccion": true}
 )
 
-func redact(_ []string, a slog.Attr) slog.Attr {
-	k := strings.ToLower(strings.ReplaceAll(a.Key, "-", "_"))
-	sensitive := personal[k]
-	for _, p := range secretParts {
-		if strings.Contains(k, p) {
-			sensitive = true
-			break
-		}
+func redact(groups []string, a slog.Attr) slog.Attr {
+	sensitive := sensitiveName(a.Key)
+	for _, g := range groups {
+		sensitive = sensitive || sensitiveName(g)
 	}
 	if sensitive {
 		return slog.String(a.Key, redacted)
 	}
 	return a
+}
+
+func sensitiveName(name string) bool {
+	k := strings.ToLower(strings.ReplaceAll(name, "-", "_"))
+	if personal[k] {
+		return true
+	}
+	for _, p := range secretParts {
+		if strings.Contains(k, p) {
+			return true
+		}
+	}
+	return false
 }
 
 // requestIDHandler adds request_id when the context carries one.
