@@ -53,8 +53,8 @@ Fronteras ya alineadas con el PO: las variantes son core `catalogo`, y la consig
 
 | Nivel | Archivo | Qué muestra |
 |---|---|---|
-| 1 Contexto | [`c4/01-context.mmd`](c4/01-context.mmd) | usuarios de empresa, staff de plataforma, cliente final; Khipu, SUNAT, mensajería, pasarelas y storage |
-| 2 Contenedores | [`c4/02-containers.mmd`](c4/02-containers.mmd) | `web` (Next.js BFF), `api`, `platform-api`, `worker` (misma imagen Go), Postgres y object storage, con el rol de base de cada uno |
+| 1 Contexto | [`c4/01-context.mmd`](c4/01-context.mmd) | usuarios de empresa, staff de plataforma, cliente final; Khipu, SUNAT, mensajería y pasarelas |
+| 2 Contenedores | [`c4/02-containers.mmd`](c4/02-containers.mmd) | `web` (Next.js BFF), `api`, `platform-api`, `worker` (misma imagen Go) y Postgres, con el rol de base de cada uno |
 | 3 Componentes API | [`c4/03-components-api.mmd`](c4/03-components-api.mmd) | middleware en orden (auth → tenant → entitlements → RBAC → idempotencia), módulos core y de rubro, kernel compartido, puerto y adaptador de Khipu |
 | 3 Componentes web | [`c4/04-components-web.mmd`](c4/04-components-web.mmd) | `proxy.ts`, Server Components y Server Actions, BFF con cookies httpOnly por plano y cliente generado desde OpenAPI |
 
@@ -91,7 +91,7 @@ Modelo y reglas en [`data/data-model.md`](data/data-model.md): `tenant_id` y RLS
 
 ## 6. Despliegue
 
-- [`deployment/railway.mmd`](deployment/railway.mmd): servicios, red privada, Postgres, bucket, pre-deploy de migraciones y nombres de variables de entorno. Railway expone el puerto completo de cada servicio, así que `api` no tiene dominio público y los webhooks entran por un servicio `webhooks` aparte que solo monta esa ruta. Las API keys de Khipu son por tenant y van **cifradas en la base**, no en variables.
+- [`deployment/railway.mmd`](deployment/railway.mmd): servicios, red privada, Postgres (sin bucket en R1), pre-deploy de migraciones y nombres de variables de entorno. Railway expone el puerto completo de cada servicio, así que `api` no tiene dominio público y los webhooks entran por un servicio `webhooks` aparte que solo monta esa ruta. Las API keys de Khipu son por tenant y van **cifradas en la base**, no en variables.
 - [`deployment/cloud-migration.md`](deployment/cloud-migration.md): health checks, apagado ordenado, backups, equivalencias en AWS/GCP/Azure y disparadores para migrar.
 
 ## 7. API
@@ -151,7 +151,7 @@ Producto (PO):
 12. Si el despacho físico requiere la GRE aceptada.
 
 Infraestructura (tech-lead):
-13. Bucket de Railway o S3 externo.
+13. Almacenamiento de artefactos. **Resuelta el 2026-11-17** (ADR 0003, «Artefactos: Khipu los conserva»): sin bucket en R1, porque Khipu conserva el XML, el CDR y el PDF; el puerto `BlobStore` queda en el kernel sin adaptador, y el bucket de Railway o S3 entra más adelante, según el crecimiento. Siguen abiertas, con Khipu, las preguntas 9 a 11 del ADR 0003.
 14. Plan de Postgres de Railway: máximo de conexiones, PITR y extensiones.
 15. Backend de observabilidad.
 16. Licencia del OpenAPI.

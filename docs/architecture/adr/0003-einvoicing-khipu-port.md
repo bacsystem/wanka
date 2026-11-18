@@ -5,11 +5,12 @@
 
 > **Nombres.** En este ADR, "Khipu" es la **API del proveedor de facturación electrónica**. Su portal web (repo `bacsystem/khipu`, `portal/`) está construido sobre el mismo sistema de diseño que adopta el frontend de Wanka: el paquete `khipu-design-system` (ver `c4/04-components-web.mmd`). Son la misma familia de productos, pero en estos documentos "Khipu" se refiere a la API y "khipu-design-system" al paquete de UI.
 
-Fuentes (citadas abajo como [ref], [guía], [errores], [entornos]):
+Fuentes (citadas abajo como [ref], [guía], [errores], [entornos], [planes]):
 - [ref] Referencia de la API, OpenAPI 3.0.1 publicado en `https://api-khipu.bacsystemsolutions.com/openapi.json`. Se citan las secciones *Autenticación*, *Sobre de respuesta*, *Estados del comprobante* y *Plazos SUNAT* de `info.description`, y cada operación por su ruta. Página: <https://khipu.bacsystemsolutions.com/developers>
 - [guía] <https://khipu.bacsystemsolutions.com/developers/guia>
 - [errores] <https://khipu.bacsystemsolutions.com/developers/errores>
 - [entornos] <https://khipu.bacsystemsolutions.com/developers/entornos>
+- [planes] Página pública de planes, <https://khipu.bacsystemsolutions.com/#precios>, consultada el 2026-11-17. Se citan solo los plazos de conservación, no los precios.
 
 ## Contexto
 
@@ -34,6 +35,7 @@ El usuario decidió que **el POS no espera la aceptación**: el ticket se imprim
 | Resumen diario | Lo gestiona Khipu. Una boleta que pasó el envío individual se informa en un resumen (`baja.condicion = ALTA`) | [ref] |
 | GRE | `POST /v1/guias-remision` con `Idempotency-Key`. Khipu numera. Estados `FIRMADO`, `ERROR_ENVIO`, `ENVIANDO`, `ENVIADO_PENDIENTE_TICKET`, `ACEPTADO`, `ACEPTADO_CON_OBS`, `RECHAZADO`. **Experimental** y sin envío en BETA | [ref] `GuiaRemisionResponse.estado`; [guía] |
 | Respuesta | `201` con `estado_documento`, `hash`, `fecha_limite_envio`, `cdr`, `totales` y `enlaces` (PDF con QR desde `FIRMADO`) | [ref] `ComprobanteResponse` |
+| Conservación de artefactos | XML y CDR: el plan Gratis los guarda 1 año y el plan Emprende, 5 años. Negocio y Pro dicen «Todo lo de Emprende» y «Todo lo de Negocio», sin repetir el plazo. El PDF no tiene plazo indicado. Dice «descarga XML y CDR cuando los necesites», pero no menciona una exportación masiva ni qué pasa al terminar el servicio | [planes] |
 | Estados del comprobante | Enum de `GET /v1/facturas?estado`: `RECIBIDO`, `INVALIDO`, `FIRMADO`, `ERROR_ENVIO`, `PENDIENTE_AGRUPACION`, `ENVIADO`, `ACEPTADO`, `ACEPTADO_CON_OBS`, `RECHAZADO`, `ANULADO`, `FUERA_DE_PLAZO`, `DESCARTADO` | [ref] `GET /v1/facturas` |
 | Reintentos hacia SUNAT | Los hace Khipu: hasta 20 en ~74 h. Forzado con `POST /v1/facturas/{id}/enviar` (`409 ENVIO_EN_CURSO` si hay un envío en vuelo) | [entornos]; [ref] |
 | Idempotencia | `Idempotency-Key` en facturas, notas y guías. Vigencia 24 h. Mismo cuerpo: `200`. Otro cuerpo: `422 IDEMPOTENCIA_INVALIDA` | [errores] |
@@ -52,6 +54,9 @@ El usuario decidió que **el POS no espera la aceptación**: el ticket se imprim
 6. Cómo automatizar el alta en Khipu, que hoy solo se hace desde el portal. **Pregunta al usuario.**
 7. Disponibilidad de la GRE en el release 1. **Pregunta al usuario.**
 8. Si los webhooks de GRE y de bajas usan los mismos eventos `comprobante.*`.
+9. Si los planes Negocio y Pro heredan los 5 años de conservación de XML y CDR del plan Emprende. **Pregunta a Khipu.**
+10. Cuánto tiempo conserva Khipu el PDF. **Pregunta a Khipu.**
+11. Si hay una exportación en bloque de XML, CDR y PDF al terminar el servicio. **Pregunta a Khipu.**
 
 ## Opciones
 
@@ -100,9 +105,9 @@ La API key `fk_…` se guarda cifrada con AES-GCM (`INTEGRATIONS_ENC_KEY`) en `i
   - **Por documento, tres pasos y ninguna red dentro de una transacción.**
     1. Una transacción corta renueva el arrendamiento (con fencing) y lee la **cabeza** de la serie: el pendiente no bloqueado de menor número. Luego hace `COMMIT`.
     2. Llamada HTTP a Khipu, fuera de toda transacción (hasta 30 s).
-    3. Otra transacción corta graba los datos del proveedor y la transición, y encola `cpe.fetch_artifacts` en la misma transacción. Luego hace `COMMIT`. Grabar los datos del proveedor es idempotente y correcto aunque el arrendamiento se haya perdido entre medio. Lo que el fencing impide es **seguir** emitiendo.
+    3. Otra transacción corta graba los datos del proveedor y la transición. Luego hace `COMMIT`. Grabar los datos del proveedor es idempotente y correcto aunque el arrendamiento se haya perdido entre medio. Lo que el fencing impide es **seguir** emitiendo.
 
-    La subida de XML, PDF y CDR a S3 **sale del bucle**: la hace el job `cpe.fetch_artifacts`, con timeout de 20 s por objeto y reintentos propios, así que una S3 lenta no consume el arrendamiento.
+    El XML, el CDR y el PDF no se descargan, ni en el bucle ni después: los conserva Khipu (ver «Artefactos: Khipu los conserva»).
   - **Backoff sin bucle caliente y sin adelantar números.** Si la cabeza tiene `next_attempt_at > now()` (un error transitorio anterior), el drenador **se detiene**: no emite N+1, porque eso rompería el orden. Suelta el arrendamiento, fija `wakeup_at = next_attempt_at` en `series_emitters` y devuelve `JobSnooze(next_attempt_at - now())`. Con Khipu caído, cada serie hace un solo intento por escalón de backoff: no hay amplificación. La política de hueco solo aplica a documentos **bloqueados** (`blocked_reason`), no a los que están en backoff.
   - **Sin avisos perdidos, sin unicidad en River.** River exige que `UniqueOpts.ByState` incluya `running` (`riverqueue/river`, `insert_opts.go`: "The following states must be included in ByState if set: … Running …"; `validate()` devuelve `UniqueOpts.ByState must contain all required states`). Con unicidad, una venta que llega durante un drenaje, o el reencolado del propio drenador, se deduplicaría contra el job en `running`, y el aviso se perdería. Por eso **`cpe.emit` no usa unicidad**: la exclusión la da el arrendamiento.
     - La venta encola `cpe.emit {series_id}` en su transacción, siempre.
@@ -121,6 +126,25 @@ La API key `fk_…` se guarda cifrada con AES-GCM (`INTEGRATIONS_ENC_KEY`) en `i
 - **Política de hueco.** Un documento bloqueado por `422` se aparta (`blocked_reason = validation`) y el drenaje sigue con N+1.
   - Si la verificación en BETA del punto 2 muestra que Khipu **rechaza** un N+1 cuando N falta, la política cambia a "detener la serie": la serie queda en pausa, con alerta inmediata y una acción "corregir" en la UI.
   - En ese caso las demás cajas siguen con sus series, y la caja afectada puede pasar temporalmente a una serie de contingencia configurada.
+
+### Artefactos: Khipu los conserva
+
+Decisión del dueño (2026-11-17): Khipu almacena y sirve el PDF, el XML y el CDR de los CPE durante 5 años. Wanka no los guarda, y en R1 no hay bucket.
+
+- **Requisito de plan.** Según [planes], el plazo de 5 años solo está confirmado para el plan Emprende (el plan Gratis guarda 1 año; para Negocio y Pro, ver la pregunta 9). Por eso las cuentas de Khipu que use Wanka tienen que estar en Emprende o en un plan superior. Cómo se cumple depende del modelo de cuentas (pregunta 5):
+  - con una cuenta compartida, esa cuenta está en Emprende o superior;
+  - con una cuenta por tenant, el alta (#31) y la conexión con Khipu (#55) exigen ese plan y lo registran. La alternativa de guardar una copia propia de los tenants que estén en Gratis necesita el adaptador de bucket del `BlobStore`, que no existe en R1, así que en R1 no se ofrece.
+- **Qué guarda Wanka.** Por documento, `provider_ref`, `hash` (el resumen del XML firmado que devuelve Khipu) y `xml_sha256`. Este último se fija la primera vez que Wanka descarga el XML, y cada descarga posterior se compara con él: si difiere, el archivo no se sirve y se genera una alerta crítica. Un documento que nunca se descargó no tiene `xml_sha256`; lo firmado sigue respaldado por `hash`.
+- **Bajo demanda.** Reimprimir, reenviar (#52) y descargar piden el artefacto a Khipu por `provider_ref` (el endpoint exacto se confirma en [ref]). El `api` hace de proxy y lo pasa al `web` sin guardarlo:
+  - timeouts de 3 s de conexión y 15 s en total;
+  - un solo reintento con jitter, en el adaptador, porque la lectura es idempotente;
+  - un límite de concurrencia propio, separado de la cola de emisión, para que las descargas no compitan con la emisión;
+  - rate limit por tenant.
+
+  Si Khipu falla, responde `503` con `Retry-After`. El ticket del POS no depende de Khipu: se imprime con los datos de Wanka. Para enviar el comprobante por correo o WhatsApp (#81), el job de notificaciones pide el archivo a Khipu en el momento del envío, con los reintentos de River.
+- **PDF.** Sale de Khipu bajo demanda. Si Khipu dejara de servirlo (pregunta 10), la opción más barata es generarlo en Wanka desde sus propios datos (`electronic_documents`, `edoc_lines` y `hash` para el QR), que ya están en la base, en vez de descargar y procesar el XML UBL. Si `provider_total` difiere de `total` (data-model §2), se genera desde el XML, porque prevalece el importe de Khipu. No se construye en R1: se decide con la respuesta a la pregunta 10, y necesitaría una librería de PDF que el dueño tendría que aprobar.
+- **Exportes.** Libros electrónicos, reportes y exportes se generan al momento y no se guardan.
+- **`BlobStore`.** El puerto vive en el kernel, sin adaptador de bucket en R1 (solo un doble en memoria para las pruebas). El adaptador compatible con S3 (bucket de Railway o S3) entra más adelante, según el crecimiento, sin tocar los módulos.
 
 ### Estados: correspondencia completa con Khipu
 
@@ -188,6 +212,7 @@ El ticket muestra la serie y el número que asignó Wanka, con el CPE "pendiente
 | Cuota (`LIMITE_PLAN`, `LIMITE_PRUEBAS`) | pausa y alerta crítica | aviso en el dashboard |
 | Credenciales o configuración | pausa del tenant | banner en `/configuracion/sunat` |
 | Webhooks pausados | la conciliación cubre el hueco; alerta para reactivarlos | nada |
+| Khipu lento o caído al descargar un artefacto | `503` con `Retry-After`, sin reintentos más allá del único del adaptador; alerta si sube la tasa de error | «documento no disponible por ahora»; el ticket del POS se reimprime igual |
 
 ## Consecuencias
 
@@ -197,10 +222,12 @@ El ticket muestra la serie y el número que asignó Wanka, con el CPE "pendiente
   - las series son exclusivas de Wanka;
   - el alta en Khipu es manual mientras no exista una API de integrador;
   - la cuota es compartida si se usa una sola cuenta;
-  - un emisor por serie limita el throughput de una serie a 1 / latencia de Khipu.
+  - un emisor por serie limita el throughput de una serie a 1 / latencia de Khipu;
+  - el XML, el CDR y el PDF dependen de Khipu: su plazo de conservación según el plan, que esté disponible al descargarlos y que se puedan sacar al terminar el servicio (preguntas 9 a 11).
 - Qué haría cambiar la decisión:
   - una API de integrador de Khipu: se automatiza el alta sin cambiar el puerto;
-  - si Khipu acepta correlativos fuera de orden, se puede relajar el emisor único por serie.
+  - si Khipu acepta correlativos fuera de orden, se puede relajar el emisor único por serie;
+  - si Khipu no confirma el plazo de conservación del plan que se use, o no ofrece una exportación al terminar el servicio: se activa el adaptador de bucket del `BlobStore` y un job que copie los artefactos.
 - **Criterios de aceptación con el sistema externo** (issues de facturación, empezando por #56):
   - emisión de factura y boleta, `422`, nota de crédito, baja y webhook firmado en **BETA de Khipu**;
   - las verificaciones en BETA 1 (redondeo) y 2 (orden y huecos por serie);

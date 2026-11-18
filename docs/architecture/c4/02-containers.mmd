@@ -11,7 +11,6 @@ C4Container
     Container(webhooks, "webhooks", "Go, misma imagen, --plane=webhooks", "Unico servicio Go con dominio publico. Solo monta /webhooks/khipu/{routeId} y health. Rol wanka_webhooks.")
     Container(worker, "worker", "Go, misma imagen, River", "Jobs: emision CPE (un emisor por serie con arrendamiento), cpe.sync de los eventos que encola el servicio webhooks, conciliacion, recordatorios, reportes pesados, limpieza. Un solo lider para periodicos.")
     ContainerDb(pg, "PostgreSQL", "PostgreSQL 16 (ADR 0002)", "Esquemas por bounded context. RLS por tenant_id. Cola River y outbox en la misma BD.")
-    ContainerDb(objects, "Object storage", "S3 compatible", "XML firmado, CDR, PDF, adjuntos. Claves con prefijo tenant_id.")
   }
 
   System_Ext(khipu, "Khipu", "Proveedor CPE")
@@ -24,8 +23,7 @@ C4Container
   Rel(api, pg, "SQL, rol wanka_app (RLS)", "pgx pool")
   Rel(platformApi, pg, "SQL, rol wanka_platform", "pgx pool")
   Rel(worker, pg, "SQL, rol wanka_worker + RLS por job", "pgx pool")
-  Rel(api, objects, "URLs prefirmadas", "S3")
-  Rel(worker, objects, "Guarda XML/CDR/PDF", "S3")
+  Rel(api, khipu, "Descarga XML, CDR y PDF bajo demanda (proxy, sin guardar)", "HTTPS timeout 15 s")
   Rel(worker, khipu, "Emite, consulta (X-Api-Key fk_ por tenant)", "HTTPS timeout 30 s")
   Rel(khipu, webhooks, "Webhook firmado /webhooks/khipu/{routeId}", "HTTPS")
   Rel(webhooks, pg, "ops.webhook_routes + RLS por tenant", "pgx pool")

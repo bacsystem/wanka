@@ -117,9 +117,7 @@ erDiagram
     text sunat_message
     text hash "digest del XML firmado"
     numeric provider_total "numeric(14,2) totales.total de Khipu, se compara con total"
-    text xml_key "objeto S3"
-    text cdr_key "objeto S3"
-    text pdf_key "objeto S3"
+    bytea xml_sha256 "sha256 del XML de Khipu, se fija en la primera descarga; XML, CDR y PDF los conserva Khipu"
     date issue_date
     timestamptz send_deadline "fecha_limite_envio de Khipu, alerta si se acerca"
     numeric total "numeric(14,2) CHECK >= 0 (GRE 0)"

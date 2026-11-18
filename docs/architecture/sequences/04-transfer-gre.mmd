@@ -22,7 +22,7 @@ sequenceDiagram
   A-->>W: 201 {transfer, guide: pendiente}
   WK->>P: EmitDispatchGuide: POST /v1/guias-remision con Idempotency-Key, serie T001 (timeout 30 s, reintentos con jitter)
   P-->>WK: numero asignado, estado ACEPTADO o ENVIADO_PENDIENTE_TICKET (Khipu consulta el ticket ~24 h)
-  WK->>DB: guarda numero T001-n y estado, PDF en storage (webhook o reconcile para el estado final)
+  WK->>DB: guarda numero T001-n y estado, el PDF se pide a Khipu bajo demanda (webhook o reconcile para el estado final)
   Note over O,D: GRE marcada experimental en Khipu y no disponible en BETA: el traslado se registra igual, el despacho fisico con GRE aceptada es regla a confirmar
   D->>W: /inventario/recepcion/T001-146 cantidades recibidas por lote
   W->>A: POST /v1/inventory/transfers/{id}/receipts Idempotency-Key

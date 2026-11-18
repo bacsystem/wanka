@@ -117,5 +117,5 @@ Un fallo de Khipu **nunca** se propaga como 500 en la petición del usuario: la 
 
 - Rate limit por sesión y por tenant en la aplicación (token bucket; en memoria mientras haya una réplica, en Postgres/Redis al escalar, ver [ADR 0007](../adr/0007-deployment-railway.md)), y por IP en el borde.
 - Endpoints con cuota más estricta: `auth/login` (5/min por IP+email), `auth/password/forgot` (3/h por email), exportes y PDF (2 concurrentes por tenant), búsquedas `q=` (10/s por sesión).
-- Cuerpo máximo 1 MB (adjuntos por URL prefirmada directa a storage).
+- Cuerpo máximo 1 MB. Los adjuntos irán por URL prefirmada directa al bucket cuando exista su adaptador (`BlobStore`); en R1 no hay bucket (data-model §5).
 - Timeouts (el de quien llama siempre mayor que el del llamado): Postgres `statement_timeout` 5 s para el rol de la app → handler de la API 10 s (`http.TimeoutHandler`; lectura de cabeceras 5 s) → BFF 12 s hacia la API → proxy/borde 30 s. `IdleTimeout` del servidor Go (120 s) mayor que el keep-alive del proxy de Railway (supuesto 60 s; medir).

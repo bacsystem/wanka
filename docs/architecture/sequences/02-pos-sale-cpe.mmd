@@ -10,7 +10,6 @@ sequenceDiagram
   participant WK as worker (River, cola cpe)
   participant P as InvoicingProvider (adaptador Khipu)
   participant WH as webhooks (servicio publico)
-  participant S3 as Object storage
 
   C->>W: Cobrar (lineas, cliente, moneda, pagos)
   W->>A: POST /v1/sales Idempotency-Key {shiftId, documentType, currency, exchangeRate?, lines, payments, expectedTotal}
@@ -60,7 +59,7 @@ sequenceDiagram
         WK->>P: POST /v1/facturas con correlativo y tipo_cambio, X-Api-Key, Idempotency-Key = document_id (3 s conexion, 30 s total)
         alt 201 o 200 (repeticion idempotente)
           P-->>WK: datos.id, estado_documento, hash, totales, fecha_limite_envio, enlaces
-          WK->>DB: tx corta: graba provider_ref, hash, provider_total WHERE provider_ref IS NULL, transicion por rango, edoc_events, encola cpe.fetch_artifacts, COMMIT
+          WK->>DB: tx corta: graba provider_ref, hash, provider_total WHERE provider_ref IS NULL, transicion por rango, edoc_events, COMMIT
         else red, timeout, 500, 502/503, ENVIO_EN_CURSO
           WK->>DB: tx corta: next_attempt_at con backoff + jitter (max 10 en ~20 h), COMMIT (en la siguiente vuelta la cabeza estara en backoff)
         else 409 DUPLICADO o reintento fuera de las 24 h
@@ -74,7 +73,7 @@ sequenceDiagram
       end
     end
   end
-  WK->>S3: cpe.fetch_artifacts (job aparte, timeout 20 s por objeto): guarda XML, PDF y CDR
+  Note over P: Khipu conserva XML, CDR y PDF, Wanka los pide bajo demanda (ADR 0003), no los descarga aqui
   Note over P: Khipu reintenta ERROR_ENVIO hacia SUNAT (20 veces, ~74 h). Wanka no llama /enviar automaticamente.
   P-)WH: POST /webhooks/khipu/{routeId} (X-Khipu-Signature, X-Khipu-Delivery)
   WH->>DB: ops.resolve_webhook_route(routeId) -> tenant + whsec_ cifrado (WEBHOOK_SECRET_ENC_KEY), verifica HMAC (300 s), InTenantTx, dedupe, guarda evento (sin acceso a fk_)
