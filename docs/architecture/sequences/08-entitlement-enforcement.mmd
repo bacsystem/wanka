@@ -18,11 +18,16 @@ sequenceDiagram
     MW-->>W: 503 overloaded, Retry-After 1
   else la base falla en session_lookup (error de conexion, statement_timeout o deadline de 1 s del contexto)
     MW-->>W: 503 dependency_unavailable, Retry-After 1. Nunca 401 ni 500: no se sabe si la sesion es valida, y un 401 haria que el BFF refresque (otra consulta a la base caida) y mande al usuario a /login
-  else sesion invalida (session_lookup sin fila)
+  else sesion invalida (session_lookup sin fila, tambien la impersonada cuyo grant se revoco o vencio, que se revoca entera)
     MW-->>W: 401 unauthenticated
   else sesion de tenant NO impersonada con current_version NULL o membresia no activa (borrada, suspendida)
-    MW->>DB: revoca la sesion (si el UPDATE falla igual responde 401: la siguiente busqueda vuelve a denegar)
-    MW-->>W: 401 session_expired (nunca se trata como sin cambios). Se decide aqui, en el paso de sesion: usa las columnas que ya devolvio session_lookup, sin otra consulta ni cache, y antes de los entitlements para no revelar a un ex miembro el estado de la empresa (402, 403)
+    MW->>DB: desliga la sesion SIN revocarla (ADR 0011): UPDATE iam.sessions SET tenant_id, membership_id, site_id, cash_register_id, authz_version = NULL WHERE id y membership_id coinciden, impersonator_id NULL y revoked_at NULL. Conserva tokens, familia de refresh y 2FA. Si el UPDATE falla, la peticion sigue sin tenant igual
+    MW->>MW: contexto sin tenant (nunca se trata como sin cambios). Se decide aqui, en el paso de sesion: usa las columnas que ya devolvio session_lookup, sin otra consulta ni cache, y antes de los entitlements para no revelar a un ex miembro el estado de la empresa (402, 403)
+  end
+  alt ruta sin tenant (/v1/auth/*, GET /v1/me, GET /v1/me/memberships)
+    MW->>H: ctx sin tenant: el handler responde (la sesion desligada sigue sirviendo para elegir otra empresa)
+  else ruta de tenant y sesion sin tenant (recien desligada o nunca eligio empresa)
+    MW-->>W: 403 tenant_access_denied, sin refresh. El BFF lleva a /seleccionar-empresa, y a /login si no queda ninguna membresia activa
   end
   MW->>E: Entitlements(tenant_id)
   alt cache vencida

@@ -1,5 +1,5 @@
 ---
-title: Login + 2FA TOTP (la obligacion se decide en un solo punto) + seleccion de empresa, sede y caja
+title: Login + 2FA TOTP (la obligacion se decide en un solo punto) + seleccion de empresa, sede y caja + membresia perdida
 ---
 sequenceDiagram
   autonumber
@@ -55,3 +55,20 @@ sequenceDiagram
   end
   Note over W,A: Refresh solo en proxy.ts o en route handlers, con single-flight por proceso. Si llega el refresh anterior dentro de 10 s desde la rotacion, la API devuelve SOLO un access nuevo y el BFF no toca wk_rt (el navegador ya tiene el refresh ganador). Fuera de la gracia, el reuso revoca toda la familia (ADR 0004).
   Note over A: Recuperacion: POST /v1/auth/password/forgot (respuesta 202 siempre) -> token 15 min por correo -> POST /v1/auth/password/reset revoca todas las sesiones.
+  Note over U,DB: Membresia perdida mientras usa la empresa A (ADR 0011, decision del dueno 2026-11-18): vuelve a /seleccionar-empresa, no a /login
+  U->>W: sigue navegando en la empresa A
+  W->>A: GET /v1/... Bearer wk_at (sesion ligada a A)
+  A->>DB: iam.session_lookup: membresia de A borrada o no activa
+  A->>DB: desliga la sesion de A SIN revocarla: tenant_id, membership_id, site_id, cash_register_id y authz_version a NULL. Mismos tokens, misma familia de refresh, misma 2FA
+  A-->>W: 403 tenant_access_denied (antes de los entitlements: nunca 402 ni 403 de la empresa)
+  W-->>U: redirige a /seleccionar-empresa con el aviso "Ya no tienes acceso a esa empresa". Sin refresh ni cookies nuevas, sirve tambien desde un Server Component
+  W->>A: GET /v1/me/memberships (la misma sesion, ahora sin tenant)
+  A-->>W: 200 membresias del usuario con su estado (A ya no esta activa)
+  alt queda al menos una membresia activa
+    U->>W: elige la empresa B, su sede y su caja
+    W->>A: POST /v1/auth/session/tenant {tenantId B, siteId, cashRegisterId?}, mismo flujo de arriba
+  else ninguna membresia activa
+    W->>A: POST /v1/auth/logout desde un route handler
+    A->>DB: revoked_at en la sesion
+    W-->>U: borra wk_at, wk_rt y wk_at_exp y redirige a /login con el aviso "Ya no perteneces a ninguna empresa"
+  end
