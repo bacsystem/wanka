@@ -173,7 +173,7 @@ Supuestos de carga: los de toda la plataforma en `capacity.md`, sujetos a la pru
 - **RLS check:** `MUTATION=naive_session_lookup sh data/rls-check/run.sh` muestra una corrida que falla.
 - **API:** REST `/v1`, `camelCase`, errores RFC 9457 con `code`, paginación por cursor, `Idempotency-Key` obligatoria en los `POST` que crean, y dinero como string decimal (`api/conventions.md`). El catálogo de permisos tiene el plano tenant y el `plataforma.*`. Los mocks del frontend se reemplazan por funciones `lib/api/*` tipadas con `openapi.yaml`.
 - **Dinero (ADR 0008):** importes `(14,2)`, precios unitarios `(14,4)`, costos `(18,6)` y cantidades `(14,4)`. `exchange_rate numeric(6,3)` es el formato de Khipu. Los correlativos salen de un contador por serie, sin llamadas de red dentro de la transacción.
-- **Facturación (ADR 0003):** asíncrona con outbox, un emisor en orden por serie, y webhooks más conciliación. Las verificaciones en BETA son el redondeo contra `POST /v1/facturas/calcular` y el correlativo N+1 antes que N.
+- **Facturación (ADR 0003):** asíncrona con outbox, un emisor en orden por serie, y webhooks más conciliación. Las verificaciones en BETA (criterios de #56) son la regresión de redondeo contra `POST /v1/facturas/calcular`, la confirmación ligera de N+1 antes que N y la baja rechazada sin webhook, resuelta sondeando `GET /v1/bajas/{id}`.
 - **Despliegue (ADR 0007):** servicios `web`, `api`, `platform-api`, `worker` y `webhooks`. `/v1` solo se alcanza por la red privada, con configuración 12-factor.
 - **Diagramas:** se validan con `npx -y @mermaid-js/mermaid-cli -i file.mmd -o /tmp/x.svg`.
 

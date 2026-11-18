@@ -152,7 +152,8 @@ erDiagram
     text provider_void_id "id de la baja en Khipu"
     text identifier "RA-... o RC-..."
     text status "solicitada, generada, enviada, aceptada, rechazada, error_envio"
-    timestamptz requested_at
+    timestamptz requested_at "base de la cadencia de sondeo, tope 24 h"
+    timestamptz stalled_at "sin estado final a las 24 h, alerta La baja no se ha resuelto"
   }
   PROVIDER_CREDENTIALS {
     uuid tenant_id PK "esquema integ, RLS"

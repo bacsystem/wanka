@@ -1,6 +1,6 @@
 # ADR 0003: Facturación electrónica vía Khipu detrás del puerto `InvoicingProvider`
 
-- Estado: propuesto. Contrastado con la documentación pública de Khipu, consultada el 2026-11-17. Lo que la documentación no dice queda marcado **SUPUESTO** o como **verificación en BETA**.
+- Estado: propuesto. Contrastado con la documentación pública de Khipu (consultada el 2026-11-17) y con su código público (bacsystem/khipu @53bd4bc, [código]). Lo que ninguna de las dos fuentes responde queda marcado **SUPUESTO** o como **verificación en BETA**.
 - Fecha: 2026-11-17 (revisado tras la revisión del PR #124: carrera entre la respuesta y el webhook, estados y códigos completos, orden por serie, redondeo)
 
 > **Nombres.** En este ADR, "Khipu" es la **API del proveedor de facturación electrónica**. Su portal web (repo `bacsystem/khipu`, `portal/`) está construido sobre el mismo sistema de diseño que adopta el frontend de Wanka: el paquete `khipu-design-system` (ver `c4/04-components-web.mmd`). Son la misma familia de productos, pero en estos documentos "Khipu" se refiere a la API y "khipu-design-system" al paquete de UI.
@@ -11,7 +11,16 @@ Fuentes (citadas abajo como [ref], [guía], [errores], [entornos], [planes]):
 - [errores] <https://khipu.bacsystemsolutions.com/developers/errores>
 - [entornos] <https://khipu.bacsystemsolutions.com/developers/entornos>
 - [planes] Página pública de planes, <https://khipu.bacsystemsolutions.com/#precios>, consultada el 2026-11-17. Se citan solo los plazos de conservación, no los precios.
-- [código] Código de Khipu (repo público bacsystem/khipu @53bd4bc): seed de planes `V37__planes_y_suscripciones.sql`, `ConsultarComprobanteService`, `FacturaController` (`GET /v1/facturas/descarga`), `ApiKeyFilter` y `S3DocumentStorage`. Se citan solo plazos y comportamiento, no precios.
+- [código] Código de Khipu (repo público bacsystem/khipu @53bd4bc). Se citan solo plazos y comportamiento, no precios. Archivos que respaldan cada tema:
+  - redondeo: `ItemCalculado.java`, `Totales.java`, `FacturaRequest.java`;
+  - numeración y N+1: `EmitirComprobanteService.java`, `JdbcSerieRepository.java`;
+  - alta asistida y sesión: `AdminAltaAsistidaController.java`, `EmpresaController.java`, `EmpresasController.java`, `WebhooksController.java`;
+  - webhooks y su log: `EventoWebhook.java`, `JdbcComprobanteRepository.java`, `EntregarWebhooksService.java`;
+  - GRE: `GuiaRemisionController.java` y `application.yml` (envío apagado);
+  - timeouts hacia SUNAT y ausencia de `Retry-After`: `application.yml`, `EmitirComprobanteService.java`;
+  - cuotas y límites: `TopeDelPlanService.java`, `Limites.java`, seed `V37__planes_y_suscripciones.sql`;
+  - bajas: `BajaController.java`, `DarDeBajaService.java`;
+  - artefactos: `ConsultarComprobanteService.java`, `FacturaController.java` (`GET /v1/facturas/descarga`), `ApiKeyFilter.java`, `S3DocumentStorage.java`.
 - [docs] Documentos del mismo repo de Khipu (@53bd4bc): la política de privacidad del portal (`portal/src/content/legal/privacidad.ts`). Es un texto legal, no comportamiento del código.
 
 ## Contexto
@@ -97,15 +106,16 @@ Decisión del dueño (2026-11-17): las empresas las crea el **operador de Khipu*
 | Paso | Quién | Cómo |
 |---|---|---|
 | 1. Pedir el alta con RUC, razón social y entorno (BETA o PRODUCCION) | soporte de Wanka | manual, al operador de Khipu, indicando el plan Emprende o superior; el tenant queda «pendiente de Khipu» en el onboarding (#31) |
-| 2. Crear la cuenta (Emprende o superior), la empresa, su serie inicial y la API key `fk_` | operador de Khipu | `POST /v1/admin/cuentas`, manual desde el lado de Khipu, en un máximo de 24 horas |
+| 2. Crear la cuenta (Emprende o superior), la empresa, su serie inicial y la API key `fk_`, y entregar la llave | operador de Khipu | `POST /v1/admin/cuentas`, manual desde el lado de Khipu, en un máximo de 24 horas |
 | 3. Registrar el webhook hacia `/webhooks/khipu/{routeId}` y entregar el `whsec_` | operador de Khipu, con el `routeId` que genera Wanka (#55) | manual: `/v1/webhooks` exige una sesión del portal de la cuenta, no la API key (ver la pregunta 12) |
-| 4. Cargar la API key y el `whsec_` en Wanka | usuario del tenant con `facturacion.config:update`, acompañado por soporte de Wanka | `/configuracion/sunat` (#55); Wanka verifica la llave con una lectura y guarda ambos cifrados |
+| 4. Cargar la API key y el `whsec_` en Wanka | usuario del tenant con `empresas.einvoicing:update`, acompañado por soporte de Wanka | `/configuracion/sunat` (#55); Wanka verifica la llave con una lectura y guarda ambos cifrados |
 | 5. Subir el certificado, las credenciales SOL y API SUNAT y los datos fiscales, y crear una serie por caja con `correlativo_inicial` | Wanka, automático con la API key | #55 |
 
 - **Activación de la facturación en R1, sin consola (#86 es de R4).** No hay comando ni función definer de operador: la activación la registra el propio `api` cuando el tenant completa el paso 4 y el paso 5 termina bien, dentro de `InTenantTx` y con su fila en `audit.events` (actor: el usuario del tenant). Se registra en `integ.provider_credentials`:
   - `verified_at`: la llave respondió a una lectura;
   - `activated_at`: llave verificada, `whsec_` guardado y series creadas. Con esto el onboarding de #31 pasa a «activación completada» y se habilita la emisión;
-  - `webhook_verified_at`: primer evento firmado que llega por la ruta. No bloquea la activación, porque la conciliación cubre la falta de webhooks, pero mientras sea nulo hay una alerta para soporte.
+  - `webhook_verified_at`: primer evento firmado que llega por la ruta. Lo escribe el `worker` en `cpe.sync`, dentro de `InTenantTx`: el servicio `webhooks` (rol `wanka_webhooks`) no tiene acceso a `integ.provider_credentials` (ADR 0001), y no hace falta un GRANT nuevo. No bloquea la activación, porque la conciliación cubre la falta de webhooks, pero mientras sea nulo hay una alerta para soporte.
+  - `provider_company_ref`: el id de la empresa en Khipu. El `api` lo lee con la API key al verificarla en el paso 4 (el endpoint exacto se confirma en [ref]). Si ninguna lectura con la API key lo devuelve, lo entrega el operador junto con la llave en el paso 2.
 
   Los pasos 1 a 3 quedan fuera de Wanka; soporte los sigue con el estado «pendiente de Khipu» del onboarding. Si pasan más de 24 horas desde el pedido sin que el tenant pueda cargar la llave, se genera una alerta para soporte.
 - La API key la ve una sola vez quien la crea, así que la entrega del paso 2 al paso 4 va por un canal seguro acordado con Khipu, nunca por correo en claro. Wanka nunca la escribe en variables ni en logs.
@@ -177,7 +187,7 @@ Decisión del dueño (2026-11-17): Khipu almacena y sirve el PDF, el XML y el CD
   - El ticket del POS no depende de Khipu: se imprime con los datos de Wanka.
 - **PDF.** Lo genera Khipu bajo demanda la primera vez que se pide (desde `FIRMADO`) y lo guarda junto al XML. Si cambia el diseño, lo regenera con otra clave ([código]). Wanka no genera el PDF.
 - **Salida al terminar el servicio.** `GET /v1/facturas/descarga` devuelve un ZIP por streaming con XML, PDF y CDR, filtrado por rango de fechas, con un tope de 500 comprobantes por petición (por eso se descarga por tramos). Dar de baja la cuenta no borra nada ni corta el acceso; **suspenderla sí corta todas las llamadas, también las descargas** (`403 CUENTA_SUSPENDIDA`), mientras que un plan vencido solo bloquea la emisión ([código]). La herramienta de exportación por tramos no entra en R1.
-- **Exportes.** Libros electrónicos, reportes y exportes se generan en el `api` al momento, desde Postgres, por streaming y sin guardarse. Sin librería de PDF (decisión del dueño, 2026-11-17): en R1 los exportes son **CSV** (y TXT para los formatos de SUNAT). No hay XLSX (decisión del dueño): no se agrega ninguna librería. El reporte Z no genera PDF: se ve en pantalla y se imprime desde el navegador con estilos de impresión (`sequences/05-cash-close.mmd`).
+- **Exportes.** Libros electrónicos, reportes y exportes se generan en el `api` al momento, desde Postgres, por streaming y sin guardarse. Decisión del dueño (2026-11-17): **solo CSV**, sin PDF ni XLSX, y sin librería nueva. Lectura del architect, no decisión del dueño: los libros electrónicos del PLE (#73) se entregan en el TXT plano que exige SUNAT, que tampoco necesita librería. El reporte Z no genera PDF: se ve en pantalla y se imprime desde el navegador con estilos de impresión (`sequences/05-cash-close.mmd`).
   - **Ruta.** `GET /v1/exports?type=&period=` es una lectura sin efectos: se puede repetir sin `Idempotency-Key` y no guarda copia.
   - **Rango máximo.** Un periodo tributario (un mes calendario) y 50 000 filas, lo que se alcance primero. Se valida antes de generar, en la misma transacción `REPEATABLE READ READ ONLY` que el exporte, para que el conteo y el archivo vean la misma foto de los datos:
     - el periodo, con los parámetros de la petición;
@@ -213,7 +223,7 @@ Las transiciones solo suben de rango: `UPDATE ... SET status = $s, status_rank =
 | Configuración del tenant | `422 SERIE_NO_CONFIGURADA`, `SERIE_INVALIDA`, `CERTIFICADO_NO_CARGADO/VENCIDO/INVALIDO`, `CREDENCIALES_SOL_NO_CARGADAS`, `CREDENCIALES_SOL_FALTAN`, `CREDENCIALES_SOL_RECHAZADAS`, `CREDENCIALES_SUNAT_NO_CARGADAS`, `CREDENCIALES_GRE_RECHAZADAS`, `CREDENCIALES_API_SUNAT_*`, `FIRMA_FALLIDA`, `XSD_INVALIDO` | `blocked_reason = config`; pausa de la emisión del tenant y banner en `/configuracion/sunat` |
 | Credencial | `401 NO_AUTORIZADO` | `blocked_reason = auth`; pausa del tenant |
 | Operación no permitida | `403 REQUIERE_SESION`, `EMPRESA_AJENA`, `ROL_INSUFICIENTE`, `SOPORTE_SOLO_LECTURA` | es un error de programación o de configuración (se llamó con API key una operación del portal, o la llave es de otra empresa). Sin reintento; alerta a ingeniería |
-| Cuota | `429 LIMITE_PLAN`, `429 LIMITE_PRUEBAS` (BETA, compartida entre las empresas de la cuenta), `402 PLAN_VENCIDO` | `blocked_reason = quota`; pausa de la cuenta (o del tenant, si las cuentas son por tenant) y alerta crítica a plataforma. Monitoreo de la cuota al 80 % con `GET /v1/cuenta` (solo portal: la mide plataforma) |
+| Cuota | `429 LIMITE_PLAN`, `429 LIMITE_PRUEBAS` (BETA; cada tenant tiene su cuenta, así que la cuota es suya), `402 PLAN_VENCIDO` | `blocked_reason = quota`; pausa del tenant y alerta crítica a plataforma. Monitoreo de la cuota al 80 % con `GET /v1/cuenta` (solo portal: la mide plataforma) |
 | SUNAT ya lo tiene | `409 SUNAT_YA_LO_TIENE`: el documento queda `ERROR_ENVIO`, fuera de los reintentos automáticos | `enviado` + `blocked_reason = sunat_ya_lo_tiene`; **no se reemite**; tarea para soporte (verificar el CDR en SOL) y `POST /v1/facturas/{id}/cdr/recuperar` manual |
 | Estado | `409 ESTADO_NO_ENVIABLE`, `FUERA_DE_PLAZO`, `NO_ACEPTADO`, `422 BAJA_INVALIDA` | sin reintento; se aplica el estado real con `GetDocument` y se informa al usuario |
 | No encontrado | `404 NO_ENCONTRADO`, `404 SIN_CDR` (CDR aún no disponible) | `SIN_CDR`: se reintenta la descarga más tarde. `NO_ENCONTRADO`: alerta |
@@ -227,7 +237,7 @@ Las transiciones solo suben de rango: `UPDATE ... SET status = $s, status_rank =
 4. **`cpe.reconcile`** (líder único, cada minuto) recorre **todos los estados no finales**:
    - `pendiente` sin job vivo, o con `next_attempt_at` vencido hace más de 5 min: lo reencola;
    - `enviado` sin novedad en más de 5 min: `GetDocument`, con backoff por documento;
-   - bajas `solicitada`, `generada`, `enviada` o `error_envio`: `GetVoid`;
+   - bajas `solicitada`, `generada`, `enviada` o `error_envio` **sin un `cpe.void` vivo** (ni en curso ni con snooze) y sin `stalled_at`: las reencola. El job retoma la misma cadencia desde `requested_at`; la conciliación no consulta a Khipu por su cuenta;
    - documentos con `blocked_reason`: genera una alerta según su antigüedad y su `send_deadline`.
 5. Timeouts: conexión 3 s, total 30 s (incluye la ida a SUNAT; **supuesto**, se mide en BETA).
 
@@ -235,7 +245,10 @@ Las transiciones solo suben de rango: `UPDATE ... SET status = $s, status_rank =
 
 Wanka crea `einv.voidings` (con un índice único parcial: una baja en curso por documento) y el job `cpe.void`.
 - Antes de cada intento consulta `ListVoids`, porque la baja no tiene idempotencia ([código]: sin clave; una baja en curso bloquea otra); si ya hay una baja en curso, la adopta.
-- **Resultado de la baja.** Una baja aceptada llega por el webhook `comprobante.anulado`. Una rechazada o en error **no emite webhook** ([código]), así que el job sondea `GET /v1/bajas/{id}` con backoff (1, 5, 15 y 60 min, luego cada hora hasta 24 h) mientras la baja esté `GENERADA` o `ENVIADA`, y la conciliación periódica cubre lo que quede.
+- **Resultado de la baja.** Una baja aceptada llega por el webhook `comprobante.anulado`. Una rechazada o en error **no emite webhook** ([código]), así que el propio job `cpe.void` sondea `GET /v1/bajas/{id}` con una **única cadencia**: a los 1, 5, 15 y 60 min de pedirla, y luego cada hora hasta 24 h, mientras la baja esté `GENERADA` o `ENVIADA`. Esta es la cadencia de referencia; la conciliación y `sequences/03-credit-note-void.mmd` la siguen.
+  - **Mecanismo.** Entre consultas, el job devuelve `JobSnooze` de River hasta la siguiente marca, calculada desde `einv.voidings.requested_at`. No usa los reintentos por error: ADR 0006 los reserva para errores transitorios, y unas 27 consultas pasarían el `MaxAttempts` por defecto de River (25). Que el snooze no consuma intentos se verifica en la versión de River que se fije.
+  - **Al tope.** Pasadas 24 h sin estado final, el job deja la baja con `stalled_at`, emite la alerta «La baja no se ha resuelto» (#60) para el tenant y para soporte, y termina. La UI muestra esa alerta en vez de quedarse en «En baja».
+  - Si mientras tanto llega `comprobante.anulado`, `cpe.sync` cierra la baja y el job, al despertar, ve el estado final y termina.
 - La API valida antes: el documento está aceptado u observado, y no pasaron más de 7 días.
 - **Una boleta ya entregada al cliente no se anula: corresponde una nota de crédito.** La UI lo pregunta.
 

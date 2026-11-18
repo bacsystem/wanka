@@ -39,8 +39,11 @@ sequenceDiagram
     WK->>P: RequestVoid: POST /v1/facturas/{id}/baja {motivo}
   end
   P-->>WK: id de la baja, estado, ticket
-  loop hasta estado final (backoff 30 s a 5 min)
-    WK->>P: GET /v1/bajas/{id} (Khipu reconsulta el ticket en SUNAT)
+  loop hasta estado final, JobSnooze a 1, 5, 15 y 60 min y luego cada hora, tope 24 h desde requested_at
+    WK->>P: GET /v1/bajas/{id} (Khipu reconsulta el ticket en SUNAT, una baja rechazada no emite webhook)
+  end
+  opt 24 h sin estado final
+    WK->>DB: voiding stalled_at, alerta La baja no se ha resuelto (issue 60)
   end
   Note over P,WK: el webhook comprobante.anulado tambien dispara cpe.sync
   alt baja aceptada
