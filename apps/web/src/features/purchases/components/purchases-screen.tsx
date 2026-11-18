@@ -85,7 +85,7 @@ export function PurchasesScreen({ purchases, discrepancy, tabCounts, kpis }: { p
           </>
         }
       />
-      <PurchasesTabs tab="registro" counts={tabCounts} />
+      <PurchasesTabs counts={tabCounts} />
       {kpis}
 
       <FilterBar className="gap-3">

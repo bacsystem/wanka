@@ -35,7 +35,7 @@ export function KardexScreen({ item, rows }: { item: typeof KardexItemType; rows
 
   return (
     <>
-      <InventoryTabs active="/inventario/kardex" />
+      <InventoryTabs />
       <SectionCard title="Artículo y parámetros de valuación" contentClassName="grid gap-4 p-4 lg:grid-cols-[1fr_auto_auto]">
         <Field label="Artículo odontológico / existencia sujeta a valuación">
           <div className="flex flex-col gap-1 rounded-md border px-3 py-2">

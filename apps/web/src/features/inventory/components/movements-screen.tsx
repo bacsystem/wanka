@@ -74,7 +74,7 @@ export function MovementsScreen({ movements, total, kpis }: { movements: Invento
           </>
         }
       />
-      <InventoryTabs active="/inventario/movimientos" />
+      <InventoryTabs />
       {kpis}
 
       <FilterBar stack className="gap-2">

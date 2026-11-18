@@ -1,39 +1,24 @@
-import type { LucideIcon } from "lucide-react";
-import Link from "next/link";
-import { cn } from "@/lib/utils";
-import { TARJETA } from "@/lib/estilos";
+import { TabsRuta, type TonoContadorTab } from "khipu-design-system/navegacion/tabs-ruta";
 
 export interface SectionNavItem {
   href: string;
   label: string;
-  icon?: LucideIcon;
-  /** Small mono counter shown after the label. */
+  /** Short counter shown after the label ("12", "SUNAT 13.1"). */
   badge?: string;
-  /** Extra classes for the inactive badge (tone). */
-  badgeClassName?: string;
+  /** Colour of the counter. */
+  badgeTone?: TonoContadorTab;
 }
 
 interface SectionNavProps {
   items: SectionNavItem[];
-  /** href of the current section. */
-  active: string;
   "aria-label": string;
-  className?: string;
 }
 
-/** Route-based pill navigation between sibling screens (compras, inventario…). Uses Link so each tab is a real page. */
-export function SectionNav({ items, active, className, ...rest }: SectionNavProps) {
-  return (
-    <nav className={cn(TARJETA, "no-scrollbar flex max-w-full gap-1 overflow-x-auto p-1.5", className)} {...rest}>
-      {items.map((t) => {
-        const isActive = t.href === active;
-        return (
-          <Link key={t.href} href={t.href} aria-current={isActive ? "page" : undefined} className={cn("flex h-10 shrink-0 items-center gap-2 rounded-lg px-4 text-sm font-semibold transition-colors", isActive ? "bg-primary text-primary-foreground shadow-sm" : "text-foreground/80 hover:bg-muted")}>
-            {t.icon ? <t.icon className="size-4" /> : null} {t.label}
-            {t.badge ? <span className={cn("rounded-full px-2 py-0.5 font-mono text-[10px] font-semibold", isActive ? "bg-primary-foreground/20" : t.badgeClassName || "bg-accent text-primary dark:bg-muted")}>{t.badge}</span> : null}
-          </Link>
-        );
-      })}
-    </nav>
-  );
+/**
+ * @deprecated W8: use `TabsRuta` from `khipu-design-system/navegacion/tabs-ruta` directly.
+ * Route-based tabs between sibling screens (compras, inventario…). The DS marks the current one from `usePathname`;
+ * every item matches its exact route (the first tab of a section is the section root).
+ */
+export function SectionNav({ items, "aria-label": etiqueta }: SectionNavProps) {
+  return <TabsRuta etiqueta={etiqueta} items={items.map((t) => ({ href: t.href, etiqueta: t.label, contador: t.badge, tonoContador: t.badgeTone, exacto: true }))} />;
 }

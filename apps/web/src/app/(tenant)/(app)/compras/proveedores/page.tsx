@@ -21,7 +21,7 @@ export default function SuppliersPage() {
         <StatCard label="Compras 2026" value={formatCurrency(s.yearTotal)} icon={Wallet} hint="Acumulado enero–setiembre" />
         <StatCard label="Órdenes pendientes" value={String(s.pendingOrders)} icon={ClipboardCheck} hint="Por recepcionar o con detracción pendiente" />
       </StatGrid>
-      <PurchasesTabs tab="proveedores" counts={{ registro: purchasesSummary.monthCount, proveedores: s.active, ordenes: s.pendingOrders }} />
+      <PurchasesTabs counts={{ registro: purchasesSummary.monthCount, proveedores: s.active, ordenes: s.pendingOrders }} />
       <SuppliersPageBody suppliers={suppliersMock} />
     </div>
   );

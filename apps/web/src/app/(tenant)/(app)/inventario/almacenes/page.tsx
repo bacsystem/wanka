@@ -13,7 +13,7 @@ export default function WarehousesPage() {
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-4 p-4 md:gap-5 md:p-6">
       <PageHeader eyebrow="Inventario" title="Almacenes y sucursales" description="Gestión centralizada de establecimientos anexos declarados ante SUNAT, depósitos de insumos, puntos de venta y control de responsables de custodia." status={<StatusBadge tone="success" dot label="SUNAT sincronizado" />} />
-      <InventoryTabs active="/inventario/almacenes" />
+      <InventoryTabs />
       <StatGrid>
         <StatCard label="Sedes y almacenes" value={String(s.total)} suffix={`almacenes en ${s.sites} sedes`} icon={Building2} tone="info" footer={<span className="flex w-full justify-between"><span>{s.bySite}</span><span className="font-semibold text-primary">100% operativos</span></span>} />
         <StatCard label="Capacidad de ocupación" value={`${s.occupancy}%`} icon={Gauge} deltaPercent={s.occupancyDelta} deltaLabel="este mes" footer={<span className="h-1.5 w-full overflow-hidden rounded-full bg-muted"><span className="block h-full rounded-full bg-primary" style={{ width: `${s.occupancy}%` }} /></span>} />

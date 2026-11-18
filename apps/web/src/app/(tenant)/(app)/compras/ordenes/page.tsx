@@ -11,7 +11,7 @@ export default function OrdersPage() {
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-4 p-4 md:gap-5 md:p-6">
       <PageHeader eyebrow="Compras y proveedores" title="Órdenes de compra y detracciones" description="Seguimiento de órdenes, recepciones parciales y constancias SPOT." />
-      <PurchasesTabs tab="ordenes" counts={{ registro: purchasesSummary.monthCount, proveedores: s.active, ordenes: s.pendingOrders }} />
+      <PurchasesTabs counts={{ registro: purchasesSummary.monthCount, proveedores: s.active, ordenes: s.pendingOrders }} />
       <OrdersScreen orders={purchaseOrdersMock} />
     </div>
   );
