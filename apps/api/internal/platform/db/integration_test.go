@@ -6,8 +6,10 @@ import (
 	"errors"
 	"io"
 	"log/slog"
+	"net"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"sort"
 	"sync"
 	"sync/atomic"
@@ -270,5 +272,56 @@ func TestReadyzWithAFullPoolIsOverloadedAndFast(t *testing.T) {
 	}
 	if rec.Header().Get("Retry-After") != "1" {
 		t.Fatalf("Retry-After = %q", rec.Header().Get("Retry-After"))
+	}
+}
+
+// slowConnectProxy reenvía a upstream y demora cada conexión nueva: simula una
+// red lenta al abrir conexiones, con la base sana.
+func slowConnectProxy(t *testing.T, upstream string, delay time.Duration) string {
+	t.Helper()
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { ln.Close() })
+	go func() {
+		for {
+			c, err := ln.Accept()
+			if err != nil {
+				return
+			}
+			go func() {
+				defer c.Close()
+				time.Sleep(delay)
+				u, err := net.Dial("tcp", upstream)
+				if err != nil {
+					return
+				}
+				defer u.Close()
+				go func() { _, _ = io.Copy(u, c) }()
+				_, _ = io.Copy(c, u)
+			}()
+		}
+	}()
+	return ln.Addr().String()
+}
+
+// Con la base sana pero una conexión nueva lenta (un proceso sin tráfico se
+// queda sin conexiones), la readiness espera la conexión y responde 200: no la
+// confunde con un pool lleno ni con una base caída.
+func TestReadyzWithASlowNewConnectionIsStillReady(t *testing.T) {
+	d := dbtest.New(t)
+	u, err := url.Parse(d.URL(dbtest.App))
+	if err != nil {
+		t.Fatal(err)
+	}
+	u.Host = slowConnectProxy(t, u.Host, 3*db.DefaultAcquireTimeout)
+	p := open(t, u.String(), db.Options{MaxConns: 3})
+
+	h := httpx.Chain(httpx.NewMux(p.Ping), discardLog())
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/readyz", nil))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("first readyz with a slow connection = %d %s, want 200", rec.Code, rec.Body)
 	}
 }

@@ -90,7 +90,11 @@ func Open(ctx context.Context, rawURL string, o Options) (*Pool, error) {
 // está lleno durante todo el plazo, ErrUnavailable si la base no contesta. Un
 // ctx cancelado devuelve su propio error. Quien llama debe hacer Release.
 func (p *Pool) Acquire(ctx context.Context) (*pgxpool.Conn, error) {
-	actx, cancel := context.WithTimeout(ctx, p.acquireTimeout)
+	return p.acquire(ctx, p.acquireTimeout)
+}
+
+func (p *Pool) acquire(ctx context.Context, timeout time.Duration) (*pgxpool.Conn, error) {
+	actx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	conn, err := p.pool.Acquire(actx)
 	if err == nil {
@@ -112,12 +116,19 @@ func (p *Pool) full() bool {
 	return s.AcquiredConns() >= s.MaxConns()
 }
 
-// Ping comprueba que la base responde; es el chequeo de readiness. Toma la
-// conexión como cualquier petición: con el pool lleno devuelve ErrOverloaded a
-// los 200 ms (no espera 2 s ni culpa a la base sana) y /readyz responde 503
-// overloaded, igual que una petición sin conexión libre (conventions.md §4).
+// Ping comprueba que la base responde; es el chequeo de readiness. Con todas
+// las conexiones en uso responde ErrOverloaded al instante: /readyz da 503
+// overloaded, igual que una petición sin conexión libre (conventions.md §4), y
+// no espera 2 s ni culpa a una base sana. Si hay hueco, espera hasta pingTimeout
+// por una conexión: un proceso sin tráfico se queda sin conexiones (MaxConnIdleTime)
+// y abrir la primera puede tardar más que los 200 ms de una petición; sería un
+// falso "no disponible". Se prefirió esto a MinConns = 1, que deja una ventana
+// fría hasta 30 s tras reciclar la conexión y conecta en segundo plano al arrancar.
 func (p *Pool) Ping(ctx context.Context) error {
-	conn, err := p.Acquire(ctx)
+	if p.full() {
+		return ErrOverloaded
+	}
+	conn, err := p.acquire(ctx, pingTimeout)
 	if err != nil {
 		return err
 	}
