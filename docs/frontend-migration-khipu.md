@@ -125,12 +125,10 @@ Rule: where a gap below is recorded, an adapter may keep layout-only classes (fl
 | 1 | `CabeceraSeccion` requires `icon` (117 of 184 SectionCards have none) | `SectionCard` falls back to `Card` + `CardHeader` | waits (DS) |
 | 2 | `CabeceraPagina` has no eyebrow slot (50 uses) or status slot (28 uses) | eyebrow in `volver` with `ROTULO`, status among the actions | waits (DS) |
 | 3 | No entity header (avatar + chips + meta + aside); `descripcion` is a `<p>` | `EntityHeader` keeps `TARJETA` + layout | waits (DS) |
-| 4 | `PillEstado` has no `info` tone (60 uses); `Chip` has no tones or solid fill | `info` renders neutral; `Tag` solid ignored | fixed by khipu #74 (`tono info`, `Chip solido`); map after the bump |
 | 5 | `EstadoVacio` title is always an `h3`; the page-level states need the page `h1` | Error/NotFound/Forbidden/SessionExpired keep their local layout | waits (DS) |
 | 6 | `Buscador` does not forward `ref` | `SearchInput` finds the input from its wrapper | waits (DS) |
 | 7 | No filter-bar container; DS `Toolbar` is an action pill group | `FilterBar`/`Toolbar` stay layout rows | waits (DS) |
 | 8 | `toneClass` class map still exported for `sunat-status-badge.tsx` | removed when W6.3 moves that file to `PillEstado` | waits (W6.3) |
-| 9 | `PieTabla` has no first/last buttons and a fixed rows selector (10/20/50) | `PaginationBar` shows DS look, page size 25 matches no option | fixed by khipu #74 (`opciones`, `extremos`); map after the bump |
 
 ### 3.1 `StatCard` → `Metrica` / `Kpi` (W5b adapter, then W6.x)
 

@@ -10,7 +10,7 @@ describe("PaginationBar", () => {
     fireEvent.click(next);
     fireEvent.click(next);
     expect(screen.getByText("4", { selector: "[aria-current=page]" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Siguiente/ })).toBeEnabled();
+    expect(screen.getByRole("button", { name: /Siguiente/ })).not.toHaveAttribute("aria-disabled");
   });
   it("reports page changes when controlled", () => {
     const onPageChange = vi.fn();
@@ -21,6 +21,6 @@ describe("PaginationBar", () => {
   });
   it("disables Anterior on the first page", () => {
     render(<PaginationBar from={1} to={25} total={200} />);
-    expect(screen.getByRole("button", { name: /Anterior/ })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /Anterior/ })).toHaveAttribute("aria-disabled", "true");
   });
 });

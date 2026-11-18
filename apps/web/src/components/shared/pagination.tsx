@@ -17,13 +17,13 @@ interface PaginationBarProps {
 /**
  * "Mostrando x–y de N" + page size + numbered pages. `from`/`to` are what the caller is actually showing;
  * until the API exists most screens leave `page` uncontrolled, so the numbers are visual.
+ * The page size is fixed by the caller (no handler exists), so the rows selector is not shown (`onPorPagina` omitted).
  * @deprecated Temporary W5a adapter over `PieTabla`. Use it directly; deleted in W8.
  */
 export function PaginationBar({ from, to, total, label = "registros", pageSize = 25, page: controlled, onPageChange }: PaginationBarProps) {
   const [internal, setInternal] = React.useState(1);
-  const [size, setSize] = React.useState(pageSize);
   const page = controlled ?? internal;
-  const pages = Math.max(1, Math.ceil(total / size));
+  const pages = Math.max(1, Math.ceil(total / pageSize));
   const setPage = (next: number) => {
     const value = Math.min(pages, Math.max(1, next));
     if (controlled === undefined) setInternal(value);
@@ -35,11 +35,8 @@ export function PaginationBar({ from, to, total, label = "registros", pageSize =
       hasta={to}
       total={total}
       unidad={label}
-      porPagina={size}
-      onPorPagina={(n) => {
-        setSize(n);
-        setInternal(1);
-      }}
+      porPagina={pageSize}
+      extremos
       pagina={page}
       ultimaPagina={pages}
       onPagina={setPage}

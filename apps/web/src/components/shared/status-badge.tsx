@@ -15,8 +15,7 @@ export const toneClass: Record<BadgeTone, string> = {
   neutral: "border-transparent bg-secondary text-muted-foreground",
 };
 
-// `PillEstado` has no info tone (DS gap): "info" is an in-progress state, which the DS renders as neutral.
-const TONO = { success: "ok", warning: "aviso", danger: "error", info: "neutro", neutral: "neutro" } as const;
+const TONO = { success: "ok", warning: "aviso", danger: "error", info: "info", neutral: "neutro" } as const;
 
 interface StatusBadgeProps {
   tone: BadgeTone;
@@ -38,10 +37,8 @@ export function StatusBadge({ tone, label, icon, className }: StatusBadgeProps) 
 
 /**
  * Compact label chip.
- * @deprecated Temporary W5a adapter over `PillEstado`/`Chip`. `Chip` has no tones and no solid fill (DS gap), so info/primary/neutral
- * render as a neutral `Chip` and `solid` is ignored. Deleted in W8.
+ * @deprecated Temporary W5a adapter over `Chip` (`tono`, `solido`). Use it directly; deleted in W8.
  */
-export function Tag({ tone = "neutral", label, className }: { tone?: BadgeTone | "primary"; label: string; className?: string; /** @deprecated No effect. */ solid?: boolean }) {
-  if (tone === "success" || tone === "warning" || tone === "danger") return <PillEstado tono={TONO[tone]} className={className}>{label}</PillEstado>;
-  return <Chip className={className}>{label}</Chip>;
+export function Tag({ tone = "neutral", label, className, solid }: { tone?: BadgeTone | "primary"; label: string; className?: string; solid?: boolean }) {
+  return <Chip tono={tone === "primary" ? "acento" : TONO[tone]} solido={solid} className={className}>{label}</Chip>;
 }
