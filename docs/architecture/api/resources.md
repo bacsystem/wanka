@@ -136,7 +136,7 @@ Ajustes de forma respecto a los mocks, comunes a todos los recursos:
 | `GET /v1/reports/management?from=&to=&site=` | `/reportes/gestion` | `management.ts` | `reportes.management:read` |
 | `GET /v1/reports/sales-register?period=` | `/reportes` RVIE | `SalesRegisterRow`, `reportsSummary` | `reportes.tax:read` |
 | `GET /v1/reports/pdt621?period=` | `/reportes/liquidacion` | `pdt621`, `kardexConsolidated` | `reportes.tax:read` |
-| `POST /v1/exports` **(I)** | exportar Excel/PDF/TXT SUNAT | `200` con el archivo generado al momento por streaming, sin URL prefirmada ni copia guardada; rango acotado (`422 validation_failed` si excede) | `*:export` del módulo |
+| `GET /v1/exports?type=&period=` | exportar Excel/PDF/TXT SUNAT | `200` con el archivo generado al momento por streaming, sin copia guardada. Lectura repetible, sin `Idempotency-Key`. Máximo un mes calendario y 50 000 filas (`422 validation_failed` si se excede). 25 s desde la llegada (ADR 0003) | `*:export` del módulo |
 
 ## agenda, integraciones, auditoria, notificaciones
 
