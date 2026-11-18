@@ -94,6 +94,7 @@ test("data table: columns menu hides a column and reset restores it", async ({ p
   await page.getByRole("menuitemcheckbox", { name: "Cliente / adquirente" }).click();
   await page.keyboard.press("Escape");
   await expect(page.getByRole("columnheader", { name: "Cliente / adquirente" })).toHaveCount(0);
-  await page.getByRole("button", { name: "Restablecer" }).click();
+  await page.getByRole("button", { name: "Columnas" }).click();
+  await page.getByRole("menuitem", { name: "Restablecer" }).click();
   await expect(page.getByRole("columnheader", { name: "Cliente / adquirente" })).toBeVisible();
 });

@@ -1,61 +1,43 @@
 "use client";
 
 import * as React from "react";
-import { Input } from "@/components/ui/input";
-import { parseNumber } from "@/lib/format";
+import { EntradaDecimal } from "khipu-design-system/formularios/entrada-decimal";
 
-interface NumberInputProps extends Omit<React.ComponentProps<typeof Input>, "value" | "onChange" | "type" | "max"> {
+interface NumberInputProps {
+  id?: string;
+  name?: string;
   value: number;
   onValueChange: (value: number) => void;
   /** Upper bound applied on every change. */
   max?: number;
   /** Whole units only (pieces, banknotes): numeric keyboard and decimals are truncated. */
   integer?: boolean;
+  disabled?: boolean;
+  placeholder?: string;
+  className?: string;
+  "aria-label"?: string;
+  "aria-describedby"?: string;
+  "aria-invalid"?: boolean;
+  /** Ignored: every DS control is `h-control`. Kept so existing call sites compile until their module migrates. */
+  size?: "default" | "sm" | "lg";
 }
 
 /**
- * Numeric field for quantities, prices and discounts. Keeps what the user typed as text (so "12." or "1,5"
- * survive the re-render and clearing the field shows empty, not "0"), commits the parsed number on every
- * change and normalizes the text on blur.
+ * @deprecated Use `EntradaDecimal` (or `EntradaMonto`) from `khipu-design-system/formularios/*` directly; this adapter
+ * goes away in W8. Keeps Wanka's `number` contract (an emptied field commits `0`) over the DS decimal input.
  */
-export function NumberInput({ value, onValueChange, max, integer = false, onBlur, inputMode, ref, ...rest }: NumberInputProps) {
-  const [text, setText] = React.useState(String(value));
-  const committed = React.useRef(value);
-  const inputRef = React.useRef<HTMLInputElement>(null);
-  React.useImperativeHandle(ref, () => inputRef.current!, []);
-
-  // Parent changed the value (reset, recalculation): reflect it unless it is the one we just committed.
-  // A reset to the same number while the field shows something else ("abc" → 0) is only applied when the
-  // field is not focused, so it never fights the user's typing.
-  React.useEffect(() => {
-    const external = value !== committed.current;
-    const stale = String(value) !== text && document.activeElement !== inputRef.current;
-    if (external || stale) {
-      committed.current = value;
-      setText(String(value));
-    }
-  }, [value, text]);
-
+export function NumberInput({ id, value, onValueChange, max, integer = false, "aria-invalid": invalid, size, ...rest }: NumberInputProps) {
+  void size;
+  const autoId = React.useId();
   return (
-    <Input
-      ref={inputRef}
-      type="text"
-      inputMode={inputMode ?? (integer ? "numeric" : "decimal")}
+    <EntradaDecimal
+      id={id ?? autoId}
+      valor={value}
+      onCambio={(v) => onValueChange(v ?? 0)}
+      max={max}
+      decimales={integer ? 0 : 2}
+      invalido={invalid}
       {...rest}
-      value={text}
-      onChange={(e) => {
-        const raw = e.target.value;
-        setText(raw);
-        let n = parseNumber(raw);
-        if (integer) n = Math.trunc(n);
-        if (max !== undefined) n = Math.min(max, n);
-        committed.current = n;
-        onValueChange(n);
-      }}
-      onBlur={(e) => {
-        setText(String(value));
-        onBlur?.(e);
-      }}
     />
   );
 }

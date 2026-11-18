@@ -1,22 +1,20 @@
 "use client";
 
-import { Columns3, Rows3, RotateCcw } from "lucide-react";
 import * as React from "react";
 import type { ReactNode } from "react";
-import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuGroup, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { TablaListado, type ColumnaListado } from "khipu-design-system/datos/tabla-listado";
 import { cn } from "@/lib/utils";
-import { EmptyState } from "./states";
 
 export interface Column<T> {
   key: string;
   header: ReactNode;
   cell: (row: T) => ReactNode;
+  /** The DS table aligns left or right: `center` falls back to left. */
   align?: "left" | "right" | "center";
   className?: string;
+  /** @deprecated Ignored: the DS table owns header styling. */
   headClassName?: string;
-  /** Plain label for the "Columnas" menu when `header` is not a string. */
+  /** Plain label for the "Columnas" menu and the CSV when `header` is not a string. */
   label?: string;
   /** Hidden by default (user can enable it from the menu). */
   hidden?: boolean;
@@ -34,19 +32,33 @@ interface DataTableProps<T> {
   emptyMessage?: string;
   className?: string;
   onRowClick?: (row: T) => void;
+  /** @deprecated Ignored: the DS table has no per-row class hook (use the DS `filaActiva` when the module migrates). */
   rowClassName?: (row: T) => string | undefined;
-  /** Column visibility + density controls (Stitch "Columnas / Restablecer"); on by default. */
+  /** Column menu, search and export bar; on by default. `false` renders the bare table. */
   controls?: boolean;
-  /** Extra content on the left of the controls bar (counts, filters). */
+  /** Extra content under the controls bar (counts, filters). */
   controlsSlot?: ReactNode;
   /** Totals row: cell content keyed by column key (missing keys render empty). */
   footer?: Partial<Record<string, ReactNode>>;
 }
 
-const alignClass = { left: "text-left", right: "text-right", center: "text-center" };
+/** Plain text of a rendered cell (strings and numbers found in the element tree), for search and CSV. */
+function nodeText(node: ReactNode): string {
+  if (node == null || typeof node === "boolean") return "";
+  if (typeof node === "string" || typeof node === "number") return String(node);
+  if (Array.isArray(node)) return node.map(nodeText).join(" ").trim();
+  if (React.isValidElement<{ children?: ReactNode }>(node)) return nodeText(node.props.children);
+  return "";
+}
 
+const LOCKED_KEYS = ["select", "sel", "actions"];
+
+/**
+ * @deprecated Adapter over the DS `TablaListado` (search, CSV, print, column menu, pagination). Modules move to
+ * `khipu-design-system/datos/tabla-listado` directly; W8 deletes this file.
+ */
 export function DataTable<T>({
-  columns: allColumns,
+  columns,
   rows,
   rowKey,
   mobileCard,
@@ -54,109 +66,37 @@ export function DataTable<T>({
   emptyMessage = "Sin resultados para los filtros seleccionados.",
   className,
   onRowClick,
-  rowClassName,
   controls = true,
   controlsSlot,
   footer,
 }: DataTableProps<T>) {
-  const defaults = React.useMemo(() => Object.fromEntries(allColumns.map((c) => [c.key, !c.hidden])) as Record<string, boolean>, [allColumns]);
-  const [visible, setVisible] = React.useState<Record<string, boolean>>({});
-  const [dense, setDense] = React.useState(false);
-  const isLocked = (c: Column<T>) => c.locked ?? ["select", "sel", "actions"].includes(c.key);
-  const isVisible = (c: Column<T>) => isLocked(c) || (visible[c.key] ?? defaults[c.key] ?? true);
-  const columns = allColumns.filter(isVisible);
-  const visibleDataColumns = columns.filter((c) => !isLocked(c)).length;
-  const dirty = dense || Object.keys(visible).some((k) => visible[k] !== defaults[k]);
-  const labelOf = (c: Column<T>) => c.label ?? (typeof c.header === "string" ? c.header : c.key);
-  const reset = () => { setVisible({}); setDense(false); };
-
-  const bar = controls ? (
-    <div className={cn("flex flex-wrap items-center justify-between gap-2 border-b bg-muted/30 px-3 py-1.5 text-xs text-muted-foreground", mobileCard && "hidden md:flex")}>
-      <div className="min-w-0">{controlsSlot ?? <span>{rows.length} registro{rows.length === 1 ? "" : "s"} · {columns.length}/{allColumns.length} columnas</span>}</div>
-      <div className="flex items-center gap-1">
-        <Button variant="ghost" size="sm" className="text-xs" aria-pressed={dense} onClick={() => setDense((d) => !d)}><Rows3 data-icon="inline-start" className={cn("transition-transform", dense && "scale-y-75")} /> {dense ? "Compacta" : "Cómoda"}</Button>
-        <DropdownMenu>
-          <DropdownMenuTrigger render={<Button variant="ghost" size="sm" className="text-xs" />}><Columns3 data-icon="inline-start" /> Columnas</DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-60">
-            <DropdownMenuGroup>
-              <DropdownMenuLabel className="flex items-center justify-between text-xs"><span className="font-semibold text-foreground">Personalizar columnas</span><button type="button" className="flex items-center gap-1 font-medium text-primary hover:underline disabled:opacity-50" disabled={!dirty} onClick={reset}><RotateCcw className="size-3" /> Restablecer</button></DropdownMenuLabel>
-              {allColumns.map((c) => isLocked(c) ? (
-                <DropdownMenuCheckboxItem key={c.key} checked disabled closeOnClick={false} className="justify-between">{labelOf(c) === c.key ? "Acciones" : labelOf(c)}<span className="ml-auto text-[10px] text-muted-foreground">Fijo</span></DropdownMenuCheckboxItem>
-              ) : (
-                <DropdownMenuCheckboxItem key={c.key} checked={isVisible(c)} disabled={isVisible(c) && visibleDataColumns === 1} onCheckedChange={(v) => setVisible((s) => ({ ...s, [c.key]: Boolean(v) }))} closeOnClick={false}>{labelOf(c)}</DropdownMenuCheckboxItem>
-              ))}
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuGroup><DropdownMenuLabel className="text-[11px] font-normal text-muted-foreground">{columns.length} activas de {allColumns.length}</DropdownMenuLabel></DropdownMenuGroup>
-          </DropdownMenuContent>
-        </DropdownMenu>
-        {dirty ? <Button variant="ghost" size="sm" className="text-xs text-primary" onClick={reset}><RotateCcw data-icon="inline-start" /> Restablecer</Button> : null}
-      </div>
-    </div>
-  ) : null;
-
-  if (rows.length === 0) {
-    return <div className={className}>{bar}<EmptyState title="Sin resultados" text={emptyMessage} className="py-10" /></div>;
-  }
+  const cols: ColumnaListado<T>[] = columns.map((c) => ({
+    id: c.key,
+    titulo: c.header,
+    render: c.cell,
+    alinear: c.align === "right" ? "derecha" : "izquierda",
+    className: c.className,
+    tituloTexto: c.label,
+    texto: (row) => nodeText(c.cell(row)),
+    ocultable: controls && !(c.locked ?? LOCKED_KEYS.includes(c.key)),
+    ocultaInicial: c.hidden,
+  }));
   return (
-    <div className={className}>
-      {bar}
-      <div className={cn("overflow-x-auto", mobileCard && "hidden md:block")}>
-        <Table className={cn(dense && "[&_td]:py-1 [&_th]:h-8")} style={{ minWidth }}>
-          <TableHeader className="bg-card">
-            <TableRow>
-              {columns.map((c, i) => (
-                <TableHead
-                  key={c.key}
-                  className={cn(
-                    "whitespace-nowrap",
-                    alignClass[c.align ?? "left"],
-                    i === 0 && "pl-4",
-                    i === columns.length - 1 && "pr-4",
-                    c.headClassName,
-                  )}
-                >
-                  {c.header}
-                </TableHead>
-              ))}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.map((row) => (
-              <TableRow key={rowKey(row)} onClick={onRowClick ? () => onRowClick(row) : undefined} className={rowClassName?.(row)}>
-                {columns.map((c, i) => (
-                  <TableCell
-                    key={c.key}
-                    className={cn(
-                      alignClass[c.align ?? "left"],
-                      i === 0 && "pl-4",
-                      i === columns.length - 1 && "pr-4",
-                      c.className,
-                    )}
-                  >
-                    {c.cell(row)}
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))}
-          </TableBody>
-          {footer ? (
-            <tfoot className="border-t bg-muted/40 font-semibold">
-              <tr>{columns.map((c, i) => <td key={c.key} className={cn("px-2 py-2", alignClass[c.align ?? "left"], i === 0 && "pl-4", i === columns.length - 1 && "pr-4", c.className)}>{footer[c.key]}</td>)}</tr>
-            </tfoot>
-          ) : null}
-        </Table>
-      </div>
-      {mobileCard ? (
-        <ul className="divide-y md:hidden">
-          {rows.map((row) => (
-            <li key={rowKey(row)} className={cn("px-4 py-3", rowClassName?.(row))} onClick={onRowClick ? () => onRowClick(row) : undefined}>
-              {mobileCard(row)}
-            </li>
-          ))}
-        </ul>
-      ) : null}
-    </div>
+    <TablaListado
+      columnas={cols}
+      filas={rows}
+      clave={rowKey}
+      titulo="Listado"
+      buscar={controls}
+      exportar={controls}
+      filtros={controls ? controlsSlot : undefined}
+      vacio={emptyMessage}
+      anchoMinimo={minWidth}
+      onFila={onRowClick}
+      tarjetaMovil={mobileCard}
+      pie={footer}
+      className={className}
+    />
   );
 }
 

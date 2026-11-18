@@ -58,10 +58,10 @@ describe("NumberInput resets and integer mode", () => {
     render(<Resettable />);
     const input = screen.getByRole("textbox", { name: "Cantidad" }) as HTMLInputElement;
     input.focus();
-    fireEvent.change(input, { target: { value: "abc" } }); // commits 0, keeps "abc" while typing
-    expect(input.value).toBe("abc");
+    fireEvent.change(input, { target: { value: "abc" } }); // the DS drops letters: commits 0, shows empty while typing
+    expect(input.value).toBe("");
     fireEvent.click(screen.getByRole("button", { name: "Limpiar" })); // parent sets 0 again while still focused
-    expect(input.value).toBe("abc");
+    expect(input.value).toBe("");
     input.blur();
     fireEvent.blur(input);
     expect(input.value).toBe("0");
