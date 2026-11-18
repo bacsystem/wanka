@@ -3,11 +3,10 @@
 import { ArrowLeft, Building2, CreditCard, FileBadge2, LogIn, Lock, MapPin, RefreshCw, Send, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { toast } from "sonner";
 import { Button } from "khipu-design-system/ui/button";
 import { EntityHeader } from "@/components/shared/entity-header";
-import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
+import { GraficoBarras } from "khipu-design-system/datos/grafico";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StateIcon } from "@/components/shared/dynamic-icon";
 import { SectionCard } from "@/components/shared/section-card";
@@ -18,7 +17,6 @@ import { cn } from "@/lib/utils";
 import type { PlatformTenant } from "../mocks/tenants";
 import { TenantAvatar, TenantStatusBadge, VerticalBadge } from "./tenant-badges";
 
-const chartConfig = { facturas: { label: "Facturas", color: "var(--primary)" }, boletas: { label: "Boletas", color: "var(--chart-2)" }, notas: { label: "Notas", color: "var(--chart-3)" } } satisfies ChartConfig;
 const daily = Array.from({ length: 14 }, (_, i) => { const d = new Date("2026-08-30T00:00:00"); d.setDate(d.getDate() + i); return { day: `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`, facturas: 180 + (i * 37) % 120, boletas: 60 + (i * 23) % 70, notas: 4 + (i % 5) }; });
 const tabs = ["Resumen", "Suscripción y facturación", "Sedes y cajas", "Usuarios", "Certificado y OSE", "Consumo y cuotas", "Auditoría y logs", "Soporte y tickets"];
 
@@ -62,13 +60,7 @@ export function TenantDetail({ tenant: t }: { tenant: PlatformTenant }) {
           </StatGrid>
           <div className="grid gap-4 xl:grid-cols-3">
             <SectionCard title="Emisión diaria de comprobantes" description="Comportamiento en los últimos 14 días (30/08/2026 – 12/09/2026)" className="xl:col-span-2" action={<div className="inline-flex rounded-lg bg-muted p-0.5 text-xs font-medium">{["Últimos 14 días", "Este mes", "Mes anterior"].map((r, i) => <span key={r} className={cn("rounded px-2.5 py-1", i === 0 && "bg-card font-semibold text-primary shadow-xs")}>{r}</span>)}</div>} contentClassName="p-4">
-              <ChartContainer config={chartConfig} className="aspect-auto h-60 w-full">
-                <BarChart data={daily} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-                  <CartesianGrid vertical={false} strokeDasharray="3 3" /><XAxis dataKey="day" tickLine={false} axisLine={false} tickMargin={8} /><YAxis tickLine={false} axisLine={false} width={36} />
-                  <ChartTooltip content={<ChartTooltipContent />} /><ChartLegend content={<ChartLegendContent />} />
-                  <Bar dataKey="facturas" stackId="a" fill="var(--color-facturas)" isAnimationActive={false} /><Bar dataKey="boletas" stackId="a" fill="var(--color-boletas)" isAnimationActive={false} /><Bar dataKey="notas" stackId="a" fill="var(--color-notas)" radius={[3, 3, 0, 0]} isAnimationActive={false} />
-                </BarChart>
-              </ChartContainer>
+<GraficoBarras plano apiladas enteros alto={240} etiqueta="Barras apiladas de facturas, boletas y notas por día" textoTotal="Total" categorias={daily.map((r) => r.day)} series={[{ nombre: "Facturas", valores: daily.map((r) => r.facturas) }, { nombre: "Boletas", valores: daily.map((r) => r.boletas) }, { nombre: "Notas", valores: daily.map((r) => r.notas) }]} />
             </SectionCard>
             <SectionCard title="Actividad reciente" description="Eventos del tenant en las últimas 48 h" contentClassName="p-0">
               <ul className="divide-y text-xs">

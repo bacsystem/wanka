@@ -2,11 +2,10 @@
 
 import { AlertTriangle, Building2, FileText, Plus, Settings2, TrendingUp, UserMinus, UserPlus } from "lucide-react";
 import Link from "next/link";
-import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { toast } from "sonner";
 import { Button } from "khipu-design-system/ui/button";
 import { PageHeader } from "@/components/shared/page-header";
-import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
+import { GraficoLineas } from "khipu-design-system/datos/grafico";
 import { StateIcon } from "@/components/shared/dynamic-icon";
 import { SectionCard } from "@/components/shared/section-card";
 import { StatCard, StatGrid } from "@/components/shared/stat-card";
@@ -16,7 +15,6 @@ import { cn } from "@/lib/utils";
 import { incidents, mrrSeries, oseProviders, platformSummary as s, platformTenants } from "../mocks/tenants";
 import { TenantsTable } from "./tenants-table";
 
-const chartConfig = { mrr: { label: "MRR facturado", color: "var(--primary)" }, goal: { label: "Proyección meta", color: "var(--chart-2)" } } satisfies ChartConfig;
 const priorityMeta = { alta: { label: "Prioridad alta", cls: "border-transparent bg-warning text-warning-foreground", icon: "warning" as const }, bloqueante: { label: "Bloqueante", cls: "border-transparent bg-destructive-suave text-destructive-texto", icon: "error" as const }, moderada: { label: "Moderada", cls: "border-transparent bg-info text-info-foreground", icon: "pending" as const } };
 
 export function AdminDashboard() {
@@ -44,17 +42,18 @@ export function AdminDashboard() {
 
       <div className="grid gap-4 xl:grid-cols-3">
         <SectionCard title="Evolución de ingresos recurrentes (MRR 12 meses)" description="Trayectoria histórica Oct 2025 – Set 2026 (crecimiento compuesto: 6.8% mensual)" className="xl:col-span-2" action={<span className="flex items-center gap-3 text-xs"><span className="rounded bg-accent px-2 py-0.5 font-semibold text-accent-foreground">S/ Soles</span><span className="flex items-center gap-1"><span className="size-2 rounded-full bg-primary" /> MRR facturado</span><span className="flex items-center gap-1"><span className="size-2 rounded-full bg-chart-2" /> Proyección meta</span></span>} contentClassName="p-4">
-          <ChartContainer config={chartConfig} className="aspect-auto h-64 w-full">
-            <AreaChart data={mrrSeries} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-              <defs><linearGradient id="mrrFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="var(--primary)" stopOpacity={0.25} /><stop offset="100%" stopColor="var(--primary)" stopOpacity={0.02} /></linearGradient></defs>
-              <CartesianGrid vertical={false} strokeDasharray="3 3" />
-              <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={8} />
-              <YAxis tickLine={false} axisLine={false} width={64} tickFormatter={(v: number) => `S/${Math.round(v / 1000)}k`} />
-              <ChartTooltip content={<ChartTooltipContent formatter={(v, name) => <span className="flex w-full justify-between gap-4"><span className="text-muted-foreground">{chartConfig[name as keyof typeof chartConfig].label}</span><span className="font-mono font-medium">{formatCurrency(Number(v))}</span></span>} />} />
-              <Area type="monotone" dataKey="goal" stroke="var(--chart-2)" strokeDasharray="4 4" fill="transparent" isAnimationActive={false} />
-              <Area type="monotone" dataKey="mrr" stroke="var(--primary)" strokeWidth={2.5} fill="url(#mrrFill)" dot={{ r: 3, fill: "var(--primary)" }} isAnimationActive={false} />
-            </AreaChart>
-          </ChartContainer>
+          <GraficoLineas
+            plano
+            area
+            alto={256}
+            etiqueta="Líneas de MRR facturado y meta en 12 meses"
+            categorias={mrrSeries.map((r) => r.month)}
+            series={[
+              { nombre: "MRR facturado", valores: mrrSeries.map((r) => r.mrr) },
+              { nombre: "Proyección meta", valores: mrrSeries.map((r) => r.goal), discontinua: true },
+            ]}
+            formato={formatCurrency}
+          />
           <div className="mt-3 grid grid-cols-3 gap-3 border-t pt-3 text-center text-xs">
             <div><p className="text-muted-foreground">MRR inicio (Oct 2025)</p><p className="font-mono text-sm font-bold">{formatCurrency(mrrSeries[0].mrr)}</p></div>
             <div><p className="text-muted-foreground">Crecimiento neto anual</p><p className="font-mono text-sm font-bold text-success-foreground">+{formatCurrency(last.mrr - mrrSeries[0].mrr)} (+{Math.round(((last.mrr - mrrSeries[0].mrr) / mrrSeries[0].mrr) * 1000) / 10}%)</p></div>

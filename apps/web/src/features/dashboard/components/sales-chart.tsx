@@ -2,17 +2,15 @@
 
 import { Download } from "lucide-react";
 import * as React from "react";
-import { Bar, BarChart, Cell, XAxis, YAxis } from "recharts";
 import { toast } from "sonner";
 import { Button } from "khipu-design-system/ui/button";
 import { Tag } from "@/components/shared/status-badge";
-import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
+import { GraficoBarras } from "khipu-design-system/datos/grafico";
 import { cn } from "@/lib/utils";
 import { formatCurrency, formatDate } from "@/lib/format";
 import type { DailySales } from "@/types/domain";
 import { SectionCard } from "@/components/shared/section-card";
 
-const chartConfig = { total: { label: "Ventas", color: "var(--chart-1)" } } satisfies ChartConfig;
 const ranges = [{ id: "7", label: "7 días", days: 7 }, { id: "30", label: "30 días", days: 30 }, { id: "month", label: "Este mes", days: 12 }] as const;
 
 /** Stitch card: title + SUNAT badge + net total, range segmented control, bars with the peak highlighted, week labels. */
@@ -22,8 +20,6 @@ export function SalesChartCard({ data }: { data: DailySales[] }) {
   const rows = data.slice(-days);
   const total = rows.reduce((s, r) => s + r.total, 0);
   const peak = rows.reduce((m, r) => (r.total > m.total ? r : m), rows[0]);
-  const last = rows.at(-1);
-  const weeks = Math.min(4, Math.ceil(rows.length / 7));
   return (
     <SectionCard
       title={<span className="flex flex-wrap items-center gap-2">Ventas últimos {days === 12 ? "días del mes" : `${days} días`} <Tag tone="success" label="SUNAT Facturado" /></span>}
@@ -38,42 +34,18 @@ export function SalesChartCard({ data }: { data: DailySales[] }) {
       </>}
       contentClassName="p-4 pt-4"
     >
-      <div>
-        <ChartContainer config={chartConfig} className="aspect-auto h-44 w-full sm:h-48">
-          <BarChart data={rows} margin={{ top: 8, right: 0, left: 0, bottom: 0 }} barCategoryGap={6}>
-            <XAxis dataKey="date" hide />
-            <YAxis hide domain={[0, "dataMax"]} />
-            <ChartTooltip
-              cursor={{ fill: "var(--muted)" }}
-              content={<ChartTooltipContent labelFormatter={(d) => formatDate(String(d))} formatter={(value) => <span className="font-mono font-medium tabular-nums">{formatCurrency(Number(value))}</span>} />}
-            />
-            <Bar dataKey="total" radius={[3, 3, 0, 0]} isAnimationActive={false}>
-              {rows.map((r) => <Cell key={r.date} fill={r.date === peak?.date || r.date === last?.date ? "var(--primary)" : "var(--chart-5)"} />)}
-            </Bar>
-          </BarChart>
-        </ChartContainer>
-        <div className="flex justify-between pt-2 text-[11px] font-medium text-muted-foreground">
-          {Array.from({ length: weeks }, (_, i) => {
-            const d = rows[Math.min(rows.length - 1, i * 7)];
-            const isLast = i === weeks - 1;
-            return <span key={i} className={cn(isLast && "font-bold text-primary")}>{isLast ? `Semana ${i + 1} (actual)` : `Semana ${i + 1} (${formatDate(d.date).slice(0, 5)})`}</span>;
-          })}
-        </div>
-      </div>
+      <GraficoBarras
+        plano
+        alto={176}
+        etiqueta="Barras de ventas netas por día"
+        categorias={rows.map((r) => formatDate(r.date).slice(0, 5))}
+        series={[{ nombre: "Ventas", valores: rows.map((r) => r.total) }]}
+        formato={formatCurrency}
+        destacado={rows.findIndex((r) => r.date === peak?.date)}
+        rotuloVisible={(i) => i % 7 === 0 || i === rows.length - 1}
+        tituloDeCategoria={(i) => formatDate(rows[i].date)}
+        descripcion={`Facturación neta de ${rows.length} días: ${formatCurrency(total)}; el pico fue el ${formatDate(peak.date)} con ${formatCurrency(peak.total)}.`}
+      />
     </SectionCard>
-  );
-}
-
-/** Bare chart (used by the industry dashboards). */
-export function SalesChart({ data }: { data: DailySales[] }) {
-  return (
-    <ChartContainer config={chartConfig} className="aspect-auto h-56 w-full sm:h-64">
-      <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }} barCategoryGap={3}>
-        <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} minTickGap={24} tickFormatter={(d: string) => formatDate(d).slice(0, 5)} />
-        <YAxis tickLine={false} axisLine={false} width={44} tickFormatter={(v: number) => (v >= 1000 ? `${Math.round(v / 1000)}k` : String(v))} />
-        <ChartTooltip cursor={{ fill: "var(--muted)" }} content={<ChartTooltipContent labelFormatter={(d) => formatDate(String(d))} formatter={(value) => <span className="font-mono font-medium tabular-nums">{formatCurrency(Number(value))}</span>} />} />
-        <Bar dataKey="total" fill="var(--color-total)" radius={[3, 3, 0, 0]} isAnimationActive={false} />
-      </BarChart>
-    </ChartContainer>
   );
 }

@@ -2,10 +2,9 @@
 
 import { Activity, Download, FileBadge2, Route, ShieldAlert, Zap } from "lucide-react";
 import * as React from "react";
-import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
 import { toast } from "sonner";
 import { Button } from "khipu-design-system/ui/button";
-import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
+import { GraficoLineas } from "khipu-design-system/datos/grafico";
 import { StateIcon } from "@/components/shared/dynamic-icon";
 import { PageHeader } from "@/components/shared/page-header";
 import { SectionCard } from "@/components/shared/section-card";
@@ -13,7 +12,6 @@ import { StatusBadge, Tag } from "@/components/shared/status-badge";
 import { cn } from "@/lib/utils";
 import { expiringCerts, latency24h, providers, rejectTop } from "../mocks/billing";
 
-const chartConfig = { sunat: { label: "SUNAT Directo", color: "#d97706" }, bizlinks: { label: "Bizlinks OSE", color: "var(--primary)" }, nubefact: { label: "Nubefact", color: "#059669" }, efact: { label: "Efact", color: "#7c3aed" } } satisfies ChartConfig;
 
 export function MonitoringScreen() {
   const [range, setRange] = React.useState("24h");
@@ -41,13 +39,20 @@ export function MonitoringScreen() {
 
       <div className="grid gap-4 xl:grid-cols-3">
         <SectionCard title="Telemetría de latencia en timbrado (últimas 24 horas)" description="Comparativa directa de tiempo de respuesta de autorización CDR en milisegundos" className="xl:col-span-2" action={<div className="flex items-center gap-2"><div className="inline-flex rounded-lg bg-muted p-0.5 text-xs font-medium">{["24h", "7 días", "30 días"].map((r) => <button key={r} type="button" onClick={() => setRange(r)} className={cn("rounded px-2.5 py-1", range === r && "bg-card font-semibold text-primary shadow-xs")}>{r}</button>)}</div><Button variant="outline" size="icon" aria-label="Exportar CSV" onClick={() => toast.success("CSV exportado")}><Download /></Button></div>} contentClassName="p-4">
-          <ChartContainer config={chartConfig} className="aspect-auto h-64 w-full">
-            <LineChart data={latency24h} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-              <CartesianGrid vertical={false} strokeDasharray="3 3" /><XAxis dataKey="hour" tickLine={false} axisLine={false} tickMargin={8} minTickGap={28} /><YAxis tickLine={false} axisLine={false} width={48} tickFormatter={(v: number) => `${v}ms`} />
-              <ChartTooltip content={<ChartTooltipContent />} /><ChartLegend content={<ChartLegendContent />} />
-              {(["sunat", "bizlinks", "nubefact", "efact"] as const).map((k) => <Line key={k} type="monotone" dataKey={k} stroke={`var(--color-${k})`} strokeWidth={k === "sunat" ? 2.5 : 1.75} dot={false} isAnimationActive={false} />)}
-            </LineChart>
-          </ChartContainer>
+          <GraficoLineas
+            plano
+            alto={256}
+            etiqueta="Líneas de latencia por proveedor en 24 horas"
+            categorias={latency24h.map((r) => r.hour)}
+            series={[
+              { nombre: "SUNAT Directo", valores: latency24h.map((r) => r.sunat) },
+              { nombre: "Bizlinks OSE", valores: latency24h.map((r) => r.bizlinks) },
+              { nombre: "Nubefact", valores: latency24h.map((r) => r.nubefact) },
+              { nombre: "Efact", valores: latency24h.map((r) => r.efact) },
+            ]}
+            formato={(v) => `${Math.round(v)} ms`}
+            enteros
+          />
         </SectionCard>
         <div className="flex flex-col gap-4">
           <SectionCard title="Certificados por vencer" description="Ventanas de 30 / 60 / 90 días" icon={FileBadge2} iconTone="warning" contentClassName="p-0">

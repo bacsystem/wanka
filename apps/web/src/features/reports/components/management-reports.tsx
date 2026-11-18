@@ -3,10 +3,9 @@
 import { CalendarClock, Download, FileSpreadsheet } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
-import { Bar, BarChart, CartesianGrid, Cell, Line, LineChart, Pie, PieChart, XAxis, YAxis } from "recharts";
 import { Badge } from "khipu-design-system/ui/badge";
 import { Button } from "khipu-design-system/ui/button";
-import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
+import { GraficoBarras, GraficoDona, GraficoLineas } from "khipu-design-system/datos/grafico";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -20,7 +19,6 @@ import { BarChart3, Receipt, ShoppingCart, PieChart as PieIcon } from "lucide-re
 import { bySite, byPayment, dailySales, heatmap, mgmtSummary as s, receivablesAging, topCustomers, topPros, topServices, weeklySales } from "../mocks/management";
 import { TARJETA } from "@/lib/estilos";
 
-const lineCfg = { sales: { label: "Ventas", color: "var(--chart-1)" }, prev: { label: "Período anterior", color: "var(--chart-4)" } } satisfies ChartConfig;
 const pct = (a: number, b: number) => ((a - b) / b) * 100;
 const ranges = ["Hoy", "Ayer", "Esta semana", "Este mes", "Trimestre", "Personalizado"];
 const tabs = [["periodo", "Ventas por período"], ["producto", "Por producto / servicio"], ["vendedor", "Por vendedor / profesional"], ["sede", "Por sede"], ["pago", "Por medio de pago"], ["cxc", "Cuentas por cobrar"], ["clientes", "Clientes"]];
@@ -63,10 +61,24 @@ export function ManagementReports() {
           </StatGrid>
           <div className="grid gap-4 xl:grid-cols-3">
             <SectionCard title="Curva diaria de ventas" className="xl:col-span-2" contentClassName="p-4">
-              <ChartContainer config={lineCfg} className="aspect-auto h-64 w-full"><LineChart data={dailySales} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}><CartesianGrid vertical={false} strokeDasharray="3 3" /><XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} minTickGap={24} tickFormatter={(d: string) => formatDate(d).slice(0, 5)} /><YAxis tickLine={false} axisLine={false} width={44} tickFormatter={(v: number) => `${Math.round(v / 1000)}k`} /><ChartTooltip content={<ChartTooltipContent labelFormatter={(d) => formatDate(String(d))} formatter={(v, name) => <span className="flex w-full justify-between gap-4"><span className="text-muted-foreground">{lineCfg[name as keyof typeof lineCfg].label}</span><span className="font-mono">{formatCurrency(Number(v))}</span></span>} />} /><ChartLegend content={<ChartLegendContent />} /><Line type="monotone" dataKey="sales" stroke="var(--color-sales)" strokeWidth={2} dot={false} isAnimationActive={false} />{compare ? <Line type="monotone" dataKey="prev" stroke="var(--color-prev)" strokeWidth={1.5} strokeDasharray="4 4" dot={false} isAnimationActive={false} /> : null}</LineChart></ChartContainer>
+              <GraficoLineas
+                plano
+                alto={256}
+                etiqueta="Líneas de ventas por día del período"
+                categorias={dailySales.map((d) => formatDate(d.date).slice(0, 5))}
+                series={[{ nombre: "Ventas", valores: dailySales.map((d) => d.sales) }, ...(compare ? [{ nombre: "Período anterior", valores: dailySales.map((d) => d.prev), discontinua: true }] : [])]}
+                formato={formatCurrency}
+              />
             </SectionCard>
             <SectionCard title="Ventas por semana" contentClassName="p-4">
-              <ChartContainer config={lineCfg} className="aspect-auto h-64 w-full"><BarChart data={weeklySales} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}><CartesianGrid vertical={false} strokeDasharray="3 3" /><XAxis dataKey="week" tickLine={false} axisLine={false} /><YAxis tickLine={false} axisLine={false} width={44} tickFormatter={(v: number) => `${Math.round(v / 1000)}k`} /><ChartTooltip content={<ChartTooltipContent formatter={(v) => <span className="font-mono">{formatCurrency(Number(v))}</span>} />} /><Bar dataKey="sales" fill="var(--color-sales)" radius={[3, 3, 0, 0]} isAnimationActive={false} />{compare ? <Bar dataKey="prev" fill="var(--color-prev)" radius={[3, 3, 0, 0]} isAnimationActive={false} /> : null}</BarChart></ChartContainer>
+              <GraficoBarras
+                plano
+                alto={256}
+                etiqueta="Barras de ventas por semana del período"
+                categorias={weeklySales.map((w) => w.week)}
+                series={[{ nombre: "Ventas", valores: weeklySales.map((w) => w.sales) }, ...(compare ? [{ nombre: "Período anterior", valores: weeklySales.map((w) => w.prev) }] : [])]}
+                formato={formatCurrency}
+              />
             </SectionCard>
           </div>
           <div className="grid gap-4 xl:grid-cols-3">
@@ -83,7 +95,7 @@ export function ManagementReports() {
       {tab === "producto" ? <SectionCard title="Ventas por producto / servicio" contentClassName="p-0"><DataTable columns={[{ key: "name", header: "Servicio", cell: (t) => t.name }, { key: "amount", header: "Ventas", align: "right", cell: (t) => <span className="font-mono">{formatCurrency(t.amount)}</span> }, { key: "share", header: "Participación", align: "right", cell: (t) => <span className="font-mono">{t.share}%</span> }]} rows={topServices} rowKey={(t) => t.name} minWidth="480px" /></SectionCard> : null}
       {tab === "vendedor" ? <SectionCard title="Ventas por profesional" contentClassName="p-0"><DataTable columns={[{ key: "name", header: "Profesional", cell: (t) => t.name }, { key: "docs", header: "CPE", align: "right", cell: (t) => <span className="font-mono">{t.docs}</span> }, { key: "amount", header: "Ventas", align: "right", cell: (t) => <span className="font-mono">{formatCurrency(t.amount)}</span> }, { key: "ticket", header: "Ticket", align: "right", cell: (t) => <span className="font-mono">{formatCurrency(t.amount / t.docs)}</span> }]} rows={topPros} rowKey={(t) => t.name} minWidth="560px" /></SectionCard> : null}
       {tab === "sede" ? <StatGrid columns={3}>{bySite.map((b) => <StatCard key={b.site} label={`Sede ${b.site}`} value={formatCurrency(b.sales)} icon={BarChart3} hint={`${b.docs} CPE · ticket ${formatCurrency(b.ticket)}`} />)}</StatGrid> : null}
-      {tab === "pago" ? <SectionCard title="Distribución por medio de pago" contentClassName="grid gap-4 p-4 md:grid-cols-2"><ChartContainer config={{}} className="aspect-square h-56 w-full"><PieChart><Pie data={byPayment} dataKey="value" nameKey="name" innerRadius={50} outerRadius={80} isAnimationActive={false}>{byPayment.map((e) => <Cell key={e.name} fill={e.fill} />)}</Pie><ChartTooltip content={<ChartTooltipContent formatter={(v) => `${v}%`} />} /></PieChart></ChartContainer><ul className="self-center divide-y text-sm">{byPayment.map((b) => <li key={b.name} className="flex items-center gap-2 py-1.5"><span className="size-3 rounded-sm" style={{ background: b.fill }} /><span className="flex-1">{b.name}</span><span className="font-mono">{b.value}%</span><span className="w-24 text-right font-mono text-xs text-muted-foreground">{formatCurrency((s.sales * b.value) / 100)}</span></li>)}</ul></SectionCard> : null}
+      {tab === "pago" ? <SectionCard title="Distribución por medio de pago" contentClassName="p-4"><GraficoDona plano etiqueta="Dona de ventas por medio de pago" partes={byPayment.map((b) => ({ nombre: b.name, valor: b.value, detalle: formatCurrency((s.sales * b.value) / 100) }))} formato={(v) => `${v}%`} /></SectionCard> : null}
       {tab === "cxc" ? <SectionCard title="Antigüedad de cuentas por cobrar" contentClassName="p-0"><DataTable columns={[{ key: "bucket", header: "Tramo", cell: (r) => <span className={cn(receivablesAging.indexOf(r) >= 3 && "text-destructive")}>{r.bucket}</span> }, { key: "count", header: "Comprobantes", align: "right", cell: (r) => <span className="font-mono">{r.count}</span> }, { key: "amount", header: "Saldo", align: "right", cell: (r) => <span className="font-mono font-medium">{formatCurrency(r.amount)}</span> }]} rows={receivablesAging} rowKey={(r) => r.bucket} minWidth="480px" footer={{ bucket: "Total cartera", count: <span className="font-mono">{receivablesAging.reduce((a, r) => a + r.count, 0)}</span>, amount: <span className="font-mono">{formatCurrency(receivablesAging.reduce((a, r) => a + r.amount, 0))}</span> }} /></SectionCard> : null}
       {tab === "clientes" ? <SectionCard title="Top clientes del período" contentClassName="p-0"><DataTable columns={[{ key: "name", header: "Cliente", cell: (c) => c.name }, { key: "docs", header: "CPE", align: "right", cell: (c) => <span className="font-mono">{c.docs}</span> }, { key: "amount", header: "Facturado", align: "right", cell: (c) => <span className="font-mono font-medium">{formatCurrency(c.amount)}</span> }]} rows={topCustomers} rowKey={(c) => c.name} minWidth="480px" /></SectionCard> : null}
     </>

@@ -1,10 +1,7 @@
-import type { LucideIcon } from "lucide-react";
-import { TrendingDown, TrendingUp } from "lucide-react";
 import type { ReactNode } from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { ENTRADA } from "@/lib/estilos";
-import { formatPercent } from "@/lib/format";
-import { cn } from "@/lib/utils";
+import { Kpi } from "khipu-design-system/datos/kpi";
+import type { IconoComponente } from "khipu-design-system/lib/iconos";
+import { FilaMetricas, Metrica, type TonoMetrica } from "khipu-design-system/patrones/metricas";
 
 export type StatTone = "default" | "success" | "warning" | "danger" | "info";
 
@@ -12,7 +9,7 @@ interface StatCardProps {
   label: string;
   value: string;
   suffix?: string;
-  icon: LucideIcon;
+  icon: IconoComponente;
   deltaPercent?: number | null;
   deltaLabel?: string;
   hint?: ReactNode;
@@ -20,7 +17,6 @@ interface StatCardProps {
   tone?: StatTone;
   emphasizeValue?: boolean;
   highlight?: boolean;
-  className?: string;
 }
 
 export const toneBox: Record<StatTone, string> = {
@@ -39,46 +35,25 @@ export const toneText: Record<StatTone, string> = {
   danger: "text-destructive-texto",
 };
 
-export function StatCard({ label, value, suffix, icon: Icon, deltaPercent, deltaLabel, hint, footer, tone = "default", emphasizeValue, highlight, className }: StatCardProps) {
-  const hasDelta = deltaPercent !== undefined && deltaPercent !== null;
-  const positive = hasDelta && deltaPercent >= 0;
+const dsTone: Record<StatTone, TonoMetrica> = { default: "neutro", success: "ok", warning: "aviso", danger: "error", info: "acento" };
+
+/**
+ * @deprecated W8: use `Metrica` (or `Kpi` when there is a delta) from `khipu-design-system/patrones/metricas` and `datos/kpi` directly.
+ * Adapter over the DS: a card with `deltaPercent` is a `Kpi`, anything else a `Metrica` (docs/frontend-migration-khipu.md §3.1).
+ */
+export function StatCard({ label, value, suffix, icon, deltaPercent, deltaLabel, hint, footer, tone = "default", emphasizeValue, highlight }: StatCardProps) {
+  // Emphasis on a neutral card needs a colour to paint: the accent (DS-F review).
+  const tono: TonoMetrica = emphasizeValue && tone === "default" ? "acento" : dsTone[tone];
+  const valor = <span data-testid="kpi-value">{value}</span>;
+  if (deltaPercent !== undefined && deltaPercent !== null) {
+    return (
+      <Kpi etiqueta={label} valor={valor} sufijo={suffix} icono={icon} tono={tono} valorConTono={emphasizeValue} variacion={deltaPercent} periodo={deltaLabel} ayuda={hint} pie={footer} destacada={highlight} />
+    );
+  }
   return (
-    <Card
-      className={cn(
-        "gap-0 py-0 transition-colors",
-        ENTRADA,
-        highlight && "border-acento-borde bg-acento-superficie text-acento-superficie-texto [&_.border-t]:border-acento-superficie-texto/15 [&_.text-muted-foreground]:text-acento-superficie-texto/80",
-        className,
-      )}
-    >
-      <CardContent className="flex h-full flex-col p-4">
-        <div className="flex items-center justify-between gap-2 text-muted-foreground">
-          <span className="text-etiqueta font-medium">{label}</span>
-          <span className={cn("flex size-7 shrink-0 items-center justify-center rounded-lg", highlight ? "bg-acento-superficie-texto/10 text-acento-superficie-texto" : toneBox[tone])}>
-            <Icon className="size-4" strokeWidth={2} aria-hidden />
-          </span>
-        </div>
-        <div className="mt-2 mb-1">
-          <div className={cn("text-metrica font-semibold tracking-tight tabular-nums", emphasizeValue && toneText[tone])} data-testid="kpi-value">
-            {value}
-            {suffix ? <span className="ml-1.5 font-sans text-etiqueta font-normal text-muted-foreground">{suffix}</span> : null}
-          </div>
-          {hasDelta || hint ? (
-            <div className="mt-1 flex flex-wrap items-center gap-1.5 text-etiqueta">
-              {hasDelta ? (
-                <span className={cn("inline-flex items-center gap-0.5 font-semibold", positive ? "text-success-foreground" : "text-destructive-texto")}>
-                  {positive ? <TrendingUp className="size-3.5" /> : <TrendingDown className="size-3.5" />}
-                  {formatPercent(deltaPercent)}
-                </span>
-              ) : null}
-              {deltaLabel ? <span className="text-muted-foreground">{deltaLabel}</span> : null}
-              {hint ? <span className={cn("text-muted-foreground", emphasizeValue && cn("font-medium", toneText[tone]))}>{hint}</span> : null}
-            </div>
-          ) : null}
-        </div>
-        {footer ? <div className="mt-auto flex items-center gap-2 border-t border-border/60 pt-2 text-[11px] font-medium text-muted-foreground">{footer}</div> : null}
-      </CardContent>
-    </Card>
+    <Metrica etiqueta={label} sufijo={suffix} icono={icon} tono={tono} valorConTono={emphasizeValue} ayuda={hint ?? deltaLabel} pie={footer} destacada={highlight}>
+      {valor}
+    </Metrica>
   );
 }
 
@@ -86,42 +61,29 @@ export function StatChip({ children }: { children: ReactNode }) {
   return <span className="rounded-full bg-secondary px-2.5 py-0.5 font-semibold text-foreground/80">{children}</span>;
 }
 
-export function StatGrid({ children, columns = 4 }: { children: React.ReactNode; columns?: 3 | 4 | 5 }) {
-  const cols = { 3: "xl:grid-cols-3", 4: "xl:grid-cols-4", 5: "xl:grid-cols-5" }[columns];
+/** @deprecated W8: use `FilaMetricas desplazable` from `khipu-design-system/patrones/metricas`. */
+export function StatGrid({ children, columns = 4, label = "Indicadores" }: { children: ReactNode; columns?: 3 | 4 | 5; label?: string }) {
   return (
-    <section
-      aria-label="Indicadores"
-      className={cn(
-        "-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1 sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 sm:pb-0 [&>*]:min-w-44 [&>*]:shrink-0 [&>*]:snap-start sm:[&>*]:min-w-0 sm:[&>*]:shrink",
-        cols,
-      )}
-    >
+    <FilaMetricas desplazable columnas={columns} etiqueta={label}>
       {children}
-    </section>
+    </FilaMetricas>
   );
 }
 
 interface StatCompactProps {
   label: string;
   value: string;
-  icon: LucideIcon;
+  icon: IconoComponente;
   tone?: StatTone;
   emphasizeValue?: boolean;
-  className?: string;
 }
 
-export function StatCompact({ label, value, icon: Icon, tone = "default", emphasizeValue, className }: StatCompactProps) {
+/** @deprecated W8: use `Metrica` from `khipu-design-system/patrones/metricas`. */
+export function StatCompact({ label, value, icon, tone = "default", emphasizeValue }: StatCompactProps) {
+  const tono: TonoMetrica = emphasizeValue && tone === "default" ? "acento" : dsTone[tone];
   return (
-    <Card className={cn("gap-0 py-0", className)}>
-      <CardContent className="flex items-center gap-3 p-3.5">
-        <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-xl", toneBox[tone])}>
-          <Icon className="size-4" strokeWidth={2} aria-hidden />
-        </span>
-        <div className="min-w-0">
-          <p className="truncate text-etiqueta font-medium text-muted-foreground">{label}</p>
-          <p className={cn("font-mono text-titulo font-bold tracking-tight tabular-nums", emphasizeValue && toneText[tone])}>{value}</p>
-        </div>
-      </CardContent>
-    </Card>
+    <Metrica etiqueta={label} icono={icon} tono={tono} valorConTono={emphasizeValue}>
+      {value}
+    </Metrica>
   );
 }

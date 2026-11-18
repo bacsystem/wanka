@@ -3,9 +3,8 @@
 import { Banknote, BarChart3, Download, FileText, MessageCircle, MessageSquare, PlusCircle, SlidersHorizontal } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { Button } from "khipu-design-system/ui/button";
-import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
+import { GraficoBarras } from "khipu-design-system/datos/grafico";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -32,7 +31,6 @@ const statusMeta: Record<ReceivableStatus, { label: string; tone: BadgeTone }> =
   judicial: { label: "Cobranza judicial", tone: "neutral" },
 };
 
-const chartConfig = { real: { label: "Cobrado real", color: "var(--chart-1)" }, projected: { label: "Proyectado", color: "var(--chart-3)" } } satisfies ChartConfig;
 
 interface Props {
   rows: Receivable[];
@@ -91,17 +89,7 @@ export function ReceivablesScreen({ rows: all, weekly, spot, kpis }: Props & { k
       {kpis}
       <div className="grid gap-4 xl:grid-cols-3">
         <SectionCard title="Proyección semanal de cobranza vs facturación" icon={BarChart3} className="xl:col-span-2" contentClassName="p-4">
-          <ChartContainer config={chartConfig} className="aspect-auto h-56 w-full">
-            <BarChart data={weekly} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-              <CartesianGrid vertical={false} strokeDasharray="3 3" />
-              <XAxis dataKey="week" tickLine={false} axisLine={false} tickMargin={8} />
-              <YAxis tickLine={false} axisLine={false} width={44} tickFormatter={(v: number) => `${Math.round(v / 1000)}k`} />
-              <ChartTooltip content={<ChartTooltipContent formatter={(v, name) => <span className="flex w-full justify-between gap-4"><span className="text-muted-foreground">{chartConfig[name as keyof typeof chartConfig].label}</span><span className="font-mono font-medium">{formatCurrency(Number(v))}</span></span>} />} />
-              <ChartLegend content={<ChartLegendContent />} />
-              <Bar dataKey="real" fill="var(--color-real)" radius={[3, 3, 0, 0]} isAnimationActive={false} />
-              <Bar dataKey="projected" fill="var(--color-projected)" radius={[3, 3, 0, 0]} isAnimationActive={false} />
-            </BarChart>
-          </ChartContainer>
+          <GraficoBarras plano alto={224} etiqueta="Barras de cobrado real y proyectado por semana" categorias={weekly.map((w) => w.week)} series={[{ nombre: "Cobrado real", valores: weekly.map((w) => w.real) }, { nombre: "Proyectado", valores: weekly.map((w) => w.projected) }]} formato={formatCurrency} />
         </SectionCard>
         <SectionCard title="Detracción SUNAT pendiente" action={<Tag label="SPOT BN" />} contentClassName="flex flex-col gap-4 p-4">
           <div className="flex items-center gap-4">

@@ -4,7 +4,8 @@ import { AlertTriangle, ArrowLeft, BedDouble, Bell, CalendarPlus, LayoutGrid, Me
 import Link from "next/link";
 import * as React from "react";
 import { toast } from "sonner";
-import { Line, LineChart, ResponsiveContainer, Tooltip, YAxis } from "recharts";
+import { Scales } from "@phosphor-icons/react";
+import { Kpi } from "khipu-design-system/datos/kpi";
 import { Button } from "khipu-design-system/ui/button";
 import { EntityHeader } from "@/components/shared/entity-header";
 import { Input } from "@/components/ui/input";
@@ -21,8 +22,6 @@ import { StatusBadge, Tag, type BadgeTone } from "@/components/shared/status-bad
 import { formatCurrency, formatDate } from "@/lib/format";
 import { Scale, Wallet, CalendarCheck, ClipboardList } from "lucide-react";
 import type { Pet, Vaccine, VetEvolution } from "../mocks/pets";
-import { TARJETA } from "@/lib/estilos";
-import { cn } from "@/lib/utils";
 
 const vMeta: Record<Vaccine["status"], { label: string; tone: BadgeTone }> = { vigente: { label: "Vigente", tone: "success" }, por_vencer: { label: "Vence en 12 días", tone: "warning" }, vencida: { label: "Vencida", tone: "danger" } };
 
@@ -59,7 +58,7 @@ export function PetDetail({ pet, vaccines, evolutions, grooming }: { pet: Pet; v
         <StatCard label="Historial consultas" value={String(pet.visits)} suffix="atenciones" icon={ClipboardList} hint={<span className="font-semibold text-primary">Paciente regular activo</span>} />
         <StatCard label="Última visita" value={formatDate(pet.lastVisit)} icon={CalendarCheck} tone="info" hint="Hace 16 días (Dermatología)" />
         <StatCard label="Saldo / deuda" value={formatCurrency(pet.debt)} icon={Wallet} tone="success" emphasizeValue hint={<span className="font-semibold text-primary">{pet.debt ? "Pendiente de cobro" : "Al día · Sin saldos pendientes"}</span>} />
-        <div className={cn(TARJETA, "flex flex-col gap-2 p-4")}><div className="flex items-center justify-between"><span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Control de peso</span><span className="flex size-7 items-center justify-center rounded-md bg-accent text-accent-foreground"><Scale className="size-4" strokeWidth={1.5} /></span></div><div className="flex items-end gap-3"><span className="font-mono text-2xl font-semibold tabular-nums">{pet.weightKg.toFixed(1)} kg</span><div className="flex-1"><ResponsiveContainer width="100%" height="100%"><LineChart data={pet.weights}><YAxis hide domain={["dataMin - 0.5", "dataMax + 0.5"]} /><Tooltip formatter={(v) => [`${v} kg`, "Peso"]} labelFormatter={(l) => String(l)} contentStyle={{ fontSize: 11 }} /><Line type="monotone" dataKey="kg" stroke="var(--primary)" strokeWidth={2} dot={{ r: 2 }} isAnimationActive={false} /></LineChart></ResponsiveContainer></div></div><p className="text-xs text-muted-foreground">+{(pet.weights.at(-1)!.kg - pet.weights[0].kg).toFixed(1)} kg en 6 meses</p></div>
+        <Kpi etiqueta="Control de peso" valor={`${pet.weightKg.toFixed(1)} kg`} icono={Scales} serie={pet.weights.map((w) => w.kg)} ayuda={`+${(pet.weights.at(-1)!.kg - pet.weights[0].kg).toFixed(1)} kg en 6 meses`} />
       </StatGrid>
 
       <Tabs value={tab} onValueChange={(v) => setTab(String(v))} className="min-w-0 max-w-full"><TabsList variant="card"><TabsTrigger value="resumen"><LayoutGrid /> Resumen general</TabsTrigger><TabsTrigger value="carne"><Syringe /> Carné de vacunas y desparasitación <span className="rounded bg-success px-1.5 font-mono text-[10px] text-success-foreground ">5</span></TabsTrigger><TabsTrigger value="hc"><ClipboardList /> Historia clínica (SOAP) <span className="rounded bg-muted px-1.5 font-mono text-[10px]">{pet.visits}</span></TabsTrigger><TabsTrigger value="hosp"><BedDouble /> Hospitalización</TabsTrigger><TabsTrigger value="groom"><Scissors /> Peluquería / grooming</TabsTrigger><TabsTrigger value="cpe"><Receipt /> Comprobantes CPE</TabsTrigger></TabsList></Tabs>

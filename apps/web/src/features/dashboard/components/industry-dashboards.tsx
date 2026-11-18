@@ -2,10 +2,9 @@
 
 import { Bike, ChefHat, Clock, HeartPulse, PawPrint, Receipt, Stethoscope, Syringe, TrendingUp, UtensilsCrossed } from "lucide-react";
 import Link from "next/link";
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { Badge } from "khipu-design-system/ui/badge";
 import { Button } from "khipu-design-system/ui/button";
-import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
+import { GraficoBarras } from "khipu-design-system/datos/grafico";
 import { SectionCard } from "@/components/shared/section-card";
 import { StatCard, StatGrid } from "@/components/shared/stat-card";
 import { StatusBadge } from "@/components/shared/status-badge";
@@ -14,7 +13,6 @@ import { SunatStatusCard } from "@/features/dashboard/components/sunat-status-ca
 import { formatCurrency } from "@/lib/format";
 import type { DashboardData } from "@/types/domain";
 
-const cfg = { total: { label: "Ventas", color: "var(--chart-1)" } } satisfies ChartConfig;
 const hourly = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22].map((h) => ({ h: `${h}:00`, total: [80, 120, 160, 240, 620, 980, 760, 320, 180, 160, 240, 560, 840, 520, 210][h - 8] }));
 
 export function RestaurantDashboard({ data }: { data: DashboardData }) {
@@ -29,7 +27,7 @@ export function RestaurantDashboard({ data }: { data: DashboardData }) {
       <div className="grid gap-4 xl:grid-cols-3">
         <div className="flex min-w-0 flex-col gap-4 xl:col-span-2">
           <SectionCard title="Ventas por hora del día" contentClassName="p-4">
-            <ChartContainer config={cfg} className="aspect-auto h-56 w-full"><BarChart data={hourly} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}><CartesianGrid vertical={false} strokeDasharray="3 3" /><XAxis dataKey="h" tickLine={false} axisLine={false} tickMargin={8} minTickGap={16} /><YAxis tickLine={false} axisLine={false} width={40} /><ChartTooltip content={<ChartTooltipContent formatter={(v) => <span className="font-mono">{formatCurrency(Number(v))}</span>} />} /><Bar dataKey="total" fill="var(--color-total)" radius={[3, 3, 0, 0]} isAnimationActive={false} /></BarChart></ChartContainer>
+<GraficoBarras plano alto={224} etiqueta="Barras de ventas por horario" categorias={hourly.map((r) => r.h)} series={[{ nombre: "Ventas", valores: hourly.map((r) => r.total) }]} formato={formatCurrency} />
           </SectionCard>
           <RecentDocumentsTable documents={data.recentDocuments} />
         </div>

@@ -10,7 +10,7 @@ import { SalesChartCard } from "@/features/dashboard/components/sales-chart";
 import { Eye } from "lucide-react";
 import Link from "next/link";
 import { PageHeader } from "@/components/shared/page-header";
-import { StatChip } from "@/components/shared/stat-card";
+import { StatChip, StatGrid } from "@/components/shared/stat-card";
 import { StockAlerts } from "@/features/dashboard/components/stock-alerts";
 import { SunatStatusCard } from "@/features/dashboard/components/sunat-status-card";
 import { formatDate } from "@/lib/format";
@@ -59,15 +59,12 @@ export default async function DashboardPage() {
     <div className="flex min-w-0 flex-1 flex-col gap-4 p-4 md:gap-5 md:p-6">
       {header}
 
-      {/* KPIs: horizontal scroll on mobile, grid from sm up */}
-      <section aria-label="Indicadores del día" className="-mx-4 overflow-x-auto px-4 md:mx-0 md:px-0">
-        <div className="grid min-w-max auto-cols-[minmax(12rem,1fr)] grid-flow-col gap-3 sm:min-w-0 sm:grid-flow-row sm:grid-cols-2 md:gap-4 xl:grid-cols-4">
-          {data.kpis.map((kpi) => {
-            const extra = kpiExtras[kpi.id] ?? {};
-            return <KpiCard key={kpi.id} kpi={kpi} icon={kpiIcons[kpi.id as keyof typeof kpiIcons] ?? TrendingUp} {...extra} />;
-          })}
-        </div>
-      </section>
+      <StatGrid label="Indicadores del día">
+        {data.kpis.map((kpi) => {
+          const extra = kpiExtras[kpi.id] ?? {};
+          return <KpiCard key={kpi.id} kpi={kpi} icon={kpiIcons[kpi.id as keyof typeof kpiIcons] ?? TrendingUp} {...extra} />;
+        })}
+      </StatGrid>
 
       <div className="grid items-start gap-4 md:gap-6 xl:grid-cols-3">
         <div className="flex min-w-0 flex-col gap-4 md:gap-6 xl:col-span-2">

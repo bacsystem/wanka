@@ -4,10 +4,9 @@ import { AlertTriangle, Calculator, CalendarClock, Download, FileSpreadsheet, Sh
 import Link from "next/link";
 import * as React from "react";
 import { toast } from "sonner";
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { Button } from "khipu-design-system/ui/button";
 import { Table, TableHead, TableHeader, TableRow } from "khipu-design-system/ui/table";
-import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
+import { GraficoBarras } from "khipu-design-system/datos/grafico";
 import { ProgresoLineal } from "khipu-design-system/feedback/progreso";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Field } from "@/components/shared/field";
@@ -18,7 +17,6 @@ import { formatCurrency, formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { kardexConsolidated as KardexType, pdt621 as PdtType } from "../mocks/pdt621";
 
-const chartConfig = { closing: { label: "Valor final", color: "var(--chart-1)" }, opening: { label: "Saldo inicial", color: "var(--chart-3)" } } satisfies ChartConfig;
 
 export function LiquidationScreen({ pdt, kardex }: { pdt: typeof PdtType; kardex: typeof KardexType }) {
   const totals = kardex.map((w) => ({ warehouse: w.warehouse.split(" (")[0], opening: w.rows.reduce((s, r) => s + r.opening, 0), closing: w.rows.reduce((s, r) => s + r.closing, 0) }));
@@ -59,7 +57,7 @@ export function LiquidationScreen({ pdt, kardex }: { pdt: typeof PdtType; kardex
           ); })}
           <tfoot><tr className="border-t bg-muted/40 font-semibold"><td className="px-3 py-2">Total general</td><td colSpan={3} /><td className="px-3 py-2 text-right font-mono tabular-nums" data-testid="kardex-total">{formatCurrency(grand)}</td></tr></tfoot>
         </Table></div>
-        <div><p className="mb-2 text-xs font-medium text-muted-foreground">Valor por almacén</p><ChartContainer config={chartConfig} className="aspect-auto h-56 w-full"><BarChart data={totals} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}><CartesianGrid vertical={false} strokeDasharray="3 3" /><XAxis dataKey="warehouse" tickLine={false} axisLine={false} tickMargin={8} /><YAxis tickLine={false} axisLine={false} width={44} tickFormatter={(v: number) => `${Math.round(v / 1000)}k`} /><ChartTooltip content={<ChartTooltipContent formatter={(v, name) => <span className="flex w-full justify-between gap-4"><span className="text-muted-foreground">{chartConfig[name as keyof typeof chartConfig].label}</span><span className="font-mono">{formatCurrency(Number(v))}</span></span>} />} /><ChartLegend content={<ChartLegendContent />} /><Bar dataKey="opening" stackId="a" fill="var(--color-opening)" isAnimationActive={false} /><Bar dataKey="closing" stackId="b" fill="var(--color-closing)" radius={[3, 3, 0, 0]} isAnimationActive={false} /></BarChart></ChartContainer></div>
+        <div><p className="mb-2 text-xs font-medium text-muted-foreground">Valor por almacén</p><GraficoBarras plano alto={224} etiqueta="Barras de saldo inicial y valor final por almacén" categorias={totals.map((t) => t.warehouse)} series={[{ nombre: "Saldo inicial", valores: totals.map((t) => t.opening) }, { nombre: "Valor final", valores: totals.map((t) => t.closing) }]} formato={formatCurrency} /></div>
       </SectionCard>
     </>
   );

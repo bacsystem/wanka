@@ -12,7 +12,7 @@ describe("KpiCard", () => {
       />,
     );
     expect(screen.getByTestId("kpi-value")).toHaveTextContent("S/ 4,892.50");
-    expect(screen.getByText("+14.2%")).toBeInTheDocument();
+    expect(screen.getByText("14.2%")).toBeInTheDocument();
   });
 
   it("renders an integer KPI without delta", () => {
