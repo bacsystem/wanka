@@ -1,0 +1,76 @@
+name: API
+
+# The workflow has no `paths:` filter on purpose: a workflow skipped by a path
+# filter leaves its required check "Pending" and blocks the PR. Instead the job
+# always runs and decides in its first step whether apps/api (or this file)
+# changed; if not, the Go steps are skipped and the check ends green.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: api-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  api:
+    name: api (gofmt, vet, test, build, arch-lint)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: apps/api
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Did apps/api or this workflow change?
+        id: changes
+        working-directory: .
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if [ "$EVENT" != "pull_request" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if git diff --name-only "$BASE_SHA"...HEAD | grep -qE '^(apps/api/|\.github/workflows/api\.yml$)'; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "No changes in apps/api: Go steps skipped."
+          fi
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
+        if: steps.changes.outputs.run == 'true'
+        with:
+          go-version-file: apps/api/go.mod
+          cache-dependency-path: apps/api/go.mod
+      - name: gofmt (fails on any diff)
+        if: steps.changes.outputs.run == 'true'
+        run: |
+          out="$(gofmt -l .)"
+          if [ -n "$out" ]; then
+            echo "gofmt differences in:"
+            echo "$out"
+            exit 1
+          fi
+      - name: go vet
+        if: steps.changes.outputs.run == 'true'
+        run: go vet ./...
+      - name: go test
+        if: steps.changes.outputs.run == 'true'
+        run: go test -race ./...
+      - name: go build
+        if: steps.changes.outputs.run == 'true'
+        run: go build ./...
+      # Version pinned in scripts/archlint.sh. The script also proves that a
+      # forbidden cross-module import makes go-arch-lint fail.
+      - name: go-arch-lint
+        if: steps.changes.outputs.run == 'true'
+        run: sh scripts/archlint.sh

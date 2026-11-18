@@ -1,0 +1,23 @@
+# Example of the cross-module rule of ADR 0002: a module may import another
+# module only through its facade (the root package), never domain/app/adapters.
+# scripts/archlint.sh runs this on the fixture (must pass) and on a copy with a
+# forbidden import added (must fail).
+version: 3
+workdir: internal
+components:
+  platform: { in: platform/** }
+  alpha: { in: alpha }
+  alpha_inner: { in: alpha/** }
+  beta: { in: beta }
+  beta_inner: { in: beta/** }
+commonComponents:
+  - platform
+deps:
+  alpha:
+    mayDependOn: [alpha_inner]
+  alpha_inner:
+    mayDependOn: [alpha_inner, beta]
+  beta:
+    mayDependOn: [beta_inner]
+  beta_inner:
+    mayDependOn: [beta_inner, alpha]

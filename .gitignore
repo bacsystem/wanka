@@ -26,3 +26,10 @@ design/
 
 # khipu migration visual captures (e2e/ds-captures.spec.ts)
 /apps/web/captures/
+
+# apps/api (Go)
+/apps/api/bin/
+/apps/api/*.test
+/apps/api/*.out
+/apps/api/coverage.*
+/apps/api/wanka
