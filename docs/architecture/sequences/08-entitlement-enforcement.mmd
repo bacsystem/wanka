@@ -53,6 +53,9 @@ sequenceDiagram
   else ok
     alt current_version distinta de s.authz_version (rol cambiado desde la ultima peticion)
       MW->>DB: re-resuelve el rol (requires_mfa) y los permisos, UPDATE sessions SET authz_version = current_version WHERE id = s.id AND membership_id = s.membership_id AND revoked_at IS NULL (si un desligue concurrente gano, 0 filas: la sesion sin tenant nunca queda con version)
+      alt el UPDATE actualizo 0 filas (la membresia se perdio entre la busqueda y este paso)
+        MW-->>W: 403 tenant_access_denied, el handler NO se ejecuta
+      end
     else igual
       MW->>MW: rol y permisos de la cache, clave membership_id + current_version (una cache caliente con la version vieja no se usa)
     end
