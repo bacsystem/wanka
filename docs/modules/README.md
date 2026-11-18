@@ -2,7 +2,7 @@
 
 Este mapa muestra el orden de construcción del backend: la prioridad de cada módulo, de qué depende y qué módulos se pueden construir en paralelo (por olas). El diseño técnico está en [`docs/architecture/`](../architecture/README.md), y cómo se toma una épica, en [`CONTRIBUTING.md`](../../CONTRIBUTING.md).
 
-> **El avance vivo no está aquí.** Se ve en el Project público [Wanka · Mapa de módulos](#M00-PROJECT-URL) y en la barra de sub-issues de cada épica. Este gráfico solo cambia cuando cambian las prioridades o las dependencias.
+> **El avance vivo no está aquí.** Se ve en el Project público [Wanka · Mapa de módulos](https://github.com/users/bacsystem/projects/8) y en la barra de sub-issues de cada épica. Este gráfico solo cambia cuando cambian las prioridades o las dependencias.
 
 ## Niveles de prioridad
 
@@ -124,7 +124,7 @@ flowchart BT
   class M10,M11,M12,M16,M17 p2
   class M13,M14,M15,M18,M19,M20,M21 p3
 
-  click M00 "https://github.com/bacsystem/wanka/issues/M00" "Épica M00 · Kernel"
+  click M00 "https://github.com/bacsystem/wanka/issues/154" "Épica M00 · Kernel"
   click M01 "https://github.com/bacsystem/wanka/issues/3" "Épica identidad"
   click M02 "https://github.com/bacsystem/wanka/issues/4" "Épica empresas"
   click M03 "https://github.com/bacsystem/wanka/issues/6" "Épica catálogo"
@@ -156,7 +156,7 @@ Dependencias fuertes en «Depende de»; las parciales van entre paréntesis.
 
 | Código | Épica | Ola | Depende de | Motivo |
 |---|---|---|---|---|
-| P0-M00 | [#M00 Kernel](https://github.com/bacsystem/wanka/issues/M00) | 0 | — | `apps/api`, `InTenantTx`, middleware auth → tenant → entitlements → RBAC → idempotencia, esquema `ops`, escritor de auditoría, `pricing.Compute`, plan semilla y catálogo de permisos sembrado |
+| P0-M00 | [#154 Kernel](https://github.com/bacsystem/wanka/issues/154) | 0 | — | `apps/api`, `InTenantTx`, middleware auth → tenant → entitlements → RBAC → idempotencia, esquema `ops`, escritor de auditoría, `pricing.Compute`, plan semilla y catálogo de permisos sembrado |
 | P0-M01 | [#3 Identidad y accesos](https://github.com/bacsystem/wanka/issues/3) | 1 | empresas | memberships y membership_sites referencian tenants y sites; la sesión se liga a la caja ([er-01](../architecture/data/er-01-identidad-empresas.mmd), [data-model §3](../architecture/data/data-model.md)) |
 | P0-M02 | [#4 Empresas](https://github.com/bacsystem/wanka/issues/4) | 1 | identidad | el alta de empresa (#31) crea la membresía del dueño. Es el único ciclo: se corta fijando el DDL de `iam` y `org` en la ola 0 |
 | P0-M03 | [#6 Catálogo](https://github.com/bacsystem/wanka/issues/6) | 2 | empresas | solo tenant y RBAC; las variantes son core del catálogo |

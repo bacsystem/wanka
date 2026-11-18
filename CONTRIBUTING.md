@@ -2,7 +2,7 @@
 
 Esta guía explica cómo tomar una épica del backlog y cómo se controla su avance. Las reglas técnicas del repositorio (comandos, arquitectura, convenciones de UI, design system, reglas del equipo) están en [`CLAUDE.md`](CLAUDE.md), y el diseño del backend, en [`docs/architecture/`](docs/architecture/README.md). Aquí no se repiten.
 
-El orden de construcción (prioridad P0–P3, dependencias y olas) está en el [mapa de módulos](docs/modules/README.md). El avance vivo está en el Project público [Wanka · Mapa de módulos](#M00-PROJECT-URL).
+El orden de construcción (prioridad P0–P3, dependencias y olas) está en el [mapa de módulos](docs/modules/README.md). El avance vivo está en el Project público [Wanka · Mapa de módulos](https://github.com/users/bacsystem/projects/8).
 
 ## Cómo tomar una épica
 
