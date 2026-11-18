@@ -43,11 +43,13 @@ Run from the repo root (they delegate to `apps/web`) or inside `apps/web`:
 pnpm install
 pnpm dev                 # next dev (http://localhost:3000)
 pnpm build               # production build
-pnpm lint                # eslint .
+pnpm lint                # eslint . + khipu-ds verificar (baseline apps/web/ds-baseline.json)
 pnpm typecheck           # next typegen && tsc --noEmit  (typegen generates PageProps/LayoutProps globals)
 pnpm test                # vitest run (unit, jsdom)
 pnpm test:e2e            # playwright (desktop 1440 / tablet 1024 / mobile Pixel 7); starts its own dev server on :3100
 ```
+
+`pnpm lint` fails with file:line on hardcoded styles not in `ds-baseline.json` (debt only shrinks). After fixing debt: `pnpm lint:ds --podar` (run from `apps/web`); after `git mv`: `pnpm lint:ds --mover <from> <to>`. One prune chore at a time; resolve baseline conflicts by re-running `--podar`. No `--inicializar`, no `npx khipu-ds`.
 
 Single tests: `pnpm --filter web exec vitest run src/lib/format.test.ts` · `pnpm --filter web exec playwright test --project=mobile -g "sidebar"`. First E2E run needs `pnpm --filter web exec playwright install chromium`.
 

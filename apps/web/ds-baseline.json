@@ -1,0 +1,2273 @@
+{
+  "version": 1,
+  "violaciones": {
+    "src/app/(admin)/admin/empresas/page.tsx": {
+      "iconos/paquete": {
+        "lucide-react": 1
+      }
+    },
+    "src/app/(tenant)/(app)/[...slug]/page.tsx": {
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-lg": 1,
+        "text-sm": 1
+      }
+    },
+    "src/app/(tenant)/(app)/agenda/page.tsx": {
+      "iconos/paquete": {
+        "lucide-react": 1
+      }
+    },
+    "src/app/(tenant)/(app)/catalogo/[[...tab]]/page.tsx": {
+      "estilos/radio": {
+        "rounded": 1
+      },
+      "estilos/style-inline": {
+        "style={{width}}": 1
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      }
+    },
+    "src/app/(tenant)/(app)/catalogo/variantes/[sku]/page.tsx": {
+      "iconos/paquete": {
+        "lucide-react": 1
+      }
+    },
+    "src/app/(tenant)/(app)/clientes/page.tsx": {
+      "estilos/valor-arbitrario": {
+        "w-[98%]": 1
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      }
+    },
+    "src/app/(tenant)/(app)/compras/page.tsx": {
+      "estilos/radio": {
+        "rounded": 1
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      }
+    },
+    "src/app/(tenant)/(app)/compras/proveedores/page.tsx": {
+      "iconos/paquete": {
+        "lucide-react": 1
+      }
+    },
+    "src/app/(tenant)/(app)/configuracion/usuarios/page.tsx": {
+      "estilos/style-inline": {
+        "style={{width}}": 1
+      },
+      "estilos/valor-arbitrario": {
+        "w-[89%]": 1
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      }
+    },
+    "src/app/(tenant)/(app)/finanzas/caja/historial/page.tsx": {
+      "iconos/paquete": {
+        "lucide-react": 1
+      }
+    },
+    "src/app/(tenant)/(app)/finanzas/caja/page.tsx": {
+      "iconos/paquete": {
+        "lucide-react": 1
+      }
+    },
+    "src/app/(tenant)/(app)/finanzas/cuentas-por-cobrar/page.tsx": {
+      "estilos/radio": {
+        "rounded": 3
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      }
+    },
+    "src/app/(tenant)/(app)/finanzas/cuentas-por-pagar/page.tsx": {
+      "iconos/paquete": {
+        "lucide-react": 1
+      }
+    },
+    "src/app/(tenant)/(app)/hospitalizacion/page.tsx": {
+      "iconos/paquete": {
+        "lucide-react": 1
+      }
+    },
+    "src/app/(tenant)/(app)/inventario/almacenes/page.tsx": {
+      "estilos/style-inline": {
+        "style={{width}}": 1
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      }
+    },
+    "src/app/(tenant)/(app)/inventario/kardex/page.tsx": {
+      "iconos/paquete": {
+        "lucide-react": 1
+      }
+    },
+    "src/app/(tenant)/(app)/inventario/movimientos/page.tsx": {
+      "estilos/font-mono-monto": {
+        "font-mono": 3
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-sm": 4
+      }
+    },
+    "src/app/(tenant)/(app)/inventario/stock/page.tsx": {
+      "iconos/paquete": {
+        "lucide-react": 1
+      }
+    },
+    "src/app/(tenant)/(app)/mascotas/page.tsx": {
+      "iconos/paquete": {
+        "lucide-react": 1
+      }
+    },
+    "src/app/(tenant)/(app)/page.tsx": {
+      "iconos/paquete": {
+        "lucide-react": 2
+      },
+      "tipografia/tamano-tailwind": {
+        "text-xs": 1
+      }
+    },
+    "src/app/(tenant)/(app)/reportes/page.tsx": {
+      "iconos/paquete": {
+        "lucide-react": 1
+      }
+    },
+    "src/app/(tenant)/(app)/salon/delivery/page.tsx": {
+      "iconos/paquete": {
+        "lucide-react": 1
+      }
+    },
+    "src/app/(tenant)/(app)/salon/page.tsx": {
+      "iconos/paquete": {
+        "lucide-react": 1
+      }
+    },
+    "src/app/(tenant)/(app)/ventas/comprobantes/page.tsx": {
+      "estilos/font-mono-monto": {
+        "font-mono": 2
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      }
+    },
+    "src/app/(tenant)/(app)/ventas/guias/page.tsx": {
+      "iconos/paquete": {
+        "lucide-react": 1
+      }
+    },
+    "src/app/(tenant)/(app)/ventas/proformas/page.tsx": {
+      "estilos/font-mono-monto": {
+        "font-mono": 3
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-sm": 3
+      }
+    },
+    "src/app/(tenant)/(auth)/layout.tsx": {
+      "estilos/z-index": {
+        "z-10": 1
+      }
+    },
+    "src/components/layout/bottom-nav.tsx": {
+      "estilos/valor-arbitrario": {
+        "pb-[env(safe-area-inset-bottom)]": 1
+      },
+      "estilos/z-index": {
+        "z-30": 2
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/tamano-suelto": {
+        "text-[11px]": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-sm": 1
+      }
+    },
+    "src/components/layout/command-palette.tsx": {
+      "estilos/radio": {
+        "rounded": 5
+      },
+      "estilos/valor-arbitrario": {
+        "max-h-[60svh]": 1,
+        "top-[10%]": 1
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/mayusculas": {
+        "uppercase": 1
+      },
+      "tipografia/tamano-suelto": {
+        "text-[10px]": 2,
+        "text-[11px]": 2
+      },
+      "tipografia/tamano-tailwind": {
+        "text-sm": 3,
+        "text-xs": 1
+      },
+      "tipografia/tracking-ancho": {
+        "tracking-wide": 1
+      }
+    },
+    "src/components/layout/notifications.tsx": {
+      "estilos/valor-arbitrario": {
+        "animate-[wiggle_1.2s_ease-in-out_1]": 1,
+        "max-h-[60svh]": 1,
+        "w-[min(26rem,calc(100vw-2rem))]": 1
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/tamano-suelto": {
+        "text-[10px]": 4,
+        "text-[11px]": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-sm": 2,
+        "text-xs": 2
+      }
+    },
+    "src/components/layout/shell-parts.tsx": {
+      "estilos/radio": {
+        "rounded": 2
+      },
+      "estilos/valor-arbitrario": {
+        "size-[18px]": 1
+      },
+      "estilos/z-index": {
+        "-z-10": 1
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/mayusculas": {
+        "uppercase": 1
+      },
+      "tipografia/tamano-suelto": {
+        "text-[10px]": 5,
+        "text-[9px]": 2
+      },
+      "tipografia/tamano-tailwind": {
+        "text-sm": 1,
+        "text-xs": 3
+      },
+      "tipografia/tracking-ancho": {
+        "tracking-wide": 1,
+        "tracking-wider": 1
+      }
+    },
+    "src/components/layout/tenant-switcher.tsx": {
+      "estilos/radio": {
+        "rounded": 2
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/tamano-suelto": {
+        "text-[10px]": 1,
+        "text-[9px]": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-sm": 1,
+        "text-xs": 4
+      }
+    },
+    "src/components/layout/theme-toggle.tsx": {
+      "estilos/style-inline": {
+        "style={{backgroundColor}}": 1
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      }
+    },
+    "src/components/layout/topbar-search.tsx": {
+      "estilos/radio": {
+        "rounded": 1
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/tamano-suelto": {
+        "text-[10px]": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-xs": 1
+      }
+    },
+    "src/components/layout/topbar.tsx": {
+      "estilos/z-index": {
+        "z-20": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-xs": 1
+      }
+    },
+    "src/components/layout/user-menu.tsx": {
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/tamano-suelto": {
+        "text-[10px]": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-sm": 1,
+        "text-xs": 3
+      }
+    },
+    "src/components/shared/data-table.tsx": {
+      "estilos/style-inline": {
+        "style={{minWidth}}": 1
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/tamano-suelto": {
+        "text-[10px]": 1,
+        "text-[11px]": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-xs": 6
+      }
+    },
+    "src/components/shared/dynamic-icon.tsx": {
+      "estilos/valor-arbitrario": {
+        "[animation-duration:1.6s]": 1
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      }
+    },
+    "src/components/shared/entity-header.tsx": {
+      "tipografia/tamano-tailwind": {
+        "text-2xl": 1,
+        "text-xl": 1,
+        "text-xs": 1
+      }
+    },
+    "src/components/shared/field.tsx": {
+      "tipografia/tamano-tailwind": {
+        "text-xs": 2
+      }
+    },
+    "src/components/shared/initials-avatar.tsx": {
+      "tipografia/tamano-suelto": {
+        "text-[11px]": 2
+      },
+      "tipografia/tamano-tailwind": {
+        "text-sm": 1,
+        "text-xs": 1
+      }
+    },
+    "src/components/shared/page-header.tsx": {
+      "tipografia/tamano-tailwind": {
+        "text-2xl": 1,
+        "text-sm": 1,
+        "text-xl": 1,
+        "text-xs": 1
+      }
+    },
+    "src/components/shared/pagination.tsx": {
+      "tipografia/tamano-tailwind": {
+        "text-xs": 2
+      }
+    },
+    "src/components/shared/section-card.tsx": {
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-sm": 1,
+        "text-xs": 1
+      }
+    },
+    "src/components/shared/section-nav.tsx": {
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/tamano-suelto": {
+        "text-[10px]": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-sm": 1
+      }
+    },
+    "src/components/shared/stat-card.tsx": {
+      "iconos/paquete": {
+        "lucide-react": 2
+      },
+      "tipografia/tamano-suelto": {
+        "text-[11px]": 1
+      }
+    },
+    "src/components/shared/states.tsx": {
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-base": 1,
+        "text-sm": 1,
+        "text-xs": 1
+      }
+    },
+    "src/components/shared/status-badge.tsx": {
+      "estilos/paleta": {
+        "text-white": 1
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/mayusculas": {
+        "uppercase": 1
+      },
+      "tipografia/tamano-suelto": {
+        "text-[10px]": 1
+      },
+      "tipografia/tracking-ancho": {
+        "tracking-wide": 1
+      }
+    },
+    "src/components/ui/avatar.tsx": {
+      "estilos/z-index": {
+        "z-10": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-sm": 2,
+        "text-xs": 1
+      }
+    },
+    "src/components/ui/badge.tsx": {
+      "estilos/radio": {
+        "rounded-4xl": 1
+      },
+      "estilos/valor-arbitrario": {
+        "ring-[3px]": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-xs": 1
+      }
+    },
+    "src/components/ui/button.tsx": {
+      "estilos/valor-arbitrario": {
+        "scale-[0.98]": 1,
+        "transition-[color,background-color,border-color,box-shadow,transform]": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-sm": 1,
+        "text-xs": 1
+      }
+    },
+    "src/components/ui/card.tsx": {
+      "estilos/valor-arbitrario": {
+        "gap-(--card-spacing)": 1,
+        "grid-cols-[1fr_auto]": 1,
+        "grid-rows-[auto_auto]": 1,
+        "p-(--card-spacing)": 1,
+        "pb-(--card-spacing)": 1,
+        "px-(--card-spacing)": 2,
+        "py-(--card-spacing)": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-base": 1,
+        "text-sm": 3
+      }
+    },
+    "src/components/ui/chart.tsx": {
+      "estilos/sombra": {
+        "shadow-xl": 1
+      },
+      "estilos/style-inline": {
+        "style={{backgroundColor}}": 1
+      },
+      "estilos/valor-arbitrario": {
+        "bg-(--color-bg)": 1,
+        "border-[1.5px]": 1,
+        "rounded-[2px]": 2
+      },
+      "tipografia/tamano-tailwind": {
+        "text-xs": 2
+      }
+    },
+    "src/components/ui/checkbox.tsx": {
+      "estilos/valor-arbitrario": {
+        "rounded-[4px]": 1
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      }
+    },
+    "src/components/ui/dialog.tsx": {
+      "estilos/duracion": {
+        "duration-100": 2
+      },
+      "estilos/paleta": {
+        "bg-black/10": 1
+      },
+      "estilos/valor-arbitrario": {
+        "max-h-[calc(100svh-2rem)]": 1,
+        "max-w-[calc(100%-2rem)]": 1
+      },
+      "estilos/z-index": {
+        "z-50": 2
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-base": 1,
+        "text-sm": 2
+      }
+    },
+    "src/components/ui/dropdown-menu.tsx": {
+      "estilos/duracion": {
+        "duration-100": 2
+      },
+      "estilos/valor-arbitrario": {
+        "min-w-[96px]": 1
+      },
+      "estilos/z-index": {
+        "z-50": 2
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-sm": 4,
+        "text-xs": 2
+      },
+      "tipografia/tracking-ancho": {
+        "tracking-widest": 1
+      }
+    },
+    "src/components/ui/empty.tsx": {
+      "tipografia/tamano-tailwind": {
+        "text-sm": 3
+      }
+    },
+    "src/components/ui/input.tsx": {
+      "tipografia/tamano-tailwind": {
+        "text-base": 1,
+        "text-sm": 2
+      }
+    },
+    "src/components/ui/label.tsx": {
+      "tipografia/tamano-tailwind": {
+        "text-sm": 1
+      }
+    },
+    "src/components/ui/popover.tsx": {
+      "estilos/duracion": {
+        "duration-100": 1
+      },
+      "estilos/z-index": {
+        "z-50": 2
+      },
+      "tipografia/tamano-tailwind": {
+        "text-sm": 2
+      }
+    },
+    "src/components/ui/select.tsx": {
+      "estilos/duracion": {
+        "duration-100": 1
+      },
+      "estilos/z-index": {
+        "z-10": 2,
+        "z-50": 2
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-sm": 2,
+        "text-xs": 1
+      }
+    },
+    "src/components/ui/sheet.tsx": {
+      "estilos/duracion": {
+        "duration-150": 1,
+        "duration-200": 1
+      },
+      "estilos/paleta": {
+        "bg-black/10": 1
+      },
+      "estilos/valor-arbitrario": {
+        "translate-x-[-2.5rem]": 2,
+        "translate-x-[2.5rem]": 2,
+        "translate-y-[-2.5rem]": 2,
+        "translate-y-[2.5rem]": 2
+      },
+      "estilos/z-index": {
+        "z-50": 2
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-base": 1,
+        "text-sm": 2
+      }
+    },
+    "src/components/ui/sidebar.tsx": {
+      "alturas/componente": {
+        "h-8": 1
+      },
+      "estilos/duracion": {
+        "duration-200": 3
+      },
+      "estilos/valor-arbitrario": {
+        "left-[calc(var(--sidebar-width)*-1)]": 1,
+        "max-w-(--skeleton-width)": 1,
+        "right-[calc(var(--sidebar-width)*-1)]": 1,
+        "shadow-[0_0_0_1px_var(--sidebar-accent)]": 1,
+        "shadow-[0_0_0_1px_var(--sidebar-border)]": 1,
+        "transition-[left,right,width]": 1,
+        "transition-[margin,opacity]": 1,
+        "transition-[width,height,padding]": 1,
+        "transition-[width]": 1,
+        "w-(--sidebar-width)": 4,
+        "w-(--sidebar-width-icon)": 2,
+        "w-[2px]": 1,
+        "w-[calc(var(--sidebar-width-icon)+(--spacing(4)))]": 1,
+        "w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)]": 1
+      },
+      "estilos/z-index": {
+        "z-10": 1,
+        "z-20": 1
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-sm": 5,
+        "text-xs": 4
+      }
+    },
+    "src/components/ui/sonner.tsx": {
+      "iconos/paquete": {
+        "lucide-react": 1
+      }
+    },
+    "src/components/ui/switch.tsx": {
+      "estilos/valor-arbitrario": {
+        "h-[14px]": 1,
+        "h-[18.4px]": 1,
+        "translate-x-[calc(100%-2px)]": 2,
+        "w-[24px]": 1,
+        "w-[32px]": 1
+      }
+    },
+    "src/components/ui/table.tsx": {
+      "tipografia/mayusculas": {
+        "uppercase": 1
+      },
+      "tipografia/tamano-suelto": {
+        "text-[10px]": 1,
+        "text-[13px]": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-sm": 1
+      },
+      "tipografia/tracking-ancho": {
+        "tracking-wider": 1
+      }
+    },
+    "src/components/ui/tabs.tsx": {
+      "estilos/valor-arbitrario": {
+        "p-[3px]": 2,
+        "shadow-[inset_0_-1px_0_var(--color-border)]": 1,
+        "transition-[left,width,top,height]": 1
+      },
+      "estilos/z-index": {
+        "-z-10": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-sm": 1
+      }
+    },
+    "src/components/ui/textarea.tsx": {
+      "tipografia/tamano-tailwind": {
+        "text-base": 1,
+        "text-sm": 1
+      }
+    },
+    "src/components/ui/toggle-group.tsx": {
+      "estilos/valor-arbitrario": {
+        "gap-[--spacing(var(--gap))]": 1,
+        "rounded-[min(var(--radius-md),10px)]": 1
+      },
+      "estilos/z-index": {
+        "z-10": 2
+      }
+    },
+    "src/components/ui/toggle.tsx": {
+      "estilos/valor-arbitrario": {
+        "ring-[3px]": 1,
+        "rounded-[min(var(--radius-md),12px)]": 1
+      },
+      "tipografia/tamano-suelto": {
+        "text-[0.8rem]": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-sm": 1
+      }
+    },
+    "src/components/ui/tooltip.tsx": {
+      "estilos/radio": {
+        "rounded-sm": 1
+      },
+      "estilos/valor-arbitrario": {
+        "rounded-[2px]": 1,
+        "translate-y-[calc(-50%-2px)]": 1
+      },
+      "estilos/z-index": {
+        "z-50": 4
+      },
+      "tipografia/tamano-tailwind": {
+        "text-xs": 1
+      }
+    },
+    "src/features/appointments/components/agenda.tsx": {
+      "estilos/font-mono-monto": {
+        "font-mono": 4
+      },
+      "estilos/radio": {
+        "rounded": 3
+      },
+      "estilos/style-inline": {
+        "style={{gridTemplateColumns,height}}": 1,
+        "style={{gridTemplateColumns}}": 1,
+        "style={{height,top}}": 1,
+        "style={{top}}": 2
+      },
+      "estilos/valor-arbitrario": {
+        "grid-cols-[1fr_22rem]": 1,
+        "max-h-[90svh]": 1,
+        "min-w-[720px]": 1
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/mayusculas": {
+        "uppercase": 3
+      },
+      "tipografia/tamano-suelto": {
+        "text-[10px]": 3,
+        "text-[11px]": 6,
+        "text-[13px]": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-base": 3,
+        "text-sm": 5,
+        "text-xl": 1,
+        "text-xs": 11
+      },
+      "tipografia/tracking-ancho": {
+        "tracking-wide": 3
+      }
+    },
+    "src/features/appointments/components/new-appointment-sheet.tsx": {
+      "estilos/valor-arbitrario": {
+        "grid-cols-[10rem_1fr]": 1
+      },
+      "estilos/z-index": {
+        "z-10": 1
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/mayusculas": {
+        "uppercase": 4
+      },
+      "tipografia/tamano-tailwind": {
+        "text-sm": 7,
+        "text-xs": 9
+      }
+    },
+    "src/features/auth/components/brand-panel.tsx": {
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/tamano-suelto": {
+        "text-[10px]": 1,
+        "text-[11px]": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-3xl": 1,
+        "text-lg": 1,
+        "text-xs": 1
+      },
+      "tipografia/tracking-ancho": {
+        "tracking-wide": 1
+      }
+    },
+    "src/features/auth/components/company-select-screen.tsx": {
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/mayusculas": {
+        "uppercase": 2
+      },
+      "tipografia/tamano-suelto": {
+        "text-[11px]": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-2xl": 1,
+        "text-lg": 2,
+        "text-sm": 8,
+        "text-xs": 13
+      }
+    },
+    "src/features/auth/components/login-screen.tsx": {
+      "alturas/componente": {
+        "h-10": 1
+      },
+      "estilos/radio": {
+        "rounded": 1
+      },
+      "estilos/valor-arbitrario": {
+        "grid-cols-[1.1fr_1fr]": 1
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/tamano-suelto": {
+        "text-[11px]": 2
+      },
+      "tipografia/tamano-tailwind": {
+        "text-base": 1,
+        "text-lg": 1,
+        "text-sm": 6,
+        "text-xl": 4,
+        "text-xs": 11
+      }
+    },
+    "src/features/auth/components/onboarding-screen.tsx": {
+      "estilos/valor-arbitrario": {
+        "grid-cols-[14rem_1fr_18rem]": 1,
+        "grid-cols-[1fr_14rem]": 1,
+        "grid-cols-[1fr_5rem_6rem]": 1
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/mayusculas": {
+        "uppercase": 3
+      },
+      "tipografia/tamano-suelto": {
+        "text-[11px]": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-lg": 6,
+        "text-sm": 13,
+        "text-xl": 1,
+        "text-xs": 10
+      }
+    },
+    "src/features/cash/components/cash-screen.tsx": {
+      "estilos/font-mono-monto": {
+        "font-mono": 9
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/mayusculas": {
+        "uppercase": 4
+      },
+      "tipografia/tamano-suelto": {
+        "text-[10px]": 4
+      },
+      "tipografia/tamano-tailwind": {
+        "text-sm": 8,
+        "text-xs": 10
+      },
+      "tipografia/tracking-ancho": {
+        "tracking-wide": 4
+      }
+    },
+    "src/features/cash/components/shift-history.tsx": {
+      "estilos/font-mono-monto": {
+        "font-mono": 11
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/tamano-suelto": {
+        "text-[11px]": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-base": 1,
+        "text-sm": 2,
+        "text-xs": 5
+      }
+    },
+    "src/features/catalog/components/catalog-screen.tsx": {
+      "estilos/font-mono-monto": {
+        "font-mono": 6
+      },
+      "estilos/radio": {
+        "rounded": 1
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/mayusculas": {
+        "uppercase": 2
+      },
+      "tipografia/tamano-suelto": {
+        "text-[10px]": 2,
+        "text-[11px]": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-sm": 11,
+        "text-xs": 17
+      },
+      "tipografia/tracking-ancho": {
+        "tracking-wide": 1
+      }
+    },
+    "src/features/clinical/components/clinical-record.tsx": {
+      "estilos/font-mono-monto": {
+        "font-mono": 4
+      },
+      "estilos/valor-arbitrario": {
+        "min-w-[720px]": 1,
+        "rounded-[1px]": 5
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/mayusculas": {
+        "uppercase": 3
+      },
+      "tipografia/tamano-suelto": {
+        "text-[10px]": 4,
+        "text-[11px]": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-sm": 6,
+        "text-xs": 14
+      }
+    },
+    "src/features/customers/components/customer-detail.tsx": {
+      "estilos/font-mono-monto": {
+        "font-mono": 6
+      },
+      "estilos/radio": {
+        "rounded": 3
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/mayusculas": {
+        "uppercase": 1
+      },
+      "tipografia/tamano-suelto": {
+        "text-[11px]": 2
+      },
+      "tipografia/tamano-tailwind": {
+        "text-2xl": 1,
+        "text-lg": 1,
+        "text-sm": 7,
+        "text-xs": 17
+      },
+      "tipografia/tracking-ancho": {
+        "tracking-wide": 1
+      }
+    },
+    "src/features/customers/components/customers-table.tsx": {
+      "estilos/font-mono-monto": {
+        "font-mono": 2
+      },
+      "estilos/radio": {
+        "rounded": 3
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/tamano-suelto": {
+        "text-[10px]": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-sm": 5,
+        "text-xs": 4
+      }
+    },
+    "src/features/dashboard/components/industry-dashboards.tsx": {
+      "estilos/font-mono-monto": {
+        "font-mono": 2
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-sm": 7,
+        "text-xl": 5,
+        "text-xs": 14
+      }
+    },
+    "src/features/dashboard/components/kpi-card.tsx": {
+      "iconos/paquete": {
+        "lucide-react": 1
+      }
+    },
+    "src/features/dashboard/components/recent-documents-table.tsx": {
+      "estilos/font-mono-monto": {
+        "font-mono": 2
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/tamano-suelto": {
+        "text-[11px]": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-sm": 2,
+        "text-xs": 5
+      }
+    },
+    "src/features/dashboard/components/sales-chart.tsx": {
+      "estilos/font-mono-monto": {
+        "font-mono": 3
+      },
+      "estilos/radio": {
+        "rounded": 1
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/tamano-suelto": {
+        "text-[11px]": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-xs": 1
+      }
+    },
+    "src/features/dashboard/components/stock-alerts.tsx": {
+      "estilos/radio": {
+        "rounded": 1
+      },
+      "estilos/style-inline": {
+        "style={{width}}": 1
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/mayusculas": {
+        "uppercase": 1
+      },
+      "tipografia/tamano-suelto": {
+        "text-[10px]": 1,
+        "text-[11px]": 1,
+        "text-[9px]": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-xs": 3
+      }
+    },
+    "src/features/dashboard/components/sunat-status-card.tsx": {
+      "estilos/font-mono-monto": {
+        "font-mono": 1
+      },
+      "estilos/radio": {
+        "rounded": 1
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/tamano-suelto": {
+        "text-[10px]": 2,
+        "text-[11px]": 4
+      },
+      "tipografia/tamano-tailwind": {
+        "text-sm": 2,
+        "text-xs": 9
+      }
+    },
+    "src/features/dispatch-guides/components/guide-detail.tsx": {
+      "estilos/radio": {
+        "rounded": 1
+      },
+      "estilos/valor-arbitrario": {
+        "-left-[21px]": 1,
+        "rounded-[1px]": 1
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/tamano-suelto": {
+        "text-[11px]": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-sm": 9,
+        "text-xs": 21
+      }
+    },
+    "src/features/dispatch-guides/components/guides-table.tsx": {
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/mayusculas": {
+        "uppercase": 1
+      },
+      "tipografia/tamano-suelto": {
+        "text-[10px]": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-sm": 7,
+        "text-xs": 7
+      }
+    },
+    "src/features/documents/components/credit-note-wizard.tsx": {
+      "estilos/font-mono-monto": {
+        "font-mono": 9
+      },
+      "estilos/valor-arbitrario": {
+        "min-w-[720px]": 1
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/tamano-suelto": {
+        "text-[11px]": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-lg": 1,
+        "text-sm": 7,
+        "text-xl": 1,
+        "text-xs": 10
+      }
+    },
+    "src/features/documents/components/debit-note-form.tsx": {
+      "estilos/font-mono-monto": {
+        "font-mono": 4
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-lg": 1,
+        "text-sm": 3,
+        "text-xl": 1,
+        "text-xs": 3
+      }
+    },
+    "src/features/documents/components/document-detail.tsx": {
+      "estilos/font-mono-monto": {
+        "font-mono": 8
+      },
+      "estilos/radio": {
+        "rounded": 2
+      },
+      "estilos/valor-arbitrario": {
+        "-left-[21px]": 1,
+        "rounded-[1px]": 1
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/mayusculas": {
+        "uppercase": 8
+      },
+      "tipografia/tamano-suelto": {
+        "text-[11px]": 4
+      },
+      "tipografia/tamano-tailwind": {
+        "text-2xl": 1,
+        "text-base": 1,
+        "text-lg": 1,
+        "text-sm": 11,
+        "text-xl": 1,
+        "text-xs": 21
+      },
+      "tipografia/tracking-ancho": {
+        "tracking-wide": 4
+      }
+    },
+    "src/features/documents/components/document-type-badge.tsx": {
+      "tipografia/mayusculas": {
+        "uppercase": 1
+      },
+      "tipografia/tamano-suelto": {
+        "text-[10px]": 1
+      },
+      "tipografia/tracking-ancho": {
+        "tracking-wide": 1
+      }
+    },
+    "src/features/documents/components/documents-list.tsx": {
+      "estilos/font-mono-monto": {
+        "font-mono": 6
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-sm": 5,
+        "text-xs": 9
+      }
+    },
+    "src/features/documents/components/sunat-status-badge.tsx": {
+      "iconos/paquete": {
+        "lucide-react": 1
+      }
+    },
+    "src/features/inventory/components/inventory-tabs.tsx": {
+      "iconos/paquete": {
+        "lucide-react": 1
+      }
+    },
+    "src/features/inventory/components/kardex-screen.tsx": {
+      "estilos/font-mono-monto": {
+        "font-mono": 4
+      },
+      "estilos/radio": {
+        "rounded": 1
+      },
+      "estilos/valor-arbitrario": {
+        "grid-cols-[1fr_auto_auto]": 1
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/mayusculas": {
+        "uppercase": 1
+      },
+      "tipografia/tamano-suelto": {
+        "text-[11px]": 7
+      },
+      "tipografia/tamano-tailwind": {
+        "text-sm": 3,
+        "text-xs": 5
+      }
+    },
+    "src/features/inventory/components/movements-screen.tsx": {
+      "estilos/font-mono-monto": {
+        "font-mono": 4
+      },
+      "estilos/paleta": {
+        "border-l-amber-500": 1,
+        "border-l-blue-500": 1,
+        "border-l-rose-500": 1,
+        "border-l-slate-400": 1
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-base": 1,
+        "text-sm": 5,
+        "text-xs": 8
+      }
+    },
+    "src/features/inventory/components/new-warehouse-sheet.tsx": {
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/mayusculas": {
+        "uppercase": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-sm": 2,
+        "text-xs": 1
+      }
+    },
+    "src/features/inventory/components/physical-count-screen.tsx": {
+      "estilos/font-mono-monto": {
+        "font-mono": 2
+      },
+      "estilos/valor-arbitrario": {
+        "min-w-[820px]": 1
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-2xl": 1,
+        "text-base": 1,
+        "text-lg": 1,
+        "text-sm": 1,
+        "text-xs": 7
+      }
+    },
+    "src/features/inventory/components/reception-screen.tsx": {
+      "estilos/valor-arbitrario": {
+        "min-w-[880px]": 1
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-2xl": 1,
+        "text-lg": 1,
+        "text-sm": 4,
+        "text-xs": 16
+      }
+    },
+    "src/features/inventory/components/stock-screen.tsx": {
+      "estilos/font-mono-monto": {
+        "font-mono": 3
+      },
+      "estilos/style-inline": {
+        "style={{width}}": 1
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/mayusculas": {
+        "uppercase": 1
+      },
+      "tipografia/tamano-suelto": {
+        "text-[10px]": 1,
+        "text-[11px]": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-base": 1,
+        "text-sm": 8,
+        "text-xs": 14
+      },
+      "tipografia/tracking-ancho": {
+        "tracking-wide": 1
+      }
+    },
+    "src/features/inventory/components/warehouses-screen.tsx": {
+      "estilos/font-mono-monto": {
+        "font-mono": 1
+      },
+      "estilos/paleta": {
+        "border-l-blue-500": 1,
+        "border-l-rose-500": 1,
+        "border-l-teal-400": 1
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/mayusculas": {
+        "uppercase": 1
+      },
+      "tipografia/tamano-suelto": {
+        "text-[10px]": 1,
+        "text-[11px]": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-base": 1,
+        "text-lg": 1,
+        "text-sm": 5,
+        "text-xl": 1,
+        "text-xs": 11
+      },
+      "tipografia/tracking-ancho": {
+        "tracking-wide": 1
+      }
+    },
+    "src/features/payables/components/integrations-screen.tsx": {
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-sm": 1,
+        "text-xs": 3
+      }
+    },
+    "src/features/payables/components/payables-screen.tsx": {
+      "estilos/font-mono-monto": {
+        "font-mono": 8
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-sm": 5,
+        "text-xs": 4
+      }
+    },
+    "src/features/platform-admin/components/admin-dashboard.tsx": {
+      "estilos/font-mono-monto": {
+        "font-mono": 5
+      },
+      "estilos/radio": {
+        "rounded": 1
+      },
+      "estilos/style-inline": {
+        "style={{width}}": 1
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/mayusculas": {
+        "uppercase": 2
+      },
+      "tipografia/tamano-suelto": {
+        "text-[10px]": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-sm": 6,
+        "text-xs": 8
+      },
+      "tipografia/tracking-ancho": {
+        "tracking-wide": 1,
+        "tracking-wider": 1
+      }
+    },
+    "src/features/platform-admin/components/admin-login-screen.tsx": {
+      "estilos/radio": {
+        "rounded": 1
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/mayusculas": {
+        "uppercase": 1
+      },
+      "tipografia/tamano-suelto": {
+        "text-[10px]": 1,
+        "text-[11px]": 3
+      },
+      "tipografia/tamano-tailwind": {
+        "text-2xl": 2,
+        "text-3xl": 1,
+        "text-sm": 4,
+        "text-xl": 2,
+        "text-xs": 2
+      },
+      "tipografia/tracking-ancho": {
+        "tracking-[0.4em]": 1,
+        "tracking-wide": 2
+      }
+    },
+    "src/features/platform-admin/components/admin-shell.tsx": {
+      "estilos/radio": {
+        "rounded": 2
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/tamano-suelto": {
+        "text-[10px]": 2,
+        "text-[11px]": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-xs": 3
+      }
+    },
+    "src/features/platform-admin/components/admin-user-menu.tsx": {
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/tamano-suelto": {
+        "text-[10px]": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-sm": 1,
+        "text-xs": 3
+      }
+    },
+    "src/features/platform-admin/components/audit-global-screen.tsx": {
+      "estilos/radio": {
+        "rounded": 1
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/tamano-suelto": {
+        "text-[11px]": 2
+      },
+      "tipografia/tamano-tailwind": {
+        "text-sm": 1,
+        "text-xs": 2
+      }
+    },
+    "src/features/platform-admin/components/billing-screen.tsx": {
+      "estilos/font-mono-monto": {
+        "font-mono": 2
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/tamano-suelto": {
+        "text-[10px]": 1,
+        "text-[11px]": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-sm": 3,
+        "text-xs": 2
+      }
+    },
+    "src/features/platform-admin/components/flags-screen.tsx": {
+      "estilos/valor-arbitrario": {
+        "min-w-[960px]": 1
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-xs": 4
+      }
+    },
+    "src/features/platform-admin/components/monitoring-screen.tsx": {
+      "estilos/color-literal": {
+        "#059669": 1,
+        "#7c3aed": 1,
+        "#d97706": 1
+      },
+      "estilos/radio": {
+        "rounded": 2
+      },
+      "estilos/style-inline": {
+        "style={{width}}": 1
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/tamano-suelto": {
+        "text-[10px]": 1,
+        "text-[11px]": 2
+      },
+      "tipografia/tamano-tailwind": {
+        "text-sm": 2,
+        "text-xs": 8
+      }
+    },
+    "src/features/platform-admin/components/plans-screen.tsx": {
+      "estilos/radio": {
+        "rounded": 1
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/mayusculas": {
+        "uppercase": 4
+      },
+      "tipografia/tamano-suelto": {
+        "text-[10px]": 3
+      },
+      "tipografia/tamano-tailwind": {
+        "text-2xl": 1,
+        "text-3xl": 1,
+        "text-sm": 2,
+        "text-xs": 10
+      },
+      "tipografia/tracking-ancho": {
+        "tracking-wide": 4
+      }
+    },
+    "src/features/platform-admin/components/platform-config-screen.tsx": {
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-sm": 4,
+        "text-xs": 2
+      }
+    },
+    "src/features/platform-admin/components/staff-screen.tsx": {
+      "estilos/valor-arbitrario": {
+        "min-w-[720px]": 1
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-sm": 1,
+        "text-xs": 5
+      }
+    },
+    "src/features/platform-admin/components/support-screen.tsx": {
+      "estilos/radio": {
+        "rounded": 1
+      },
+      "estilos/valor-arbitrario": {
+        "max-w-[85%]": 2
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-sm": 3,
+        "text-xs": 6
+      }
+    },
+    "src/features/platform-admin/components/tenant-badges.tsx": {
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/tamano-suelto": {
+        "text-[11px]": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-xs": 1
+      }
+    },
+    "src/features/platform-admin/components/tenant-detail.tsx": {
+      "estilos/radio": {
+        "rounded": 4
+      },
+      "estilos/style-inline": {
+        "style={{width}}": 1
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/tamano-suelto": {
+        "text-[10px]": 3
+      },
+      "tipografia/tamano-tailwind": {
+        "text-sm": 2,
+        "text-xl": 1,
+        "text-xs": 6
+      }
+    },
+    "src/features/platform-admin/components/tenants-table.tsx": {
+      "estilos/font-mono-monto": {
+        "font-mono": 2
+      },
+      "estilos/radio": {
+        "rounded": 1
+      },
+      "estilos/style-inline": {
+        "style={{width}}": 1
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/mayusculas": {
+        "uppercase": 1
+      },
+      "tipografia/tamano-suelto": {
+        "text-[11px]": 1,
+        "text-[9px]": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-sm": 4,
+        "text-xs": 5
+      },
+      "tipografia/tracking-ancho": {
+        "tracking-wide": 1
+      }
+    },
+    "src/features/pos/components/cart-panel.tsx": {
+      "estilos/font-mono-monto": {
+        "font-mono": 7
+      },
+      "estilos/radio": {
+        "rounded": 1
+      },
+      "estilos/valor-arbitrario": {
+        "shadow-[0_-8px_16px_-12px_rgb(0_0_0/0.25)]": 1
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/mayusculas": {
+        "uppercase": 4
+      },
+      "tipografia/tamano-suelto": {
+        "text-[10px]": 2,
+        "text-[11px]": 3
+      },
+      "tipografia/tamano-tailwind": {
+        "text-3xl": 1,
+        "text-base": 3,
+        "text-sm": 6,
+        "text-xs": 7
+      },
+      "tipografia/tracking-ancho": {
+        "tracking-wide": 4
+      }
+    },
+    "src/features/pos/components/catalog-grid.tsx": {
+      "estilos/font-mono-monto": {
+        "font-mono": 1
+      },
+      "estilos/radio": {
+        "rounded": 1
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/mayusculas": {
+        "uppercase": 1
+      },
+      "tipografia/tamano-suelto": {
+        "text-[10px]": 2,
+        "text-[11px]": 2,
+        "text-[15px]": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-sm": 2,
+        "text-xl": 1,
+        "text-xs": 2
+      },
+      "tipografia/tracking-ancho": {
+        "tracking-wide": 1
+      }
+    },
+    "src/features/pos/components/customer-picker.tsx": {
+      "estilos/z-index": {
+        "z-20": 1
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-sm": 2,
+        "text-xs": 3
+      }
+    },
+    "src/features/pos/components/pos-screen.tsx": {
+      "estilos/font-mono-monto": {
+        "font-mono": 1
+      },
+      "estilos/radio": {
+        "rounded": 3
+      },
+      "estilos/valor-arbitrario": {
+        "h-[92svh]": 1,
+        "h-[calc(100svh-4rem)]": 1,
+        "w-[27rem]": 1,
+        "w-[30rem]": 1
+      },
+      "estilos/z-index": {
+        "z-30": 1
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/tamano-suelto": {
+        "text-[10px]": 1,
+        "text-[11px]": 3
+      },
+      "tipografia/tamano-tailwind": {
+        "text-base": 1,
+        "text-sm": 1,
+        "text-xs": 4
+      }
+    },
+    "src/features/purchases/components/orders-screen.tsx": {
+      "estilos/font-mono-monto": {
+        "font-mono": 3
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-sm": 2,
+        "text-xs": 3
+      }
+    },
+    "src/features/purchases/components/purchase-order-editor.tsx": {
+      "estilos/font-mono-monto": {
+        "font-mono": 9
+      },
+      "estilos/radio": {
+        "rounded": 1
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/mayusculas": {
+        "uppercase": 3
+      },
+      "tipografia/tamano-suelto": {
+        "text-[10px]": 4
+      },
+      "tipografia/tamano-tailwind": {
+        "text-base": 1,
+        "text-sm": 7,
+        "text-xl": 1,
+        "text-xs": 17
+      },
+      "tipografia/tracking-ancho": {
+        "tracking-wide": 3
+      }
+    },
+    "src/features/purchases/components/purchases-screen.tsx": {
+      "estilos/font-mono-monto": {
+        "font-mono": 7
+      },
+      "estilos/valor-arbitrario": {
+        "grid-cols-[1fr_1.3fr_1fr_1fr_auto]": 1
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-base": 3,
+        "text-sm": 6,
+        "text-xs": 12
+      }
+    },
+    "src/features/purchases/components/purchases-tabs.tsx": {
+      "iconos/paquete": {
+        "lucide-react": 1
+      }
+    },
+    "src/features/purchases/components/supplier-detail.tsx": {
+      "estilos/font-mono-monto": {
+        "font-mono": 5
+      },
+      "iconos/paquete": {
+        "lucide-react": 2
+      },
+      "tipografia/tamano-suelto": {
+        "text-[11px]": 2
+      },
+      "tipografia/tamano-tailwind": {
+        "text-sm": 4,
+        "text-xs": 7
+      }
+    },
+    "src/features/purchases/components/suppliers-screen.tsx": {
+      "estilos/font-mono-monto": {
+        "font-mono": 3
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-sm": 2,
+        "text-xs": 3
+      }
+    },
+    "src/features/quotes/components/new-quote-wizard.tsx": {
+      "estilos/font-mono-monto": {
+        "font-mono": 8
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/tamano-suelto": {
+        "text-[11px]": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-sm": 10,
+        "text-xl": 1,
+        "text-xs": 12
+      }
+    },
+    "src/features/quotes/components/quote-detail.tsx": {
+      "estilos/font-mono-monto": {
+        "font-mono": 9
+      },
+      "estilos/radio": {
+        "rounded": 1
+      },
+      "estilos/valor-arbitrario": {
+        "-left-[21px]": 1,
+        "min-w-[860px]": 1
+      },
+      "estilos/z-index": {
+        "z-10": 1
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/mayusculas": {
+        "uppercase": 2
+      },
+      "tipografia/tamano-suelto": {
+        "text-[10px]": 2,
+        "text-[11px]": 4
+      },
+      "tipografia/tamano-tailwind": {
+        "text-sm": 6,
+        "text-xl": 2,
+        "text-xs": 11
+      }
+    },
+    "src/features/quotes/components/quotes-board.tsx": {
+      "estilos/font-mono-monto": {
+        "font-mono": 9
+      },
+      "estilos/radio": {
+        "rounded": 1
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/mayusculas": {
+        "uppercase": 6
+      },
+      "tipografia/tamano-suelto": {
+        "text-[10px]": 3,
+        "text-[11px]": 6,
+        "text-[15px]": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-base": 1,
+        "text-lg": 1,
+        "text-sm": 7,
+        "text-xl": 1,
+        "text-xs": 10
+      },
+      "tipografia/tracking-ancho": {
+        "tracking-wide": 5
+      }
+    },
+    "src/features/receivables/components/receivables-screen.tsx": {
+      "estilos/font-mono-monto": {
+        "font-mono": 5
+      },
+      "estilos/style-inline": {
+        "style={{background}}": 1
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-base": 1,
+        "text-lg": 1,
+        "text-sm": 6,
+        "text-xs": 6
+      }
+    },
+    "src/features/reports/components/liquidation-screen.tsx": {
+      "estilos/font-mono-monto": {
+        "font-mono": 13
+      },
+      "estilos/valor-arbitrario": {
+        "min-w-[720px]": 1
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/mayusculas": {
+        "uppercase": 2
+      },
+      "tipografia/tamano-suelto": {
+        "text-[11px]": 2
+      },
+      "tipografia/tamano-tailwind": {
+        "text-2xl": 1,
+        "text-lg": 1,
+        "text-sm": 4,
+        "text-xl": 1,
+        "text-xs": 8
+      }
+    },
+    "src/features/reports/components/management-reports.tsx": {
+      "estilos/font-mono-monto": {
+        "font-mono": 20
+      },
+      "estilos/radio": {
+        "rounded": 2,
+        "rounded-sm": 1
+      },
+      "estilos/style-inline": {
+        "style={{background}}": 2,
+        "style={{width}}": 1
+      },
+      "estilos/valor-arbitrario": {
+        "grid-cols-[1.5rem_1fr]": 1,
+        "rounded-[2px]": 1
+      },
+      "iconos/paquete": {
+        "lucide-react": 2
+      },
+      "tipografia/tamano-suelto": {
+        "text-[10px]": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-sm": 2,
+        "text-xs": 4
+      }
+    },
+    "src/features/reports/components/reports-screen.tsx": {
+      "estilos/font-mono-monto": {
+        "font-mono": 10
+      },
+      "estilos/radio": {
+        "rounded": 1
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/mayusculas": {
+        "uppercase": 3
+      },
+      "tipografia/tamano-suelto": {
+        "text-[10px]": 3,
+        "text-[11px]": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-base": 1,
+        "text-sm": 4,
+        "text-xs": 12
+      },
+      "tipografia/tracking-ancho": {
+        "tracking-wide": 1
+      }
+    },
+    "src/features/restaurant/components/delivery-screen.tsx": {
+      "estilos/font-mono-monto": {
+        "font-mono": 2
+      },
+      "estilos/paleta": {
+        "border-l-amber-500": 1,
+        "border-l-blue-500": 1,
+        "border-l-emerald-500": 1,
+        "border-l-slate-400": 1
+      },
+      "estilos/radio": {
+        "rounded": 1
+      },
+      "estilos/valor-arbitrario": {
+        "grid-cols-[1fr_20rem]": 1,
+        "max-h-[88svh]": 1
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/tamano-suelto": {
+        "text-[10px]": 1,
+        "text-[11px]": 2
+      },
+      "tipografia/tamano-tailwind": {
+        "text-lg": 1,
+        "text-sm": 6,
+        "text-xs": 17
+      }
+    },
+    "src/features/restaurant/components/floor-screen.tsx": {
+      "estilos/font-mono-monto": {
+        "font-mono": 4
+      },
+      "estilos/radio": {
+        "rounded": 2
+      },
+      "estilos/valor-arbitrario": {
+        "grid-cols-[1fr_22rem]": 1,
+        "h-[88svh]": 1,
+        "min-h-[36rem]": 1
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/mayusculas": {
+        "uppercase": 2
+      },
+      "tipografia/tamano-suelto": {
+        "text-[10px]": 2,
+        "text-[11px]": 6,
+        "text-[9px]": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-2xl": 1,
+        "text-lg": 1,
+        "text-sm": 8,
+        "text-xs": 6
+      },
+      "tipografia/tracking-ancho": {
+        "tracking-wide": 1
+      }
+    },
+    "src/features/restaurant/components/kds-board.tsx": {
+      "estilos/radio": {
+        "rounded": 2
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/tamano-suelto": {
+        "text-[11px]": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-sm": 2,
+        "text-xs": 6
+      }
+    },
+    "src/features/restaurant/components/reservations-screen.tsx": {
+      "estilos/font-mono-monto": {
+        "font-mono": 1
+      },
+      "estilos/valor-arbitrario": {
+        "grid-cols-[18rem_1fr]": 1
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-sm": 3,
+        "text-xs": 2
+      }
+    },
+    "src/features/retail/components/product-variants.tsx": {
+      "estilos/font-mono-monto": {
+        "font-mono": 5
+      },
+      "estilos/style-inline": {
+        "style={{background}}": 2
+      },
+      "estilos/valor-arbitrario": {
+        "min-w-[560px]": 1,
+        "min-w-[820px]": 1
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/tamano-suelto": {
+        "text-[10px]": 2,
+        "text-[11px]": 2
+      },
+      "tipografia/tamano-tailwind": {
+        "text-2xl": 1,
+        "text-lg": 1,
+        "text-sm": 3,
+        "text-xl": 1,
+        "text-xs": 13
+      }
+    },
+    "src/features/settings/components/audit-screen.tsx": {
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-sm": 2,
+        "text-xs": 5
+      }
+    },
+    "src/features/settings/components/invite-collaborator-sheet.tsx": {
+      "estilos/valor-arbitrario": {
+        "min-w-[520px]": 1
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-sm": 2,
+        "text-xs": 3
+      }
+    },
+    "src/features/settings/components/profile-screen.tsx": {
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/tamano-suelto": {
+        "text-[11px]": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-sm": 7,
+        "text-xs": 8
+      }
+    },
+    "src/features/settings/components/security-screen.tsx": {
+      "estilos/valor-arbitrario": {
+        "min-w-[720px]": 1
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-sm": 2,
+        "text-xs": 6
+      }
+    },
+    "src/features/settings/components/sunat-settings.tsx": {
+      "estilos/paleta": {
+        "bg-white": 1,
+        "text-black": 1
+      },
+      "estilos/radio": {
+        "rounded": 1
+      },
+      "estilos/valor-arbitrario": {
+        "aspect-[210/297]": 1
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/tamano-suelto": {
+        "text-[10px]": 1,
+        "text-[11px]": 1,
+        "text-[8px]": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-sm": 5,
+        "text-xs": 9
+      }
+    },
+    "src/features/veterinary/components/grooming-screen.tsx": {
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-sm": 1,
+        "text-xs": 2
+      }
+    },
+    "src/features/veterinary/components/hospital-screen.tsx": {
+      "estilos/font-mono-monto": {
+        "font-mono": 3
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/tamano-suelto": {
+        "text-[11px]": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-sm": 4,
+        "text-xs": 11
+      }
+    },
+    "src/features/veterinary/components/new-pet-sheet.tsx": {
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-sm": 1
+      }
+    },
+    "src/features/veterinary/components/pet-detail.tsx": {
+      "estilos/font-mono-monto": {
+        "font-mono": 2
+      },
+      "estilos/radio": {
+        "rounded": 2
+      },
+      "iconos/paquete": {
+        "lucide-react": 2
+      },
+      "tipografia/mayusculas": {
+        "uppercase": 1
+      },
+      "tipografia/tamano-suelto": {
+        "text-[10px]": 2
+      },
+      "tipografia/tamano-tailwind": {
+        "text-2xl": 1,
+        "text-sm": 9,
+        "text-xs": 11
+      },
+      "tipografia/tracking-ancho": {
+        "tracking-wide": 1
+      }
+    },
+    "src/features/veterinary/components/pets-list.tsx": {
+      "estilos/font-mono-monto": {
+        "font-mono": 1
+      },
+      "iconos/paquete": {
+        "lucide-react": 1
+      },
+      "tipografia/tamano-tailwind": {
+        "text-sm": 1,
+        "text-xs": 4
+      }
+    }
+  }
+}
