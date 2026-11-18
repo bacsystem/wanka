@@ -1,6 +1,6 @@
 # Recursos de la API por módulo
 
-Estado: borrador (2026-11-17). Derivado de las pantallas (`apps/web/src/app/**/page.tsx`) y de sus mocks (`apps/web/src/features/*/mocks/*.ts`), que reflejan la forma que devolverá la API. Cada fila indica la pantalla que lo consume, el mock que fija la forma de la respuesta y el permiso requerido (`modulo.recurso:accion`, acciones `read | create | update | void | export` que corresponden a "Ver, Crear, Editar, Anular, Exportar" de `settings/mocks/settings.ts`).
+Estado: **congelado (2026-11-18)**, historia #160. Un cambio a este documento (ruta, forma, permiso o catálogo) es un PR de contrato aprobado por el architect, con las reglas de [`conventions.md` §0](conventions.md#0-contrato-congelado-cómo-se-cambia). Derivado de las pantallas (`apps/web/src/app/**/page.tsx`) y de sus mocks (`apps/web/src/features/*/mocks/*.ts`), que reflejan la forma que devolverá la API. Cada fila indica la pantalla que lo consume, el mock que fija la forma de la respuesta y el permiso requerido (`modulo.recurso:accion`, acciones `read | create | update | void | export` que corresponden a "Ver, Crear, Editar, Anular, Exportar" de `settings/mocks/settings.ts`).
 
 Convenciones (cursor, errores, idempotencia, dinero como string): [`conventions.md`](conventions.md). Todo `POST` marcado **(I)** exige `Idempotency-Key`. Los contratos definitivos de cada endpoint (request/response con tipos y opcionalidad) se publican en el issue que lo implementa y terminan en `openapi.yaml`.
 
@@ -48,7 +48,7 @@ Ajustes de forma respecto a los mocks, comunes a todos los recursos:
 | `POST /v1/customers`, `PATCH /v1/customers/{id}` | alta rápida POS, ficha | `Customer` | `clientes.customers:create/update` |
 | `GET /v1/customers/{id}` | `/clientes/[id]` | `CustomerDetail` (kpis, billing, alerts) | read |
 | `GET /v1/customers/{id}/ledger`, `/documents`, `/files` | pestañas de la ficha | `CustomerDetail.ledger/documents/files` | read |
-| `GET /v1/lookups/ruc/{ruc}`, `/v1/lookups/dni/{dni}` | autocompletar | — | create. RUC vía Khipu `GET /v1/consultas/ruc/{ruc}` con la llave del tenant (60/min y 5 000/día por empresa) y caché de 24 h; timeout 3 s; si falla se ingresa a mano. Fuente del DNI a definir |
+| `GET /v1/lookups/ruc/{ruc}`, `/v1/lookups/dni/{dni}` | autocompletar | — | create. RUC vía Khipu `GET /v1/consultas/ruc/{ruc}` con la llave del tenant (60/min y 5 000/día por empresa) y caché de 24 h; timeout 3 s; si falla se ingresa a mano. DNI: misma ruta, timeout y respaldo manual («sin validar»); **la fuente está pendiente de decisión del dueño** (#34, [`conventions.md` §8](conventions.md#8-decisiones-del-dueño)) |
 
 ## catalogo (`catalog`)
 
@@ -194,8 +194,8 @@ Formato `modulo.recurso:accion`. Este catálogo es la **fuente de verdad**: se c
 | empresas | `empresas.config:read/update`, `empresas.sites:read/create/update`, `empresas.series:read/create/update`, `empresas.einvoicing:read/update` |
 | clientes | `clientes.customers:read/create/update/export/import` |
 | catalogo | `catalogo.items:read/create/update/import/export`, `catalogo.categories:read/create/update`, `catalogo.prices:read/update` |
-| inventario | `inventario.warehouses:read/create/update`, `inventario.stock:read/update/export`, `inventario.transfers:read/create/update`, `inventario.counts:read/create/update/approve`, `inventario.consignments:read/create/update`, `inventario.supplier_returns:read/create` |
-| ventas | `ventas.pos:read/create`, `ventas.discounts:create/approve`, `ventas.quotes:read/create/update/send` |
+| inventario | `inventario.warehouses:read/create/update`, `inventario.stock:read/update/export`, `inventario.transfers:read/create/update`, `inventario.counts:read/create/update/approve`, `inventario.consignments:read/create/update`, `inventario.supplier_returns:read/create/approve` |
+| ventas | `ventas.pos:read/create`, `ventas.discounts:create/approve`, `ventas.quotes:read/create/update/send`, `ventas.returns:create/approve` |
 | facturacion | `facturacion.cpe:read/create/void/retry/send/export`, `facturacion.credit_notes:create`, `facturacion.debit_notes:create`, `facturacion.gre:read/create/update` |
 | compras | `compras.suppliers:read/create/update`, `compras.orders:read/create/update`, `compras.documents:read/create/update/export` |
 | finanzas | `finanzas.cash:read/read_all/create/update/approve/export`, `finanzas.receivables:read/create/update`, `finanzas.payables:read/create/update` |
@@ -206,8 +206,8 @@ Formato `modulo.recurso:accion`. Este catálogo es la **fuente de verdad**: se c
 | notificaciones | `notificaciones.reminders:read/update` |
 | lubricentro | `lubricentro.vehicles:read/create/update`, `lubricentro.service_orders:read/create/update/void` |
 | libreria | `libreria.books:read/create/update/import`, `libreria.school_lists:read/create/update` |
-| odontologia, veterinaria | `odontologia.records:read/update`, `veterinaria.records:read/update`, `veterinaria.hospital:read/update` |
-| restaurante, retail | `restaurante.tables:read/update`, `restaurante.orders:read/create/update`, `retail.variants:read/update` |
+| odontologia, veterinaria | `odontologia.records:read/update`, `veterinaria.records:read/update`, `veterinaria.hospital:read/update`, `veterinaria.grooming:read/update` |
+| restaurante, retail | `restaurante.tables:read/update`, `restaurante.orders:read/create/update`, `restaurante.reservations:read/create/update`, `retail.variants:read/update` |
 
 ## Correspondencia: código de historia → catálogo
 
@@ -254,6 +254,54 @@ Los issues usan 37 códigos abreviados (relevados con `gh issue list --limit 200
 | `ventas.descuento` | #51 | `ventas.discounts:create`; sobre el tope del rol, `ventas.discounts:approve` del supervisor que autoriza |
 
 La consignación (#112) no tenía código propio: usa `inventario.consignments:*`.
+
+**Altas del congelamiento (2026-11-18).** Ocho permisos nuevos en cuatro recursos, para historias abiertas que piden un permiso que el catálogo no tenía: `ventas.returns:create` y `:approve` (devolución o cambio de un cliente; `approve` autoriza la excepción sin ticket o fuera de plazo, #110 y #122), `inventario.supplier_returns:approve` (devolver al proveedor fuera del plazo pactado, #111), `veterinaria.grooming:read/update` (grooming separado de la historia clínica, para dárselo a un peluquero sin acceso clínico, #118) y `restaurante.reservations:read/create/update` (reservas de mesa, #115). Sus rutas se publican en el issue de cada historia (ADR 0009).
+
+### Historias sin código abreviado → catálogo
+
+Historias de negocio abiertas que no citan un código. Con esta tabla y la anterior, ninguna historia abierta queda sin permiso. «Sin permiso de catálogo» significa que la ruta la protege otra cosa (público con rate limit, la sesión del propio usuario o la membresía), como en las tablas de recursos.
+
+| Issue | Historia | Permisos del catálogo |
+|---|---|---|
+| #24 | Iniciar sesión | sin permiso de catálogo: público, con rate limit |
+| #25 | Verificación en dos pasos | sin permiso de catálogo: la sesión del propio usuario |
+| #26 | Recuperar contraseña | sin permiso de catálogo: público, con rate limit |
+| #27 | Seleccionar la empresa activa | sin permiso de catálogo: membresía activa en el tenant |
+| #30 | Editar mi perfil y contraseña | sin permiso de catálogo: la sesión del propio usuario |
+| #31 | Registrar mi empresa | el alta es pública con rate limit y crea el rol dueño; los pasos del onboarding exigen `empresas.config:update`, `empresas.sites:create`, `empresas.series:create` |
+| #35 | Ficha del cliente | `clientes.customers:read`; editar contacto, `clientes.customers:update` |
+| #40 | Variantes de producto | `catalogo.items:read`, `:update` |
+| #42 | Stock y alertas de mínimo | `inventario.stock:read` |
+| #45 | Kardex valorizado | `inventario.stock:read`, `:export` |
+| #47 | Numeración sin huecos | sin permiso propio: la asigna la venta o el CPE dentro de su transacción (ADR 0008); configurar series, `empresas.series:create`, `:update` |
+| #50 | Venta en espera | `ventas.pos:create` |
+| #52 | Consultar, reimprimir y reenviar comprobantes | `facturacion.cpe:read`, `ventas.pos:read` (reimpresión), `facturacion.cpe:send` (reenvío) |
+| #54 | Convertir proforma en venta | `ventas.quotes:update`, `ventas.pos:create` |
+| #76 | Cobrar una cita en el POS | `ventas.pos:create`, `agenda.appointments:update` (marca la cita cobrada) |
+| #83 | Notificaciones en la app | sin permiso de catálogo: cada usuario ve las suyas (sesión) |
+| #84 | Consola con 2FA obligatorio | plano plataforma, sin permiso de catálogo: login público con 2FA |
+| #95 | Buscar vehículo por placa | `lubricentro.vehicles:read` |
+| #99 | Cerrar la orden y facturar | `lubricentro.service_orders:update`, `ventas.pos:create` |
+| #100 | Próximo cambio por km y fecha | `lubricentro.vehicles:update` (lectura de km), `lubricentro.service_orders:update` |
+| #101 | Recordatorios de próximo cambio | `notificaciones.reminders:read`, `:update` |
+| #102 | Historial del vehículo | `lubricentro.vehicles:read`, `lubricentro.service_orders:read` |
+| #103 | Paquetes de servicio | definirlos, `catalogo.items:create`, `:update`; venderlos, `ventas.pos:create` |
+| #105 | Buscar libros | `libreria.books:read` |
+| #107 | Listas escolares | `libreria.school_lists:read`, `:create`, `:update` |
+| #108 | Cotizar una lista escolar | `libreria.school_lists:read`, `ventas.quotes:create` |
+| #109 | Reservar stock de una lista cotizada | `ventas.quotes:create` (la reserva nace con la proforma), `ventas.quotes:update` (liberarla o extenderla) |
+| #110 | Devolver un libro del cliente | `ventas.returns:create`; fuera de plazo, `ventas.returns:approve` |
+| #111 | Devolver libros al proveedor | `inventario.supplier_returns:create`; fuera de plazo, `inventario.supplier_returns:approve` |
+| #113 | Mesas y cuentas del salón | `restaurante.tables:read`, `:update`, `restaurante.orders:create`, `:update` |
+| #114 | Comandas a cocina (KDS) | `restaurante.orders:read`, `:update` |
+| #115 | Delivery y reservas | `restaurante.orders:create`, `:update` (delivery), `restaurante.reservations:read`, `:create`, `:update` |
+| #116 | Mascotas y carné de vacunas | `veterinaria.records:read`, `:update` |
+| #118 | Hospitalización y grooming | `veterinaria.hospital:read`, `:update`, `veterinaria.grooming:read`, `:update` |
+| #120 | Presupuesto de tratamiento | `odontologia.records:update`; convertirlo en proforma, `ventas.quotes:create` |
+| #121 | Matriz talla × color | `retail.variants:read`, `:update` |
+| #122 | Cambios y devoluciones | `ventas.returns:create`; sin ticket, `ventas.returns:approve` |
+
+Las historias del kernel (épica #154), las de frontend y las épicas no exponen rutas de negocio propias: aplican los permisos de las rutas que tocan.
 
 ## Catálogo de permisos de plataforma (plano super-admin)
 
