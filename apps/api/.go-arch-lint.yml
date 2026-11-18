@@ -1,0 +1,15 @@
+# Architecture rules for apps/api (ADR 0002). Check: scripts/archlint.sh
+#
+# The kernel (internal/platform) is shared by everyone and imports no module.
+# The rule that keeps modules apart is exercised on a fixture:
+# testdata/archlint/.go-arch-lint.yml. When a module is added under
+# internal/<module>/, add its pair of components to this file following that
+# fixture: <module> (the facade, package internal/<module>) and <module>_inner
+# (domain, app, adapters), so no other module can import its inner packages.
+version: 3
+workdir: internal
+components:
+  platform: { in: platform/** }
+deps:
+  platform:
+    mayDependOn: [platform]
