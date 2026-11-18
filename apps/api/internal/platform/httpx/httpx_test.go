@@ -46,6 +46,21 @@ func TestReadyzStubReturns503(t *testing.T) {
 	if err := json.Unmarshal(rec.Body.Bytes(), &p); err != nil || p["status"] != float64(503) {
 		t.Fatalf("bad problem body %q (%v)", rec.Body.String(), err)
 	}
+	// Required by the frozen Problem schema (openapi.yaml, conventions.md §4).
+	for _, k := range []string{"type", "title", "status", "code", "requestId"} {
+		if _, ok := p[k]; !ok {
+			t.Fatalf("problem lacks required field %q: %s", k, rec.Body.String())
+		}
+	}
+	if p["code"] != "dependency_unavailable" {
+		t.Fatalf("code %v", p["code"])
+	}
+	if id := rec.Header().Get("X-Request-Id"); id == "" || p["requestId"] != id {
+		t.Fatalf("requestId %v does not match X-Request-Id %q", p["requestId"], id)
+	}
+	if strings.Contains(rec.Body.String(), httpx.ErrNotReady.Error()) {
+		t.Fatalf("detail leaks the internal cause: %s", rec.Body.String())
+	}
 }
 
 func TestReadyzOKWhenReady(t *testing.T) {

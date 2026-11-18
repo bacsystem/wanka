@@ -54,7 +54,7 @@ func NewMux(ready ReadyFunc) *http.ServeMux {
 	mux.HandleFunc("GET /readyz", func(w http.ResponseWriter, r *http.Request) {
 		if ready(r.Context()) != nil {
 			// The cause is not returned to the caller: it may name internals.
-			WriteProblem(w, http.StatusServiceUnavailable, "Service Unavailable", "dependency not ready")
+			WriteProblem(w, r, http.StatusServiceUnavailable, "dependency_unavailable", "Service Unavailable", "dependency not ready")
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -63,12 +63,15 @@ func NewMux(ready ReadyFunc) *http.ServeMux {
 	return mux
 }
 
-// WriteProblem writes an RFC 9457 problem document.
-func WriteProblem(w http.ResponseWriter, status int, title, detail string) {
+// WriteProblem writes an RFC 9457 problem document with the fields the API
+// contract requires (openapi.yaml Problem): code comes from the closed list in
+// conventions.md §4 and requestId from the request context.
+func WriteProblem(w http.ResponseWriter, r *http.Request, status int, code, title, detail string) {
 	w.Header().Set("Content-Type", "application/problem+json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(map[string]any{
-		"type": "about:blank", "title": title, "status": status, "detail": detail,
+		"type": "about:blank", "title": title, "status": status, "code": code,
+		"detail": detail, "requestId": logging.RequestID(r.Context()),
 	})
 }
 
