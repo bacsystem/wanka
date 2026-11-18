@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose/v3"
+	"github.com/pressly/goose/v3/database"
 	"github.com/pressly/goose/v3/lock"
 )
 
@@ -20,6 +21,9 @@ const (
 	// migrationLockTimeout hace que una migración que espera un lock falle en
 	// vez de congelar producción (data-model §6).
 	migrationLockTimeout = 5 * time.Second
+	// versionTable es la tabla de versiones de goose, calificada con su esquema.
+	versionTable = "goose.goose_db_version"
+
 	// migrationStatementTimeout acota cada sentencia de una migración.
 	migrationStatementTimeout = 5 * time.Minute
 )
@@ -41,7 +45,9 @@ func Migrate(ctx context.Context, rawURL string, fsys fs.FS, log *slog.Logger) (
 
 	sqlDB := stdlib.OpenDB(*cc)
 	defer sqlDB.Close()
-	// Una conexión sostiene el advisory lock y la otra corre la migración.
+	// goose toma una conexión (*sql.Conn) para el advisory lock y corre sobre ella
+	// las migraciones SQL; el segundo hueco es para migraciones Go sin
+	// transacción, que goose abre aparte y hoy no existen.
 	sqlDB.SetMaxOpenConns(2)
 	sqlDB.SetConnMaxLifetime(time.Hour)
 
@@ -60,7 +66,13 @@ func migrate(ctx context.Context, sqlDB *sql.DB, fsys fs.FS, log *slog.Logger) (
 	if err != nil {
 		return 0, fmt.Errorf("creating migration lock: %w", err)
 	}
-	provider, err := goose.NewProvider(goose.DialectPostgres, sqlDB, fsys, goose.WithSessionLocker(locker))
+	// La tabla de versiones vive en el esquema goose, que crea el bootstrap con
+	// dueño wanka_migrator: el migrador no necesita CREATE en public.
+	store, err := database.NewStore(database.DialectPostgres, versionTable)
+	if err != nil {
+		return 0, fmt.Errorf("creating migration store: %w", err)
+	}
+	provider, err := goose.NewProvider(goose.DialectCustom, sqlDB, fsys, goose.WithSessionLocker(locker), goose.WithStore(store))
 	if err != nil {
 		return 0, fmt.Errorf("creating migration provider: %w", err)
 	}

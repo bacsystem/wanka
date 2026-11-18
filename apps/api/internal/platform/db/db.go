@@ -112,12 +112,19 @@ func (p *Pool) full() bool {
 	return s.AcquiredConns() >= s.MaxConns()
 }
 
-// Ping comprueba que la base responde; es el chequeo de readiness. Su plazo es
-// mayor que el de Acquire: la readiness no es una petición de usuario.
+// Ping comprueba que la base responde; es el chequeo de readiness. Toma la
+// conexión como cualquier petición: con el pool lleno devuelve ErrOverloaded a
+// los 200 ms (no espera 2 s ni culpa a la base sana) y /readyz responde 503
+// overloaded, igual que una petición sin conexión libre (conventions.md §4).
 func (p *Pool) Ping(ctx context.Context) error {
+	conn, err := p.Acquire(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Release()
 	ctx, cancel := context.WithTimeout(ctx, pingTimeout)
 	defer cancel()
-	if err := p.pool.Ping(ctx); err != nil {
+	if err := conn.Conn().Ping(ctx); err != nil {
 		return fmt.Errorf("%w: %w", ErrUnavailable, scrubbed(p.scrub, err))
 	}
 	return nil
@@ -126,7 +133,10 @@ func (p *Pool) Ping(ctx context.Context) error {
 // Close cierra todas las conexiones; llamarlo después de detener el servidor HTTP.
 func (p *Pool) Close() { p.pool.Close() }
 
-// scrubber reemplaza la URL y su contraseña en el texto de un error.
+// scrubber reemplaza la URL completa y la contraseña en el texto de un error.
+// La contraseña se redacta solo donde es un secreto (":clave@" dentro de una
+// URL y "password=clave"), nunca como subcadena suelta: una clave corta como
+// "x" mutilaría el resto del mensaje.
 func scrubber(rawURL string) *strings.Replacer {
 	pairs := []string{}
 	if rawURL != "" {
@@ -134,7 +144,9 @@ func scrubber(rawURL string) *strings.Replacer {
 	}
 	if u, err := url.Parse(rawURL); err == nil && u.User != nil {
 		if pw, ok := u.User.Password(); ok && pw != "" {
-			pairs = append(pairs, pw, "[REDACTED]")
+			for _, form := range []string{pw, url.PathEscape(pw), url.QueryEscape(pw)} {
+				pairs = append(pairs, ":"+form+"@", ":[REDACTED]@", "password="+form, "password=[REDACTED]")
+			}
 		}
 	}
 	return strings.NewReplacer(pairs...)

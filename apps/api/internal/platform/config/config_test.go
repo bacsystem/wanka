@@ -123,3 +123,12 @@ func TestLoadDefaultsAndOverrides(t *testing.T) {
 		t.Fatalf("unexpected overrides: %+v", cfg)
 	}
 }
+
+// El nombre de la variable es el que fijan ADR 0006 y ADR 0007 y el que usará
+// el admin en Railway: se prueba con el literal, no con la constante.
+func TestPoolMaxVariableNameMatchesTheDeploymentDocs(t *testing.T) {
+	cfg, err := config.Load(env(map[string]string{"DATABASE_URL_APP": "x", "DB_POOL_MAX_CONNS": "7"}), config.API)
+	if err != nil || cfg.DBPoolMax != 7 {
+		t.Fatalf("DB_POOL_MAX_CONNS=7 gave %+v, %v", cfg, err)
+	}
+}

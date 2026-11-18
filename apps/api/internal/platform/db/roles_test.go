@@ -2,11 +2,13 @@ package db_test
 
 import (
 	"context"
+	"errors"
 	"regexp"
 	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/bacsystem/wanka/apps/api/bootstrap"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/db/dbtest"
@@ -142,7 +144,50 @@ func TestBootstrapSelfCheckAbortsOnAnUnexpectedRole(t *testing.T) {
 	}
 	defer func() { _, _ = c.Exec(context.Background(), `DROP ROLE IF EXISTS wanka_zz_unexpected`) }()
 	_, err := c.Exec(ctx, bootstrap.RolesSQL)
-	if err == nil || !strings.Contains(err.Error(), "faltan o sobran roles") {
+	if err == nil || !strings.Contains(err.Error(), "missing or extra wanka_* roles") {
+		t.Fatalf("err = %v, want the self-check to abort", err)
+	}
+}
+
+// En una base donde PUBLIC puede crear en public (restaurada o actualizada
+// desde PostgreSQL < 15, o alterada a mano) el bootstrap cierra el hueco: los
+// roles de servicio no pueden crear objetos allí.
+func TestBootstrapClosesPublicSchemaToEveryone(t *testing.T) {
+	d := dbtest.NewExclusive(t)
+	ctx := context.Background()
+	c := d.Admin(ctx, t)
+	if _, err := c.Exec(ctx, `GRANT CREATE ON SCHEMA public TO PUBLIC`); err != nil {
+		t.Fatal(err)
+	}
+	app, err := pgx.Connect(ctx, d.URL(dbtest.App))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer app.Close(ctx)
+	if _, err := app.Exec(ctx, `CREATE TABLE public.leak_before (i int)`); err != nil {
+		t.Fatalf("test setup: with PUBLIC open the app should be able to create: %v", err)
+	}
+
+	rerunBootstrap(t, c)
+
+	_, err = app.Exec(ctx, `CREATE TABLE public.leak_after (i int)`)
+	var pgErr *pgconn.PgError
+	if !errors.As(err, &pgErr) || pgErr.Code != "42501" {
+		t.Fatalf("after the bootstrap: err = %v, want SQLSTATE 42501", err)
+	}
+}
+
+// La autoverificación del bootstrap aborta si algún rol wanka_* conserva
+// CREATE en public por un GRANT directo, que el REVOKE de PUBLIC no quita.
+func TestBootstrapSelfCheckAbortsWhenARoleCanCreateInPublic(t *testing.T) {
+	d := dbtest.NewExclusive(t)
+	ctx := context.Background()
+	c := d.Admin(ctx, t)
+	if _, err := c.Exec(ctx, `GRANT CREATE ON SCHEMA public TO wanka_worker`); err != nil {
+		t.Fatal(err)
+	}
+	_, err := c.Exec(ctx, bootstrap.RolesSQL)
+	if err == nil || !strings.Contains(err.Error(), "can create in schema public") {
 		t.Fatalf("err = %v, want the self-check to abort", err)
 	}
 }

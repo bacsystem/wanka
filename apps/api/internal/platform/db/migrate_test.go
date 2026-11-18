@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/fs"
 	"log/slog"
+	"os"
 	"regexp"
 	"strings"
 	"sync"
@@ -75,13 +76,13 @@ func TestMigrateUpAppliesFromScratchAndTwiceIsANoOp(t *testing.T) {
 		t.Fatalf("first run: applied %d (want %d), err %v", n, want, err)
 	}
 	admin := d.Admin(ctx, t)
-	before := queryOne[string](t, admin, `SELECT string_agg(version_id::text || ':' || is_applied::text || ':' || tstamp::text, ',' ORDER BY id) FROM public.goose_db_version`)
+	before := queryOne[string](t, admin, `SELECT string_agg(version_id::text || ':' || is_applied::text || ':' || tstamp::text, ',' ORDER BY id) FROM goose.goose_db_version`)
 
 	n, err = db.Migrate(ctx, d.URL(dbtest.Migrator), migrations.FS, log)
 	if err != nil || n != 0 {
 		t.Fatalf("second run: applied %d, err %v; want a no-op", n, err)
 	}
-	after := queryOne[string](t, admin, `SELECT string_agg(version_id::text || ':' || is_applied::text || ':' || tstamp::text, ',' ORDER BY id) FROM public.goose_db_version`)
+	after := queryOne[string](t, admin, `SELECT string_agg(version_id::text || ':' || is_applied::text || ':' || tstamp::text, ',' ORDER BY id) FROM goose.goose_db_version`)
 	if before != after {
 		t.Fatalf("version table changed on the second run:\n%s\n%s", before, after)
 	}
@@ -287,5 +288,70 @@ func TestMigrateErrorsDoNotLeakTheURL(t *testing.T) {
 	}
 	if strings.Contains(err.Error(), "WRONG-PW-XYZ") || strings.Contains(err.Error(), bad) {
 		t.Fatalf("error leaks the URL: %v", err)
+	}
+}
+
+// Un rol LOGIN con BYPASSRLS pero sin SUPERUSER tampoco puede migrar: RLS
+// parecería correcto sin aplicarse. El rol vive fuera del prefijo wanka_ para
+// no descuadrar la autoverificación del bootstrap.
+func TestMigrateRefusesBypassRLSWithoutSuperuser(t *testing.T) {
+	d := dbtest.New(t)
+	ctx := context.Background()
+	admin := d.Admin(ctx, t)
+
+	role := "bypass_" + strings.TrimPrefix(d.Name, "wanka_t_")
+	if _, err := admin.Exec(ctx, `CREATE ROLE `+role+` LOGIN NOSUPERUSER BYPASSRLS PASSWORD 'pw'`); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _, _ = admin.Exec(context.Background(), `DROP OWNED BY `+role+`; DROP ROLE `+role) })
+	if _, err := admin.Exec(ctx, `GRANT CREATE ON DATABASE `+pgx.Identifier{d.Name}.Sanitize()+` TO `+role); err != nil {
+		t.Fatal(err)
+	}
+
+	u := strings.Replace(d.URL(dbtest.Migrator), "wanka_migrator:"+os.Getenv(dbtest.EnvRolePassword), role+":pw", 1)
+	if u == d.URL(dbtest.Migrator) {
+		t.Fatal("test setup: could not build the URL of the bypass role")
+	}
+	_, err := db.Migrate(ctx, u, migrations.FS, discardLog())
+	if err == nil || !strings.Contains(err.Error(), "BYPASSRLS") {
+		t.Fatalf("err = %v, want a refusal that names BYPASSRLS", err)
+	}
+	if queryOne[bool](t, admin, `SELECT EXISTS (SELECT 1 FROM pg_namespace WHERE nspname = 'app')`) {
+		t.Fatal("a refused migration changed the database")
+	}
+}
+
+// Una sentencia sin esquema en una migración no puede caer en public: el
+// migrador no tiene CREATE allí y falla con 42501, en vez de crear objetos que
+// todos los roles verían.
+func TestMigrationWithoutSchemaCannotCreateInPublic(t *testing.T) {
+	d := dbtest.New(t)
+	fsys := fstest.MapFS{"20000101000000_noschema.sql": {Data: []byte("-- +goose Up\nCREATE TABLE no_schema (id int);\n")}}
+	_, err := db.Migrate(context.Background(), d.URL(dbtest.Migrator), fsys, discardLog())
+	var pgErr *pgconn.PgError
+	if !errors.As(err, &pgErr) || pgErr.Code != "42501" {
+		t.Fatalf("err = %v, want SQLSTATE 42501", err)
+	}
+}
+
+// goose guarda sus versiones en el esquema goose (del migrador), no en public.
+func TestGooseVersionTableLivesInItsOwnSchema(t *testing.T) {
+	d := dbtest.New(t)
+	ctx := context.Background()
+	d.Migrate(ctx, t)
+	admin := d.Admin(ctx, t)
+	if !queryOne[bool](t, admin, `SELECT to_regclass('goose.goose_db_version') IS NOT NULL`) {
+		t.Fatal("goose.goose_db_version does not exist")
+	}
+	if queryOne[bool](t, admin, `SELECT to_regclass('public.goose_db_version') IS NOT NULL`) {
+		t.Fatal("goose_db_version must not live in public")
+	}
+	if o := queryOne[string](t, admin, `SELECT pg_get_userbyid(nspowner) FROM pg_namespace WHERE nspname = 'goose'`); o != "wanka_migrator" {
+		t.Fatalf("schema goose owner = %s", o)
+	}
+	for _, role := range []string{"wanka_app", "wanka_worker", "wanka_webhooks", "wanka_platform"} {
+		if queryOne[bool](t, admin, `SELECT has_schema_privilege($1, 'goose', 'USAGE')`, role) {
+			t.Errorf("%s can use the goose schema", role)
+		}
 	}
 }

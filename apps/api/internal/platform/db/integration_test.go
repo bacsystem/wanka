@@ -243,3 +243,32 @@ func TestApplicationRolesCannotCreateObjects(t *testing.T) {
 		})
 	}
 }
+
+// Con el pool lleno y la base sana, la readiness no espera 2 s ni culpa a la
+// base: responde 503 overloaded como cualquier petición sin conexión libre
+// (conventions.md §4).
+func TestReadyzWithAFullPoolIsOverloadedAndFast(t *testing.T) {
+	d := dbtest.New(t)
+	ctx := context.Background()
+	p := open(t, d.URL(dbtest.App), db.Options{MaxConns: 1})
+	held, err := p.Acquire(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer held.Release()
+
+	h := httpx.Chain(httpx.NewMux(p.Ping), discardLog())
+	start := time.Now()
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/readyz", nil))
+	if elapsed := time.Since(start); elapsed > time.Second {
+		t.Fatalf("readyz took %v with a full pool", elapsed)
+	}
+	var problem map[string]any
+	if rec.Code != http.StatusServiceUnavailable || json.Unmarshal(rec.Body.Bytes(), &problem) != nil || problem["code"] != "overloaded" {
+		t.Fatalf("readyz = %d %s, want 503 overloaded", rec.Code, rec.Body)
+	}
+	if rec.Header().Get("Retry-After") != "1" {
+		t.Fatalf("Retry-After = %q", rec.Header().Get("Retry-After"))
+	}
+}

@@ -5,7 +5,7 @@
 #   - un archivo de migración que ya estaba se modificó, se borró o se renombró;
 #   - un archivo no se llama <yyyymmddhhmmss>_<nombre>.sql;
 #   - un archivo con "-- +goose NO TRANSACTION" contiene algo más que
-#     CREATE [UNIQUE] INDEX CONCURRENTLY.
+#     CREATE [UNIQUE] INDEX CONCURRENTLY (sin IF NOT EXISTS).
 # Antes de revisar el repo real, demuestra con repos temporales que el check
 # rechaza cada caso malo y acepta los buenos (como scripts/archlint.sh).
 set -eu
@@ -34,12 +34,15 @@ lint() {
         echo "FAIL: $name debe llamarse <yyyymmddhhmmss>_<nombre>.sql" >&2
         bad=1
       fi
-      if grep -Eq '^[[:space:]]*--[[:space:]]*\+goose[[:space:]]+NO[[:space:]]+TRANSACTION' "$f"; then
-        # Sin comentarios, las sentencias separadas por ';' deben ser todas CREATE [UNIQUE] INDEX CONCURRENTLY.
+      # goose compara la anotación sin distinguir mayúsculas: el check tampoco.
+      if grep -Eiq '^[[:space:]]*--[[:space:]]*\+goose[[:space:]]+NO[[:space:]]+TRANSACTION' "$f"; then
+        # Sin comentarios, las sentencias separadas por ';' deben ser todas CREATE [UNIQUE] INDEX CONCURRENTLY
+        # sin IF NOT EXISTS: si el build concurrente falla deja un índice INVALID, y con IF NOT EXISTS
+        # la siguiente corrida lo saltaría y el índice inválido quedaría para siempre.
         if ! sed 's/--.*$//' "$f" | tr '\n' ' ' | awk '
             BEGIN { RS = ";"; n = 0; bad = 0 }
             { s = tolower($0); gsub(/^[ \t\r]+|[ \t\r]+$/, "", s); if (s == "") next; n++
-              if (s !~ /^create (unique )?index concurrently /) bad = 1 }
+              if (s !~ /^create (unique )?index concurrently / || s ~ /^create (unique )?index concurrently if not exists /) bad = 1 }
             END { exit (n == 0 || bad) }'; then
           echo "FAIL: $name usa NO TRANSACTION pero contiene algo más que CREATE INDEX CONCURRENTLY" >&2
           bad=1
@@ -83,10 +86,16 @@ new_repo; git mv "$mdir/20260101000000_first.sql" "$mdir/20260101000000_renamed.
 expect fail "renombrar una migración ya presente" "$tmp/r" main
 new_repo; printf -- '-- +goose Up\nSELECT 2;\n' > "$mdir/second.sql"
 expect fail "nombre sin timestamp" "$tmp/r" main
-new_repo; printf -- '-- +goose NO TRANSACTION\n-- +goose Up\n-- índice grande\nCREATE INDEX CONCURRENTLY IF NOT EXISTS i1 ON t (a);\nCREATE UNIQUE INDEX CONCURRENTLY i2 ON t (b);\n' > "$mdir/20260102000000_idx.sql"
+new_repo; printf -- '-- +goose NO TRANSACTION\n-- +goose Up\n-- índice grande\nCREATE INDEX CONCURRENTLY i1 ON t (a);\nCREATE UNIQUE INDEX CONCURRENTLY i2 ON t (b);\n' > "$mdir/20260102000000_idx.sql"
 expect pass "NO TRANSACTION solo con CREATE INDEX CONCURRENTLY" "$tmp/r" main
 new_repo; printf -- '-- +goose NO TRANSACTION\n-- +goose Up\nCREATE INDEX CONCURRENTLY i1 ON t (a);\nALTER TABLE t ADD COLUMN c int;\n' > "$mdir/20260102000000_mixed.sql"
 expect fail "NO TRANSACTION con otra sentencia" "$tmp/r" main
+new_repo; printf -- '-- +goose no transaction\n-- +goose Up\nCREATE INDEX CONCURRENTLY i ON t (a);\nALTER TABLE t ADD COLUMN c int;\n' > "$mdir/20260102000000_lower.sql"
+expect fail "NO TRANSACTION en minúsculas (goose no distingue mayúsculas)" "$tmp/r" main
+new_repo; printf -- '--+goose No Transaction\n-- +goose Up\nCREATE INDEX CONCURRENTLY i ON t (a);\nALTER TABLE t ADD COLUMN c int;\n' > "$mdir/20260102000000_mixed_case.sql"
+expect fail "NO TRANSACTION con mayúsculas mezcladas y sin espacio" "$tmp/r" main
+new_repo; printf -- '-- +goose NO TRANSACTION\n-- +goose Up\nCREATE INDEX CONCURRENTLY IF NOT EXISTS i1 ON t (a);\n' > "$mdir/20260102000000_ifne.sql"
+expect fail "CONCURRENTLY IF NOT EXISTS (un índice INVALID quedaría para siempre)" "$tmp/r" main
 new_repo; printf -- '-- +goose NO TRANSACTION\n-- +goose Up\nSELECT 1;\n' > "$mdir/20260102000000_other.sql"
 expect fail "NO TRANSACTION sin índice" "$tmp/r" main
 new_repo; printf -- '-- +goose NO TRANSACTION\n-- +goose Up\n' > "$mdir/20260102000000_empty.sql"

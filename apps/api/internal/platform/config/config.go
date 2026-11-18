@@ -16,10 +16,10 @@ import (
 const (
 	EnvHTTPAddr  = "HTTP_ADDR"
 	EnvLogLevel  = "LOG_LEVEL"
-	EnvDBPoolMax = "DB_POOL_MAX"
+	EnvDBPoolMax = "DB_POOL_MAX_CONNS"
 )
 
-// maxPoolMax acota DB_POOL_MAX: un error de tipeo no debe abrir cientos de conexiones.
+// maxPoolMax acota DB_POOL_MAX_CONNS: un error de tipeo no debe abrir cientos de conexiones.
 const maxPoolMax = 200
 
 // Service es una identidad de base de datos: cada proceso se conecta con el rol

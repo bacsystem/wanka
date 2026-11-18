@@ -53,7 +53,12 @@ func NewMux(ready ReadyFunc) *http.ServeMux {
 	mux.HandleFunc("GET /healthz", live)
 	mux.HandleFunc("GET /livez", live)
 	mux.HandleFunc("GET /readyz", func(w http.ResponseWriter, r *http.Request) {
-		if ready(r.Context()) != nil {
+		if err := ready(r.Context()); err != nil {
+			// Un pool sin conexión libre es 503 overloaded y una base que no
+			// responde es 503 dependency_unavailable (conventions.md §4).
+			if WriteDBError(w, r, err) {
+				return
+			}
 			// The cause is not returned to the caller: it may name internals.
 			w.Header().Set("Retry-After", "1")
 			WriteProblem(w, r, http.StatusServiceUnavailable, "dependency_unavailable", "Service Unavailable", "dependency not ready")

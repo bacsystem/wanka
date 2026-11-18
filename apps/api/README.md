@@ -98,7 +98,7 @@ rol y no lee las de los demás.
 | `DATABASE_URL_WEBHOOKS` | `serve --plane=webhooks` | URL del rol `wanka_webhooks`. Secreto |
 | `DATABASE_URL_WORKER` | `worker` | URL del rol `wanka_worker`. Secreto |
 | `DATABASE_URL_MIGRATOR` | `migrate up` | URL del rol `wanka_migrator`. Secreto |
-| `DB_POOL_MAX` | no | Tamaño máximo del pool, 1 a 200. Por defecto: api 20, worker 10, webhooks 5, platform 5 (`capacity.md`) |
+| `DB_POOL_MAX_CONNS` | no | Tamaño máximo del pool, 1 a 200. Por defecto: api 20, worker 10, webhooks 5, platform 5 (`capacity.md`) |
 | `HTTP_ADDR` | no (`:8080`) | Dirección donde escucha `serve` (con `127.0.0.1:0` el sistema elige el puerto y se informa en el log `listening`) |
 | `LOG_LEVEL` | no (`info`) | `debug`, `info`, `warn` o `error` |
 

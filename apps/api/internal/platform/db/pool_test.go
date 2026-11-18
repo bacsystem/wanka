@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -106,5 +107,65 @@ func TestErrorsStayInspectable(t *testing.T) {
 	var opErr *net.OpError
 	if !errors.As(err, &opErr) && !errors.As(err, &netErr) {
 		t.Fatalf("the cause should stay reachable with errors.As: %v", err)
+	}
+}
+
+// hungDatabaseURL devuelve la URL de un servidor que acepta conexiones TCP y
+// nunca responde: una base colgada (red cortada a medias, proceso congelado).
+func hungDatabaseURL(t *testing.T, password string) string {
+	t.Helper()
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var mu sync.Mutex
+	var conns []net.Conn
+	go func() {
+		for {
+			c, err := ln.Accept()
+			if err != nil {
+				return
+			}
+			mu.Lock()
+			conns = append(conns, c)
+			mu.Unlock()
+		}
+	}()
+	t.Cleanup(func() {
+		ln.Close()
+		mu.Lock()
+		defer mu.Unlock()
+		for _, c := range conns {
+			c.Close()
+		}
+	})
+	return "postgres://wanka_app:" + password + "@" + ln.Addr().String() + "/wanka?sslmode=disable"
+}
+
+// Una base colgada no es un pool lleno: el plazo de 200 ms vence igual, pero no
+// hay conexiones en uso, así que el error es "no disponible" y no "sobrecarga".
+func TestHungDatabaseIsUnavailableNotOverloaded(t *testing.T) {
+	p := open(t, hungDatabaseURL(t, "pw"), db.Options{MaxConns: 2})
+	start := time.Now()
+	conn, err := p.Acquire(context.Background())
+	if conn != nil {
+		conn.Release()
+		t.Fatal("got a connection from a hung database")
+	}
+	if !errors.Is(err, db.ErrUnavailable) || errors.Is(err, db.ErrOverloaded) {
+		t.Fatalf("Acquire = %v, want ErrUnavailable and not ErrOverloaded", err)
+	}
+	if d := time.Since(start); d < db.DefaultAcquireTimeout || d > 2*time.Second {
+		t.Fatalf("answered after %v, want about %v", d, db.DefaultAcquireTimeout)
+	}
+}
+
+// Con una contraseña de un solo carácter el texto del error no se mutila: la
+// contraseña se redacta solo dentro de la URL o de password=.
+func TestShortPasswordDoesNotMangleErrors(t *testing.T) {
+	p := open(t, hungDatabaseURL(t, "x"), db.Options{MaxConns: 1})
+	_, err := p.Acquire(context.Background())
+	if err == nil || !strings.Contains(err.Error(), "context deadline exceeded") {
+		t.Fatalf("error text was mangled: %v", err)
 	}
 }

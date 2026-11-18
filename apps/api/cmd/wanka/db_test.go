@@ -90,7 +90,7 @@ func TestServeIsReadyAgainstARealDatabase(t *testing.T) {
 	} {
 		t.Run(plane, func(t *testing.T) {
 			envVar := map[string]string{"tenant": "DATABASE_URL_APP", "platform": "DATABASE_URL_PLATFORM", "webhooks": "DATABASE_URL_WEBHOOKS"}[plane]
-			p := start(t, []string{envVar + "=" + d.URL(role), "HTTP_ADDR=127.0.0.1:0", "DB_POOL_MAX=2"}, "serve", "--plane="+plane)
+			p := start(t, []string{envVar + "=" + d.URL(role), "HTTP_ADDR=127.0.0.1:0", "DB_POOL_MAX_CONNS=2"}, "serve", "--plane="+plane)
 			addr := p.waitMsg(t, "listening")["addr"].(string)
 			resp, err := http.Get("http://" + addr + "/readyz")
 			if err != nil {

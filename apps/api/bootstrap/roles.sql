@@ -24,9 +24,14 @@ BEGIN
   EXECUTE 'GRANT wanka_definer TO wanka_migrator';
   -- el migrador crea los esquemas de la aplicacion
   EXECUTE format('GRANT CREATE ON DATABASE %I TO wanka_migrator', current_database());
-  -- PostgreSQL 15+ ya no deja crear en "public" a nadie salvo al duenio de la base: goose guarda ahi su
-  -- tabla de versiones (goose_db_version). Solo el migrador recibe el permiso.
-  EXECUTE 'GRANT CREATE ON SCHEMA public TO wanka_migrator';
+  -- Nadie crea objetos en "public": una sentencia sin esquema en una migracion falla con 42501 en vez de
+  -- dejar un objeto que todos los roles verian. PostgreSQL 15+ ya lo trae asi; el REVOKE cubre las bases
+  -- restauradas o actualizadas desde versiones anteriores (idempotente).
+  EXECUTE 'REVOKE CREATE ON SCHEMA public FROM PUBLIC';
+  -- goose guarda sus versiones en goose.goose_db_version, un esquema propio del migrador (no en public).
+  -- Lo crea el bootstrap porque goose crea su tabla antes de la primera migracion.
+  EXECUTE 'CREATE SCHEMA IF NOT EXISTS goose AUTHORIZATION wanka_migrator';
+  EXECUTE 'ALTER SCHEMA goose OWNER TO wanka_migrator';
   -- api/conventions.md §7; ALTER ROLE ... SET exige superusuario o CREATEROLE
   EXECUTE 'ALTER ROLE wanka_app SET statement_timeout = ''5s''';
 END $$;
@@ -35,24 +40,30 @@ END $$;
 DO $$
 BEGIN
   IF (SELECT count(*) FROM pg_roles WHERE rolname LIKE 'wanka\_%') <> 6 THEN
-    RAISE EXCEPTION 'faltan o sobran roles wanka_*';
+    RAISE EXCEPTION 'missing or extra wanka_* roles';
   END IF;
   IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname LIKE 'wanka\_%'
              AND (rolsuper OR rolbypassrls OR rolcreaterole OR rolcreatedb OR rolreplication)) THEN
-    RAISE EXCEPTION 'un rol wanka_* tiene SUPERUSER, BYPASSRLS, CREATEROLE, CREATEDB o REPLICATION';
+    RAISE EXCEPTION 'a wanka_* role has SUPERUSER, BYPASSRLS, CREATEROLE, CREATEDB or REPLICATION';
   END IF;
   IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname LIKE 'wanka\_%' AND rolcanlogin <> (rolname <> 'wanka_definer')) THEN
-    RAISE EXCEPTION 'LOGIN: solo wanka_definer es NOLOGIN';
+    RAISE EXCEPTION 'LOGIN: only wanka_definer is NOLOGIN';
   END IF;
   IF NOT pg_has_role('wanka_migrator', 'wanka_definer', 'MEMBER') THEN
-    RAISE EXCEPTION 'wanka_migrator no es miembro de wanka_definer';
+    RAISE EXCEPTION 'wanka_migrator is not a member of wanka_definer';
   END IF;
   IF NOT has_database_privilege('wanka_migrator', current_database(), 'CREATE') THEN
-    RAISE EXCEPTION 'wanka_migrator no tiene CREATE sobre la base';
+    RAISE EXCEPTION 'wanka_migrator lacks CREATE on the database';
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_db_role_setting s JOIN pg_roles r ON r.oid = s.setrole
                  WHERE r.rolname = 'wanka_app' AND s.setdatabase = 0 AND s.setconfig @> ARRAY['statement_timeout=5s']) THEN
-    RAISE EXCEPTION 'wanka_app no tiene statement_timeout = 5s';
+    RAISE EXCEPTION 'wanka_app lacks statement_timeout = 5s';
   END IF;
-  RAISE NOTICE 'bootstrap OK: 5 roles LOGIN + wanka_definer NOLOGIN, ninguno con BYPASSRLS ni CREATEROLE';
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname LIKE 'wanka\_%' AND has_schema_privilege(rolname, 'public', 'CREATE')) THEN
+    RAISE EXCEPTION 'a wanka_* role can create in schema public';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_namespace n WHERE n.nspname = 'goose' AND pg_get_userbyid(n.nspowner) = 'wanka_migrator') THEN
+    RAISE EXCEPTION 'schema goose is missing or not owned by wanka_migrator';
+  END IF;
+  RAISE NOTICE 'bootstrap OK: 5 LOGIN roles + wanka_definer NOLOGIN, none with BYPASSRLS or CREATEROLE';
 END $$;
