@@ -120,7 +120,7 @@ The tokens, the Tailwind theme, the recipes and the appearance preferences come 
 
 Not built yet. The design is in `docs/architecture/` (index and full detail: `README.md`; decisions: `adr/`). Rules:
 
-- **Stack** (ADR 0002): Go modular monolith on PostgreSQL 16. The proposed libraries need owner approval; don't add any before it.
+- **Stack** (ADR 0002): Go modular monolith on PostgreSQL 16. Libraries: only those ADR 0002 lists as approved; any other needs owner approval first.
 - **ADRs**: `docs/architecture/adr/NNNN-*.md`; to add, change or supersede one, follow `docs/architecture/README.md` §9.
 - **Multi-tenancy** (ADR 0001): every tenant table has `tenant_id` + `FORCE ROW LEVEL SECURITY` with `tenant_id = app.current_tenant()` (`NULLIF`); uniques and FKs include `tenant_id`; data access only via `InTenantTx(Actor{..., Kind})`; no `BYPASSRLS`; `SECURITY DEFINER` functions only owned by `wanka_definer` with a pinned `search_path`; extra policies only those whitelisted in ADR 0001.
 - **RLS check**: any change to policies, roles, grants or definer functions updates `docs/architecture/data/rls-check/` and must pass `sh docs/architecture/data/rls-check/run.sh` (Docker, exit 0).

@@ -109,7 +109,7 @@ Modelo y reglas en [`data/data-model.md`](data/data-model.md): `tenant_id` y RLS
 | # | Decisión | Estado |
 |---|---|---|
 | [0001](adr/0001-multitenancy-rls.md) | Multi-tenancy con base única, `tenant_id` y RLS; acceso cross-tenant de la consola | aceptado |
-| [0002](adr/0002-modular-monolith-go.md) | Monolito modular hexagonal en Go; librerías base | propuesto |
+| [0002](adr/0002-modular-monolith-go.md) | Monolito modular hexagonal en Go; librerías base | aceptado |
 | [0003](adr/0003-einvoicing-khipu-port.md) | Facturación vía Khipu tras `InvoicingProvider` (con hechos de la documentación) | propuesto |
 | [0004](adr/0004-in-house-auth.md) | Autenticación y RBAC propios; plano super-admin separado | aceptado |
 | [0005](adr/0005-industry-modules-feature-flags.md) | Módulos de rubro, planes y feature flags; empresa cerrada en solo lectura | propuesto |
@@ -125,7 +125,7 @@ Modelo y reglas en [`data/data-model.md`](data/data-model.md): `tenant_id` y RLS
 - Para revertirlo o reemplazarlo se escribe un ADR nuevo que lo cita, y el anterior pasa a *reemplazado por NNNN*. Lo único que se le edita al anterior es la línea de estado.
 - Las correcciones que no cambian la decisión (erratas, enlaces, números de línea) se pueden hacer en el mismo ADR.
 
-Las dependencias nuevas que proponen los ADR (River, sqlc, goose, oapi-codegen, shopspring/decimal, pquerna/otp, OpenTelemetry y el SDK de S3) **requieren aprobación del usuario** antes de agregarse.
+El dueño aprobó el 2026-11-17 las librerías del [ADR 0002](adr/0002-modular-monolith-go.md): River, sqlc, goose, oapi-codegen, shopspring/decimal, pquerna/otp, OpenTelemetry y el SDK de S3, más pgx/v5, golang.org/x/crypto y go-arch-lint. Cualquier otra dependencia **requiere aprobación del usuario** antes de agregarse.
 
 ## 10. Supuestos y preguntas abiertas
 
@@ -162,7 +162,7 @@ Supuestos de carga: los de toda la plataforma en `capacity.md`, sujetos a la pru
 
 `CLAUDE.md` solo lleva las reglas; el detalle vive aquí y en los ADR.
 
-- **Binario:** una imagen con `serve --plane=tenant|platform|webhooks`, `worker` y `migrate`. Librerías propuestas, pendientes de aprobación del dueño: River, sqlc, goose, oapi-codegen, shopspring/decimal, pquerna/otp, OpenTelemetry y el SDK de S3 de AWS (ADR 0002).
+- **Binario:** una imagen con `serve --plane=tenant|platform|webhooks`, `worker` y `migrate`. Librerías aprobadas por el dueño: River, sqlc, goose, oapi-codegen, shopspring/decimal, pquerna/otp, OpenTelemetry, el SDK de S3 de AWS, pgx/v5, golang.org/x/crypto y go-arch-lint (ADR 0002); cualquier otra requiere su aprobación.
 - **Multi-tenancy (ADR 0001):**
   - `app.current_tenant()` es `NULLIF(current_setting('app.tenant_id', true), '')::uuid`;
   - `InTenantTx(ctx, Actor{TenantID, UserID, Kind, ImpersonatorID})` fija siempre `app.tenant_id`, `app.user_id` y `app.session_kind`, y el tenant sale de la sesión, nunca del cuerpo, la URL ni una cabecera;

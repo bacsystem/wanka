@@ -49,4 +49,4 @@ Las cuentas: **una cuenta por usuario virtual** (si no, se mide el lock de una s
 - RED por endpoint (tasa, errores, p95/p99) y saturación: conexiones en uso/espera de `pgxpool`, profundidad y edad de cada cola River, goroutines, CPU, memoria.
 - `X-Request-Id` en cada log (JSON, `log/slog`) y propagado a Khipu como cabecera si lo admite.
 - Métricas de negocio con alerta: CPE pendientes por antigüedad, tasa de rechazo, latencia de Khipu, sesiones fallidas por minuto.
-- Exportación OTLP (OpenTelemetry) a un backend a elegir (aprobación de dependencia externa pendiente).
+- Exportación OTLP con el SDK de OpenTelemetry (aprobado, ADR 0002). Falta elegir el backend de observabilidad que recibe las trazas y métricas, un servicio externo que requiere aprobación del dueño (README §10, pregunta 15).

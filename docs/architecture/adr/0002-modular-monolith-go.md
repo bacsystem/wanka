@@ -1,6 +1,6 @@
 # ADR 0002: Monolito modular hexagonal en Go y librerías base
 
-- Estado: propuesto (Go y PostgreSQL son decisión del usuario; estructura y librerías propuestas, las dependencias requieren aprobación del usuario vía tech-lead)
+- Estado: aceptado (2026-11-17: el dueño aprobó River, sqlc, goose, oapi-codegen, shopspring/decimal, pquerna/otp, OpenTelemetry y el SDK de S3, y también pgx/v5, golang.org/x/crypto y go-arch-lint; Go y PostgreSQL ya eran decisión del usuario)
 - Fecha: 2026-11-17
 
 ## Contexto
@@ -12,6 +12,7 @@ Hay ~20 bounded contexts (taxonomía del PO: identidad, empresas, clientes, cata
 1. **Microservicios por módulo**: despliegue independiente, pero la venta necesitaría sagas entre 4-5 servicios, y el equipo pagaría red, versionado de contratos internos y observabilidad distribuida sin una necesidad medida.
 2. **Monolito sin fronteras** (paquetes por capa técnica): rápido al inicio; con 20 módulos termina en acoplamiento por tablas.
 3. **Monolito modular hexagonal**: un binario, módulos con fronteras verificadas, transacción local cuando hace falta, extracción posible de un módulo si una medición lo pide.
+4. **Framework [go-bricks](https://github.com/gaborage/go-bricks)** (evaluado el 2026-11-17, descartado): su multi-tenancy toma el tenant de una cabecera, un subdominio o el path, y aísla con una base y un pool por tenant, sin `set_config` ni RLS; choca con ADR 0001 (tenant desde la sesión, base única con `FORCE ROW LEVEL SECURITY`). Sus migraciones usan Flyway (CLI de Java) y su outbox entrega a RabbitMQ, frente a goose y River sobre Postgres (ADR 0006); sus respuestas van envueltas en `{data, meta}`, frente a RFC 9457 (`api/conventions.md`). Está en v0.x con cambios incompatibles en versiones menores y casi un solo mantenedor, e impone su estructura de módulos: habría que desactivar su núcleo multi-tenant y aun así sumaría días al kernel.
 
 ## Decisión
 
@@ -32,11 +33,11 @@ internal/plataforma/       # solo se monta con --plane=platform
 migrations/                # goose, SQL
 openapi/                   # contrato (ADR 0009)
 ```
-- Un módulo importa de otro **solo** su `Facade` (paquete raíz del módulo). Prohibido importar `domain`, `app` o `adapters` ajenos y leer tablas ajenas. Verificado en CI con `go-arch-lint` (o una prueba con `go list -deps`, si no se aprueba la dependencia).
+- Un módulo importa de otro **solo** su `Facade` (paquete raíz del módulo). Prohibido importar `domain`, `app` o `adapters` ajenos y leer tablas ajenas. Verificado en CI con `go-arch-lint`.
 - Transacción compartida: la fachada recibe el `pgx.Tx` (o un `ctx` que lo transporta) del caso de uso que orquesta, p. ej. `ventas.CreateSale` llama a `inventario.Decrement(ctx, tx, ...)`, `empresas.NextNumber(ctx, tx, ...)`, `facturacion.CreatePending(ctx, tx, ...)`. Integraciones asíncronas entre módulos van por jobs (ADR 0006).
 - `--plane=platform` monta solo `plataforma` + lecturas permitidas; `--plane=tenant` nunca monta `plataforma`.
 
-**Librerías propuestas** (todas maduras y con licencia permisiva; requieren aprobación):
+**Librerías** (todas maduras y con licencia permisiva). Aprobadas por el dueño el 2026-11-17: `oapi-codegen`, `sqlc`, `goose`, `River`, `shopspring/decimal`, `pquerna/otp`, OpenTelemetry Go SDK, `aws-sdk-go-v2/service/s3`, `jackc/pgx/v5`, `golang.org/x/crypto` (argon2) y `go-arch-lint`. Cualquier dependencia que no esté en esa lista necesita la aprobación del dueño antes de agregarse:
 | Necesidad | Elección | Alternativa descartada |
 |---|---|---|
 | HTTP | `net/http` (patrones de ruta de Go 1.22+) + `oapi-codegen` strict server | chi, echo, gin: no hacen falta con el mux estándar |
