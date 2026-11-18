@@ -98,7 +98,8 @@ erDiagram
     text doc_type "01 factura, 03 boleta, 07 NC, 08 ND, 09 GRE"
     uuid series_id FK
     text series
-    bigint number "UK tenant_id+doc_type+series+number; null en GRE hasta que Khipu numere"
+    text environment "BETA, PRODUCCION: copiado de la serie; los de BETA no entran en RVIE, PLE ni reportes"
+    bigint number "UK tenant_id+environment+doc_type+series+number; null en GRE hasta que Khipu numere"
     text issuer_ruc
     uuid source_sale_id "nullable"
     uuid related_document_id FK "NC/ND"
