@@ -1,10 +1,12 @@
-import { DM_Sans, Figtree, Inter, JetBrains_Mono, Manrope, Plus_Jakarta_Sans } from "next/font/google";
+import localFont from "next/font/local";
 
-const sans = Inter({ variable: "--font-sans", subsets: ["latin"] });
-const jakarta = Plus_Jakarta_Sans({ variable: "--fuente-jakarta", subsets: ["latin"], preload: false });
-const manrope = Manrope({ variable: "--fuente-manrope", subsets: ["latin"], preload: false });
-const dmSans = DM_Sans({ variable: "--fuente-dmsans", subsets: ["latin"], preload: false });
-const figtree = Figtree({ variable: "--fuente-figtree", subsets: ["latin"], preload: false });
-const mono = JetBrains_Mono({ variable: "--font-mono", weight: ["400", "500", "600"], subsets: ["latin"] });
+// Self-hosted woff2 files (latin subset, OFL licences next to them, see ./fonts/README.md): the build never downloads fonts.
+const sans = localFont({ src: "./fonts/inter-latin-wght-normal.woff2", weight: "100 900", variable: "--font-sans" });
+const jakarta = localFont({ src: "./fonts/plus-jakarta-sans-latin-wght-normal.woff2", weight: "200 800", variable: "--fuente-jakarta", preload: false });
+const manrope = localFont({ src: "./fonts/manrope-latin-wght-normal.woff2", weight: "200 800", variable: "--fuente-manrope", preload: false });
+const dmSans = localFont({ src: "./fonts/dm-sans-latin-wght-normal.woff2", weight: "100 1000", variable: "--fuente-dmsans", preload: false });
+const figtree = localFont({ src: "./fonts/figtree-latin-wght-normal.woff2", weight: "300 900", variable: "--fuente-figtree", preload: false });
+// weight "100 600": the old build only had the 400/500/600 faces, so `font-bold` (700) rendered as 600; the range caps it the same way.
+const mono = localFont({ src: "./fonts/jetbrains-mono-latin-wght-normal.woff2", weight: "100 600", variable: "--font-mono" });
 /** CSS classes that define the font variables on <html>. */
 export const fonts = [sans, jakarta, manrope, dmSans, figtree, mono].map((f) => f.variable).join(" ");
