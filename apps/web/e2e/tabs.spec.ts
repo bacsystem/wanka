@@ -59,3 +59,29 @@ test("kardex: counters stay in the tab name and ArrowLeft wraps", async ({ page 
   await expect(page.getByText("F001-08492")).toHaveCount(0);
   await expectNoDanglingAriaControls(page);
 });
+
+test("billing: counters keep the es-PE thousands separator in the tab name", async ({ page }) => {
+  await page.goto("/admin/facturacion");
+  await expect(page.getByRole("tab", { name: "Todos 1,482" })).toBeVisible();
+});
+
+test("customer detail: keyboard focus ring on a line tab is inset (not clipped by the scroller)", async ({ page }) => {
+  await page.goto("/clientes/u2");
+  await page.getByRole("tab", { name: /Resumen/ }).focus();
+  await page.keyboard.press("ArrowRight");
+  const comprobantes = page.getByRole("tab", { name: /Comprobantes/ });
+  await expect(comprobantes).toBeFocused();
+  await expect.poll(() => comprobantes.evaluate((el) => getComputedStyle(el).boxShadow)).toContain("inset");
+});
+
+test("segmented strips stay on one row at phone width", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "mobile", "phone width only");
+  for (const path of ["/admin/facturacion", "/ventas/proformas", "/finanzas/cuentas-por-cobrar", "/catalogo", "/inventario/kardex"]) {
+    await page.goto(path);
+    const first = page.getByRole("tab").first();
+    const strip = page.getByRole("tablist").first();
+    await expect(first).toBeVisible();
+    const [stripH, tabH] = await Promise.all([strip.evaluate((el) => el.getBoundingClientRect().height), first.evaluate((el) => el.getBoundingClientRect().height)]);
+    expect(stripH, path).toBeLessThanOrEqual(tabH + 8);
+  }
+});

@@ -14,7 +14,7 @@ import { SectionCard } from "@/components/shared/section-card";
 import { StatCard, StatGrid } from "@/components/shared/stat-card";
 import { StatusBadge, type BadgeTone } from "@/components/shared/status-badge";
 import { DocumentTypeBadge } from "@/features/documents/components/document-type-badge";
-import { formatCurrency, formatDate } from "@/lib/format";
+import { formatCurrency, formatDate, formatInteger } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { billingSummary as s, saasInvoices, type InvoiceStatus } from "../mocks/billing";
 
@@ -49,7 +49,7 @@ export function BillingScreen() {
 
       <SectionCard title={<span className="sr-only">Comprobantes emitidos</span>} className="[&>div:first-child]:hidden" contentClassName="p-0">
         <div className="flex flex-col gap-2 border-b p-3">
-          <Tabs estilo="segmentado" className="min-w-0 max-w-full" valor={tab} onCambio={setTab} items={[["all", "Todos"], ["pagado", "Pagados"], ["pendiente", "Pendientes"], ["retry", "Reintentos fallidos"], ["nc", "Notas de crédito"]].map(([id, etiqueta]) => ({ id, etiqueta, contador: count(id) }))} />
+          <Tabs estilo="segmentado" className="min-w-0 max-w-full" valor={tab} onCambio={setTab} items={[["all", "Todos"], ["pagado", "Pagados"], ["pendiente", "Pendientes"], ["retry", "Reintentos fallidos"], ["nc", "Notas de crédito"]].map(([id, etiqueta]) => ({ id, etiqueta, contador: formatInteger(count(id)) }))} />
           <div className="flex flex-wrap items-center gap-2">
             <Select defaultValue="all" items={[{ value: "all", label: "Tipo: todos" }, { value: "01", label: "Factura electrónica (01)" }, { value: "03", label: "Boleta de venta (03)" }, { value: "07", label: "Nota de crédito (07)" }]}><SelectTrigger className="w-52 bg-muted/50" aria-label="Tipo"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Tipo: todos</SelectItem><SelectItem value="01">Factura electrónica (01)</SelectItem><SelectItem value="03">Boleta de venta (03)</SelectItem><SelectItem value="07">Nota de crédito (07)</SelectItem></SelectContent></Select>
             <Select value={status} onValueChange={(v) => setStatus(String(v))} items={[{ value: "all", label: "Estado: todos" }, { value: "pagado", label: "Pagado" }, { value: "pendiente", label: "Pendiente" }, { value: "moroso", label: "Moroso / reintentos" }, { value: "anulado", label: "Anulado" }]}><SelectTrigger className="w-48 bg-muted/50" aria-label="Estado"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Estado: todos</SelectItem><SelectItem value="pagado">Pagado</SelectItem><SelectItem value="pendiente">Pendiente</SelectItem><SelectItem value="moroso">Moroso / reintentos</SelectItem><SelectItem value="anulado">Anulado</SelectItem></SelectContent></Select>

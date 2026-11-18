@@ -41,7 +41,7 @@ export function TenantDetail({ tenant: t }: { tenant: PlatformTenant }) {
         </>}
       />
 
-      <Tabs estilo="linea" className="min-w-0 max-w-full" valor={tab} onCambio={setTab} items={tabs.map((name) => ({ id: name, etiqueta: name === "Sedes y cajas" ? `${name} (${t.sites} / ${t.sites * 4})` : name === "Soporte y tickets" ? `${name} (1 resuelto)` : name, contador: name === "Usuarios" ? t.users : undefined }))}>
+      <Tabs estilo="linea" className="min-w-0 max-w-full" valor={tab} onCambio={setTab} items={tabs.map((name) => ({ id: name, etiqueta: name, contador: name === "Sedes y cajas" ? `${t.sites} / ${t.sites * 4}` : name === "Usuarios" ? t.users : name === "Soporte y tickets" ? "1 resuelto" : undefined, tonoContador: name === "Soporte y tickets" ? "ok" : undefined }))}>
         {(panel) => (
           <>
 

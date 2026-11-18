@@ -53,7 +53,7 @@ export function QuotesBoard({ quotes }: { quotes: Quote[] }) {
   return (
     <>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <Tabs estilo="segmentado" valor={tab} onCambio={setTab} items={(["todas", "aprobada", "enviada", "borrador", "vencida"] as const).map((k) => ({ id: k, etiqueta: k === "todas" ? "Todas" : statusMeta[k].label.split(" ")[0], contador: counts[k] ?? 0 }))} />
+        <Tabs estilo="segmentado" valor={tab} onCambio={setTab} items={(["todas", "aprobada", "enviada", "borrador", "vencida"] as const).map((k) => ({ id: k, etiqueta: k === "todas" ? "Todas" : statusMeta[k].label.split(" ")[0], contador: counts[k] ?? 0, tonoContador: k === "vencida" ? "error" : k === "aprobada" ? "ok" : undefined }))} />
         <div className="flex items-center gap-2"><SearchInput placeholder="Buscar por cliente, RUC o N° cotización…" value={query} onChange={setQuery} className="sm:w-80 sm:max-w-none" /><Button variant="outline" size="icon" aria-label="Exportar" onClick={() => toast.success("Listado exportado")}><Download /></Button></div>
       </div>
 
