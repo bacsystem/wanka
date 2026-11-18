@@ -61,9 +61,9 @@ sequenceDiagram
   A->>DB: iam.session_lookup: membresia de A borrada o no activa
   A->>DB: desliga la sesion de A SIN revocarla: tenant_id, membership_id, site_id, cash_register_id y authz_version a NULL. Mismos tokens, misma familia de refresh, misma 2FA
   A-->>W: 403 tenant_access_denied (antes de los entitlements: nunca 402 ni 403 de la empresa)
-  W-->>U: redirige a /seleccionar-empresa con el aviso "Ya no tienes acceso a esa empresa". Sin refresh ni cookies nuevas, sirve tambien desde un Server Component
+  W-->>U: redirige a /seleccionar-empresa con el aviso "Ya no tienes acceso a esa empresa", sin nombrar a A. Sin refresh ni cookies nuevas, sirve tambien desde un Server Component
   W->>A: GET /v1/me/memberships (la misma sesion, ahora sin tenant)
-  A-->>W: 200 membresias del usuario con su estado (A ya no esta activa)
+  A-->>W: 200 solo las membresias activas. A no aparece: ni la empresa, ni su estado, ni el de la membresia, ni un motivo (no revela si A esta morosa, suspendida o cerrada)
   alt queda al menos una membresia activa
     U->>W: elige la empresa B, su sede y su caja
     W->>A: POST /v1/auth/session/tenant {tenantId B, siteId, cashRegisterId?}, mismo flujo de arriba

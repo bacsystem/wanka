@@ -9,6 +9,7 @@ Este documento y [`resources.md`](resources.md) están congelados desde el 2026-
 - **Todo cambio** a estas reglas, al catálogo de errores (§4), a la paginación (§5), a los tipos en el cable (§6), a las cabeceras (§3) o al catálogo de permisos de `resources.md` es un **PR de contrato**: un PR a `docs/architecture/api/` aprobado por el architect. El PR dice si el cambio es compatible y qué issues afecta.
 - **Cambios compatibles** (no cambian la versión): campo opcional nuevo en una respuesta, endpoint nuevo, permiso nuevo en el catálogo, `code` nuevo en §4 (los clientes tratan un `code` desconocido por su `status` y su `title`), valor nuevo en un enum abierto.
 - **Cambios incompatibles** (exigen versión nueva): quitar o renombrar un campo, una ruta o un `code`; cambiar el HTTP de un `code`; volver obligatorio un campo de request; cambiar el tipo o el formato de un campo; cambiar la paginación o la semántica de una cabecera. Se publica `/v2` del recurso afectado y `/v1` sigue respondiendo con `Deprecation` y `Sunset` (fecha al menos **90 días** después), según §1.
+- **Excepción registrada (2026-11-18, [ADR 0011](../adr/0011-membership-loss-keeps-user-session.md)):** este cambio **no es compatible** según la lista anterior, y se aplica en `/v1` sin `/v2`. Tiene dos partes. La membresía perdida deja de ser `401 session_expired` y pasa a `403 tenant_access_denied`: la misma situación cambia de HTTP y de acción del BFF. Y una sesión que la búsqueda no encuentra deja de ser `401 unauthenticated` (token inexistente) y pasa a `401 session_expired`. Es aceptable porque no hay consumidores: ni la API ni el BFF existen todavía, y ningún código de `apps/` emite ni lee estos códigos. Desde el primer cliente real, un cambio así exige `/v2`.
 - Las decisiones del dueño que siguen abiertas (§8) no bloquean el congelamiento: el contrato ya fija la forma, y la decisión solo cambia el origen del dato.
 
 ## 1. Estilo y versionado
@@ -85,8 +86,8 @@ RFC 9457 (`application/problem+json`) con un `code` estable que el frontend trad
 | HTTP | `code` | Lo emite | Significado |
 |---|---|---|---|
 | 400 | `malformed_request` | kernel | JSON inválido o tipo incorrecto en un campo o parámetro |
-| 401 | `unauthenticated` | kernel | sin token, token inexistente o de otro plano (prefijo `wka_` en `/v1` o `wk_` en `/platform/v1`). El BFF intenta un refresh una vez |
-| 401 | `session_expired` | kernel | sesión expirada o revocada (también la impersonada cuyo grant se revocó o venció). El BFF intenta un refresh una vez y, si falla, lleva a `/login`. La membresía perdida **no** da este código: ver `tenant_access_denied` |
+| 401 | `unauthenticated` | kernel | lo que se rechaza **sin consultar la base**: sin `Authorization`, formato inválido o prefijo de otro plano (`wka_` en `/v1` o `wk_` en `/platform/v1`). El BFF intenta un refresh una vez |
+| 401 | `session_expired` | kernel | `iam.session_lookup` no devuelve fila. La función **no distingue** inexistente, expirada y revocada: las tres filtran igual. Incluye la impersonada cuyo grant se revocó o venció, porque esa sesión queda revocada. El BFF intenta un refresh una vez y, si falla, lleva a `/login`. La membresía perdida **no** da este código: ver `tenant_access_denied` |
 | 401 | `invalid_credentials` | identidad | solo en `POST /v1/auth/login` y `/platform/v1/auth/login`: correo o contraseña incorrectos, con el mismo mensaje y tiempo si el correo no existe ([secuencia 01](../sequences/01-login-2fa-tenant.mmd)). El BFF no hace refresh |
 | 402 | `subscription_inactive` | kernel | suscripción `morosa`, `suspendida` o `cancelada`: **bloqueo total** del tenant salvo la exportación de datos (ver abajo, decisión del dueño del 2026-11-18) |
 | 403 | `forbidden` | kernel | falta el permiso del catálogo que declara la ruta (`x-permission`); el problema lleva `permission` |
@@ -170,7 +171,7 @@ Decididas y ya reflejadas en este documento:
 
 - **Paginación por cursor** (2026-11-18), §5. Seguimiento de frontend: #178.
 - **Suscripción inactiva = bloqueo total salvo exportar** (2026-11-18), §4. Aplicación: #175.
-- **Membresía perdida ⇒ `/seleccionar-empresa`, no `/login`** (2026-11-18), §4 (`tenant_access_denied`) y [ADR 0011](../adr/0011-membership-loss-keeps-user-session.md). Aplicación: #174. Cambio de contrato compatible: ningún `code` nuevo ni HTTP distinto; `tenant_access_denied` amplía dónde se emite y `session_expired` deja de cubrir la membresía.
+- **Membresía perdida ⇒ `/seleccionar-empresa`, no `/login`** (2026-11-18), §4 (`tenant_access_denied`) y [ADR 0011](../adr/0011-membership-loss-keeps-user-session.md). Aplicación: #174 (API) y #27 (BFF y `/seleccionar-empresa`). No hay `code` nuevo, pero el cambio **no es compatible** según §0: la membresía perdida pasa de `401` a `403`, y «sin fila» pasa de `unauthenticated` a `session_expired`. Se acepta en `/v1` como excepción registrada en §0, porque no hay consumidores.
 - Ya tomadas antes: PEN y USD desde R1, dinero como string decimal, errores RFC 9457, tenant desde la sesión (sin cabecera).
 
 **Pendientes de decisión.** No bloquean el congelamiento: el contrato ya fija la forma del dato, y la decisión solo elige de dónde sale.

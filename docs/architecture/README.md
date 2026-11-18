@@ -111,7 +111,7 @@ Modelo y reglas en [`data/data-model.md`](data/data-model.md): `tenant_id` y RLS
 | [0001](adr/0001-multitenancy-rls.md) | Multi-tenancy con base única, `tenant_id` y RLS; acceso cross-tenant de la consola | aceptado |
 | [0002](adr/0002-modular-monolith-go.md) | Monolito modular hexagonal en Go; librerías base | aceptado |
 | [0003](adr/0003-einvoicing-khipu-port.md) | Facturación vía Khipu tras `InvoicingProvider` (con hechos de la documentación) | propuesto |
-| [0004](adr/0004-in-house-auth.md) | Autenticación y RBAC propios; plano super-admin separado | aceptado |
+| [0004](adr/0004-in-house-auth.md) | Autenticación y RBAC propios; plano super-admin separado | aceptado; modificado por [0011](adr/0011-membership-loss-keeps-user-session.md) (2026-11-18) en la membresía perdida |
 | [0005](adr/0005-industry-modules-feature-flags.md) | Módulos de rubro, planes y feature flags; empresa cerrada en solo lectura | propuesto |
 | [0006](adr/0006-async-jobs-outbox.md) | Jobs y outbox en Postgres con River | propuesto |
 | [0007](adr/0007-deployment-railway.md) | Railway con Docker, portable | aceptado |
