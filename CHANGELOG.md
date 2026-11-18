@@ -3,7 +3,13 @@
 All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [0.2.1] - 2026-11-18
+
+### Changed
+- Every PR bumps the version: `feat` and breaking changes raise the minor (also before 1.0), every other type the patch (`CLAUDE.md` › Team rules).
+- Code comments are written in Spanish; code, identifiers, logs and error messages stay in English (#183).
+- Commits and PRs, including agents', go through the `/git-flow` skill (#182).
+- CI: the `e2e` job skips its steps on PRs that do not touch the frontend (#186).
 
 ### Fixed
 - Clean builds no longer fail at random with `next/font/google queries have exactly one entry` (#125): the fonts are self-hosted with `next/font/local` (`apps/web/src/app/fonts/`: latin woff2 of Inter, JetBrains Mono, Plus Jakarta Sans, Manrope, DM Sans and Figtree, all variable fonts, with their SIL OFL licences). Same CSS variables and rendering; JetBrains Mono is declared with weight `100 600` so `font-bold` still renders as 600, as before. Known difference: only the `latin` subset is shipped, so latin-ext characters (e.g. Ł ř Ş ₡ ₲) fall back to the system font (adding latin-ext costs ~165 KB). `pnpm build` needs no network.
