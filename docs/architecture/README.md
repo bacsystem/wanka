@@ -135,7 +135,7 @@ Verificaciones en BETA de Khipu, criterios del issue #56 (el código de Khipu ya
 - **Baja rechazada sin webhook.** Se resuelve sondeando `GET /v1/bajas/{id}`.
 
 Khipu. Respondidas con el código de Khipu (repo público bacsystem/khipu @53bd4bc) y decisiones del dueño (2026-11-17); detalle en el ADR 0003:
-1. Modelo de cuentas. **Resuelta:** las empresas las crea el operador de Khipu con el alta asistida, sin cuenta propia por tenant ni tope de RUC por plan (ADR 0003, «Alta asistida»).
+1. Modelo de cuentas. **Resuelta:** una cuenta de Khipu por empresa, en Emprende o superior, creada por el operador de Khipu con el alta asistida en un máximo de 24 horas (ADR 0003, «Alta asistida»).
 2. API de integrador. **Resuelta:** no existe para terceros; queda para más adelante. Sigue abierta con Khipu la pregunta 12 del ADR 0003 (registro del webhook y entrega segura de las llaves).
 3. GRE en R1. **Resuelta:** la GRE (#61) pasa a R2; es experimental y su envío viene apagado.
 4. Timeouts, `Retry-After`, `PENDIENTE_AGRUPACION`, webhooks de GRE y bajas, y cuota BETA. **Resuelta** en el ADR 0003 (puntos 3, 4 y 8 y la fila «Límites»). Solo falta medir la latencia típica en la prueba de carga de #56.
