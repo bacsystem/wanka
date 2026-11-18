@@ -31,6 +31,11 @@ func TestMigrationsCheckDetectsEveryNoTransactionFormGooseAccepts(t *testing.T) 
 		{"+goose glued to the word", "-- +gooseNO TRANSACTION"},
 		{"words before +goose", "-- NO TRANSACTION +goose"},
 		{"extra spaces", "--   +goose    NO   TRANSACTION"},
+		{"long s (U+017F) in the word", "-- +goose NO TRAN\u017fACTION"},
+		{"form feed at the end", "-- +goose NO TRANSACTION\f"},
+		{"vertical tab after +goose", "-- +goose\v NO TRANSACTION"},
+		{"no-break space at the end", "-- +goose NO TRANSACTION\u00a0"},
+		{"em space after +goose", "-- +goose\u2003 NO TRANSACTION"},
 		{"leading space", "   -- +goose NO TRANSACTION"},
 		{"not an annotation", "-- NO TRANSACTION"},
 		{"plain comment", "-- this migration is not in a transaction"},
@@ -66,7 +71,11 @@ func TestMigrationsCheckDetectsEveryNoTransactionFormGooseAccepts(t *testing.T) 
 			if err := os.WriteFile(f, []byte(body), 0o600); err != nil {
 				t.Fatal(err)
 			}
-			scriptNoTx := exec.Command("sh", script, "--detect", f).Run() == nil
+			// Exit 0: lo trata como NO TRANSACTION; 2: no reconoce la anotación; ambos lo bloquean.
+			// Solo el 1 lo deja pasar.
+			var ee *exec.ExitError
+			err = exec.Command("sh", script, "--detect", f).Run()
+			scriptNoTx := err == nil || (errors.As(err, &ee) && ee.ExitCode() == 2)
 
 			if gooseNoTx && !scriptNoTx {
 				t.Fatalf("goose runs %q outside a transaction but migrations-check.sh does not see it", v.annotation)

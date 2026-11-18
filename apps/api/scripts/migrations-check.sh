@@ -13,27 +13,37 @@ set -eu
 root="$(cd "$(dirname "$0")/../../.." && pwd)"
 mdir="apps/api/migrations"
 
-# has_no_tx <archivo>: devuelve 0 si alguna línea es la anotación NO TRANSACTION
-# tal como la lee goose (internal/sqlparser/parser.go): una línea que, sin
-# espacios iniciales, empieza con "--" y contiene "+goose"; se quitan todos los
-# "--" y el primer "+goose", y lo que queda se compara sin distinguir
-# mayúsculas con "NO TRANSACTION". Este check es más estricto que goose: quita
-# todos los espacios, así que cualquier variante que goose acepte la detecta.
+# has_no_tx <archivo>: devuelve 0 si el archivo lleva la anotación NO TRANSACTION
+# de goose, 1 si no la lleva y 2 si alguna línea de anotación no se puede
+# reconocer con seguridad ("unrecognized goose annotation"). Una línea candidata
+# es la que contiene "--" y "+goose". goose la lee con TrimSpace y EqualFold de
+# Unicode (internal/sqlparser/parser.go), que awk y grep no replican: NO
+# TRANſACTION (U+017F), \f, \v, NBSP o EM SPACE valen para goose. Por eso toda
+# línea candidata con un byte no ASCII o un control distinto de tab y CR se
+# rechaza (2), y las demás se normalizan en ASCII (se quitan todos los "--", el
+# primer "+goose" y los espacios, y se pasa a minúsculas) y deben quedar en una
+# anotación conocida de goose. Es más estricto que goose, que es el lado seguro.
 has_no_tx() {
-  awk '
-    { line = tolower($0); sub(/^[ \t\r]+/, "", line)
-      if (substr(line, 1, 2) == "--" && index(line, "+goose") > 0) {
-        gsub(/--/, "", line); sub(/\+goose/, "", line); gsub(/[ \t\r]/, "", line)
-        if (line == "notransaction") found = 1
-      } }
-    END { exit !found }' "$1"
+  cand="$(LC_ALL=C grep -i -F -- '+goose' "$1" | LC_ALL=C grep -F -- '--' || true)"
+  [ -n "$cand" ] || return 1
+  if printf '%s\n' "$cand" | LC_ALL=C grep -q "$(printf '[^[:print:]\t\r]')"; then
+    return 2
+  fi
+  printf '%s\n' "$cand" | LC_ALL=C awk '
+    { line = tolower($0); gsub(/--/, "", line); sub(/\+goose/, "", line); gsub(/[ \t\r]/, "", line)
+      if (line == "notransaction") nt = 1
+      else if (line != "up" && line != "down" && line != "statementbegin" && line != "statementend" \
+               && line != "envsubston" && line != "envsubstoff") bad = 1 }
+    END { if (bad) exit 2; exit !nt }'
 }
 
-# Modo de prueba: "--detect <archivo>" dice si el check lo trata como NO TRANSACTION
-# (lo usa un test Go que lo contrasta con el comportamiento real de goose).
+# Modo de prueba: "--detect <archivo>" sale con 0 si el check lo trata como NO
+# TRANSACTION, 2 si no reconoce la anotación (también lo bloquea) y 1 si no lo
+# bloquea (lo usa un test Go que lo contrasta con el comportamiento real de goose).
 if [ "${1:-}" = "--detect" ]; then
-  has_no_tx "$2"
-  exit $?
+  rc=0
+  has_no_tx "$2" || rc=$?
+  exit "$rc"
 fi
 
 # lint <repo> <base-ref>: imprime los problemas y devuelve 1 si hay alguno.
@@ -57,12 +67,26 @@ lint() {
         echo "FAIL: $name debe llamarse <yyyymmddhhmmss>_<nombre>.sql" >&2
         bad=1
       fi
-      if has_no_tx "$f"; then
+      rc=0
+      has_no_tx "$f" || rc=$?
+      if [ "$rc" = 2 ]; then
+        echo "FAIL: $name tiene una línea de anotación goose que no se reconoce (unrecognized goose annotation)" >&2
+        bad=1
+      elif [ "$rc" = 0 ]; then
         # Sin comentarios, las sentencias separadas por ';' deben ser todas CREATE [UNIQUE] INDEX CONCURRENTLY
         # sin IF NOT EXISTS: si el build concurrente falla deja un índice INVALID, y con IF NOT EXISTS
         # la siguiente corrida lo saltaría y el índice inválido quedaría para siempre.
         # Los espacios y saltos de línea se colapsan antes de comparar (varias líneas, sangrías).
         if ! sed 's/--.*$//' "$f" | tr '\n' ' ' | awk '
+            # Quita los comentarios /* ... */ (uno sin cerrar deja un marcador que no es una sentencia válida).
+            { s = $0; out = ""
+              while ((i = index(s, "/*")) > 0) {
+                out = out substr(s, 1, i - 1) " "; s = substr(s, i + 2)
+                j = index(s, "*/")
+                if (j == 0) { s = "unterminated_block_comment"; break }
+                s = substr(s, j + 2)
+              }
+              printf "%s", out s }' | awk '
             BEGIN { RS = ";"; n = 0; bad = 0 }
             { s = tolower($0); gsub(/[ \t\r]+/, " ", s); gsub(/^ | $/, "", s); if (s == "") next; n++
               if (s !~ /^create (unique )?index concurrently / || s ~ /^create (unique )?index concurrently if not exists /) bad = 1 }
@@ -119,6 +143,13 @@ new_repo; printf -- '--+goose No Transaction\n-- +goose Up\nCREATE INDEX CONCURR
 expect fail "NO TRANSACTION con mayúsculas mezcladas y sin espacio" "$tmp/r" main
 new_repo; printf -- '-- +gooseNO TRANSACTION\n-- +goose Up\nCREATE INDEX CONCURRENTLY i ON t (a);\nALTER TABLE t ADD COLUMN c int;\n' > "$mdir/20260102000000_glued.sql"
 expect fail "NO TRANSACTION con +goose pegado a la palabra" "$tmp/r" main
+for variant in 'NO TRAN\305\277ACTION' 'NO TRANSACTION\f' '+goose\v NO TRANSACTION' 'NO TRANSACTION\302\240' '+goose\342\200\203 NO TRANSACTION'; do
+  case "$variant" in '+goose'*) line="-- $variant" ;; *) line="-- +goose $variant" ;; esac
+  new_repo; printf -- "$line\n-- +goose Up\nCREATE INDEX CONCURRENTLY i ON t (a);\nALTER TABLE t ADD COLUMN c int;\n" > "$mdir/20260102000000_unicode.sql"
+  expect fail "anotación con bytes que goose acepta y awk no ve ($variant)" "$tmp/r" main
+done
+new_repo; printf -- '-- +goose NO TRANSACTION\n-- +goose Up\nCREATE INDEX CONCURRENTLY i ON t (a); -- +goose raro\n' > "$mdir/20260102000000_unknown.sql"
+expect fail "línea +goose con anotación desconocida" "$tmp/r" main
 new_repo; printf -- '-- NO TRANSACTION +goose\n-- +goose Up\nCREATE INDEX CONCURRENTLY i ON t (a);\nALTER TABLE t ADD COLUMN c int;\n' > "$mdir/20260102000000_swapped.sql"
 expect fail "NO TRANSACTION antes de +goose" "$tmp/r" main
 new_repo; printf -- '-- +goose NO TRANSACTION\n-- +goose Up\nCREATE INDEX CONCURRENTLY\n    IF NOT EXISTS i1 ON t (a);\n' > "$mdir/20260102000000_ml_ifne.sql"
@@ -129,6 +160,12 @@ new_repo; printf -- '-- +goose NO TRANSACTION\n-- +goose Up\nCREATE INDEX\n    C
 expect pass "CREATE INDEX CONCURRENTLY repartido en varias líneas" "$tmp/r" main
 new_repo; printf -- '-- +goose NO TRANSACTION\n-- +goose Up\nCREATE INDEX CONCURRENTLY\n    i1 ON t (a);\nALTER\n TABLE t ADD COLUMN c int;\n' > "$mdir/20260102000000_ml_mixed.sql"
 expect fail "varias líneas con una sentencia que no es de índice" "$tmp/r" main
+new_repo; printf -- '-- +goose NO TRANSACTION\n-- +goose Up\nCREATE INDEX CONCURRENTLY /* nota */ IF NOT EXISTS i1 ON t (a);\n' > "$mdir/20260102000000_cm_ifne.sql"
+expect fail "IF NOT EXISTS separado por un comentario /* */" "$tmp/r" main
+new_repo; printf -- '-- +goose NO TRANSACTION\n-- +goose Up\nCREATE INDEX /* a; b */ CONCURRENTLY i1 ON t (a); /* sin cerrar\n' > "$mdir/20260102000000_cm_open.sql"
+expect fail "comentario /* sin cerrar" "$tmp/r" main
+new_repo; printf -- '-- +goose NO TRANSACTION\n-- +goose Up\nCREATE INDEX /* nota */ CONCURRENTLY i1 ON t (a);\n' > "$mdir/20260102000000_cm_ok.sql"
+expect pass "comentario /* */ dentro de un CREATE INDEX CONCURRENTLY válido" "$tmp/r" main
 new_repo; printf -- '-- +goose NO TRANSACTION\n-- +goose Up\nCREATE INDEX CONCURRENTLY IF NOT EXISTS i1 ON t (a);\n' > "$mdir/20260102000000_ifne.sql"
 expect fail "CONCURRENTLY IF NOT EXISTS (un índice INVALID quedaría para siempre)" "$tmp/r" main
 new_repo; printf -- '-- +goose NO TRANSACTION\n-- +goose Up\nSELECT 1;\n' > "$mdir/20260102000000_other.sql"
