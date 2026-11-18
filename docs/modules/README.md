@@ -17,10 +17,10 @@ El código `P<nivel>-M<orden>` va en el título de cada épica. El orden es úni
 
 ## Gráfico de dependencias
 
-`A --> B` significa que A depende de B (fuerte: A no se termina sin B). `A -.-> B` es una dependencia parcial: solo algunas historias de A la necesitan. Todo módulo depende del kernel (M00); en el gráfico solo se dibuja esa arista desde la ola 1. Un módulo que abarca varias olas aparece en la ola en que empieza.
+`A --> B` significa que B depende de A: A es un prerrequisito que B necesita para terminarse. `A -.-> B` es una dependencia parcial: solo algunas historias de B necesitan a A. Todo módulo depende del kernel (M00); en el gráfico solo se dibuja esa arista hacia la ola 1. Un módulo que abarca varias olas aparece en la ola en que empieza. Las olas se leen de arriba abajo, de la 0 a la 6.
 
 ```mermaid
-flowchart BT
+flowchart TB
   subgraph O0["Ola 0 · kernel"]
     M00["P0-M00 kernel"]
   end
@@ -58,62 +58,66 @@ flowchart BT
     M21["P3-M21 retail"]
   end
 
-  M01 --> M00
-  M02 --> M00
-  M01 --> M02
+  M00 --> M01
+  M00 --> M02
   M02 --> M01
-  M03 --> M02
-  M04 --> M02
-  M05 --> M02
-  M06 --> M02
-  M06 -.-> M07
-  M09 --> M01
-  M07 --> M03
-  M07 --> M02
-  M08 --> M03
-  M08 --> M04
-  M08 --> M07
-  M08 --> M02
-  M08 --> M06
-  M08 --> M05
-  M12 --> M02
-  M12 -.-> M08
-  M12 -.-> M06
-  M12 -.-> M07
-  M12 -.-> M11
-  M12 -.-> M05
-  M12 -.-> M04
-  M10 --> M01
-  M10 --> M06
-  M10 -.-> M13
-  M11 --> M03
-  M11 --> M07
-  M11 --> M02
-  M11 -.-> M05
-  M16 --> M08
-  M16 --> M03
-  M16 --> M07
-  M16 -.-> M10
-  M17 --> M03
-  M17 --> M07
-  M17 --> M08
-  M13 --> M01
-  M13 -.-> M08
-  M13 -.-> M06
-  M14 --> M02
-  M14 --> M01
-  M14 -.-> M06
-  M15 --> M04
-  M15 --> M03
-  M15 --> M08
-  M18 --> M08
-  M18 --> M03
-  M19 --> M04
-  M19 --> M15
-  M20 --> M04
-  M20 --> M15
-  M21 --> M03
-  M21 --> M08
+  M01 --> M02
+  M02 --> M03
+  M02 --> M04
+  M02 --> M05
+  M02 --> M06
+  M07 -.-> M06
+  M01 --> M09
+  M03 --> M07
+  M02 --> M07
+  M03 --> M08
+  M04 --> M08
+  M07 --> M08
+  M02 --> M08
+  M06 --> M08
+  M05 --> M08
+  M02 --> M12
+  M08 -.-> M12
+  M06 -.-> M12
+  M07 -.-> M12
+  M11 -.-> M12
+  M05 -.-> M12
+  M04 -.-> M12
+  M01 --> M10
+  M06 --> M10
+  M13 -.-> M10
+  M03 --> M11
+  M07 --> M11
+  M02 --> M11
+  M05 -.-> M11
+  M08 --> M16
+  M03 --> M16
+  M07 --> M16
+  M10 -.-> M16
+  M03 --> M17
+  M07 --> M17
+  M08 --> M17
+  M01 --> M13
+  M08 -.-> M13
+  M06 -.-> M13
+  M02 --> M14
+  M01 --> M14
+  M06 -.-> M14
+  M04 --> M15
+  M03 --> M15
+  M08 --> M15
+  M08 --> M18
+  M03 --> M18
+  M04 --> M19
+  M15 --> M19
+  M04 --> M20
+  M15 --> M20
+  M03 --> M21
+  M08 --> M21
+
+  O3 ~~~ O4
+  O4 ~~~ O5
+  O5 ~~~ O6
 
   classDef p0 fill:#cf222e,stroke:#82071e,color:#ffffff
   classDef p1 fill:#bc4c00,stroke:#762c00,color:#ffffff
@@ -181,7 +185,7 @@ Dependencias fuertes en «Depende de»; las parciales van entre paréntesis.
 
 ## Olas y contratos que se fijan antes de abrirlas
 
-Una ola se abre cuando su contrato está publicado en la épica, para que el módulo que lo ofrece y el que lo usa trabajen en paralelo con dobles de prueba. La fuente final es [`openapi.yaml`](../architecture/api/openapi.yaml).
+Una ola se abre cuando su contrato está publicado en la épica, para que el módulo que lo ofrece y el que lo usa trabajen en paralelo con dobles de prueba. La fuente final es [`openapi.yaml`](../architecture/api/openapi.yaml). Las fachadas que se nombran aquí (`NextNumber`, `Decrement`, `CreatePending`) salen del [ADR 0002](../architecture/adr/0002-modular-monolith-go.md) y de [data-model §3-4](../architecture/data/data-model.md); el orden de las olas, las firmas exactas, las fachadas de finanzas y el puerto `Mailer` son propuesta, pendiente de ADR.
 
 - **Ola 0 (kernel, un solo equipo).** [`api/conventions.md`](../architecture/api/conventions.md) (cursor, errores RFC 9457, dinero como string, idempotencia) y el catálogo de permisos completo ([`api/resources.md`](../architecture/api/resources.md), «Catálogo de permisos»). En paralelo, las verificaciones en BETA de Khipu (redondeo y correlativo N+1), que no dependen de nada.
 - **Ola 1 (identidad ∥ empresas).** El DDL de `org.tenants`, `sites`, `cash_registers`, `document_series` y `tenant_settings`; `/v1/auth/*`, `/v1/auth/session/tenant` y `/v1/me/entitlements`; la firma de `empresas.NextNumber(ctx, tx, cashRegisterID, docType)`. El correo va detrás de un puerto `Mailer` con un stub hasta la ola 4.
@@ -193,15 +197,23 @@ Una ola se abre cuando su contrato está publicado en la épica, para que el mó
 
 ## Recursos compartidos que obligan a serializar
 
-| Recurso | Riesgo | Cómo se corta |
-|---|---|---|
-| Migraciones (goose) | dos ramas con el mismo número de versión chocan al mergear | versiones con timestamp, un solo dueño por esquema y FK entre esquemas solo hacia tablas de olas anteriores ([data-model §6](../architecture/data/data-model.md)) |
-| `org.document_series` | es una fila caliente que usan facturación, ventas, compras, finanzas y lubricentros | solo se accede por `empresas.NextNumber`; el `CHECK` de `doc_type` se siembra completo desde el inicio (01, 03, 07, 08, 09, PRO, OC, Z, OT); el `UPDATE` de la serie va al final de la transacción ([data-model §3](../architecture/data/data-model.md)) |
-| Catálogo de permisos | un solo archivo y una sola semilla en `iam` | se congela en la ola 0; una alta posterior es un PR a [`api/resources.md`](../architecture/api/resources.md) más su migración, a cargo de identidad |
-| RLS | las funciones `SECURITY DEFINER` y las políticas extra cambian `rls-check` | las tablas normales usan la plantilla estándar y no lo tocan; login, webhooks, alta de tenant y `platform_rw` pasan por `sh docs/architecture/data/rls-check/run.sh` de a uno |
-| `openapi.yaml` | un solo archivo editado por todos | partirlo por tag (un archivo por módulo con `$ref`) antes de abrir la ola 1 |
-| Transacción de la venta POS | cruza cinco fachadas; un orden de locks distinto produce deadlocks | ventas es dueño de la prueba integrada y del orden: stock por `variant_id` primero, serie al final |
-| `org.tenant_settings` | varias configuraciones leídas por varios módulos | solo empresas la escribe; los demás la leen por su fachada |
+En la columna «Respaldo», una regla con enlace ya está en los docs de arquitectura; una marcada «propuesta, pendiente de ADR» la propone este mapa y no rige hasta registrarse en [`docs/architecture/`](../architecture/README.md) (§9).
+
+| Recurso | Riesgo | Cómo se corta | Respaldo |
+|---|---|---|---|
+| Migraciones (goose) | dos ramas con el mismo número de versión chocan al mergear | solo hacia adelante y cambios destructivos en expandir → migrar → contraer | [data-model §6](../architecture/data/data-model.md#6-migraciones) |
+| | | versiones con timestamp, un solo dueño por esquema y FK entre esquemas solo hacia tablas de olas anteriores | propuesta, pendiente de ADR |
+| `org.document_series` | es una fila caliente que usan facturación, ventas, compras, finanzas y lubricentros | el `UPDATE` de la serie va al final de la transacción, sin llamadas de red dentro; una serie por caja | [data-model §3](../architecture/data/data-model.md#3-series-y-correlativos-numeración-concurrente) |
+| | | acceso solo por `empresas.NextNumber` | [ADR 0002](../architecture/adr/0002-modular-monolith-go.md) (fachadas y transacción compartida) |
+| | | el `CHECK` de `doc_type` se siembra completo desde el inicio (01, 03, 07, 08, 09, PRO, OC, Z, OT) | propuesta, pendiente de ADR |
+| Catálogo de permisos | un solo archivo y una sola semilla en `iam` | los códigos salen solo del catálogo | [`api/resources.md`](../architecture/api/resources.md#catálogo-de-permisos-fuente-de-verdad) |
+| | | se congela en la ola 0; una alta posterior es un PR a `api/resources.md` más su migración, a cargo de identidad | propuesta, pendiente de ADR |
+| RLS | las funciones `SECURITY DEFINER` y las políticas extra cambian `rls-check` | toda tabla de tenant usa la política estándar; un cambio de políticas, roles, grants o funciones definer actualiza `rls-check` y pasa `sh docs/architecture/data/rls-check/run.sh` | [data-model §1](../architecture/data/data-model.md#1-reglas-comunes-a-toda-tabla-de-tenant), [ADR 0001](../architecture/adr/0001-multitenancy-rls.md) |
+| | | login, webhooks, alta de tenant y `platform_rw` se cambian de a uno | propuesta, pendiente de ADR |
+| `openapi.yaml` | un solo archivo editado por todos | partirlo por tag (un archivo por módulo con `$ref`) antes de abrir la ola 1 | propuesta, pendiente de ADR |
+| Transacción de la venta POS | cruza cinco fachadas; un orden de locks distinto produce deadlocks | stock en orden de `variant_id` y la serie al final | [data-model §4](../architecture/data/data-model.md#4-stock) y [§3](../architecture/data/data-model.md#3-series-y-correlativos-numeración-concurrente) |
+| | | ventas es dueño de la prueba integrada y de ese orden | propuesta, pendiente de ADR |
+| `org.tenant_settings` | varias configuraciones leídas por varios módulos | solo empresas la escribe; los demás la leen por su fachada | propuesta, pendiente de ADR |
 
 ## Decisiones pendientes del dueño
 
