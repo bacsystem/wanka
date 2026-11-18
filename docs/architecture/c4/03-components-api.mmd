@@ -11,7 +11,7 @@ flowchart TB
     subgraph edge["Borde HTTP (internal/platform/httpx)"]
       mw["Middleware en orden:<br/>request-id y log, recover, timeout,<br/>rate limit, auth (sesion opaca),<br/>tenant + sede, plan y feature flag,<br/>RBAC por permiso, idempotency-key"]
       router["Router net/http + handlers<br/>generados desde OpenAPI (oapi-codegen strict)"]
-      hooks["--plane=webhooks: solo /webhooks/khipu/{routeId}<br/>resuelve tenant en ops.webhook_routes, verifica HMAC,<br/>dedupe por delivery, encola cpe.sync(serie, numero)"]
+      hooks["--plane=webhooks: solo /webhooks/khipu/{routeId}<br/>resuelve tenant en ops.webhook_routes, verifica HMAC,<br/>dedupe por delivery, encola cpe.sync(tipo, serie, numero)"]
     end
 
     subgraph core["Bounded contexts core (internal/&lt;modulo&gt;): domain / app / ports / adapters"]

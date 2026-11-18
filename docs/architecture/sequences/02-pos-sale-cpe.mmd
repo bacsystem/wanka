@@ -63,7 +63,7 @@ sequenceDiagram
         else red, timeout, 500, 502/503, ENVIO_EN_CURSO
           WK->>DB: tx corta: next_attempt_at con backoff + jitter (max 10 en ~20 h), COMMIT (en la siguiente vuelta la cabeza estara en backoff)
         else 409 DUPLICADO o reintento fuera de las 24 h
-          WK->>P: GET /v1/facturas?serie=&numero=
+          WK->>P: GET /v1/facturas?tipo=&serie=&numero=
           WK->>DB: tx corta: adopta si total y receptor coinciden, si no alerta critica
         else 422 de validacion
           WK->>DB: tx corta: blocked_reason = validation (mismo numero tras corregir), la serie sigue con N+1 (politica de hueco, verificar en BETA)
@@ -77,7 +77,7 @@ sequenceDiagram
   Note over P: Khipu reintenta ERROR_ENVIO hacia SUNAT (20 veces, ~74 h). Wanka no llama /enviar automaticamente.
   P-)WH: POST /webhooks/khipu/{routeId} (X-Khipu-Signature, X-Khipu-Delivery)
   WH->>DB: ops.resolve_webhook_route(routeId) -> tenant + whsec_ cifrado (WEBHOOK_SECRET_ENC_KEY), verifica HMAC (300 s), InTenantTx, dedupe, guarda evento (sin acceso a fk_)
-  WH->>DB: encola cpe.sync(tenant, serie, numero), responde 2xx
-  WK->>P: cpe.sync: GET /v1/facturas/{id}, o por serie y numero si aun no hay provider_ref
+  WH->>DB: encola cpe.sync(tenant, tipo, serie, numero), responde 2xx
+  WK->>P: cpe.sync: GET /v1/facturas/{id}, o por tipo, serie y numero si aun no hay provider_ref
   WK->>DB: graba datos del proveedor, luego transicion por rango (el orden de eventos no importa)
   Note over WK: cpe.reconcile (lider unico, cada minuto): todo estado no final (pendiente sin job vivo, enviado sin novedad > 5 min, bajas en curso, bloqueados por antiguedad y fecha_limite_envio).

@@ -1,7 +1,7 @@
 # ADR 0003: Facturación electrónica vía Khipu detrás del puerto `InvoicingProvider`
 
 - Estado: propuesto. Contrastado con la documentación pública de Khipu (consultada el 2026-11-17) y con su código público (bacsystem/khipu @53bd4bc, [código]). Lo que ninguna de las dos fuentes responde queda marcado **SUPUESTO** o como **verificación en BETA**.
-- Fecha: 2026-11-17 (revisado tras la revisión del PR #124: carrera entre la respuesta y el webhook, estados y códigos completos, orden por serie, redondeo)
+- Fecha: 2026-11-17 (revisado tras la revisión del PR #124: carrera entre la respuesta y el webhook, estados y códigos completos, orden por serie, redondeo; 2026-11-18, #159: orden de la tabla de `activate`, `--rotate` y tipo de documento en la búsqueda)
 
 > **Nombres.** En este ADR, "Khipu" es la **API del proveedor de facturación electrónica**. Su portal web (repo `bacsystem/khipu`, `portal/`) está construido sobre el mismo sistema de diseño que adopta el frontend de Wanka: el paquete `khipu-design-system` (ver `c4/04-components-web.mmd`). Son la misma familia de productos, pero en estos documentos "Khipu" se refiere a la API y "khipu-design-system" al paquete de UI.
 
@@ -51,7 +51,7 @@ El usuario decidió que **el POS no espera la aceptación**: el ticket se imprim
 | Estados del comprobante | Enum de `GET /v1/facturas?estado`: `RECIBIDO`, `INVALIDO`, `FIRMADO`, `ERROR_ENVIO`, `PENDIENTE_AGRUPACION`, `ENVIADO`, `ACEPTADO`, `ACEPTADO_CON_OBS`, `RECHAZADO`, `ANULADO`, `FUERA_DE_PLAZO`, `DESCARTADO` | [ref] `GET /v1/facturas` |
 | Reintentos hacia SUNAT | Los hace Khipu: hasta 20 en ~74 h (dato de la documentación, no confirmado en el código). Forzado con `POST /v1/facturas/{id}/enviar` (`409 ENVIO_EN_CURSO` si hay un envío en vuelo). Con `enviar_automatico`, `POST /v1/facturas` llama a SUNAT dentro de la misma petición, con 15 s de timeout. Khipu **no envía `Retry-After`** | [entornos]; [ref]; [código] |
 | Idempotencia | `Idempotency-Key` en facturas, notas y guías. Vigencia 24 h. Mismo cuerpo: `200`. Otro cuerpo: `422 IDEMPOTENCIA_INVALIDA` | [errores] |
-| Búsqueda por número | `GET /v1/facturas?serie=&numero=` | [ref] |
+| Búsqueda por número | `GET /v1/facturas?tipo=&serie=&numero=`. Khipu numera por `(empresa, tipo, serie)`, así que un mismo código de serie puede existir en dos tipos | [ref]; [código] `JdbcSerieRepository`, `FacturaController` |
 | Webhooks | Solo cambios de estado de un comprobante: `comprobante.aceptado`, `.aceptado_con_obs`, `.rechazado`, `.error_envio`, `.fuera_de_plazo`, `.anulado`, `.descartado`. **La GRE no emite webhooks, y una baja rechazada o en error tampoco** (la aceptada llega como `comprobante.anulado`). Firma `X-Khipu-Signature: t=..,v1=..` (HMAC-SHA256 de `t.cuerpo`). Deduplicación por `X-Khipu-Delivery`. **Sin orden garantizado.** Reintentos con esperas crecientes (1 min, 5 min, 15 min, 1 h…); pausa tras 10 fallos seguidos; el log de entregas dura **30 días**; hasta 5 endpoints por empresa | [guía] *Webhooks*; [código] |
 | Límites | **Sin limitador de tasa** en la emisión. Cuota mensual del plan sumada entre todas las empresas de la cuenta (`429 LIMITE_PLAN`, `402 PLAN_VENCIDO`). BETA: 1 000 documentos por RUC al mes, sumados entre las empresas en BETA de la cuenta (`429 LIMITE_PRUEBAS`). Consulta RUC: 60/min y 5 000/día por empresa | [entornos]; [código] |
 | Errores | Sobre `{estado, datos, codigo, mensaje, errores}`; `trace_id` en los 500; un 502 puede no ser JSON | [ref]; [errores] |
@@ -93,7 +93,7 @@ type InvoicingProvider interface {
     ListVoids(ctx context.Context, tenant TenantCreds, ref ProviderRef) ([]VoidResult, error)                      // GET /v1/facturas/{id}/bajas
     GetVoid(ctx context.Context, tenant TenantCreds, voidRef string) (VoidResult, error)                           // GET /v1/bajas/{id}
     GetDocument(ctx context.Context, tenant TenantCreds, ref ProviderRef) (StatusResult, error)                    // GET /v1/facturas/{id}, /v1/guias-remision/{id}
-    FindByNumber(ctx context.Context, tenant TenantCreds, series string, number int64) (StatusResult, bool, error)  // GET /v1/facturas?serie=&numero=
+    FindByNumber(ctx context.Context, tenant TenantCreds, docType, series string, number int64) (StatusResult, bool, error)  // GET /v1/facturas?tipo=&serie=&numero=
     FetchArtifact(ctx context.Context, tenant TenantCreds, ref ProviderRef, kind ArtifactKind) (io.ReadCloser, error)
     VerifyWebhook(secret []byte, header http.Header, rawBody []byte, now time.Time) (WebhookEvent, error)
 }
@@ -120,18 +120,20 @@ Decisión del dueño (2026-11-17): las empresas las crea el **operador de Khipu*
     - **Ruta.** `--route-id` tiene que tener el formato del paso 3 (128 bits) y no existir para otro tenant. Si el operador lo copió mal, los webhooks no llegan y la alerta de `webhook_verified_at` lo hace visible.
   - **Transiciones de `activate`.** Primero se valida todo lo que no depende del estado (formato del `--route-id`, llave contra `GET /v1/empresa` y empresa igual a `--company-ref`), **fuera de toda transacción**, porque es una llamada de red. Después, en una transacción corta, se toma `pg_advisory_xact_lock` con una clave derivada del tenant y de `einvoicing:activate`. Así dos `activate` simultáneos sobre el mismo tenant se serializan, y el segundo vuelve a leer el estado ya cambiado. El lock no necesita GRANT: `wanka_app` solo tiene SELECT en `org.tenants` y no podría bloquear esa fila. **Todo rechazo** deja una fila `einvoicing:activate_rejected` en `audit.events`, con el motivo, en una transacción propia, y nada más.
 
-    Las filas se evalúan en orden y gana la primera que coincide.
+    Las filas se evalúan en orden y gana la primera que coincide. Las reglas que no se pueden cambiar (entorno y empresa) van antes que la de plan: un tenant activo en BETA que recibe `--environment PRODUCCION --plan gratis` se rechaza por entorno, que es el motivo que el operador tiene que corregir.
 
     | Estado de origen | Banderas | Efecto | `audit.events` |
     |---|---|---|---|
     | cualquiera | llave inválida, empresa distinta de `--company-ref` o `--route-id` mal formado o de otro tenant | rechazo con el motivo | `einvoicing:activate_rejected` |
-    | cualquiera | PRODUCCION con `--plan gratis` | rechazo «Plan de facturación insuficiente» | `einvoicing:activate_rejected` |
-    | pendiente (sin `activated_at`) | BETA con cualquier plan, o PRODUCCION con Emprende o superior | crea `provider_credentials` con ese `environment`, que ya no cambia, y la ruta; fija `activated_at` | `einvoicing:activate` |
-    | activo | `--environment` distinto del guardado, con o sin `--rotate` | rechazo «El entorno de facturación no se puede cambiar» (ver «Un entorno por tenant») | `einvoicing:activate_rejected` |
+    | activo | `--environment` distinto del guardado, con cualquier plan y con o sin `--rotate` | rechazo «El entorno de facturación no se puede cambiar» (ver «Un entorno por tenant») | `einvoicing:activate_rejected` |
     | activo | `--company-ref` distinto de `provider_company_ref`, con o sin `--rotate` | rechazo «La empresa de Khipu no se puede cambiar» | `einvoicing:activate_rejected` |
+    | cualquiera | PRODUCCION con `--plan gratis` | rechazo «Plan de facturación insuficiente» | `einvoicing:activate_rejected` |
+    | pendiente (sin `activated_at`) | `--rotate` | rechazo «La facturación no está activa: actívala sin `--rotate`». No hay llave ni ruta que rotar, y activar en silencio ocultaría un error del operador | `einvoicing:activate_rejected` |
+    | pendiente (sin `activated_at`) | sin `--rotate`: BETA con cualquier plan, o PRODUCCION con Emprende o superior | crea `provider_credentials` con ese `environment`, que ya no cambia, y la ruta; fija `activated_at` | `einvoicing:activate` |
     | activo, mismo entorno y empresa | sin `--rotate`, mismo plan | rechazo «La facturación ya está activa» | `einvoicing:activate_rejected` |
     | activo, mismo entorno y empresa | sin `--rotate`, otro plan válido para el entorno (por ejemplo, de Gratis a Emprende en BETA o de Emprende a Negocio en PRODUCCION) | cambia solo `provider_plan`; no lee secretos ni toca la ruta | `einvoicing:plan_change` |
-    | activo, mismo entorno y empresa | `--rotate` | rota la llave y el `whsec_`; revoca la ruta anterior y crea la nueva; `webhook_verified_at` vuelve a nulo; conserva `emission_ready_at` | `einvoicing:rotate` |
+    | activo, mismo entorno y empresa | `--rotate` con un plan distinto del guardado | rechazo «Rotar la llave y cambiar el plan son pasos separados». Cada acción deja su propia fila de auditoría; el operador corre primero uno y después el otro | `einvoicing:activate_rejected` |
+    | activo, mismo entorno y empresa | `--rotate` con el mismo plan | rota la llave y el `whsec_`; revoca la ruta anterior y crea la nueva; `webhook_verified_at` vuelve a nulo; conserva `emission_ready_at` | `einvoicing:rotate` |
 
   - **Un entorno por tenant.** Decisión del dueño (2026-11-18): cada tenant vive en un único entorno de Khipu durante toda su vida. Las pruebas en BETA se hacen en un tenant de prueba aparte, y la empresa real se activa directamente en PRODUCCION. No hay paso de BETA a PRODUCCION ni el inverso.
     - **Por qué serie y número no son ambiguos.** Un tenant tiene un solo entorno y una sola empresa de Khipu (`provider_company_ref`) para siempre: la tabla de arriba rechaza cambiar cualquiera de los dos, y `--rotate` exige la misma empresa. Así bastan las UK sin entorno: `(tenant_id, doc_type, series)` en `org.document_series` y `(tenant_id, doc_type, series, number)` en `einv.electronic_documents` (data-model §3). Un número dentro de un tenant corresponde a un único comprobante en una única empresa de Khipu, y los CPE de BETA viven en su propio tenant de prueba, así que nunca entran en el RVIE, el PLE ni los reportes de la empresa real.
@@ -268,8 +270,8 @@ Las transiciones solo suben de rango: `UPDATE ... SET status = $s, status_rank =
 ### Respuesta, webhook y conciliación sin carreras
 
 1. **Datos del proveedor primero, transición después.** Al recibir `201`/`200`, el worker graba en una sentencia idempotente `provider_ref`, `hash`, `send_deadline`, `provider_total` y los enlaces, **sin depender del estado**: `UPDATE ... SET provider_ref = $ref, ... WHERE id = $id AND (provider_ref IS NULL OR provider_ref = $ref)`. Después aplica la transición por rango. Si el webhook llegó antes y ya dejó el documento en `aceptado`, la respuesta igual completa los datos que faltaban.
-2. **El webhook resuelve el documento por serie y número**, no por `provider_ref`: la carga trae `datos.serie` y `datos.numero`, y esos valores los asignó Wanka, así que existen desde la venta. El handler del servicio `webhooks` verifica la firma, deduplica, guarda el evento y encola `cpe.sync(tenant, serie, numero)`.
-3. **`cpe.sync` consulta el estado actual** (`GetDocument` si ya hay `provider_ref`; si no, `FindByNumber`) y aplica primero los datos y luego la transición. El orden de los eventos no importa.
+2. **El webhook resuelve el documento por tipo, serie y número**, no por `provider_ref`: la carga trae `datos.tipo`, `datos.serie` y `datos.numero` ([código] `PayloadDeWebhook`), y la serie y el número los asignó Wanka, así que existen desde la venta. El tipo es necesario: Khipu numera por tipo y serie, y la UK de Wanka es `(tenant_id, doc_type, series, number)`, así que serie y número solos no identifican un comprobante si un código de serie se repite entre tipos. `datos.tipo` usa los códigos SUNAT (`01`, `03`, `07`, `08`), los mismos de `doc_type`. El handler del servicio `webhooks` verifica la firma, deduplica, guarda el evento y encola `cpe.sync(tenant, doc_type, serie, numero)`.
+3. **`cpe.sync` consulta el estado actual** (`GetDocument` si ya hay `provider_ref`; si no, `FindByNumber` con tipo, serie y número) y aplica primero los datos y luego la transición. El orden de los eventos no importa.
 4. **`cpe.reconcile`** (líder único, cada minuto) recorre **todos los estados no finales**:
    - `pendiente` sin job vivo, o con `next_attempt_at` vencido hace más de 5 min: lo reencola;
    - `enviado` sin novedad en más de 5 min: `GetDocument`, con backoff por documento;
