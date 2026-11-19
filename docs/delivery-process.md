@@ -40,7 +40,7 @@ Decisión del dueño, 2026-11-19. Reemplaza la regla anterior de que cada PR sub
 
 Al cerrar cada lote, junto con el PR de release, quien coordina (con Claude o con Gemini) corre el skill `retro` de `bacsystem/skills`, que produce tres cosas:
 
-1. `docs/retros/AAAA-MM-DD-<lote>.md`, con las métricas del lote tomadas de GitHub (rondas de revisión, hallazgos por severidad, horas hasta el merge y minutos y fallos de CI), los cuellos de botella con su evidencia, las clases de defecto y las mejoras.
+1. `docs/retros/AAAA-MM-DD-<lote>.md`, con las métricas del lote tomadas de GitHub (rondas de revisión, hallazgos por severidad, tiempo hasta el merge y minutos y fallos de CI), los cuellos de botella con su evidencia, las clases de defecto y las mejoras.
 2. Los tipos de defecto nuevos se agregan a [`architecture/review-checklist.md`](architecture/review-checklist.md). Si cambia una regla del equipo, se edita `CLAUDE.md` (nunca `GEMINI.md`, que solo lo importa).
 3. Un PR a `bacsystem/skills` con las mejoras genéricas para agentes y skills.
 
