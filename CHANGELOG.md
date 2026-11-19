@@ -5,6 +5,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Changed
+- Status docs (`apps/api/README.md`, `docs/architecture/README.md`, `docs/modules/README.md`, `CLAUDE.md`): the wave 0 kernel is done (epic #154, v0.19.0); the Khipu BETA checks moved to #224 and the kernel follow-ups to #225.
+
 ## [0.19.0] - 2026-11-19
 
 ### Added

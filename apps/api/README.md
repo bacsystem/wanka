@@ -4,9 +4,11 @@ Backend de Wanka: un binario Go (`wanka`) con módulos hexagonales. Decisiones e
 [ADR 0002](../../docs/architecture/adr/0002-modular-monolith-go.md). Módulo Go:
 `github.com/bacsystem/wanka/apps/api` (Go 1.25 o superior).
 
-Estado: kernel con conexión a PostgreSQL 16, migraciones goose y bootstrap de
-roles. Aún no hay tablas de negocio, OpenAPI ni despliegue (Railway queda para
-más adelante).
+Estado: kernel de la ola 0 completo (épica #154, release v0.19.0). Incluye la
+cadena `/v1` (sesión, tenant, entitlements, RBAC e idempotencia), la auditoría,
+los jobs, `pricing.Compute` y el contrato OpenAPI con su código generado. Todavía
+no hay módulos de negocio (empiezan en la ola 1) ni despliegue (Railway queda
+para más adelante).
 
 ## Estructura
 

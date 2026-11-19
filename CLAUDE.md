@@ -81,7 +81,7 @@ Feature-based layout: **`app/` holds thin route files; everything else lives in 
 - `components/shared/*` — building blocks every screen uses: `PageHeader`, `StatCard`/`StatGrid` (KPI row, horizontal scroller on mobile), `StatusBadge` (tone: success/warning/danger/info/neutral), `DataTable` (desktop table + `mobileCard` renderer for ≤767px; pass `minWidth` so wide tables scroll inside the card), `SectionCard`, `EntityHeader`, `FilterBar`, `SectionNav`, `Toolbar`/`SearchInput`, `Field`, `PaginationBar`, `InitialsAvatar`, `Tag`.
 - `components/ui/*` — shadcn generated (Base UI variant): use the `render` prop instead of `asChild`, and add `nativeButton={false}` when a `Button` renders a `Link`. `Select` needs `items={[...]}` so `SelectValue` shows labels.
 - `features/*` — one folder per screen/domain; the per-feature inventory (routes, screens, special flows) is in `docs/frontend-structure.md`.
-- `types/domain.ts` — shared domain types (Tenant, SalesDocument/Detail, Customer, CatalogItem, CartLine…). Feature-only types live next to their mocks. Mocks mirror the shape the future API will return; there is no backend yet.
+- `types/domain.ts` — shared domain types (Tenant, SalesDocument/Detail, Customer, CatalogItem, CartLine…). Feature-only types live next to their mocks. Mocks mirror the shape the API returns; no screen calls `apps/api` yet.
 - `lib/format.ts` — currency (`S/`), integer, percent, date (`dd/mm/aaaa`) and `SERIE-NNNNNNNN` formatting. Use these instead of ad-hoc formatting.
 
 Interactions are mock-backed: actions show a sonner toast (`toast.success(...)`) instead of calling an API. Keep that convention until the API exists.
@@ -120,7 +120,7 @@ The tokens, the Tailwind theme, the recipes and the appearance preferences come 
 
 ## Backend architecture (`docs/architecture`)
 
-Not built yet. The design is in `docs/architecture/` (index and full detail: `README.md`; decisions: `adr/`). Rules:
+Kernel (wave 0) built in `apps/api`; business modules start in wave 1. The design is in `docs/architecture/` (index and full detail: `README.md`; decisions: `adr/`). Rules:
 
 - **Stack** (ADR 0002): Go modular monolith on PostgreSQL 16. Libraries: only those ADR 0002 lists as approved; any other needs owner approval first.
 - **ADRs**: `docs/architecture/adr/NNNN-*.md`; to add, change or supersede one, follow `docs/architecture/README.md` §9.
