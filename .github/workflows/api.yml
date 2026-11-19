@@ -80,6 +80,12 @@ jobs:
       - name: go vet
         if: steps.changes.outputs.run == 'true'
         run: go vet ./...
+      # testdata queda fuera de ./...: el harness de carga (servidor + k6) se
+      # compila aparte para que no se pudra, sin ser un paquete más del módulo
+      # (un main nuevo en cmd/ o internal/ entraría en go-arch-lint y en ./...).
+      - name: go vet load test harness
+        if: steps.changes.outputs.run == 'true'
+        run: go vet ./testdata/loadtest
       # Migraciones solo hacia adelante; el script también prueba sus casos malos.
       - name: migrations are forward-only
         if: steps.changes.outputs.run == 'true'
