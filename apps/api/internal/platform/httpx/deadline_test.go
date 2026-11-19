@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/bacsystem/wanka/apps/api/internal/platform/logging"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -259,17 +261,22 @@ func TestStreamingRouteSkipsTheHandlerDeadlineAndCanFlush(t *testing.T) {
 
 func TestStreamingContextExpiresAtTheBudgetFromArrival(t *testing.T) {
 	const budget = 3 * time.Second
+	const lag = 300 * time.Millisecond // tiempo entre la llegada y la ruta
 	var deadline time.Time
-	h, _, _ := chainWith(t, httpx.RouterOptions{StreamTimeout: budget}, func(rt *httpx.Router) {
-		rt.HandleFunc("GET /export", func(_ http.ResponseWriter, r *http.Request) {
-			deadline, _ = r.Context().Deadline()
-		}, httpx.Streaming())
+	rt := httpx.NewRouter(httpx.RouterOptions{StreamTimeout: budget})
+	rt.HandleFunc("GET /export", func(_ http.ResponseWriter, r *http.Request) {
+		deadline, _ = r.Context().Deadline()
+	}, httpx.Streaming())
+	slow := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(lag)
+		rt.ServeHTTP(w, r)
 	})
+	h := httpx.Chain(slow, logging.New(&logBuf{}, slog.LevelInfo), nil)
 	before := time.Now()
 	do(h, httptest.NewRequest(http.MethodGet, "/export", nil))
-	after := time.Now()
-	if deadline.Before(before.Add(budget)) || deadline.After(after.Add(budget)) {
-		t.Fatalf("deadline %v not within [%v, %v] + %v", deadline, before, after, budget)
+	// Contado desde la llegada: before+budget, no before+lag+budget.
+	if deadline.Before(before.Add(budget)) || deadline.After(before.Add(budget+lag/2)) {
+		t.Fatalf("deadline %v is %v after arrival, want %v", deadline, deadline.Sub(before), budget)
 	}
 }
 
@@ -341,5 +348,64 @@ func TestSlowHeadersAreCut(t *testing.T) {
 	}
 	if ne, ok := err.(interface{ Timeout() bool }); ok && ne.Timeout() {
 		t.Fatal("the server kept the connection open past ReadHeaderTimeout")
+	}
+}
+
+// Un panic que coincide con el vencimiento del plazo no se pierde: cada 503 por
+// plazo de un handler que entra en panic deja su línea error con el valor.
+func TestPanicAtTheDeadlineIsAlwaysLogged(t *testing.T) {
+	const n = 1500
+	h, buf, _ := chainWith(t, httpx.RouterOptions{HandlerTimeout: time.Millisecond}, func(rt *httpx.Router) {
+		rt.HandleFunc("GET /boom/{id}", func(_ http.ResponseWriter, r *http.Request) {
+			<-r.Context().Done()
+			panic("boom-" + r.PathValue("id"))
+		})
+	})
+	var wg sync.WaitGroup
+	codes := make([]int, n)
+	for i := 0; i < n; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			codes[i] = do(h, httptest.NewRequest(http.MethodGet, fmt.Sprintf("/boom/%d", i), nil)).Code
+		}()
+	}
+	wg.Wait()
+	time.Sleep(100 * time.Millisecond) // las goroutines tardías terminan de registrar
+	logged := map[string]bool{}
+	for _, msg := range []string{"panic recovered", "panic after the handler deadline"} {
+		for _, l := range buf.lines(t, msg) {
+			if l["level"] != "ERROR" {
+				t.Fatalf("panic logged as %v", l["level"])
+			}
+			logged[fmt.Sprint(l["panic"])] = true
+		}
+	}
+	for i, c := range codes {
+		if c == http.StatusServiceUnavailable && !logged[fmt.Sprintf("boom-%d", i)] {
+			t.Fatalf("request %d answered 503 and its panic was lost", i)
+		}
+	}
+}
+
+// Un ErrAbortHandler posterior al plazo no deja traza (convención de net/http).
+func TestAbortAfterTheDeadlineIsNotLogged(t *testing.T) {
+	responded := make(chan struct{})
+	finished := make(chan struct{})
+	h, buf, _ := chainWith(t, httpx.RouterOptions{HandlerTimeout: testDeadline}, func(rt *httpx.Router) {
+		rt.HandleFunc("GET /abort", func(_ http.ResponseWriter, r *http.Request) {
+			defer close(finished)
+			<-r.Context().Done()
+			<-responded
+			panic(http.ErrAbortHandler)
+		})
+	})
+	rec := do(h, httptest.NewRequest(http.MethodGet, "/abort", nil))
+	close(responded)
+	<-finished
+	time.Sleep(20 * time.Millisecond)
+	mustProblem(t, rec, http.StatusServiceUnavailable, "overloaded")
+	if strings.Contains(buf.String(), `"level":"ERROR"`) || strings.Contains(buf.String(), "stack") {
+		t.Fatalf("ErrAbortHandler must not be logged with a trace: %s", buf.String())
 	}
 }

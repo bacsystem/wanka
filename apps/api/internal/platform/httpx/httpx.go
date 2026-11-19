@@ -1,12 +1,12 @@
-// Package httpx holds the HTTP plumbing shared by every plane: server
-// timeouts, health endpoints, request ids, access log, panic recovery, the body
-// limit, RFC 9457 problems, handler deadlines, routing and the rate limiter.
+// Package httpx es la base HTTP común a todos los planos: timeouts del
+// servidor, rutas de salud, request id, log de acceso, recuperación de panic,
+// límite de cuerpo, problemas RFC 9457, plazos del handler, enrutado y limitador.
 //
-// Chain is the outer layer (request id, access log, recovery, body limit) and
-// Router the inner one (undeclared routes, handler deadline, per-route
-// middleware). Every error response goes through WriteProblem, WriteError or
-// WriteDBError, so all of them are application/problem+json with a code of the
-// closed list in api/conventions.md §4.
+// Chain es la capa externa (request id, log de acceso, recuperación, límite de
+// cuerpo) y Router la interna (rutas no declaradas, plazo del handler,
+// middleware por ruta). Toda respuesta de error pasa por WriteProblem,
+// WriteError o WriteDBError, así que todas son application/problem+json con un
+// code de la lista cerrada de api/conventions.md §4.
 package httpx
 
 import (
@@ -16,10 +16,10 @@ import (
 	"time"
 )
 
-// ReadyFunc reports whether the process can serve traffic; a non-nil error means not ready.
+// ReadyFunc informa si el proceso puede atender tráfico; un error no nulo significa que no.
 type ReadyFunc func(ctx context.Context) error
 
-// ErrNotReady is returned by NotReady.
+// ErrNotReady es lo que devuelve NotReady.
 var ErrNotReady = errors.New("database not connected")
 
 // NotReady es una ReadyFunc que siempre falla.
@@ -35,7 +35,7 @@ const (
 	idleTimeout = 120 * time.Second
 )
 
-// NewServer returns an http.Server with the timeouts of api/conventions.md §7.
+// NewServer devuelve un http.Server con los timeouts de api/conventions.md §7.
 func NewServer(addr string, h http.Handler) *http.Server {
 	return &http.Server{
 		Addr:              addr,
@@ -44,11 +44,14 @@ func NewServer(addr string, h http.Handler) *http.Server {
 		ReadTimeout:       readTimeout,
 		WriteTimeout:      writeTimeout,
 		IdleTimeout:       idleTimeout,
+		// Sin esto net/http responde "OPTIONS *" con un 200 vacío antes de Chain:
+		// sin X-Request-Id, sin log y sin RFC 9457. Así llega al Router (404).
+		DisableGeneralOptionsHandler: true,
 	}
 }
 
-// NewMux returns the router with the routes every plane mounts: /healthz (and
-// its alias /livez) never touches dependencies; /readyz does, through ready.
+// NewMux devuelve el router con las rutas que monta todo plano: /healthz (y su
+// alias /livez) no consulta dependencias; /readyz sí, mediante ready.
 func NewMux(ready ReadyFunc) *Router {
 	rt := NewRouter(RouterOptions{})
 	live := func(w http.ResponseWriter, _ *http.Request) {
@@ -64,7 +67,7 @@ func NewMux(ready ReadyFunc) *Router {
 			if WriteDBError(w, r, err) {
 				return
 			}
-			// The cause is not returned to the caller: it may name internals.
+			// La causa no se devuelve: puede nombrar detalles internos.
 			WriteProblem(w, r, "dependency_unavailable", "dependency not ready")
 			return
 		}

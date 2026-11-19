@@ -363,3 +363,29 @@ func TestNewLimiterValidatesItsConfig(t *testing.T) {
 		}
 	}
 }
+
+// Con el tope de claves del segundo limitador, el primero devuelve su ficha y
+// el 503 informa la cuota ya reembolsada.
+func TestChainedLimitersRefundWhenALaterOneHitsItsKeyCap(t *testing.T) {
+	clk := clock.NewFake(t0)
+	session := newLimiter(t, clk, httpx.LimiterConfig{Name: "session", Capacity: 4, Refill: time.Hour, MaxKeys: 10, Key: headerKey("X-Session")})
+	tenant := newLimiter(t, clk, httpx.LimiterConfig{Name: "tenant", Capacity: 10, Refill: time.Hour, MaxKeys: 1, Key: headerKey("X-Tenant")})
+	h, _ := limited(t, 200, session, tenant)
+
+	if rec := hit(h, "X-Session", "S", "X-Tenant", "T1"); rec.Code != 200 {
+		t.Fatalf("first request: %d", rec.Code)
+	}
+	rec := hit(h, "X-Session", "S", "X-Tenant", "T2") // el tenant no tiene sitio para T2
+	mustProblem(t, rec, http.StatusServiceUnavailable, "overloaded")
+	// La sesión gastó 1 ficha (la primera); la del 503 se devolvió: quedan 3.
+	if got := intHeader(t, rec, "RateLimit-Remaining"); got != 3 {
+		t.Fatalf("RateLimit-Remaining = %d on the 503, want 3 (after the refund)", got)
+	}
+	// Y de verdad quedan 3: tres más pasan y la cuarta ya no.
+	for i := 0; i < 3; i++ {
+		if rec := hit(h, "X-Session", "S", "X-Tenant", "T1"); rec.Code != 200 {
+			t.Fatalf("request %d after the 503: %d", i, rec.Code)
+		}
+	}
+	mustProblem(t, hit(h, "X-Session", "S", "X-Tenant", "T1"), http.StatusTooManyRequests, "rate_limited")
+}

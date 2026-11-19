@@ -117,6 +117,7 @@ cuerpo) envuelve a un `httpx.Router`; los módulos registran ahí sus rutas con
   `Retry-After`, y `RateLimit-Limit`, `-Remaining` y `-Reset` en toda respuesta de
   la ruta. Con `MaxKeys` buckets no llenos, una clave nueva recibe `503 overloaded`.
   Las claves de sesión y tenant y los valores por defecto los fija #174.
+- La sobrecarga de la cadena se repite con `go test -run '^$' -bench Overhead -benchmem ./internal/platform/httpx` y, con carga real, con `testdata/loadtest` (servidor + script k6).
 - Todo `429` y `503` del kernel lleva `Retry-After` en segundos enteros >= 1.
 
 Cada respuesta lleva `X-Request-Id`: se conserva el entrante si son de 1 a 128

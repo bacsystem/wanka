@@ -1,16 +1,20 @@
 package httpx_test
 
 import (
+	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/bacsystem/wanka/apps/api/internal/platform/httpx"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/logging"
@@ -242,7 +246,7 @@ func TestNoCORSHeaders(t *testing.T) {
 }
 
 func TestRouterRejectsBadPatterns(t *testing.T) {
-	for _, pattern := range []string{"/no-method", "GET /subtree/", "GET"} {
+	for _, pattern := range []string{"/no-method", "GET /subtree/", "GET", "GET /v1/files/{p...}", "GET /{rest...}"} {
 		t.Run(pattern, func(t *testing.T) {
 			defer func() {
 				if recover() == nil {
@@ -476,5 +480,79 @@ func TestAccessLogOmitsQueryAndHeadersThroughRouter(t *testing.T) {
 	do(h, req)
 	if strings.Contains(buf.String(), "SECRET") {
 		t.Fatalf("access log leaks: %s", buf.String())
+	}
+}
+
+// Ninguna petición puede recibir una redirección ni un cuerpo que no sea RFC 9457
+// o del handler: ServeMux redirige (301 HTML) cuando un patrón termina en "/" o "...}".
+func TestNoRequestGetsAServeMuxResponse(t *testing.T) {
+	h, _, _ := chain(t, func(rt *httpx.Router) {
+		rt.HandleFunc("GET /v1/files", func(w http.ResponseWriter, _ *http.Request) { _, _ = io.WriteString(w, "list") })
+		rt.HandleFunc("GET /v1/files/{id}", func(w http.ResponseWriter, _ *http.Request) { _, _ = io.WriteString(w, "one") })
+		rt.HandleFunc("GET /{$}", func(w http.ResponseWriter, _ *http.Request) { _, _ = io.WriteString(w, "root") })
+	})
+	paths := []string{"/", "/v1", "/v1/", "/v1/files", "/v1/files/", "/v1/files/a/b", "/v1/files/a/", "//v1/files", "/v1//files",
+		"/v1/./files", "/v1/files/..", "/v1/files/%2e%2e", "/*", "/v1/files?x=1", "/V1/FILES"}
+	for _, method := range []string{http.MethodGet, http.MethodHead, http.MethodPost, http.MethodOptions, http.MethodDelete} {
+		for _, p := range paths {
+			req := httptest.NewRequest(method, "http://example.com/", nil)
+			req.URL.Path, req.URL.RawQuery = strings.SplitN(p, "?", 2)[0], ""
+			req.RequestURI = p
+			rec := do(h, req)
+			ct := rec.Header().Get("Content-Type")
+			if rec.Code >= 300 && rec.Code < 400 || rec.Header().Get("Location") != "" || rec.Header().Get("Allow") != "" {
+				t.Fatalf("%s %s: redirect or ServeMux response %d %v", method, p, rec.Code, rec.Header())
+			}
+			if rec.Code >= 400 && ct != "application/problem+json" {
+				t.Fatalf("%s %s: error %d with Content-Type %q: %s", method, p, rec.Code, ct, rec.Body.String())
+			}
+		}
+	}
+}
+
+// Un OPTIONS * lo atiende net/http antes de Chain salvo que se desactive.
+func TestOptionsStarGoesThroughTheChain(t *testing.T) {
+	buf := &logBuf{}
+	h := httpx.Chain(httpx.NewMux(func(context.Context) error { return nil }), logging.New(buf, slog.LevelInfo), nil)
+	srv := httptest.NewUnstartedServer(h)
+	srv.Config = httpx.NewServer("", h)
+	srv.Start()
+	defer srv.Close()
+	conn, err := net.DialTimeout("tcp", srv.Listener.Addr().String(), time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+	_, _ = io.WriteString(conn, "OPTIONS * HTTP/1.1\r\nHost: x\r\nOrigin: https://evil.example\r\nConnection: close\r\n\r\n")
+	resp, err := http.ReadResponse(bufio.NewReader(conn), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusNotFound || resp.Header.Get("Content-Type") != "application/problem+json" ||
+		resp.Header.Get("X-Request-Id") == "" || !strings.Contains(string(body), `"code":"not_found"`) {
+		t.Fatalf("OPTIONS *: %d %v %s", resp.StatusCode, resp.Header, body)
+	}
+	if len(buf.lines(t, "request")) != 1 {
+		t.Fatalf("the access log must record it: %s", buf.String())
+	}
+}
+
+// Lo que el handler dejó en las cabeceras antes de entrar en panic en una ruta
+// Streaming (donde no hay buffer) no llega al 500.
+func TestPanicOnAStreamingRouteDropsTheHandlerHeaders(t *testing.T) {
+	h, _, _ := chain(t, func(rt *httpx.Router) {
+		rt.HandleFunc("GET /boom", func(w http.ResponseWriter, _ *http.Request) {
+			w.Header().Set("Set-Cookie", "session=leak")
+			w.Header().Set("Content-Disposition", "attachment; filename=x.csv")
+			w.Header().Set("Content-Type", "text/csv")
+			panic("boom")
+		}, httpx.Streaming())
+	})
+	rec := do(h, httptest.NewRequest(http.MethodGet, "/boom", nil))
+	mustProblem(t, rec, http.StatusInternalServerError, "internal")
+	if rec.Header().Get("Set-Cookie") != "" || rec.Header().Get("Content-Disposition") != "" {
+		t.Fatalf("handler headers reached the 500: %v", rec.Header())
 	}
 }

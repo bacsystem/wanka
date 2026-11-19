@@ -66,11 +66,13 @@ func Streaming() RouteOption { return func(r *route) { r.streaming = true } }
 func Use(mw ...Middleware) RouteOption { return func(r *route) { r.mw = append(r.mw, mw...) } }
 
 // Handle registra h para pattern, que debe ser "MÉTODO /camino". Un patrón sin
-// método o de subárbol (termina en "/") es un error de programación y entra en pánico.
+// método o de subárbol (termina en "/" o en "...}") es un error de programación y entra en pánico.
 func (rt *Router) Handle(pattern string, h http.Handler, opts ...RouteOption) {
 	method, p, ok := strings.Cut(pattern, " ")
-	if !ok || method == "" || strings.ToUpper(method) != method || !strings.HasPrefix(p, "/") || strings.HasSuffix(p, "/") {
-		panic("httpx: route pattern must be \"METHOD /path\" without a trailing slash, got " + pattern)
+	if !ok || method == "" || strings.ToUpper(method) != method || !strings.HasPrefix(p, "/") || strings.HasSuffix(p, "/") || strings.HasSuffix(p, "...}") {
+		// Un patrón de subárbol ("/x/" o "/{p...}") hace que ServeMux redirija
+		// "/x" con un 301 HTML, que no es RFC 9457.
+		panic("httpx: route pattern must be \"METHOD /path\" without a trailing slash or a \"...}\" wildcard, got " + pattern)
 	}
 	var ro route
 	for _, o := range opts {

@@ -42,8 +42,8 @@ func conventionsTable(t *testing.T) map[string]int {
 
 func TestCodeTableMatchesConventions(t *testing.T) {
 	want := conventionsTable(t)
-	if len(want) != 31 {
-		t.Fatalf("conventions.md §4 has %d codes, the story says 31", len(want))
+	if rows := countTableRows(t); rows != len(want) {
+		t.Fatalf("conventions.md §4 has %d rows but %d were recognised as a code", rows, len(want))
 	}
 	got := httpx.Codes()
 	for code, status := range want {
@@ -145,4 +145,17 @@ func TestKernelThrottleAndUnavailableCodesCarryRetryAfter(t *testing.T) {
 			t.Fatalf("%s: Retry-After = %q", code, rec.Header().Get("Retry-After"))
 		}
 	}
+}
+
+// countTableRows cuenta las filas de la tabla de §4 sin interpretarlas, para que
+// una fila con otro formato rompa el test en vez de saltarse.
+func countTableRows(t *testing.T) int {
+	t.Helper()
+	raw, err := os.ReadFile("../../../../../docs/architecture/api/conventions.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(raw)
+	section := text[strings.Index(text, "## 4. Formato de error"):strings.Index(text, "## 5.")]
+	return len(regexp.MustCompile(`(?m)^\| \d{3} \|`).FindAllString(section, -1))
 }

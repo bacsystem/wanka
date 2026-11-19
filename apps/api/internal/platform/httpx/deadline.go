@@ -42,10 +42,17 @@ func handlerDeadline(next http.Handler, d time.Duration) http.Handler {
 			defer func() {
 				if v := recover(); v != nil {
 					hp := &handlerPanic{value: v, stack: debug.Stack()}
-					if tw.timedOutNow() {
+					tw.mu.Lock()
+					late := tw.timedOut
+					if !late {
+						// El select de abajo la propaga, o la registra si el plazo gana la carrera.
+						tw.panicked = hp
+					}
+					tw.mu.Unlock()
+					if late {
 						// Nadie la recogerá: la petición ya respondió el 503.
-						depsFrom(r.Context()).log.ErrorContext(r.Context(), "panic after the handler deadline",
-							"route", routeOf(hr), "panic", fmt.Sprint(v), "stack", string(hp.stack))
+						logLostPanic(r, hr, hp)
+						return
 					}
 					panicked <- hp
 				}
@@ -77,6 +84,10 @@ func handlerDeadline(next http.Handler, d time.Duration) http.Handler {
 			tw.mu.Lock()
 			defer tw.mu.Unlock()
 			tw.timedOut = true
+			if tw.panicked != nil {
+				// Entró en panic justo al vencer y el plazo ganó el select.
+				logLostPanic(r, hr, tw.panicked)
+			}
 			if r.Context().Err() != nil {
 				return // el cliente se fue: no hay a quién responder
 			}
@@ -97,6 +108,17 @@ type timeoutWriter struct {
 	buf      bytes.Buffer
 	code     int
 	timedOut bool
+	panicked *handlerPanic // panic del handler que aún no recogió la petición
+}
+
+// logLostPanic registra un panic del handler que no llegará a recoverPanic
+// porque el plazo ya respondió. http.ErrAbortHandler no se registra (convención de net/http).
+func logLostPanic(r, hr *http.Request, hp *handlerPanic) {
+	if hp.value == http.ErrAbortHandler {
+		return
+	}
+	depsFrom(r.Context()).log.ErrorContext(r.Context(), "panic after the handler deadline",
+		"route", routeOf(hr), "panic", fmt.Sprint(hp.value), "stack", string(hp.stack))
 }
 
 func (tw *timeoutWriter) Header() http.Header { return tw.h }
@@ -123,12 +145,6 @@ func (tw *timeoutWriter) WriteHeader(code int) {
 		panic(fmt.Sprintf("invalid WriteHeader code %v", code))
 	}
 	tw.code = code
-}
-
-func (tw *timeoutWriter) timedOutNow() bool {
-	tw.mu.Lock()
-	defer tw.mu.Unlock()
-	return tw.timedOut
 }
 
 // streamBudget da a una ruta de streaming su presupuesto, contado desde la

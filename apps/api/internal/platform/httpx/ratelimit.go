@@ -157,17 +157,46 @@ type rateKey struct{}
 
 // rateState lo comparten los limitadores encadenados de una misma petición.
 type rateState struct {
-	refunds []func()
-	shown   *quotaInfo // el del bucket con menos fichas, ya escrito en las cabeceras
+	taken []takenToken
+	shown *quotaInfo // el del bucket con menos fichas, ya escrito en las cabeceras
 }
 
-func (s *rateState) refundAll() {
-	for _, f := range s.refunds {
-		f()
+// takenToken es una ficha concedida por l a key, que se devuelve si un limitador posterior rechaza.
+type takenToken struct {
+	l   *Limiter
+	key string
+}
+
+// refundAll devuelve todas las fichas tomadas y dice cuáles eran.
+func (s *rateState) refundAll() []takenToken {
+	prev := s.taken
+	for _, t := range prev {
+		t.l.refund(t.key)
 	}
-	s.refunds = nil
+	s.taken, s.shown = nil, nil
+	return prev
 }
 
+// lessTokens dice si a es una cuota con menos fichas que b (a igual número, la que tarda más en llenarse).
+func lessTokens(a, b quotaInfo) bool {
+	return a.remaining < b.remaining || a.remaining == b.remaining && a.reset > b.reset
+}
+
+// peek calcula la cuota de key sin tomar una ficha.
+func (l *Limiter) peek(key string) quotaInfo {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	now := l.cfg.Clock.Now()
+	full := l.fullAt[key]
+	if full.Before(now) {
+		full = now
+	}
+	return l.info(full.Sub(now))
+}
+
+// setQuota escribe RateLimit-*. Header.Set canonicaliza los nombres
+// ("Ratelimit-Limit" en HTTP/1.1); los nombres no distinguen mayúsculas
+// (RFC 9110 §5.1) y escribir el mapa con otra grafía rompería Get, Set y Del.
 func setQuota(h http.Header, q quotaInfo) {
 	h.Set("RateLimit-Limit", strconv.Itoa(q.limit))
 	h.Set("RateLimit-Remaining", strconv.Itoa(q.remaining))
@@ -196,7 +225,16 @@ func (l *Limiter) Middleware() Middleware {
 			q, res := l.take(key, l.cfg.Clock.Now())
 			switch res {
 			case keysExhausted:
-				st.refundAll()
+				// La cuota informada es la de los buckets ya con la ficha devuelta.
+				var best *quotaInfo
+				for _, t := range st.refundAll() {
+					if p := t.l.peek(t.key); best == nil || lessTokens(p, *best) {
+						best = &p
+					}
+				}
+				if best != nil {
+					setQuota(w.Header(), *best)
+				}
 				depsFrom(r.Context()).log.WarnContext(r.Context(), "rate limiter key limit reached",
 					"limiter", l.cfg.Name, "max_keys", l.cfg.MaxKeys, "route", routeOf(r))
 				WriteProblem(w, r, "overloaded", "the server is busy, retry shortly")
@@ -208,8 +246,8 @@ func (l *Limiter) Middleware() Middleware {
 				WriteProblem(w, r, "rate_limited", "too many requests, retry later")
 				return
 			}
-			st.refunds = append(st.refunds, func() { l.refund(key) })
-			if st.shown == nil || q.remaining < st.shown.remaining || (q.remaining == st.shown.remaining && q.reset > st.shown.reset) {
+			st.taken = append(st.taken, takenToken{l, key})
+			if st.shown == nil || lessTokens(q, *st.shown) {
 				st.shown = &q
 				setQuota(w.Header(), q)
 			}
