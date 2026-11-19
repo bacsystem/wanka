@@ -12,7 +12,7 @@ más adelante).
 
 ```
 cmd/wanka/            main: serve, worker, migrate up
-internal/platform/    kernel: config, logging, httpx, metrics, clock, db (+ db/dbtest para tests) en uso;
+internal/platform/    kernel: config, logging, httpx, auth, metrics, clock, db (+ db/dbtest para tests) en uso;
                       jobs, money, entitlements, idgen (paquetes vacíos por ahora)
 bootstrap/roles.sql   bootstrap de roles: lo corre el superusuario con psql, fuera de goose
 migrations/           goose, SQL con timestamp, embebido en el binario, solo hacia adelante
@@ -116,7 +116,7 @@ cuerpo) envuelve a un `httpx.Router`; los módulos registran ahí sus rutas con
   encadenados no consumen ficha si uno rechaza. `429 rate_limited` con
   `Retry-After`, y `RateLimit-Limit`, `-Remaining` y `-Reset` en toda respuesta de
   la ruta. Con `MaxKeys` buckets no llenos, una clave nueva recibe `503 overloaded`.
-  Las claves de sesión y tenant y los valores por defecto los fija #174.
+  Las claves de sesión y tenant y los valores por defecto están en la sección «Sesión».
 - La sobrecarga de la cadena se repite con `go test -run '^$' -bench Overhead -benchmem ./internal/platform/httpx` y, con carga real, con `testdata/loadtest` (servidor + script k6).
 - Una conexión perdida del pool (reinicio o failover de la base) es `503 dependency_unavailable`, no `500`. El log de acceso marca con `aborted` una conexión cortada con `http.ErrAbortHandler` (status 0 si no se envió nada). Las peticiones que `net/http` rechaza antes de la cadena (`/%zz`, línea de petición inválida) las responde Go en `text/plain` (conventions.md §4).
 - Todo `429` y `503` del kernel lleva `Retry-After` en segundos enteros >= 1.
@@ -124,6 +124,47 @@ cuerpo) envuelve a un `httpx.Router`; los módulos registran ahí sus rutas con
 Cada respuesta lleva `X-Request-Id`: se conserva el entrante si son de 1 a 128
 caracteres de `[A-Za-z0-9_-]` y, si falta o no cumple, se reemplaza por uno nuevo
 (nunca `400`).
+
+## Sesión (`internal/platform/auth`)
+
+`auth` define el puerto `SessionResolver` (`Lookup` por `sha256` del token y
+`Detach`), la `SessionRecord` que devuelve `iam.session_lookup`, la `Session`
+del handler y el registrador `auth.Routes`. El adaptador de PostgreSQL llega con
+#196; el middleware se prueba con un doble.
+
+- **Registro**: los módulos registran sus rutas `/v1` con
+  `routes.Handle(pattern, class, h, opts...)`, `class` de tipo `auth.RouteClass`
+  (`Public`, `NoTenant`, `Tenant`; sin valor cero válido). Nadie recibe el
+  `httpx.Router` (`Router.Handle` sigue siendo público: el cableado de #196 no lo expone). Una clase omitida o que no cumple `conventions.md` §2 entra en
+  pánico al arrancar. `Public` solo bajo `/v1/auth/`; `NoTenant` es `/v1/auth/*`,
+  `GET /v1/me` y `GET /v1/me/memberships`; el resto es `Tenant`. Una ruta tiene
+  una sola clase (el enrolamiento TOTP son dos rutas).
+- **Token**: `Authorization: Bearer wk_at_<43 caracteres>`, una sola cabecera.
+  `auth.ParseAuthorization` comprueba los 43 caracteres de `[A-Za-z0-9_-]` uno por
+  uno antes de decodificar con `Strict()` (Go ignora `\r` y `\n`) y devuelve el
+  `sha256` del token completo. Lo demás es `401 unauthenticated` sin consultar la
+  base. El token y su hash no salen de ahí y no se registran.
+- **Orden**: token, búsqueda (plazo de 1 s, fase `session_lookup`; la fase no llega
+  al handler), `MFASatisfied` y coherencia de la fila, desligue de la membresía
+  perdida (ADR 0011, una llamada a `Detach` y el contador
+  `auth_session_detach_total{outcome}`), `403 tenant_access_denied` en rutas
+  `Tenant` sin empresa, límite por sesión y, solo en `Tenant`, por tenant, y los
+  pasos de la ruta (`httpx.Use`). Sin fila o `MFASatisfied = false` es
+  `401 session_expired`; un fallo de la base o el plazo vencido es `503`; un error
+  no tipado o una fila incoherente es `500`. Todo `401` lleva
+  `WWW-Authenticate: Bearer`. Una impersonada llega con `UserID` vacío y su
+  `Actor.UserID` es el `ImpersonatorID`.
+- **Límites por defecto** (`auth.Options` los reemplaza en los tests): sesión 10/s
+  con ráfaga de 20, tenant 100/s con ráfaga de 200, con topes de 50 000 y 10 000
+  claves por réplica. Son supuestos que ajusta la prueba de carga de #196.
+  `Routes.Sweep()` elimina los buckets llenos; llamarlo cada 10 s es de `serve`.
+- El handler lee la sesión con `auth.FromContext(ctx)`. Solo un handler de ruta
+  `Tenant` pasa su `Actor` a `db.InTenantTx`: ahí corren los entitlements, la
+  versión, la 2FA, el RBAC y el límite del tenant. En una ruta `NoTenant` el
+  tenant de la sesión (si lo tiene) es informativo y no se entra a datos de la
+  empresa. Los módulos registran rutas solo por `auth.Routes`; el `httpx.Router`
+  no sale de `cmd/wanka`. Los entitlements (fase `entitlements`) llegan con #175.
+- Sobrecarga: `go test -run '^$' -bench Session -benchmem -count 5 ./internal/platform/auth`.
 
 ## Transacciones de tenant (`InTenantTx`)
 
