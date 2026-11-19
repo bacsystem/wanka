@@ -309,25 +309,26 @@ func TestLogsAreJSONWithRequestIDAndNoSecrets(t *testing.T) {
 	}
 }
 
-// mailerWarnings arranca el worker, lee el log hasta «started» y devuelve los
-// avisos WARN sobre el correo. El aviso sale antes de «started».
+// mailerWarnings arranca serve (plano webhooks), lee el log hasta «listening» y
+// devuelve los avisos WARN sobre el correo. El aviso sale antes de «listening».
+// No usa el worker: sin base sale con código 1 antes de arrancar (#169).
 func mailerWarnings(t *testing.T, extra ...string) []map[string]any {
 	t.Helper()
-	p := start(t, append(okEnv(), extra...), "worker")
+	p := start(t, append(okEnv(), extra...), "serve", "--plane=webhooks")
 	var warns []map[string]any
 	timeout := time.After(10 * time.Second)
 	for done := false; !done; {
 		select {
 		case m, ok := <-p.lines:
 			if !ok {
-				t.Fatalf("process ended before \"started\"; stderr: %s", p.stderr)
+				t.Fatalf("process ended before \"listening\"; stderr: %s", p.stderr)
 			}
 			if m["level"] == "WARN" && strings.Contains(fmt.Sprint(m["msg"]), "mailer") {
 				warns = append(warns, m)
 			}
-			done = m["msg"] == "started"
+			done = m["msg"] == "listening"
 		case <-timeout:
-			t.Fatal("timeout waiting for \"started\"")
+			t.Fatal("timeout waiting for \"listening\"")
 		}
 	}
 	p.terminate(t)
