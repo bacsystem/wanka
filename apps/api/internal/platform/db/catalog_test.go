@@ -103,10 +103,18 @@ func squash(s string) string { return strings.Join(strings.Fields(s), " ") }
 var uniqueAllow = map[string]string{
 	"iam.sessions(access_hash)":  "ADR 0004: el hash del token de acceso es único en todo el sistema y se busca antes de conocer el tenant",
 	"iam.sessions(refresh_hash)": "ADR 0004: el hash del token de refresco es único en todo el sistema",
+	"audit.events(id,at)":        "ADR 0001: id es PK sustituta (gen_random_uuid); PostgreSQL exige la columna de partición at en toda clave única",
 }
 
 // fkAllow: FK entre tablas de tenant que no lleva tenant_id. Clave «esquema.tabla.restricción».
 var fkAllow = map[string]string{}
+
+// definerOwnerAllow: función SECURITY DEFINER cuyo dueño es wanka_migrator y no
+// wanka_definer, porque hace DDL sobre tablas del migrador. Clave: la firma
+// regprocedure («esquema.función(tipos)»).
+var definerOwnerAllow = map[string]string{
+	"audit.ensure_partitions(date,integer)": "ADR 0001, «Excepción: DDL de particiones», #173",
+}
 
 // adrRef exige que el motivo de cada entrada cite un ADR.
 var adrRef = regexp.MustCompile(`ADR (\d{4})`)
@@ -531,7 +539,7 @@ func ruleDefiners(ctx context.Context, q queryer) ([]string, error) {
 	}
 	var out []string
 	for _, f := range fns {
-		if f.owner != "wanka_definer" {
+		if f.owner != "wanka_definer" && (f.owner != "wanka_migrator" || definerOwnerAllow[f.sig] == "") {
 			out = append(out, fmt.Sprintf("%s: SECURITY DEFINER owned by %s, want wanka_definer", f.sig, f.owner))
 		}
 		if len(f.config) != 1 || f.config[0] != "search_path=pg_catalog, pg_temp" {
@@ -604,7 +612,7 @@ func ruleByName(t *testing.T, name string) catalogRule {
 
 // problemsOfExceptions revisa las listas blancas: cada entrada cita un ADR y
 // (salvo las de política, que el ADR fija de antemano) apunta a un objeto que existe.
-func problemsOfExceptions(ctx context.Context, q queryer, adrs map[string]bool, noRLS, uniq, fks map[string]string, pols map[string]policyRule) ([]string, error) {
+func problemsOfExceptions(ctx context.Context, q queryer, adrs map[string]bool, noRLS, uniq, fks, definers map[string]string, pols map[string]policyRule) ([]string, error) {
 	var out []string
 	check := func(kind, key, reason string) {
 		if !adrRef.MatchString(reason) {
@@ -624,6 +632,9 @@ func problemsOfExceptions(ctx context.Context, q queryer, adrs map[string]bool, 
 	}
 	for k, v := range fks {
 		check("fkAllow", k, v)
+	}
+	for k, v := range definers {
+		check("definerOwnerAllow", k, v)
 	}
 	for k, v := range pols {
 		check("policyAllow", k, v.reason)
@@ -657,6 +668,24 @@ func problemsOfExceptions(ctx context.Context, q queryer, adrs map[string]bool, 
 	for k := range fks {
 		if !have[k] {
 			out = append(out, fmt.Sprintf("fkAllow %s: no such foreign key; remove the stale entry", k))
+		}
+	}
+	defs, err := scanAll(ctx, q, `
+		SELECT p.oid::regprocedure::text FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+		 WHERE p.prosecdef AND `+userSchemas, func(r pgx.Rows) (string, error) {
+		var s string
+		return s, r.Scan(&s)
+	})
+	if err != nil {
+		return nil, err
+	}
+	haveDef := map[string]bool{}
+	for _, d := range defs {
+		haveDef[d] = true
+	}
+	for k := range definers {
+		if !haveDef[k] {
+			out = append(out, fmt.Sprintf("definerOwnerAllow %s: no such SECURITY DEFINER function; remove the stale entry", k))
 		}
 	}
 	sort.Strings(out)
@@ -697,7 +726,7 @@ func runRules(t *testing.T, d *dbtest.DB) {
 		})
 	}
 	t.Run("the whitelists cite an ADR and point at live objects", func(t *testing.T) {
-		got, err := problemsOfExceptions(ctx, admin, knownADRs(t), noRLSTables, uniqueAllow, fkAllow, policyAllow)
+		got, err := problemsOfExceptions(ctx, admin, knownADRs(t), noRLSTables, uniqueAllow, fkAllow, definerOwnerAllow, policyAllow)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -783,6 +812,7 @@ func TestCatalogWhitelistProblemsAreDetected(t *testing.T) {
 		map[string]string{"iam.ghost": "ADR 0001: gone", "iam.sessions": "no reason", "iam.users": "ADR 9999: invented"},
 		map[string]string{"iam.sessions(nope)": "ADR 0004: gone"},
 		map[string]string{"iam.sessions.nope_fk": "ADR 0001: gone"},
+		map[string]string{"audit.ghost(integer)": "ADR 9998: gone", "audit.ensure_partitions(date,integer)": "no reason"},
 		map[string]policyRule{"iam.x:y": {reason: "because"}})
 	if err != nil {
 		t.Fatal(err)
@@ -793,6 +823,9 @@ func TestCatalogWhitelistProblemsAreDetected(t *testing.T) {
 		"noRLSTables iam.sessions: the reason must cite an ADR",
 		"uniqueAllow iam.sessions(nope): no such unique index",
 		"fkAllow iam.sessions.nope_fk: no such foreign key",
+		"definerOwnerAllow audit.ghost(integer): no such SECURITY DEFINER function",
+		"definerOwnerAllow audit.ensure_partitions(date,integer): the reason must cite an ADR",
+		"definerOwnerAllow audit.ghost(integer): ADR 9998 does not exist",
 		"policyAllow iam.x:y: the reason must cite an ADR",
 		"noRLSTables iam.users: ADR 9999 does not exist",
 	} {

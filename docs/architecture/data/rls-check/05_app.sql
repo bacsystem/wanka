@@ -170,6 +170,51 @@ SELECT test.assert((SELECT created_at = now() FROM iam.sessions WHERE id = '5e00
 ROLLBACK;
 \echo '== A10. (wanka_app) tablas de River: solo INSERT en ops.river_job =='
 SELECT test.river_enqueue_only();
+\echo '== A11. (wanka_app) audit.events: aislamiento por tenant, solo insercion, sin DDL de particiones (#173) =='
+-- Como Record: el tenant, el usuario y el tipo de sesion salen de las variables app.* de la transaccion.
+BEGIN;
+SELECT set_config('app.tenant_id','aaaaaaaa-0000-0000-0000-000000000001', true), set_config('app.user_id','eeeeeeee-0000-0000-0000-000000000001', true),
+       set_config('app.session_kind','user', true);
+INSERT INTO audit.events (tenant_id, actor_type, actor_user_id, action) VALUES (app.current_tenant(), 'user', app.current_user_id(), 'rls.check:a');
+COMMIT;
+BEGIN;
+SELECT set_config('app.tenant_id','bbbbbbbb-0000-0000-0000-000000000002', true), set_config('app.user_id','eeeeeeee-0000-0000-0000-000000000009', true),
+       set_config('app.session_kind','user', true);
+INSERT INTO audit.events (tenant_id, actor_type, actor_user_id, action) VALUES (app.current_tenant(), 'user', app.current_user_id(), 'rls.check:b');
+COMMIT;
+BEGIN;
+SELECT set_config('app.tenant_id','aaaaaaaa-0000-0000-0000-000000000001', true);
+SELECT test.assert((SELECT count(*) FROM audit.events WHERE action = 'rls.check:a') = 1 AND (SELECT count(*) FROM audit.events WHERE action = 'rls.check:b') = 0,
+                   'A ve su evento y no el de B');
+SELECT test.assert((SELECT count(*) > 0 AND bool_and(tenant_id = 'aaaaaaaa-0000-0000-0000-000000000001') FROM audit.events),
+                   'todo lo que ve A es de A (tambien los eventos de plataforma sobre A)');
+SELECT test.expect_error($$INSERT INTO audit.events (tenant_id, actor_type, actor_user_id, action)
+                           VALUES ('bbbbbbbb-0000-0000-0000-000000000002', 'user', 'eeeeeeee-0000-0000-0000-000000000001', 'rls.check:x')$$,
+                         '42501', 'A no inserta un evento a nombre de B (WITH CHECK)');
+SELECT test.expect_error($$INSERT INTO audit.events (tenant_id, actor_type, actor_user_id, action)
+                           VALUES (app.current_tenant(), 'user', NULL, 'rls.check:x')$$,
+                         '23514', 'una fila user sin usuario es imposible');
+SELECT test.expect_error($$INSERT INTO audit.events (tenant_id, actor_type, actor_user_id, action)
+                           VALUES (app.current_tenant(), 'system', 'eeeeeeee-0000-0000-0000-000000000001', 'rls.check:x')$$,
+                         '23514', 'una fila system no lleva usuario');
+SELECT test.expect_error($$INSERT INTO audit.events (tenant_id, actor_type, action) VALUES (app.current_tenant(), 'platform_staff', 'rls.check:x')$$,
+                         '23514', 'una fila platform_staff sin impersonador es imposible');
+SELECT test.expect_error($$INSERT INTO audit.events (tenant_id, actor_type, actor_user_id, impersonator_id, action)
+                           VALUES (app.current_tenant(), 'platform_staff', 'eeeeeeee-0000-0000-0000-000000000001', 'cccccccc-0000-0000-0000-000000000009', 'rls.check:x')$$,
+                         '23514', 'una fila platform_staff no lleva usuario de la empresa');
+SELECT test.expect_error($$INSERT INTO audit.events (tenant_id, actor_type, actor_user_id, impersonator_id, action)
+                           VALUES (app.current_tenant(), 'user', 'eeeeeeee-0000-0000-0000-000000000001', 'cccccccc-0000-0000-0000-000000000009', 'rls.check:x')$$,
+                         '23514', 'solo el staff lleva impersonador');
+SELECT test.expect_error($$INSERT INTO audit.events (tenant_id, actor_type, actor_user_id, action) VALUES (app.current_tenant(), 'user', 'eeeeeeee-0000-0000-0000-000000000001', 'tenants:create')$$,
+                         '23514', 'una accion sin modulo.recurso:accion se rechaza');
+SELECT test.expect_error($$UPDATE audit.events SET action = 'rls.check:z'$$, '42501', 'wanka_app no actualiza audit.events');
+SELECT test.expect_error('DELETE FROM audit.events', '42501', 'wanka_app no borra audit.events');
+SELECT test.expect_error('TRUNCATE audit.events', '42501', 'wanka_app no vacia audit.events');
+SELECT test.expect_error($$SELECT audit.ensure_partitions(current_date, 0)$$, '42501', 'wanka_app no crea particiones');
+SELECT test.expect_error('SELECT count(*) FROM audit.events_y' || to_char(now() AT TIME ZONE 'UTC', 'YYYY') || 'm' || to_char(now() AT TIME ZONE 'UTC', 'MM'), '42501',
+                         'wanka_app no lee una particion directo');
+COMMIT;
+SELECT test.assert((SELECT count(*) FROM audit.events) = 0, 'sin tenant fijado: 0 eventos');
 \echo '== A11. ops.exchange_rates (global, sin RLS; issue #170): wanka_app solo lee =='
 SELECT test.expect_error($$INSERT INTO ops.exchange_rates VALUES ('2026-11-19', 'USD', 3.7, 3.8, 'official')$$, '42501', 'wanka_app no inserta tipos de cambio');
 SELECT test.expect_error($$UPDATE ops.exchange_rates SET buy = 1$$, '42501', 'wanka_app no actualiza tipos de cambio');

@@ -154,3 +154,58 @@ func TestWorkerStartsTheFiveQueuesAndStopsOnSIGTERM(t *testing.T) {
 	}
 	p.terminate(t)
 }
+
+// Criterio 8 (#173): el worker asegura las particiones de audit.events al arrancar y el job audit.ensure_partitions
+// de la cola maintenance las crea. Se borra la última partición (vacía) y se comprueba que vuelve las dos veces.
+func TestWorkerEnsuresAuditPartitions(t *testing.T) {
+	d := dbtest.New(t)
+	ctx := context.Background()
+	d.Migrate(ctx, t)
+	conn := d.Admin(ctx, t)
+	last := func() string {
+		var n string
+		if err := conn.QueryRow(ctx, `SELECT max(c.relname) FROM pg_inherits i JOIN pg_class c ON c.oid = i.inhrelid WHERE i.inhparent = 'audit.events'::regclass`).Scan(&n); err != nil {
+			t.Fatal(err)
+		}
+		return n
+	}
+	exists := func(name string) bool {
+		var ok bool
+		if err := conn.QueryRow(ctx, `SELECT to_regclass('audit.' || $1) IS NOT NULL`, name).Scan(&ok); err != nil {
+			t.Fatal(err)
+		}
+		return ok
+	}
+	wait := func(what string, cond func() bool) {
+		t.Helper()
+		deadline := time.Now().Add(15 * time.Second)
+		for !cond() {
+			if time.Now().After(deadline) {
+				t.Fatalf("timeout waiting for %s", what)
+			}
+			time.Sleep(100 * time.Millisecond)
+		}
+	}
+
+	name := last()
+	if _, err := conn.Exec(ctx, `DROP TABLE audit.`+name); err != nil {
+		t.Fatal(err)
+	}
+	p := start(t, []string{"DATABASE_URL_WORKER=" + d.URL(dbtest.Worker)}, "worker")
+	p.waitMsg(t, "started")
+	wait("the startup run to recreate "+name, func() bool { return exists(name) })
+
+	// Ahora por el job: se encola como lo haría el periódico.
+	if _, err := conn.Exec(ctx, `DROP TABLE audit.`+name); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := conn.Exec(ctx, `INSERT INTO ops.river_job (kind, args, queue) VALUES ('audit.ensure_partitions', '{}', 'maintenance')`); err != nil {
+		t.Fatal(err)
+	}
+	wait("the job to recreate "+name, func() bool { return exists(name) })
+	wait("the job to complete", func() bool {
+		var n int
+		return conn.QueryRow(ctx, `SELECT count(*) FROM ops.river_job WHERE kind = 'audit.ensure_partitions' AND state = 'completed'`).Scan(&n) == nil && n == 1
+	})
+	p.terminate(t)
+}

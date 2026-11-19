@@ -84,17 +84,16 @@ CREATE TRIGGER mfa_enrollments_guard_writes BEFORE INSERT OR UPDATE ON iam.mfa_e
   FOR EACH ROW EXECUTE FUNCTION iam.guard_mfa_enrollment_writes();
 
 CREATE TABLE org.sites (id uuid PRIMARY KEY, tenant_id uuid NOT NULL REFERENCES org.tenants, name text NOT NULL, UNIQUE (tenant_id, id));
-CREATE TABLE audit.events (id bigserial PRIMARY KEY, tenant_id uuid NOT NULL, actor_type text NOT NULL, action text NOT NULL, at timestamptz NOT NULL DEFAULT now());
 CREATE TABLE ops.webhook_routes (route_id text PRIMARY KEY, tenant_id uuid NOT NULL, provider text NOT NULL, webhook_secret_enc bytea NOT NULL, revoked_at timestamptz);
 CREATE TABLE platform.impersonation_grants (id uuid PRIMARY KEY, platform_user_id uuid NOT NULL, tenant_id uuid NOT NULL, ticket_id uuid NOT NULL,
   scope text NOT NULL, reason text, status text NOT NULL, created_at timestamptz NOT NULL DEFAULT now(), approved_by uuid, approved_at timestamptz,
   consent_expires_at timestamptz, exchange_token_hash bytea UNIQUE, redeemed_at timestamptz, revoked_at timestamptz);
 CREATE TABLE platform.audit_events (id bigserial PRIMARY KEY, platform_user_id uuid, target_tenant_id uuid, action text NOT NULL);
 
--- RLS habilitado y FORZADO en las demas tablas de tenant (ADR 0001); iam.roles, iam.memberships y org.tenants
+-- RLS habilitado y FORZADO en las demas tablas de tenant (ADR 0001); iam.roles, iam.memberships, org.tenants y audit.events
 -- ya lo traen de la migracion del kernel, con su tenant_isolation.
 DO $$ DECLARE t text; BEGIN
-  FOREACH t IN ARRAY ARRAY['org.sites','audit.events'] LOOP
+  FOREACH t IN ARRAY ARRAY['org.sites'] LOOP
     EXECUTE format('ALTER TABLE %s ENABLE ROW LEVEL SECURITY', t);
     EXECUTE format('ALTER TABLE %s FORCE ROW LEVEL SECURITY', t);
     EXECUTE format('CREATE POLICY tenant_isolation ON %s USING (tenant_id = app.current_tenant()) WITH CHECK (tenant_id = app.current_tenant())', t);
@@ -152,7 +151,7 @@ BEGIN
    WHERE g.id = p_grant_id AND g.status = 'solicitado' AND g.tenant_id = app.current_tenant();
   GET DIAGNOSTICS n = ROW_COUNT;
   IF n = 0 THEN RAISE EXCEPTION 'grant not found for this tenant' USING ERRCODE = 'no_data_found'; END IF;
-  INSERT INTO audit.events (tenant_id, actor_type, action) VALUES (app.current_tenant(), 'user', 'support_access:' || CASE WHEN p_approve THEN 'approve' ELSE 'reject' END);
+  INSERT INTO audit.events (tenant_id, actor_type, actor_user_id, action) VALUES (app.current_tenant(), 'user', app.current_user_id(), 'identidad.support_access:' || CASE WHEN p_approve THEN 'approve' ELSE 'reject' END);
   RETURN CASE WHEN p_approve THEN 'aprobado' ELSE 'rechazado' END;
 END $$;
 
@@ -171,7 +170,7 @@ BEGIN
   INSERT INTO iam.sessions (id, user_id, tenant_id, membership_id, access_hash, access_expires_at, authz_version, mfa_satisfied, mfa_method, impersonator_id)
        VALUES (p_session_id, NULL, g.tenant_id, NULL, p_access_hash, now() + interval '60 minutes', NULL, true, 'platform', g.platform_user_id);
   PERFORM set_config('app.tenant_id', g.tenant_id::text, true);
-  INSERT INTO audit.events (tenant_id, actor_type, action) VALUES (g.tenant_id, 'platform_staff', 'impersonation:redeem');
+  INSERT INTO audit.events (tenant_id, actor_type, impersonator_id, action) VALUES (g.tenant_id, 'platform_staff', g.platform_user_id, 'plataforma.impersonation:redeem');
   PERFORM set_config('app.tenant_id', coalesce(prev, ''), true);
   RETURN g.tenant_id;
 END $$;
@@ -188,7 +187,7 @@ BEGIN
   INSERT INTO iam.roles (id, tenant_id, name, requires_mfa) VALUES (p_role, p_tenant, 'Propietario', true);
   INSERT INTO iam.users (id, email) VALUES (p_owner, p_owner_email) ON CONFLICT (email) DO NOTHING;
   INSERT INTO iam.memberships (id, tenant_id, user_id, role_id, status) VALUES (gen_random_uuid(), p_tenant, p_owner, p_role, 'invitado');
-  INSERT INTO audit.events (tenant_id, actor_type, action) VALUES (p_tenant, 'platform_staff', 'tenants:create');
+  INSERT INTO audit.events (tenant_id, actor_type, impersonator_id, action) VALUES (p_tenant, 'platform_staff', app.current_user_id(), 'plataforma.tenants:create');
   PERFORM set_config('app.tenant_id', coalesce(prev, ''), true);
   RETURN p_tenant;
 END $$;
@@ -202,7 +201,7 @@ BEGIN
   INSERT INTO platform.impersonation_grants (id, platform_user_id, tenant_id, ticket_id, scope, status, exchange_token_hash)
        VALUES (p_grant, p_staff, p_tenant, p_ticket, p_scope, 'solicitado', p_token_hash);
   PERFORM set_config('app.tenant_id', p_tenant::text, true);
-  INSERT INTO audit.events (tenant_id, actor_type, action) VALUES (p_tenant, 'platform_staff', 'impersonation:request');
+  INSERT INTO audit.events (tenant_id, actor_type, impersonator_id, action) VALUES (p_tenant, 'platform_staff', p_staff, 'plataforma.impersonation:request');
   PERFORM set_config('app.tenant_id', coalesce(prev, ''), true);
   RETURN p_grant;
 END $$;
@@ -216,7 +215,7 @@ BEGIN
   PERFORM set_config('app.tenant_id', p_tenant::text, true);
   UPDATE org.tenants SET status = 'suspendida' WHERE id = p_tenant;
   IF NOT FOUND THEN RAISE EXCEPTION 'tenant not found'; END IF;
-  INSERT INTO audit.events (tenant_id, actor_type, action) VALUES (p_tenant, 'platform_staff', 'tenants:suspend');
+  INSERT INTO audit.events (tenant_id, actor_type, impersonator_id, action) VALUES (p_tenant, 'platform_staff', app.current_user_id(), 'plataforma.tenants:suspend');
   PERFORM set_config('app.tenant_id', coalesce(prev, ''), true);
 END $$;
 
@@ -260,13 +259,12 @@ GRANT INSERT ON iam.memberships, iam.users, iam.roles TO wanka_definer;
 GRANT SELECT ON iam.users, iam.roles TO wanka_definer;
 GRANT SELECT, INSERT, UPDATE ON org.tenants TO wanka_definer;
 GRANT SELECT, INSERT, DELETE ON org.sites TO wanka_definer;
-GRANT INSERT ON audit.events TO wanka_definer;
-GRANT USAGE ON SEQUENCE audit.events_id_seq TO wanka_definer;
+GRANT INSERT ON audit.events TO wanka_definer;   -- el esquema audit y sus GRANT para app y worker: migracion del kernel (#173)
 GRANT SELECT ON ops.webhook_routes TO wanka_definer;
 GRANT SELECT, INSERT, UPDATE ON platform.impersonation_grants TO wanka_definer;
 
 -- Permisos de los roles de aplicación (extracto de la matriz del ADR 0001)
-GRANT USAGE ON SCHEMA audit TO wanka_app;   -- app, iam y org, y los GRANT de iam.* y org.tenants: migracion del kernel
+-- app, audit, iam y org, y los GRANT de iam.*, org.tenants y audit.events: migracion del kernel
 GRANT SELECT, INSERT, UPDATE ON org.sites TO wanka_app;
 GRANT SELECT ON iam.list_my_memberships TO wanka_app;
 -- iam.mfa_enrollments (#25): la app no mueve user_id, token_hash, expires_at ni created_at, ni borra; el worker solo limpia.
