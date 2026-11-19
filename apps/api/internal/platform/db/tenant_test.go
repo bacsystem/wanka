@@ -196,6 +196,9 @@ func TestInTenantTxRejectsInvalidActorsWithoutOpeningATransaction(t *testing.T) 
 		{"impersonated with the zero impersonator", db.Actor{TenantID: tenant, UserID: user, Kind: db.KindImpersonated, ImpersonatorID: zeroValid}, db.ErrInvalidActor},
 		{"user with impersonator", db.Actor{TenantID: tenant, UserID: user, Kind: db.KindUser, ImpersonatorID: imp}, db.ErrInvalidActor},
 		{"system with impersonator", db.Actor{TenantID: tenant, UserID: user, Kind: db.KindSystem, ImpersonatorID: imp}, db.ErrInvalidActor},
+		{"user without UserID", db.Actor{TenantID: tenant, Kind: db.KindUser}, db.ErrInvalidActor},
+		{"impersonated without UserID", db.Actor{TenantID: tenant, Kind: db.KindImpersonated, ImpersonatorID: imp}, db.ErrInvalidActor},
+		{"user with the zero UserID", db.Actor{TenantID: tenant, UserID: zeroValid, Kind: db.KindUser}, db.ErrInvalidActor},
 		{"user without tenant", db.Actor{UserID: user, Kind: db.KindUser}, db.ErrNoTenant},
 		{"user with the zero tenant", db.Actor{TenantID: zeroValid, UserID: user, Kind: db.KindUser}, db.ErrNoTenant},
 		{"impersonated without tenant", db.Actor{UserID: user, Kind: db.KindImpersonated, ImpersonatorID: imp}, db.ErrNoTenant},
@@ -403,13 +406,19 @@ func TestFailedFnLeavesNoWritesAndNoStateOnTheConnection(t *testing.T) {
 	}
 }
 
-// Una cancelación del contexto en medio de fn deshace la transacción y deja la
-// conexión usable (el ROLLBACK no depende del contexto cancelado).
-func TestCanceledContextRollsBackAndConnectionIsReusable(t *testing.T) {
+// Una cancelación del contexto en medio de fn deshace la transacción y la
+// conexión física se conserva: el ROLLBACK no depende del contexto cancelado.
+// Con un ROLLBACK fallido el pool destruiría la conexión y la siguiente
+// transacción abriría otra, por eso se compara el pid.
+func TestCanceledContextRollsBackAndKeepsTheConnection(t *testing.T) {
 	_, p := tenantDB(t, 1)
 	a := actor(t, tenantA, db.KindUser)
 	ctx, cancel := context.WithCancel(context.Background())
+	var pidIn int
 	err := p.InTenantTx(ctx, a, func(tx pgx.Tx) error {
+		if err := tx.QueryRow(ctx, `SELECT pg_backend_pid()`).Scan(&pidIn); err != nil {
+			return err
+		}
 		if err := insertItem(ctx, tx, a.TenantID, "x"); err != nil {
 			return err
 		}
@@ -420,10 +429,140 @@ func TestCanceledContextRollsBackAndConnectionIsReusable(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected an error")
 	}
-	var n int
-	err = p.InTenantTx(context.Background(), a, func(tx pgx.Tx) (err error) { n, err = countItems(context.Background(), tx); return })
+	var n, pid int
+	err = p.InTenantTx(context.Background(), a, func(tx pgx.Tx) error {
+		if err := tx.QueryRow(context.Background(), `SELECT pg_backend_pid()`).Scan(&pid); err != nil {
+			return err
+		}
+		n, err = countItems(context.Background(), tx)
+		return err
+	})
 	if err != nil || n != 0 {
-		t.Fatalf("rows = %d (err %v), want 0 and a usable connection", n, err)
+		t.Fatalf("rows = %d (err %v), want 0", n, err)
+	}
+	if pid != pidIn {
+		t.Fatalf("the connection was destroyed (%d -> %d): the ROLLBACK depended on the canceled context", pidIn, pid)
+	}
+}
+
+// Un COMMIT que falla llega al llamador y no deja nada guardado.
+func TestFailedCommitReachesTheCaller(t *testing.T) {
+	_, p := tenantDB(t, 1)
+	ctx := context.Background()
+	a := actor(t, tenantA, db.KindUser)
+
+	t.Run("deferred constraint violated at commit", func(t *testing.T) {
+		err := p.InTenantTx(ctx, a, func(tx pgx.Tx) error {
+			for range 2 { // la restricción es diferida: fn no ve el error
+				if err := insertItem(ctx, tx, a.TenantID, "dup"); err != nil {
+					return err
+				}
+			}
+			return nil
+		})
+		if pgCode(err) != "23505" {
+			t.Fatalf("error = %v, want unique violation (23505) from COMMIT", err)
+		}
+	})
+	t.Run("fn swallows an error and the transaction is already aborted", func(t *testing.T) {
+		err := p.InTenantTx(ctx, a, func(tx pgx.Tx) error {
+			_ = insertItem(ctx, tx, uid(t, tenantB), "forged") // 42501 ignorado
+			return nil
+		})
+		if !errors.Is(err, pgx.ErrTxCommitRollback) {
+			t.Fatalf("error = %v, want pgx.ErrTxCommitRollback", err)
+		}
+	})
+	var n int
+	err := p.InTenantTx(ctx, a, func(tx pgx.Tx) (err error) { n, err = countItems(ctx, tx); return })
+	if err != nil || n != 0 {
+		t.Fatalf("rows = %d (err %v), want 0", n, err)
+	}
+}
+
+// Una variable fijada a nivel de sesión dentro de fn (prohibido, ver el doc del
+// paquete) sobrevive al COMMIT en esa conexión, pero la siguiente InTenantTx
+// vuelve a fijar las cuatro y no la ve; y fuera de este paquete nadie puede
+// usar la conexión cruda (Acquire no es exportado).
+func TestSessionLevelSetConfigInFnDoesNotReachTheNextTenantTx(t *testing.T) {
+	_, p := tenantDB(t, 1)
+	ctx := context.Background()
+	seed(t, p)
+	err := p.InTenantTx(ctx, actor(t, tenantA, db.KindUser), func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `SELECT set_config('app.tenant_id', $1, false)`, tenantA)
+		return err
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var tenants []string
+	err = p.InTenantTx(ctx, actor(t, tenantB, db.KindUser), func(tx pgx.Tx) error {
+		rows, err := tx.Query(ctx, `SELECT tenant_id::text FROM rlstest.items`)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var s string
+			if err := rows.Scan(&s); err != nil {
+				return err
+			}
+			tenants = append(tenants, s)
+		}
+		return rows.Err()
+	})
+	if err != nil || len(tenants) != 1 || tenants[0] != tenantB {
+		t.Fatalf("tenant B saw %v (err %v)", tenants, err)
+	}
+}
+
+// Para Kind = system el ADR 0001 («Workers», webhooks) no pasa UserID: es válido.
+func TestSystemActorWithoutUserIDIsValid(t *testing.T) {
+	_, p := tenantDB(t, 1)
+	ctx := context.Background()
+	a := db.Actor{TenantID: uid(t, tenantA), Kind: db.KindSystem}
+	var user, kind string
+	err := p.InTenantTx(ctx, a, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `SELECT current_setting('app.user_id'), current_setting('app.session_kind')`).Scan(&user, &kind)
+	})
+	if err != nil || user != "" || kind != "system" {
+		t.Fatalf("user_id=%q session_kind=%q err=%v", user, kind, err)
+	}
+}
+
+// H2: el timeout se reconoce por SQLSTATE 57014 y el ctx vivo, nunca por el
+// texto del mensaje, que PostgreSQL traduce según lc_messages.
+func TestTypedErrClassifiesBySQLStateNotByMessage(t *testing.T) {
+	dead, cancel := context.WithCancel(context.Background())
+	cancel()
+	alive := context.Background()
+	pgErr := func(code, msg string) error {
+		return fmt.Errorf("fn: %w", &pgconn.PgError{Code: code, Message: msg})
+	}
+	cases := []struct {
+		name      string
+		ctx       context.Context
+		err       error
+		wantTyped bool
+	}{
+		{"english message", alive, pgErr("57014", "canceling statement due to statement timeout"), true},
+		{"spanish message", alive, pgErr("57014", "cancelando la sentencia debido a que se agotó el tiempo de espera de sentencias"), true},
+		{"german message", alive, pgErr("57014", "storniere Anfrage wegen Zeitüberschreitung"), true},
+		{"caller canceled", dead, pgErr("57014", "canceling statement due to user request"), false},
+		{"caller canceled and statement timeout together", dead, pgErr("57014", "canceling statement due to statement timeout"), false},
+		{"other SQLSTATE with the same words", alive, pgErr("XX000", "canceling statement due to statement timeout"), false},
+		{"not a PostgreSQL error", alive, errors.New("canceling statement due to statement timeout"), false},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got := db.TypedErr(c.ctx, c.err)
+			if errors.Is(got, db.ErrStatementTimeout) != c.wantTyped {
+				t.Fatalf("typed = %v, want %v (err %v)", !c.wantTyped, c.wantTyped, got)
+			}
+			if !errors.Is(got, c.err) {
+				t.Fatalf("the original error was lost: %v", got)
+			}
+		})
 	}
 }
 
@@ -491,6 +630,20 @@ func TestStatementTimeoutArrivesTyped(t *testing.T) {
 	})
 	if err == nil || errors.Is(err, db.ErrStatementTimeout) {
 		t.Fatalf("a canceled context was reported as %v", err)
+	}
+
+	// Contexto y statement_timeout vencen a la vez: manda el contexto, no se tipa.
+	bctx, bcancel := context.WithTimeout(ctx, 50*time.Millisecond)
+	defer bcancel()
+	err = p.InTenantTx(bctx, a, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(bctx, `SET LOCAL statement_timeout = '50ms'`); err != nil {
+			return err
+		}
+		_, err := tx.Exec(bctx, `SELECT pg_sleep(3)`)
+		return err
+	})
+	if err == nil || errors.Is(err, db.ErrStatementTimeout) {
+		t.Fatalf("an expired context plus statement_timeout was reported as %v", err)
 	}
 }
 

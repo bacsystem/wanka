@@ -10,11 +10,12 @@ import (
 	"github.com/bacsystem/wanka/apps/api/internal/platform/db/dbtest"
 )
 
-// La sobrecarga de InTenantTx es la diferencia entre estos tres: BenchmarkTxBaseline
-// hace BEGIN + la consulta + COMMIT sin variables (lo que costaría cualquier
-// transacción), y BenchmarkInTenantTx añade el set_config. Para capacity.md:
+// La sobrecarga de InTenantTx es la diferencia entre BenchmarkInTenantTx y
+// BenchmarkTxBaseline: BEGIN + la consulta + COMMIT sin variables, lo que
+// costaría cualquier transacción; InTenantTx añade el set_config. Para
+// capacity.md se corre (desde apps/api):
 //
-//	go test -run '^$' -bench 'Tx' -count 10 ./internal/platform/db
+//	go test -run '^$' -bench 'Tx|Autocommit' -benchtime 2000x -count 8 ./internal/platform/db
 func benchPool(b *testing.B) *db.Pool {
 	b.Helper()
 	d := dbtest.New(b)

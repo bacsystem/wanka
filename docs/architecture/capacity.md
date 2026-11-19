@@ -39,15 +39,21 @@ Las cuentas: **una cuenta por usuario virtual** (si no, se mide el lock de una s
 
 ### Sobrecarga medida de `InTenantTx`
 
-Medida en #163 con `BenchmarkAutocommitQuery`, `BenchmarkTxBaseline` y `BenchmarkInTenantTx` (`apps/api/internal/platform/db/tenant_bench_test.go`), contra PostgreSQL 16 real en Docker (macOS, Apple M4 Max, loopback; cada ida y vuelta de red cuesta ~0,2 ms en este entorno), una consulta `SELECT 1` por transacción, un solo cliente, mediana de 8 corridas de 2 000 iteraciones:
+Medida en #163 con el comando
+
+```sh
+cd apps/api && go test -run '^$' -bench 'Tx|Autocommit' -benchtime 2000x -count 8 ./internal/platform/db
+```
+
+(`apps/api/internal/platform/db/tenant_bench_test.go`), contra PostgreSQL 16 real en Docker sobre macOS (Apple M4 Max), conectando por loopback con un solo cliente y una consulta `SELECT 1` por transacción. Mediana de las 8 corridas de 2 000 iteraciones:
 
 | Caso | Tiempo por operación | Idas y vueltas |
 |---|---|---|
-| Consulta suelta (autocommit) | ~0,24 ms | 1 |
-| `BEGIN` + consulta + `COMMIT`, sin variables | ~0,66 ms | 3 |
-| `InTenantTx` (`BEGIN` + `set_config` ×4 + consulta + `COMMIT`) | ~0,87 ms | 4 |
+| Consulta suelta (autocommit) | 0,23 ms | 1 |
+| `BEGIN` + consulta + `COMMIT`, sin variables | 0,64 ms | 3 |
+| `InTenantTx` (`BEGIN` + `set_config` ×4 + consulta + `COMMIT`) | 0,91 ms | 4 |
 
-El `set_config` suma **~0,2 ms** sobre una transacción normal, es decir, una ida y vuelta: en el servidor el `SELECT set_config(...)` de las cuatro variables tarda 0,044 ms (`EXPLAIN ANALYZE`). El coste depende de la latencia de red entre la API y la base, no del cómputo: en el mismo entorno de Railway será menor. Es la referencia para el presupuesto de ~10-30 ms por transacción de arriba; hay que repetirla en la prueba de carga. Si hiciera falta recortarlo, `BEGIN` y `set_config` pueden ir en una sola ida y vuelta con un lote de pgx; hoy no se justifica.
+`InTenantTx` suma **una ida y vuelta** (RTT) por transacción respecto de una transacción normal: 0,26 ms en esta medición, que coincide con el coste de una consulta suelta (0,23 ms). En el servidor, el `SELECT set_config(...)` de las cuatro variables tarda 0,03-0,04 ms (`EXPLAIN ANALYZE`), así que el coste es de red y no de cómputo. Por eso la sobrecarga se debe leer como "1 RTT entre la API y la base", y su valor en ms en cada entorno se mide en la prueba de carga: esta medición no dice qué cifra dará la red entre servicios del despliegue. Es la referencia para el presupuesto de ~10-30 ms por transacción de arriba. Si hiciera falta recortarlo, `BEGIN` y `set_config` pueden ir en una sola ida y vuelta con un lote de pgx; hoy no se justifica.
 
 ## 3. Degradación y backpressure
 

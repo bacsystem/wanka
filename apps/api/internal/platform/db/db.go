@@ -4,6 +4,13 @@
 // Cada proceso se conecta con el rol de su servicio (config.Service); el pool
 // nunca crea roles ni es dueño de objetos. Los errores que pueden llevar la
 // cadena de conexión se limpian antes de salir de este paquete.
+//
+// Los datos de tenant se tocan solo dentro de InTenantTx o InTenantReadTx; el
+// pool no entrega conexiones crudas (acquire no es exportado). Dentro de fn
+// está prohibido fijar las variables app.* a nivel de sesión (set_config con
+// false o SET sin LOCAL): sobreviven al COMMIT en esa conexión. No filtran datos
+// de otro tenant porque la siguiente InTenantTx vuelve a fijar las cuatro
+// variables y nadie más usa la conexión, pero es un uso incorrecto igualmente.
 package db
 
 import (
@@ -38,7 +45,7 @@ const (
 type Options struct {
 	// MaxConns es el tamaño del pool; mínimo 1.
 	MaxConns int32
-	// AcquireTimeout acota Acquire; cero significa DefaultAcquireTimeout.
+	// AcquireTimeout acota la adquisición de conexión; cero significa DefaultAcquireTimeout.
 	AcquireTimeout time.Duration
 	// AppName se ve en pg_stat_activity (application_name).
 	AppName string
@@ -86,14 +93,18 @@ func Open(ctx context.Context, rawURL string, o Options) (*Pool, error) {
 	return &Pool{pool: pool, acquireTimeout: timeout, scrub: scrub}, nil
 }
 
-// Acquire devuelve una conexión libre o falla rápido: ErrOverloaded si el pool
+// acquire devuelve una conexión libre o falla rápido: ErrOverloaded si el pool
 // está lleno durante todo el plazo, ErrUnavailable si la base no contesta. Un
 // ctx cancelado devuelve su propio error. Quien llama debe hacer Release.
-func (p *Pool) Acquire(ctx context.Context) (*pgxpool.Conn, error) {
-	return p.acquire(ctx, p.acquireTimeout)
+//
+// No es exportado a propósito: una conexión cruda permitiría ejecutar SQL fuera
+// de InTenantTx (por ejemplo fijar app.tenant_id a nivel de sesión), y
+// go-arch-lint solo ve imports, no que un paquete reciba un *pgxpool.Conn.
+func (p *Pool) acquire(ctx context.Context) (*pgxpool.Conn, error) {
+	return p.acquireWithin(ctx, p.acquireTimeout)
 }
 
-func (p *Pool) acquire(ctx context.Context, timeout time.Duration) (*pgxpool.Conn, error) {
+func (p *Pool) acquireWithin(ctx context.Context, timeout time.Duration) (*pgxpool.Conn, error) {
 	actx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	conn, err := p.pool.Acquire(actx)
@@ -128,7 +139,7 @@ func (p *Pool) Ping(ctx context.Context) error {
 	if p.full() {
 		return ErrOverloaded
 	}
-	conn, err := p.acquire(ctx, pingTimeout)
+	conn, err := p.acquireWithin(ctx, pingTimeout)
 	if err != nil {
 		return err
 	}

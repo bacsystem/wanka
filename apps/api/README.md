@@ -91,7 +91,7 @@ escritura) o `InTenantReadTx` (`BEGIN READ ONLY`); el aislamiento lo da la RLS
 `UserID`, `Kind` (`KindUser`, `KindImpersonated`, `KindSystem`; no hay valor
 cero válido) e `ImpersonatorID` (solo con `KindImpersonated`). Los UUID son
 `pgtype.UUID` de pgx. Errores: `ErrNoTenant` (sesión sin empresa o UUID cero,
-para todo `Kind`), `ErrInvalidActor` (error de programación) y
+para todo `Kind`), `ErrInvalidActor` (error de programación: `Kind` indefinido, `ImpersonatorID` incoherente o, salvo en `KindSystem`, `UserID` vacío) y
 `ErrStatementTimeout` (5 s del rol `wanka_app`); ninguno de los dos primeros
 abre transacción. Las pruebas usan la tabla `rlstest.items`, que solo existe en
 `internal/platform/db/testdata/` y se aplica con `dbtest.MigrateWith`.

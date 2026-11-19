@@ -1,10 +1,10 @@
 name: API
 
-# The workflow has no `paths:` filter on purpose: a workflow skipped by a path
-# filter leaves its required check "Pending" and blocks the PR. Instead the job
-# always runs and decides in its first step whether apps/api (or this file)
-# changed (or the RLS reference cases in docs/architecture/data/rls-check/); if
-# not, the Go steps are skipped and the check ends green.
+# El workflow no lleva filtro `paths:` a propósito: un workflow omitido por ese
+# filtro deja su check requerido en «Pending» y bloquea el PR. En cambio el job
+# siempre corre y decide en su primer paso si cambió apps/api, este archivo o los
+# casos de RLS (docs/architecture/data/rls-check/); si no, los pasos de Go se
+# omiten y el check termina en verde.
 on:
   pull_request:
   push:
@@ -129,32 +129,20 @@ jobs:
           WANKA_TEST_ADMIN_URL: postgres://postgres:ci-superuser-not-a-secret@localhost:5432/wanka
           WANKA_TEST_ROLE_PASSWORD: ci-roles-not-a-secret
         run: go test -race ./...
-      # ADR 0001: los casos de referencia de RLS corren en un contenedor propio
-      # de PostgreSQL 16 con los roles reales (Docker del runner). Deben pasar, y
-      # la mutación naive_session_lookup debe hacerlos fallar: si no fallara, la
-      # verificación no detectaría el defecto que dice vigilar.
-      - name: RLS reference cases pass (rls-check/run.sh)
+      # ADR 0001: los casos de referencia de RLS corren en un contenedor propio de
+      # PostgreSQL 16 con los roles reales (Docker del runner). Deben pasar, y la
+      # mutación naive_session_lookup debe hacerlos fallar en el paso wanka_app; el
+      # script también prueba que una mutación inexistente no cuenta como detectada.
+      - name: RLS reference cases (pass, and the mutation is detected)
         if: steps.changes.outputs.run == 'true'
         working-directory: .
-        run: sh docs/architecture/data/rls-check/run.sh
-      - name: RLS reference cases fail under MUTATION=naive_session_lookup
-        if: steps.changes.outputs.run == 'true'
-        working-directory: .
-        run: |
-          rc=0; log="$(mktemp)"
-          MUTATION=naive_session_lookup sh docs/architecture/data/rls-check/run.sh > "$log" 2>&1 || rc=$?
-          cat "$log"
-          # exit 1 es un caso que falló; otro valor (p. ej. 2: Docker no arrancó) no prueba nada.
-          if [ "$rc" -ne 1 ] || ! grep -q "^FAILED at:" "$log"; then
-            echo "expected the mutation to make a case fail (exit 1), got exit $rc"
-            exit 1
-          fi
-          echo "OK: the mutation was detected"
+        run: sh apps/api/scripts/rls-check.sh
       - name: go build
         if: steps.changes.outputs.run == 'true'
         run: go build ./...
-      # Version pinned in scripts/archlint.sh. The script also proves that a
-      # forbidden cross-module import makes go-arch-lint fail.
+      # Versión fijada en scripts/archlint.sh. El script también prueba que una
+      # importación prohibida entre módulos, o de pgxpool/stdlib fuera de
+      # internal/platform/db, hace fallar a go-arch-lint.
       - name: go-arch-lint
         if: steps.changes.outputs.run == 'true'
         run: sh scripts/archlint.sh

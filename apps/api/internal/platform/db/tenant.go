@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -92,6 +91,11 @@ func (a Actor) validate() error {
 	if emptyUUID(a.TenantID) {
 		return ErrNoTenant
 	}
+	// Solo system puede ir sin usuario (ADR 0001, «Workers» y webhooks); una
+	// sesión de usuario sin UserID dejaría app.current_user_id() en NULL.
+	if a.Kind != KindSystem && emptyUUID(a.UserID) {
+		return fmt.Errorf("%w: session kind %s without UserID", ErrInvalidActor, a.Kind)
+	}
 	hasImpersonator := !emptyUUID(a.ImpersonatorID)
 	switch {
 	case a.Kind == KindImpersonated && !hasImpersonator:
@@ -108,7 +112,7 @@ func (a Actor) validate() error {
 // pánico se relanza). Es la única puerta a las tablas de tenant (ADR 0001).
 //
 // Devuelve ErrNoTenant o ErrInvalidActor sin tocar la base si a no es válido,
-// y los errores de Acquire (ErrOverloaded, ErrUnavailable) si no hay conexión.
+// y los de adquisición de conexión (ErrOverloaded, ErrUnavailable) si no hay conexión.
 func (p *Pool) InTenantTx(ctx context.Context, a Actor, fn func(pgx.Tx) error) error {
 	return p.inTenantTx(ctx, a, pgx.ReadWrite, fn)
 }
@@ -122,7 +126,7 @@ func (p *Pool) inTenantTx(ctx context.Context, a Actor, mode pgx.TxAccessMode, f
 	if err := a.validate(); err != nil {
 		return err
 	}
-	conn, err := p.Acquire(ctx)
+	conn, err := p.acquire(ctx)
 	if err != nil {
 		return err
 	}
@@ -154,7 +158,7 @@ func (p *Pool) inTenantTx(ctx context.Context, a Actor, mode pgx.TxAccessMode, f
 		return p.txError(ctx, "setting session variables", err)
 	}
 	if err := fn(tx); err != nil {
-		return p.typed(ctx, err)
+		return typedErr(ctx, err)
 	}
 	if err := tx.Commit(ctx); err != nil {
 		return p.txError(ctx, "committing transaction", err)
@@ -164,16 +168,19 @@ func (p *Pool) inTenantTx(ctx context.Context, a Actor, mode pgx.TxAccessMode, f
 }
 
 func (p *Pool) txError(ctx context.Context, what string, err error) error {
-	return p.typed(ctx, fmt.Errorf("%s: %w", what, scrubbed(p.scrub, err)))
+	return typedErr(ctx, fmt.Errorf("%s: %w", what, scrubbed(p.scrub, err)))
 }
 
-// typed marca con ErrStatementTimeout el error de una sentencia cancelada por
-// statement_timeout. Una cancelación del llamador (ctx) tiene el mismo SQLSTATE
-// 57014 pero otro mensaje, y no se marca. La causa original se conserva.
-func (p *Pool) typed(ctx context.Context, err error) error {
+// typedErr marca con ErrStatementTimeout el error de una sentencia cancelada por
+// el servidor. Se reconoce por SQLSTATE 57014 (query_canceled) con el contexto
+// del llamador todavía vivo: si el llamador canceló, el ctx ya terminó antes de
+// que llegue el error (pgx envía el cancel por eso). Nunca por el texto del
+// mensaje, que PostgreSQL traduce según lc_messages. Un pg_cancel_backend() de
+// un administrador también cae aquí; para la petición es el mismo "la base
+// canceló tu sentencia, reintenta". La causa original se conserva.
+func typedErr(ctx context.Context, err error) error {
 	var pgErr *pgconn.PgError
-	if ctx.Err() == nil && errors.As(err, &pgErr) && pgErr.Code == "57014" &&
-		strings.Contains(pgErr.Message, "statement timeout") {
+	if ctx.Err() == nil && errors.As(err, &pgErr) && pgErr.Code == "57014" {
 		return fmt.Errorf("%w: %w", ErrStatementTimeout, err)
 	}
 	return err

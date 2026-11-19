@@ -8,7 +8,9 @@ GRANT USAGE ON SCHEMA rlstest TO wanka_app, wanka_worker, wanka_platform;
 CREATE TABLE rlstest.items (
   id        bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   tenant_id uuid NOT NULL,
-  name      text NOT NULL
+  name      text NOT NULL,
+  -- Diferida: un duplicado solo falla al hacer COMMIT (prueba el error de commit).
+  UNIQUE (tenant_id, name) DEFERRABLE INITIALLY DEFERRED
 );
 ALTER TABLE rlstest.items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE rlstest.items FORCE ROW LEVEL SECURITY;
