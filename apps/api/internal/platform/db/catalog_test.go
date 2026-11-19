@@ -14,6 +14,7 @@ package db_test
 import (
 	"context"
 	"fmt"
+	"os"
 	"regexp"
 	"sort"
 	"strings"
@@ -47,24 +48,55 @@ var noRLSTables = map[string]string{
 
 // policyRule describe una política adicional permitida (además de tenant_isolation).
 type policyRule struct {
-	cmds   []string // pg_policies.cmd admitidos
-	roles  []string // TO <roles>; nil = PUBLIC
-	userIs bool     // la rama por usuario debe contener app.current_tenant() IS NULL
-	reason string
+	cmds        []string // pg_policies.cmd admitidos
+	roles       []string // TO <roles>; nil = PUBLIC
+	userIs      bool     // la rama por usuario debe contener app.current_tenant() IS NULL
+	mustContain []string // fragmentos que la expresión debe contener (para las políticas cuyo USING el ADR aún no escribe)
+	qual        string   // si no está vacío, p.qual debe ser exactamente este texto (como lo deparsa PostgreSQL 16, espacios colapsados)
+	reason      string
 }
 
 // policyAllow: clave «esquema.tabla:política». Es la lista blanca del ADR 0001
 // (a); incluye tablas que llegan en olas siguientes, porque la lista es del ADR
 // y la regla solo la consulta.
 var policyAllow = map[string]policyRule{
-	"iam.memberships:own_memberships":      {cmds: []string{"SELECT"}, userIs: true, reason: "ADR 0001, «Caminos que no tienen un tenant fijado», 1"},
-	"iam.membership_sites:own_memberships": {cmds: []string{"SELECT"}, userIs: true, reason: "ADR 0001, «Caminos que no tienen un tenant fijado», 1"},
-	"org.tenants:member_read":              {cmds: []string{"SELECT"}, userIs: true, reason: "ADR 0001, «Caminos que no tienen un tenant fijado», 1"},
-	"iam.roles:member_read":                {cmds: []string{"SELECT"}, userIs: true, reason: "ADR 0001, «Caminos que no tienen un tenant fijado», 1"},
-	"org.sites:member_read":                {cmds: []string{"SELECT"}, userIs: true, reason: "ADR 0001, «Caminos que no tienen un tenant fijado», 1"},
-	"org.cash_registers:member_read":       {cmds: []string{"SELECT"}, userIs: true, reason: "ADR 0001, «Caminos que no tienen un tenant fijado», 1"},
-	"org.tenants:platform_rw":              {cmds: []string{"ALL", "SELECT", "UPDATE"}, roles: []string{"wanka_platform"}, reason: "ADR 0001, matriz de GRANT: única política que no es solo de lectura, limitada TO wanka_platform"},
+	"iam.memberships:own_memberships": {cmds: []string{"SELECT"}, userIs: true, qual: qualOwnMemberships, reason: reasonNoTenantPaths},
+	// El USING de esta todavía no está escrito en el ADR; la historia que la cree le aplicará el mismo filtro de estado.
+	"iam.membership_sites:own_memberships": {cmds: []string{"SELECT"}, userIs: true, mustContain: []string{"status", "invitado", "activo"}, reason: reasonNoTenantPaths},
+	"org.tenants:member_read":              {cmds: []string{"SELECT"}, userIs: true, qual: qualTenantsMemberRead, reason: reasonNoTenantPaths},
+	"iam.roles:member_read":                {cmds: []string{"SELECT"}, userIs: true, qual: qualRolesMemberRead, reason: reasonNoTenantPaths},
+	"org.sites:member_read":                {cmds: []string{"SELECT"}, userIs: true, qual: qualSitesMemberRead, reason: reasonNoTenantPaths},
+	"org.cash_registers:member_read":       {cmds: []string{"SELECT"}, userIs: true, qual: qualCashRegistersMemberRead, reason: reasonNoTenantPaths},
+	"org.tenants:platform_rw":              {cmds: []string{"ALL", "SELECT", "UPDATE"}, roles: []string{"wanka_platform"}, qual: "true", reason: "ADR 0001, matriz de GRANT: única política que no es solo de lectura, limitada TO wanka_platform"},
 }
+
+const reasonNoTenantPaths = "ADR 0001, «Caminos que no tienen un tenant fijado», 1"
+
+// Textos canónicos del ADR 0001 («Caminos que no tienen un tenant fijado», 1; filtro de estado de #187), tal como
+// PostgreSQL 16 los deparsa en pg_policies.qual. Cambiar uno es cambiar el ADR.
+const (
+	qualOwnMemberships = `((app.current_tenant() IS NULL) AND (user_id = app.current_user_id()) AND (status = ANY (ARRAY['invitado'::text, 'activo'::text])))`
+
+	qualTenantsMemberRead = `((id = app.current_tenant()) OR ((app.current_tenant() IS NULL) AND (id IN ( SELECT memberships.tenant_id
+	   FROM iam.memberships
+	  WHERE ((memberships.user_id = app.current_user_id()) AND (memberships.status = ANY (ARRAY['invitado'::text, 'activo'::text])))))))`
+
+	qualRolesMemberRead = `((tenant_id = app.current_tenant()) OR ((app.current_tenant() IS NULL) AND (id IN ( SELECT memberships.role_id
+	   FROM iam.memberships
+	  WHERE ((memberships.user_id = app.current_user_id()) AND (memberships.status = ANY (ARRAY['invitado'::text, 'activo'::text])))))))`
+
+	qualSitesMemberRead = `((tenant_id = app.current_tenant()) OR ((app.current_tenant() IS NULL) AND (EXISTS ( SELECT 1
+	   FROM iam.memberships m
+	  WHERE ((m.user_id = app.current_user_id()) AND (m.status = 'activo'::text) AND (m.tenant_id = sites.tenant_id) AND (m.all_sites OR (EXISTS ( SELECT 1
+	           FROM iam.membership_sites ms
+	          WHERE ((ms.membership_id = m.id) AND (ms.site_id = sites.id))))))))))`
+
+	qualCashRegistersMemberRead = `((tenant_id = app.current_tenant()) OR ((app.current_tenant() IS NULL) AND (site_id IN ( SELECT sites.id
+	   FROM org.sites))))`
+)
+
+// squash colapsa los espacios y saltos de línea: PostgreSQL parte las expresiones largas en varias líneas.
+func squash(s string) string { return strings.Join(strings.Fields(s), " ") }
 
 // uniqueAllow: UNIQUE o PK de una tabla con tenant_id que no empieza por
 // tenant_id y no es una PK sustituta. Clave «esquema.tabla(col1,col2)».
@@ -85,7 +117,29 @@ var definerOwnerAllow = map[string]string{
 }
 
 // adrRef exige que el motivo de cada entrada cite un ADR.
-var adrRef = regexp.MustCompile(`ADR \d{4}`)
+var adrRef = regexp.MustCompile(`ADR (\d{4})`)
+
+// adrDir es docs/architecture/adr, visto desde este paquete.
+const adrDir = "../../../../../docs/architecture/adr"
+
+// knownADRs devuelve los números de los ADR que existen en el repo.
+func knownADRs(t testing.TB) map[string]bool {
+	t.Helper()
+	entries, err := os.ReadDir(adrDir)
+	if err != nil {
+		t.Fatalf("reading the ADR directory: %v", err)
+	}
+	out := map[string]bool{}
+	for _, e := range entries {
+		if len(e.Name()) > 5 && e.Name()[4] == '-' {
+			out[e.Name()[:4]] = true
+		}
+	}
+	if len(out) == 0 {
+		t.Fatalf("no ADR found in %s", adrDir)
+	}
+	return out
+}
 
 type queryer interface {
 	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
@@ -114,7 +168,9 @@ const userSchemas = `n.nspname NOT IN ('pg_catalog', 'information_schema', 'goos
 
 type tableInfo struct {
 	name              string
-	rls, force, hasID bool // hasID: tiene columna tenant_id
+	rls, force, hasID bool     // hasID: tiene columna tenant_id
+	parent            string   // tabla particionada madre, si es una partición
+	grantees          []string // roles wanka_* de ejecución (no el migrador) con algún privilegio sobre la tabla o sus columnas
 }
 
 // tenantCol devuelve la columna que aísla la tabla, o "" si no es de tenant.
@@ -128,11 +184,16 @@ func (t tableInfo) tenantCol() string {
 func loadTables(ctx context.Context, q queryer) (map[string]tableInfo, error) {
 	list, err := scanAll(ctx, q, `
 		SELECT n.nspname || '.' || c.relname, c.relrowsecurity, c.relforcerowsecurity,
-		       EXISTS (SELECT 1 FROM pg_attribute a WHERE a.attrelid = c.oid AND a.attname = 'tenant_id' AND NOT a.attisdropped)
+		       EXISTS (SELECT 1 FROM pg_attribute a WHERE a.attrelid = c.oid AND a.attname = 'tenant_id' AND NOT a.attisdropped),
+		       COALESCE((SELECT pn.nspname || '.' || pc.relname FROM pg_inherits h JOIN pg_class pc ON pc.oid = h.inhparent
+		                   JOIN pg_namespace pn ON pn.oid = pc.relnamespace WHERE h.inhrelid = c.oid AND c.relispartition), ''),
+		       ARRAY(SELECT r.rolname::text FROM pg_roles r WHERE r.rolname LIKE 'wanka\_%' AND r.rolname <> 'wanka_migrator'
+		              AND (has_table_privilege(r.oid, c.oid, 'SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')
+		                   OR has_any_column_privilege(r.oid, c.oid, 'SELECT,INSERT,UPDATE,REFERENCES')) ORDER BY 1)
 		  FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
-		 WHERE c.relkind IN ('r', 'p') AND NOT c.relispartition AND `+userSchemas, func(r pgx.Rows) (tableInfo, error) {
+		 WHERE c.relkind IN ('r', 'p') AND `+userSchemas, func(r pgx.Rows) (tableInfo, error) {
 		var t tableInfo
-		return t, r.Scan(&t.name, &t.rls, &t.force, &t.hasID)
+		return t, r.Scan(&t.name, &t.rls, &t.force, &t.hasID, &t.parent, &t.grantees)
 	})
 	if err != nil {
 		return nil, err
@@ -172,12 +233,31 @@ func sortedKeys[V any](m map[string]V) []string {
 
 var usesCurrentTenant = regexp.MustCompile(`app\.current_tenant\(\)`)
 
-// (a) Toda tabla de tenant tiene RLS, FORCE y la política tenant_isolation.
-func ruleTenantRLS(ctx context.Context, q queryer) ([]string, error) {
-	tables, err := loadTables(ctx, q)
-	if err != nil {
-		return nil, err
+// isolationProblems revisa RLS, FORCE y la política tenant_isolation exacta de una tabla de tenant.
+func isolationProblems(name string, t tableInfo, iso map[string]policyInfo) []string {
+	col := t.tenantCol()
+	want := "(" + col + " = app.current_tenant())"
+	var out []string
+	if !t.rls || !t.force {
+		out = append(out, fmt.Sprintf("%s: relrowsecurity=%v relforcerowsecurity=%v, both must be true (or add it to noRLSTables citing the ADR)", name, t.rls, t.force))
 	}
+	p, ok := iso[name]
+	switch {
+	case !ok:
+		out = append(out, fmt.Sprintf("%s: no tenant_isolation policy", name))
+	case p.cmd != "ALL":
+		out = append(out, fmt.Sprintf("%s: tenant_isolation is FOR %s, want ALL", name, p.cmd))
+	case squash(p.qual) != want:
+		out = append(out, fmt.Sprintf("%s: tenant_isolation USING does not isolate by exactly %s: %q", name, want, p.qual))
+	case p.check == "":
+		out = append(out, fmt.Sprintf("%s: tenant_isolation has no WITH CHECK, want %s", name, want))
+	case squash(p.check) != want:
+		out = append(out, fmt.Sprintf("%s: tenant_isolation WITH CHECK is %q, want exactly %s", name, p.check, want))
+	}
+	return out
+}
+
+func isolationPolicies(ctx context.Context, q queryer) (map[string]policyInfo, error) {
 	pols, err := loadPolicies(ctx, q)
 	if err != nil {
 		return nil, err
@@ -188,29 +268,56 @@ func ruleTenantRLS(ctx context.Context, q queryer) ([]string, error) {
 			iso[p.table] = p
 		}
 	}
+	return iso, nil
+}
+
+// (a) Toda tabla de tenant tiene RLS, FORCE y la política tenant_isolation exacta del ADR. Las particiones van aparte.
+func ruleTenantRLS(ctx context.Context, q queryer) ([]string, error) {
+	tables, err := loadTables(ctx, q)
+	if err != nil {
+		return nil, err
+	}
+	iso, err := isolationPolicies(ctx, q)
+	if err != nil {
+		return nil, err
+	}
 	var out []string
 	for _, name := range sortedKeys(tables) {
 		t := tables[name]
-		col := t.tenantCol()
-		if col == "" {
+		if t.tenantCol() == "" || t.parent != "" {
 			continue
 		}
 		if _, skip := noRLSTables[name]; skip {
 			continue
 		}
-		if !t.rls || !t.force {
-			out = append(out, fmt.Sprintf("%s: relrowsecurity=%v relforcerowsecurity=%v, both must be true (or add it to noRLSTables citing the ADR)", name, t.rls, t.force))
+		out = append(out, isolationProblems(name, t, iso)...)
+	}
+	return out, nil
+}
+
+// Una consulta directa a una partición aplica las políticas de la partición, no las de su madre. Por eso una
+// partición de una tabla de tenant, o no tiene ningún privilegio de rol de ejecución (así se hace con audit.events,
+// #173: se llega por la madre), o tiene su propia RLS con FORCE y tenant_isolation.
+func rulePartitions(ctx context.Context, q queryer) ([]string, error) {
+	tables, err := loadTables(ctx, q)
+	if err != nil {
+		return nil, err
+	}
+	iso, err := isolationPolicies(ctx, q)
+	if err != nil {
+		return nil, err
+	}
+	var out []string
+	for _, name := range sortedKeys(tables) {
+		t := tables[name]
+		if t.parent == "" || t.tenantCol() == "" || len(t.grantees) == 0 {
+			continue
 		}
-		p, ok := iso[name]
-		switch {
-		case !ok:
-			out = append(out, fmt.Sprintf("%s: no tenant_isolation policy", name))
-		case p.cmd != "ALL":
-			out = append(out, fmt.Sprintf("%s: tenant_isolation is FOR %s, want ALL", name, p.cmd))
-		case !regexp.MustCompile(`(^|\W)` + col + ` = app\.current_tenant\(\)`).MatchString(p.qual):
-			out = append(out, fmt.Sprintf("%s: tenant_isolation USING does not isolate by %s = app.current_tenant(): %q", name, col, p.qual))
-		case !usesCurrentTenant.MatchString(p.check):
-			out = append(out, fmt.Sprintf("%s: tenant_isolation has no WITH CHECK using app.current_tenant(): %q", name, p.check))
+		if _, skip := noRLSTables[t.parent]; skip {
+			continue
+		}
+		for _, v := range isolationProblems(name, t, iso) {
+			out = append(out, fmt.Sprintf("partition %s of %s is granted to %v and is not isolated by itself (revoke the privileges or give it RLS): %s", name, t.parent, t.grantees, v))
 		}
 	}
 	return out, nil
@@ -248,6 +355,14 @@ func rulePolicies(ctx context.Context, q queryer) ([]string, error) {
 		}
 		if strings.Join(p.roles, ",") != strings.Join(wantRoles, ",") {
 			out = append(out, fmt.Sprintf("%s: policy %s is TO %v, want %v", p.table, p.name, p.roles, wantRoles))
+		}
+		if rule.qual != "" && squash(p.qual) != squash(rule.qual) {
+			out = append(out, fmt.Sprintf("%s: policy %s does not match the canonical expression of ADR 0001: got %q, want %q", p.table, p.name, squash(p.qual), squash(rule.qual)))
+		}
+		for _, frag := range rule.mustContain {
+			if !strings.Contains(p.qual, frag) {
+				out = append(out, fmt.Sprintf("%s: policy %s must contain %q (ADR 0001 (a), #187): %q", p.table, p.name, frag, p.qual))
+			}
 		}
 		if rule.userIs && !strings.Contains(p.qual, "app.current_tenant() IS NULL") {
 			out = append(out, fmt.Sprintf("%s: policy %s has no app.current_tenant() IS NULL in its user branch: %q", p.table, p.name, p.qual))
@@ -474,6 +589,7 @@ type catalogRule struct {
 
 var catalogRules = []catalogRule{
 	{"tenant-tables-have-force-rls-and-policy", ruleTenantRLS},
+	{"partitions-of-tenant-tables", rulePartitions},
 	{"extra-policies-are-whitelisted", rulePolicies},
 	{"unique-and-pk-start-with-tenant-id", ruleUniques},
 	{"policies-wrap-current-setting-in-nullif", rulePoliciesNullif},
@@ -496,11 +612,16 @@ func ruleByName(t *testing.T, name string) catalogRule {
 
 // problemsOfExceptions revisa las listas blancas: cada entrada cita un ADR y
 // (salvo las de política, que el ADR fija de antemano) apunta a un objeto que existe.
-func problemsOfExceptions(ctx context.Context, q queryer, noRLS, uniq, fks, definers map[string]string, pols map[string]policyRule) ([]string, error) {
+func problemsOfExceptions(ctx context.Context, q queryer, adrs map[string]bool, noRLS, uniq, fks, definers map[string]string, pols map[string]policyRule) ([]string, error) {
 	var out []string
 	check := func(kind, key, reason string) {
 		if !adrRef.MatchString(reason) {
 			out = append(out, fmt.Sprintf("%s %s: the reason must cite an ADR (\"ADR NNNN\"): %q", kind, key, reason))
+		}
+		for _, m := range adrRef.FindAllStringSubmatch(reason, -1) {
+			if !adrs[m[1]] {
+				out = append(out, fmt.Sprintf("%s %s: ADR %s does not exist in docs/architecture/adr: %q", kind, key, m[1], reason))
+			}
 		}
 	}
 	for k, v := range noRLS {
@@ -605,7 +726,7 @@ func runRules(t *testing.T, d *dbtest.DB) {
 		})
 	}
 	t.Run("the whitelists cite an ADR and point at live objects", func(t *testing.T) {
-		got, err := problemsOfExceptions(ctx, admin, noRLSTables, uniqueAllow, fkAllow, definerOwnerAllow, policyAllow)
+		got, err := problemsOfExceptions(ctx, admin, knownADRs(t), noRLSTables, uniqueAllow, fkAllow, definerOwnerAllow, policyAllow)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -687,11 +808,11 @@ func TestCatalogWhitelistProblemsAreDetected(t *testing.T) {
 	d := migrated(t)
 	ctx := context.Background()
 	admin := d.Admin(ctx, t)
-	got, err := problemsOfExceptions(ctx, admin,
-		map[string]string{"iam.ghost": "ADR 0001: gone", "iam.sessions": "no reason"},
+	got, err := problemsOfExceptions(ctx, admin, knownADRs(t),
+		map[string]string{"iam.ghost": "ADR 0001: gone", "iam.sessions": "no reason", "iam.users": "ADR 9999: invented"},
 		map[string]string{"iam.sessions(nope)": "ADR 0004: gone"},
 		map[string]string{"iam.sessions.nope_fk": "ADR 0001: gone"},
-		map[string]string{"audit.ghost(integer)": "ADR 0001: gone", "audit.ensure_partitions(date,integer)": "no reason"},
+		map[string]string{"audit.ghost(integer)": "ADR 9998: gone", "audit.ensure_partitions(date,integer)": "no reason"},
 		map[string]policyRule{"iam.x:y": {reason: "because"}})
 	if err != nil {
 		t.Fatal(err)
@@ -704,7 +825,9 @@ func TestCatalogWhitelistProblemsAreDetected(t *testing.T) {
 		"fkAllow iam.sessions.nope_fk: no such foreign key",
 		"definerOwnerAllow audit.ghost(integer): no such SECURITY DEFINER function",
 		"definerOwnerAllow audit.ensure_partitions(date,integer): the reason must cite an ADR",
+		"definerOwnerAllow audit.ghost(integer): ADR 9998 does not exist",
 		"policyAllow iam.x:y: the reason must cite an ADR",
+		"noRLSTables iam.users: ADR 9999 does not exist",
 	} {
 		if !strings.Contains(joined, want) {
 			t.Errorf("missing problem %q in:\n%s", want, joined)
@@ -741,6 +864,35 @@ CREATE FUNCTION mut.%[1]s() RETURNS int LANGUAGE sql SECURITY DEFINER %[2]s AS $
 	}
 	if revokePublic {
 		s += fmt.Sprintf("REVOKE ALL ON FUNCTION mut.%s() FROM PUBLIC;\n", name)
+	}
+	return s
+}
+
+// partitionedParent crea una tabla particionada de tenant que cumple todas las reglas.
+func partitionedParent(name string) string {
+	return fmt.Sprintf(`
+CREATE TABLE mut.%[1]s (
+  id uuid NOT NULL,
+  tenant_id uuid NOT NULL REFERENCES org.tenants,
+  name text NOT NULL,
+  PRIMARY KEY (tenant_id, id)
+) PARTITION BY HASH (tenant_id);
+ALTER TABLE mut.%[1]s ENABLE ROW LEVEL SECURITY;
+ALTER TABLE mut.%[1]s FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation ON mut.%[1]s
+  USING (tenant_id = app.current_tenant()) WITH CHECK (tenant_id = app.current_tenant());
+`, name)
+}
+
+// partition crea la única partición (hash módulo 1) de mut.pt; isolated le da su propia RLS completa.
+func partition(name string, isolated bool) string {
+	s := fmt.Sprintf("CREATE TABLE mut.%s PARTITION OF mut.pt FOR VALUES WITH (MODULUS 1, REMAINDER 0);\n", name)
+	if isolated {
+		s += fmt.Sprintf(`ALTER TABLE mut.%[1]s ENABLE ROW LEVEL SECURITY;
+ALTER TABLE mut.%[1]s FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation ON mut.%[1]s
+  USING (tenant_id = app.current_tenant()) WITH CHECK (tenant_id = app.current_tenant());
+`, name)
 	}
 	return s
 }
@@ -797,6 +949,48 @@ func TestCatalogRulesCatchMutations(t *testing.T) {
 			up: `CREATE TABLE mut.g (id uuid PRIMARY KEY); ALTER TABLE mut.g ENABLE ROW LEVEL SECURITY;
 			     CREATE POLICY tenant_isolation ON mut.g USING (true);`,
 			want: []string{"mut.g: tenant_isolation on a table that is not a tenant table"}},
+
+		// (a) Forma exacta de las políticas (H2) y filtro de estado (H3).
+		{name: "tenant_isolation that fails open without a tenant", rule: "tenant-tables-have-force-rls-and-policy",
+			up: goodTenantTable("a") + `DROP POLICY tenant_isolation ON mut.a;
+			   CREATE POLICY tenant_isolation ON mut.a
+			     USING (tenant_id = app.current_tenant() OR app.current_tenant() IS NULL) WITH CHECK (tenant_id = app.current_tenant());`,
+			want: []string{"mut.a: tenant_isolation USING does not isolate by exactly (tenant_id = app.current_tenant())"}},
+		{name: "tenant_isolation with an inverted WITH CHECK", rule: "tenant-tables-have-force-rls-and-policy",
+			up: goodTenantTable("a") + `DROP POLICY tenant_isolation ON mut.a;
+			   CREATE POLICY tenant_isolation ON mut.a USING (tenant_id = app.current_tenant()) WITH CHECK (tenant_id <> app.current_tenant());`,
+			want: []string{"mut.a: tenant_isolation WITH CHECK is"}},
+		{name: "own_memberships that opens with OR true", rule: "extra-policies-are-whitelisted",
+			up: `DROP POLICY IF EXISTS own_memberships ON iam.memberships;
+			   CREATE POLICY own_memberships ON iam.memberships FOR SELECT
+			     USING ((app.current_tenant() IS NULL AND user_id = app.current_user_id() AND status IN ('invitado','activo')) OR true);`,
+			want: []string{"iam.memberships: policy own_memberships does not match the canonical expression"}},
+		{name: "own_memberships without the member state filter", rule: "extra-policies-are-whitelisted",
+			up: `DROP POLICY IF EXISTS own_memberships ON iam.memberships;
+			   CREATE POLICY own_memberships ON iam.memberships FOR SELECT USING (app.current_tenant() IS NULL AND user_id = app.current_user_id());`,
+			want: []string{"iam.memberships: policy own_memberships does not match the canonical expression"}},
+		{name: "member_read of org.tenants that lets a suspended member read", rule: "extra-policies-are-whitelisted",
+			up: `DROP POLICY IF EXISTS member_read ON org.tenants;
+			   CREATE POLICY member_read ON org.tenants FOR SELECT USING (id = app.current_tenant()
+			     OR (app.current_tenant() IS NULL AND id IN (SELECT tenant_id FROM iam.memberships WHERE user_id = app.current_user_id())));`,
+			want: []string{"org.tenants: policy member_read does not match the canonical expression"}},
+		{name: "own_memberships of membership_sites without the state filter", rule: "extra-policies-are-whitelisted",
+			up: `CREATE TABLE iam.membership_sites (id uuid PRIMARY KEY, tenant_id uuid NOT NULL REFERENCES org.tenants, user_id uuid, UNIQUE (tenant_id, id));
+			   ALTER TABLE iam.membership_sites ENABLE ROW LEVEL SECURITY; ALTER TABLE iam.membership_sites FORCE ROW LEVEL SECURITY;
+			   CREATE POLICY tenant_isolation ON iam.membership_sites USING (tenant_id = app.current_tenant()) WITH CHECK (tenant_id = app.current_tenant());
+			   CREATE POLICY own_memberships ON iam.membership_sites FOR SELECT USING (app.current_tenant() IS NULL AND user_id = app.current_user_id());`,
+			want: []string{`iam.membership_sites: policy own_memberships must contain "status"`}},
+
+		// Particiones (H1): una consulta directa a la partición no pasa por la política de la madre.
+		{name: "partition without RLS granted to wanka_app", rule: "partitions-of-tenant-tables",
+			up:   partitionedParent("pt") + partition("pt_1", false) + "GRANT SELECT ON mut.pt_1 TO wanka_app;",
+			want: []string{"partition mut.pt_1 of mut.pt is granted to [wanka_app]"}},
+		{name: "partition granted by column only", rule: "partitions-of-tenant-tables",
+			up:   partitionedParent("pt") + partition("pt_1", false) + "GRANT SELECT (name) ON mut.pt_1 TO wanka_worker;",
+			want: []string{"partition mut.pt_1 of mut.pt is granted to [wanka_worker]"}},
+		{name: "partition with RLS but without FORCE and granted", rule: "partitions-of-tenant-tables",
+			up:   partitionedParent("pt") + partition("pt_1", true) + "ALTER TABLE mut.pt_1 NO FORCE ROW LEVEL SECURITY; GRANT SELECT ON mut.pt_1 TO wanka_app;",
+			want: []string{"partition mut.pt_1 of mut.pt is granted to [wanka_app]", "relforcerowsecurity=false"}},
 
 		// (c) NULLIF.
 		{name: "current_setting without NULLIF", rule: "policies-wrap-current-setting-in-nullif",
@@ -906,6 +1100,126 @@ func TestCatalogRulesCatchMutations(t *testing.T) {
 				if !strings.Contains(text, want) {
 					t.Errorf("rule %s did not report %q; it reported:\n%s", tc.rule, want, text)
 				}
+			}
+		})
+	}
+}
+
+// Una partición sin privilegios de ejecución, o con su propia RLS completa, no viola ninguna regla
+// (ni rulePolicies se queja de su tenant_isolation).
+func TestCatalogAcceptsPartitionsThatAreSafe(t *testing.T) {
+	cases := map[string]string{
+		"partition with no privileges for the runtime roles": partitionedParent("pt") + partition("pt_1", false) + "GRANT SELECT ON mut.pt TO wanka_app;",
+		"partition with its own full RLS and a grant":        partitionedParent("pt") + partition("pt_1", true) + "GRANT SELECT, INSERT ON mut.pt, mut.pt_1 TO wanka_app;",
+	}
+	for name, up := range cases {
+		t.Run(name, func(t *testing.T) {
+			ctx := context.Background()
+			d := dbtest.New(t)
+			d.MigrateWith(ctx, t, fstest.MapFS{"99990101000099_catalog_mutation.sql": {Data: []byte("-- +goose Up\nCREATE SCHEMA mut;\n" + up + "\n")}})
+			admin := d.Admin(ctx, t)
+			tables, err := loadTables(ctx, admin)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if tables["mut.pt_1"].parent != "mut.pt" {
+				t.Fatalf("mut.pt_1 is not seen as a partition of mut.pt: %+v", tables["mut.pt_1"])
+			}
+			for _, r := range catalogRules {
+				got, err := r.check(ctx, admin)
+				if err != nil {
+					t.Fatal(err)
+				}
+				for _, v := range got {
+					t.Errorf("%s: %s", r.name, v)
+				}
+			}
+		})
+	}
+}
+
+// El SQL del ADR 0001 («Caminos que no tienen un tenant fijado», 1; #187), tal cual, sobre tablas que cumplen el resto de reglas.
+const adrPoliciesSQL = `
+CREATE TABLE org.sites (id uuid PRIMARY KEY, tenant_id uuid NOT NULL REFERENCES org.tenants, UNIQUE (tenant_id, id));
+CREATE TABLE org.cash_registers (id uuid PRIMARY KEY, tenant_id uuid NOT NULL REFERENCES org.tenants, site_id uuid NOT NULL,
+  FOREIGN KEY (tenant_id, site_id) REFERENCES org.sites (tenant_id, id));
+CREATE TABLE iam.membership_sites (id uuid PRIMARY KEY, tenant_id uuid NOT NULL REFERENCES org.tenants, membership_id uuid NOT NULL,
+  site_id uuid NOT NULL, user_id uuid NOT NULL, UNIQUE (tenant_id, id),
+  FOREIGN KEY (tenant_id, membership_id) REFERENCES iam.memberships (tenant_id, id),
+  FOREIGN KEY (tenant_id, site_id) REFERENCES org.sites (tenant_id, id));
+ALTER TABLE iam.memberships ADD COLUMN IF NOT EXISTS all_sites boolean NOT NULL DEFAULT false;
+CREATE INDEX cash_registers_site_idx ON org.cash_registers (tenant_id, site_id);
+CREATE INDEX membership_sites_membership_idx ON iam.membership_sites (tenant_id, membership_id);
+CREATE INDEX membership_sites_site_idx ON iam.membership_sites (tenant_id, site_id);
+ALTER TABLE org.sites ENABLE ROW LEVEL SECURITY; ALTER TABLE org.sites FORCE ROW LEVEL SECURITY;
+ALTER TABLE org.cash_registers ENABLE ROW LEVEL SECURITY; ALTER TABLE org.cash_registers FORCE ROW LEVEL SECURITY;
+ALTER TABLE iam.membership_sites ENABLE ROW LEVEL SECURITY; ALTER TABLE iam.membership_sites FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation ON org.sites USING (tenant_id = app.current_tenant()) WITH CHECK (tenant_id = app.current_tenant());
+CREATE POLICY tenant_isolation ON org.cash_registers USING (tenant_id = app.current_tenant()) WITH CHECK (tenant_id = app.current_tenant());
+CREATE POLICY tenant_isolation ON iam.membership_sites USING (tenant_id = app.current_tenant()) WITH CHECK (tenant_id = app.current_tenant());
+
+DROP POLICY IF EXISTS own_memberships ON iam.memberships;
+CREATE POLICY own_memberships ON iam.memberships FOR SELECT USING (app.current_tenant() IS NULL AND user_id = app.current_user_id() AND status IN ('invitado','activo'));
+CREATE POLICY own_memberships ON iam.membership_sites FOR SELECT USING (app.current_tenant() IS NULL AND user_id = app.current_user_id()
+  AND membership_id IN (SELECT id FROM iam.memberships WHERE status IN ('invitado','activo')));
+DROP POLICY IF EXISTS member_read ON org.tenants;
+CREATE POLICY member_read ON org.tenants FOR SELECT USING (id = app.current_tenant() OR (app.current_tenant() IS NULL AND id IN (SELECT tenant_id FROM iam.memberships WHERE user_id = app.current_user_id() AND status IN ('invitado','activo'))));
+DROP POLICY IF EXISTS platform_rw ON org.tenants;
+CREATE POLICY platform_rw ON org.tenants TO wanka_platform USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS member_read ON iam.roles;
+CREATE POLICY member_read ON iam.roles FOR SELECT USING (
+  tenant_id = app.current_tenant()
+  OR (app.current_tenant() IS NULL AND id IN (SELECT role_id FROM iam.memberships
+            WHERE user_id = app.current_user_id() AND status IN ('invitado','activo'))));
+CREATE POLICY member_read ON org.sites FOR SELECT USING (
+  tenant_id = app.current_tenant()
+  OR (app.current_tenant() IS NULL AND EXISTS (SELECT 1 FROM iam.memberships m
+             WHERE m.user_id = app.current_user_id() AND m.status = 'activo' AND m.tenant_id = sites.tenant_id
+               AND (m.all_sites OR EXISTS (SELECT 1 FROM iam.membership_sites ms
+                                           WHERE ms.membership_id = m.id AND ms.site_id = sites.id)))));
+CREATE POLICY member_read ON org.cash_registers FOR SELECT USING (
+  tenant_id = app.current_tenant()
+  OR (app.current_tenant() IS NULL AND site_id IN (SELECT id FROM org.sites)));
+`
+
+func adrPoliciesViolations(t *testing.T) []string {
+	t.Helper()
+	ctx := context.Background()
+	d := dbtest.New(t)
+	d.MigrateWith(ctx, t, fstest.MapFS{"99990101000098_adr_policies.sql": {Data: []byte("-- +goose Up\n" + adrPoliciesSQL)}})
+	admin := d.Admin(ctx, t)
+	var out []string
+	for _, r := range catalogRules {
+		got, err := r.check(ctx, admin)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, v := range got {
+			out = append(out, r.name+": "+v)
+		}
+	}
+	return out
+}
+
+// Caso positivo: las constantes de texto exacto son lo que PostgreSQL deparsa del SQL del ADR.
+func TestCatalogAcceptsTheADRPoliciesVerbatim(t *testing.T) {
+	for _, v := range adrPoliciesViolations(t) {
+		t.Error(v)
+	}
+}
+
+// Si una constante se desvía (aquí, un paréntesis menos), el caso positivo se pone en rojo y nombra la política.
+func TestCatalogADRPoliciesFailWhenAConstantDrifts(t *testing.T) {
+	for _, key := range []string{"iam.memberships:own_memberships", "org.sites:member_read"} {
+		t.Run(key, func(t *testing.T) {
+			orig := policyAllow[key]
+			drifted := orig
+			drifted.qual = strings.Replace(orig.qual, "(", "", 1)
+			policyAllow[key] = drifted
+			t.Cleanup(func() { policyAllow[key] = orig })
+			got := strings.Join(adrPoliciesViolations(t), "\n")
+			if !strings.Contains(got, "policy "+strings.SplitN(key, ":", 2)[1]+" does not match the canonical expression") {
+				t.Errorf("a drifted constant for %s was not reported:\n%s", key, got)
 			}
 		})
 	}

@@ -243,17 +243,19 @@ func TestPlanLimitsCheckRejectsEverythingButTheThreeIntegerKeys(t *testing.T) {
 	e := newEnv(t)
 	c := ctx(t)
 	for name, limits := range map[string]string{
-		"missing key":   `{"users": 1, "sites": 1}`,
-		"empty":         `{}`,
-		"extra key":     `{"users": 1, "sites": 1, "cpe_per_month": 1, "otro": 1}`,
-		"string":        `{"users": "muchos", "sites": 1, "cpe_per_month": 1}`,
-		"negative":      `{"users": -1, "sites": 1, "cpe_per_month": 1}`,
-		"decimal":       `{"users": 1.5, "sites": 1, "cpe_per_month": 1}`,
-		"null":          `{"users": null, "sites": 1, "cpe_per_month": 1}`,
-		"too big":       `{"users": 1e30, "sites": 1, "cpe_per_month": 1}`,
-		"boolean":       `{"users": true, "sites": 1, "cpe_per_month": 1}`,
-		"array":         `{"users": [1], "sites": 1, "cpe_per_month": 1}`,
-		"not an object": `[1, 2, 3]`,
+		"missing key":    `{"users": 1, "sites": 1}`,
+		"empty":          `{}`,
+		"extra key":      `{"users": 1, "sites": 1, "cpe_per_month": 1, "otro": 1}`,
+		"string":         `{"users": "muchos", "sites": 1, "cpe_per_month": 1}`,
+		"negative":       `{"users": -1, "sites": 1, "cpe_per_month": 1}`,
+		"decimal":        `{"users": 1.5, "sites": 1, "cpe_per_month": 1}`,
+		"null":           `{"users": null, "sites": 1, "cpe_per_month": 1}`,
+		"too big":        `{"users": 1e30, "sites": 1, "cpe_per_month": 1}`,
+		"boolean":        `{"users": true, "sites": 1, "cpe_per_month": 1}`,
+		"array":          `{"users": [1], "sites": 1, "cpe_per_month": 1}`,
+		"not an object":  `[1, 2, 3]`,
+		"trailing zero":  `{"users": 1.0, "sites": 1, "cpe_per_month": 1}`,
+		"max with scale": `{"users": 9223372036854775807.0, "sites": 1, "cpe_per_month": 1}`,
 	} {
 		_, err := e.admin.Exec(c, `INSERT INTO platform.plans (code, name, limits) VALUES ($1, $1, $2::jsonb)`, "bad-"+name, limits)
 		var pgErr *pgconn.PgError

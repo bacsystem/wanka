@@ -82,6 +82,21 @@ func TestConfigFromEnv(t *testing.T) {
 			t.Fatal("ConfigFromEnv changed the package defaults")
 		}
 	})
+	t.Run("job timeout", func(t *testing.T) {
+		cfg, err := ConfigFromEnv(env(nil))
+		if err != nil || cfg.JobTimeout != time.Minute {
+			t.Fatalf("default %s (%v), want 1m", cfg.JobTimeout, err)
+		}
+		cfg, err = ConfigFromEnv(env(map[string]string{"JOBS_JOB_TIMEOUT": "5m"}))
+		if err != nil || cfg.JobTimeout != 5*time.Minute {
+			t.Fatalf("got %s (%v), want 5m", cfg.JobTimeout, err)
+		}
+		for _, v := range []string{"soon-789", "0.5s", "2h"} {
+			if _, err := ConfigFromEnv(env(map[string]string{"JOBS_JOB_TIMEOUT": v})); err == nil || !strings.Contains(err.Error(), "JOBS_JOB_TIMEOUT") || strings.Contains(err.Error(), v) {
+				t.Errorf("JOBS_JOB_TIMEOUT=%s: error %v", v, err)
+			}
+		}
+	})
 	t.Run("bad values name the variable and never echo the value", func(t *testing.T) {
 		for k, v := range map[string]string{
 			"JOBS_CONCURRENCY_CPE": "lots-123", "JOBS_CONCURRENCY_WEBHOOKS": "-0", "JOBS_CONCURRENCY_REPORTS": "-3",

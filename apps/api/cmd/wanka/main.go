@@ -52,6 +52,9 @@ type wiring struct {
 	entitlements entitlements.Options
 	// wrapSweeper, si no es nil, envuelve o reemplaza el barredor (solo los tests).
 	wrapSweeper func(sweeper) sweeper
+	// mount, si no es nil, registra rutas en el registrador del plano tenant
+	// (solo los tests; los módulos llegan con sus historias).
+	mount func(*auth.Routes)
 	// wrapListener, si no es nil, envuelve o reemplaza el escucha de NOTIFY (solo los tests).
 	wrapListener func(listener) listener
 }
@@ -274,6 +277,9 @@ func mountPlane(plane string, rt *httpx.Router, pool *db.Pool, w wiring) (sweepe
 	routes, err := auth.NewRoutes(rt, pgsession.New(pool), ent, w.auth)
 	if err != nil {
 		return nil, nil, fmt.Errorf("mounting the session chain: %w", err)
+	}
+	if w.mount != nil {
+		w.mount(routes)
 	}
 	return routes, ent, nil
 }

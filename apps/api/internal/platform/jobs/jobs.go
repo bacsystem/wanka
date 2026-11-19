@@ -87,8 +87,8 @@ func WithScheduledAt(t time.Time) Option { return func(o *insertOptions) { o.sch
 
 // WithUnique hace al job único mientras haya uno igual en curso (disponible,
 // programado, en ejecución o por reintentar; uno ya terminado no cuenta). La
-// clave son los argumentos serializados, o solo los campos marcados con la
-// etiqueta `river:"unique"` si hay alguno.
+// clave son todos los argumentos serializados: dos jobs del mismo Kind con algún
+// campo distinto no son el mismo job.
 func WithUnique() Option { return func(o *insertOptions) { o.unique = true } }
 
 func resolveOptions(opts []Option) (insertOptions, error) {
