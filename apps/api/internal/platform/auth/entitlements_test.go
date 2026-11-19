@@ -480,27 +480,32 @@ func TestRouteSpecIsValidatedAtRegistration(t *testing.T) {
 		{"tenant route with no spec at all", "GET /v1/items", auth.Tenant, auth.Spec{}, false},
 		{"empty module", "GET /v1/items", auth.Tenant, auth.Spec{Module: "", Permission: "ventas.pos:read"}, false},
 		{"empty permission", "GET /v1/items", auth.Tenant, auth.Spec{Module: "ventas"}, false},
-		{"NoPermission on a tenant route is allowed", "GET /v1/items", auth.Tenant, auth.Spec{Module: "ventas", Permission: auth.NoPermission}, true},
+		{"NoPermission on an ordinary tenant route", "GET /v1/items", auth.Tenant, auth.Spec{Module: "ventas", Permission: auth.NoPermission}, false},
+		{"a permission outside the catalog on a tenant route", "GET /v1/items", auth.Tenant, auth.Spec{Module: "ventas", Permission: "ventas.pos:inventada"}, false},
+		{"a malformed permission", "GET /v1/items", auth.Tenant, auth.Spec{Module: "ventas", Permission: "ventas"}, false},
+		{"a platform code on a tenant route", "GET /v1/items", auth.Tenant, auth.Spec{Module: "ventas", Permission: "plataforma.tenants:read"}, false},
+		{"a permission on a NoTenant route", "GET /v1/me", auth.NoTenant, auth.Spec{Module: auth.NoModule, Permission: "ventas.pos:read"}, false},
+		{"a permission on a Public route", "POST /v1/auth/login", auth.Public, auth.Spec{Module: auth.NoModule, Permission: "ventas.pos:read"}, false},
 		{"NoModule on an ordinary tenant route", "GET /v1/items", auth.Tenant, none, false},
-		{"NoModule on GET /v1/exports", "GET /v1/exports", auth.Tenant, none, true},
+		{"NoModule on GET /v1/exports", "GET /v1/exports", auth.Tenant, auth.Spec{Module: auth.NoModule, Permission: "reportes.management:export"}, true},
 		{"NoModule on GET /v1/me/entitlements", "GET /v1/me/entitlements", auth.Tenant, none, true},
-		{"a module on GET /v1/exports", "GET /v1/exports", auth.Tenant, auth.Spec{Module: "reportes", Permission: auth.NoPermission}, false},
-		{"NoModule on POST /v1/exports", "POST /v1/exports", auth.Tenant, none, false},
+		{"a module on GET /v1/exports", "GET /v1/exports", auth.Tenant, auth.Spec{Module: "reportes", Permission: "reportes.management:export"}, false},
+		{"NoModule on POST /v1/exports", "POST /v1/exports", auth.Tenant, auth.Spec{Module: auth.NoModule, Permission: "reportes.management:export"}, false},
 		{"NoModule on NoTenant", "GET /v1/me", auth.NoTenant, none, true},
 		{"a module on NoTenant", "GET /v1/me", auth.NoTenant, auth.Spec{Module: "ventas", Permission: auth.NoPermission}, false},
 		{"empty module on NoTenant", "GET /v1/me", auth.NoTenant, auth.Spec{Permission: auth.NoPermission}, false},
 		{"NoModule on Public", "POST /v1/auth/login", auth.Public, none, true},
 		{"empty spec on Public", "POST /v1/auth/login", auth.Public, auth.Spec{}, false},
 		{"a module on Public", "POST /v1/auth/login", auth.Public, auth.Spec{Module: "ventas", Permission: auth.NoPermission}, false},
-		{"sites has no usage measurement yet", "POST /v1/sites", auth.Tenant, auth.Spec{Module: "empresas", Permission: "x:y", Limit: entitlements.LimitSites}, false},
-		{"a known limit", "POST /v1/users", auth.Tenant, auth.Spec{Module: "identidad", Permission: "x:y", Limit: entitlements.LimitUsers}, true},
-		{"an unknown limit", "POST /v1/users", auth.Tenant, auth.Spec{Module: "identidad", Permission: "x:y", Limit: "seats"}, false},
+		{"sites has no usage measurement yet", "POST /v1/sites", auth.Tenant, auth.Spec{Module: "empresas", Permission: "ventas.pos:read", Limit: entitlements.LimitSites}, false},
+		{"a known limit", "POST /v1/users", auth.Tenant, auth.Spec{Module: "identidad", Permission: "ventas.pos:read", Limit: entitlements.LimitUsers}, true},
+		{"an unknown limit", "POST /v1/users", auth.Tenant, auth.Spec{Module: "identidad", Permission: "ventas.pos:read", Limit: "seats"}, false},
 		{"a limit on a NoTenant route", "GET /v1/me", auth.NoTenant, auth.Spec{Module: auth.NoModule, Permission: auth.NoPermission, Limit: entitlements.LimitUsers}, false},
-		{"the literal is none, in lowercase", "GET /v1/items", auth.Tenant, auth.Spec{Module: "NONE", Permission: "x:y"}, true}, // "NONE" es un código de módulo cualquiera, no el reservado
+		{"the literal is none, in lowercase", "GET /v1/items", auth.Tenant, auth.Spec{Module: "NONE", Permission: "ventas.pos:read"}, true}, // "NONE" es un código de módulo cualquiera, no el reservado
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			routes, err := auth.NewRoutes(httpx.NewRouter(httpx.RouterOptions{}), returns(bound()), grants(plan()), auth.Options{})
+			routes, err := auth.NewRoutes(httpx.NewRouter(httpx.RouterOptions{}), returns(bound()), grants(plan()), &fakePerms{}, &fakeDenials{}, auth.Options{})
 			if err != nil {
 				t.Fatal(err)
 			}

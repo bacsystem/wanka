@@ -611,7 +611,7 @@ func TestRouteClassRulesPanicAtRegistration(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			routes, err := auth.NewRoutes(httpx.NewRouter(httpx.RouterOptions{}), returns(bound()), grants(plan()), auth.Options{})
+			routes, err := auth.NewRoutes(httpx.NewRouter(httpx.RouterOptions{}), returns(bound()), grants(plan()), &fakePerms{}, &fakeDenials{}, auth.Options{})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -627,19 +627,19 @@ func TestRouteClassRulesPanicAtRegistration(t *testing.T) {
 
 func TestNewRoutesValidatesItsInputs(t *testing.T) {
 	rt := httpx.NewRouter(httpx.RouterOptions{})
-	if _, err := auth.NewRoutes(nil, returns(bound()), grants(plan()), auth.Options{}); err == nil {
+	if _, err := auth.NewRoutes(nil, returns(bound()), grants(plan()), &fakePerms{}, &fakeDenials{}, auth.Options{}); err == nil {
 		t.Error("nil router accepted")
 	}
-	if _, err := auth.NewRoutes(rt, nil, grants(plan()), auth.Options{}); err == nil {
+	if _, err := auth.NewRoutes(rt, nil, grants(plan()), &fakePerms{}, &fakeDenials{}, auth.Options{}); err == nil {
 		t.Error("nil resolver accepted")
 	}
-	if _, err := auth.NewRoutes(rt, returns(bound()), nil, auth.Options{}); err == nil {
+	if _, err := auth.NewRoutes(rt, returns(bound()), nil, &fakePerms{}, &fakeDenials{}, auth.Options{}); err == nil {
 		t.Error("nil entitlements source accepted")
 	}
-	if _, err := auth.NewRoutes(rt, returns(bound()), grants(plan()), auth.Options{SessionLimiter: httpx.LimiterConfig{Capacity: 1}}); err == nil {
+	if _, err := auth.NewRoutes(rt, returns(bound()), grants(plan()), &fakePerms{}, &fakeDenials{}, auth.Options{SessionLimiter: httpx.LimiterConfig{Capacity: 1}}); err == nil {
 		t.Error("invalid session limiter accepted")
 	}
-	if _, err := auth.NewRoutes(rt, returns(bound()), grants(plan()), auth.Options{TenantLimiter: httpx.LimiterConfig{Capacity: 1}}); err == nil {
+	if _, err := auth.NewRoutes(rt, returns(bound()), grants(plan()), &fakePerms{}, &fakeDenials{}, auth.Options{TenantLimiter: httpx.LimiterConfig{Capacity: 1}}); err == nil {
 		t.Error("invalid tenant limiter accepted")
 	}
 }

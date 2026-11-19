@@ -6,6 +6,7 @@ Lista viva: cada revisión que encuentra un tipo de error nuevo lo agrega aquí.
 - Un dato ausente, mal formado o de un tipo inesperado **cierra**: un límite ausente vale 0, nunca «sin tope» (#207). Un `1.0` en `jsonb` conserva la escala y Go no lo lee como `int64`: hay que validarlo en el CHECK **y** normalizarlo en el código (#206).
 - «Ninguno» se declara con el literal reservado `none`, nunca con `null` ni con un campo vacío (#206).
 - Si una lectura de seguridad falla (base caída o error no tipado), la ruta no corre. Se responde 503 o 500, nunca se deja pasar.
+- Cerrar es negar la petición, no destruir estado: ante un dato desconocido no se revoca ni se borra nada (#176).
 
 ## Datos y pertenencia
 - Toda clave, caché o respuesta guardada se liga al **principal**, no solo al tenant (replay de idempotencia entre usuarios, #213).

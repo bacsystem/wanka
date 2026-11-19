@@ -20,6 +20,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 
+	"github.com/bacsystem/wanka/apps/api/internal/platform/audit"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/auth"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/auth/pgsession"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/db"
@@ -137,6 +138,9 @@ type envConfig struct {
 	// roleSetting es un ALTER ROLE wanka_app IN DATABASE ... SET <setting> previo a abrir el pool.
 	roleSettings [][2]string
 	wrap         func(auth.SessionResolver) auth.SessionResolver
+	// perms reemplaza al resolver de permisos (allowAll); mount agrega rutas de prueba.
+	perms auth.PermissionResolver
+	mount func(r *auth.Routes, pool *db.Pool)
 	// realEnts arma el servicio real de entitlements (y su escucha de NOTIFY) en vez de openSource.
 	realEnts bool
 }
@@ -202,8 +206,12 @@ func newEnv(t *testing.T, cfg envConfig) *env {
 			time.Sleep(10 * time.Millisecond)
 		}
 	}
+	var perms auth.PermissionResolver = allowAll{}
+	if cfg.perms != nil {
+		perms = cfg.perms
+	}
 	rt := httpx.NewRouter(httpx.RouterOptions{})
-	routes, err := auth.NewRoutes(rt, resolver, source, auth.Options{})
+	routes, err := auth.NewRoutes(rt, resolver, source, perms, audit.NewWriter(pool), auth.Options{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -213,8 +221,8 @@ func newEnv(t *testing.T, cfg envConfig) *env {
 	none := auth.Spec{Module: auth.NoModule, Permission: auth.NoPermission}
 	routes.HandleFunc("POST /v1/items", auth.Tenant, auth.Spec{Module: "ventas", Permission: "ventas.pos:create"}, ok(&e.writes))
 	routes.HandleFunc("POST /v1/users", auth.Tenant, auth.Spec{Module: "ventas", Permission: "identidad.users:create", Limit: entitlements.LimitUsers}, ok(&e.writes))
-	routes.HandleFunc("GET /v1/vet", auth.Tenant, auth.Spec{Module: "rubro.veterinaria", Permission: "vet.pets:read"}, ok(&e.ran))
-	routes.HandleFunc("GET /v1/exports", auth.Tenant, none, ok(&e.ran))
+	routes.HandleFunc("GET /v1/vet", auth.Tenant, auth.Spec{Module: "rubro.veterinaria", Permission: "veterinaria.records:read"}, ok(&e.ran))
+	routes.HandleFunc("GET /v1/exports", auth.Tenant, auth.Spec{Module: auth.NoModule, Permission: "reportes.management:export"}, ok(&e.ran))
 	routes.HandleFunc("GET /v1/me/entitlements", auth.Tenant, none, ok(&e.ran))
 	// GET /v1/me: ruta NoTenant de prueba; la real llega con #27.
 	routes.HandleFunc("GET /v1/me", auth.NoTenant, auth.Spec{Module: auth.NoModule, Permission: auth.NoPermission}, func(w http.ResponseWriter, r *http.Request) {
@@ -247,6 +255,9 @@ func newEnv(t *testing.T, cfg envConfig) *env {
 		}
 		writeView(w, sessionView(s, roles))
 	})
+	if cfg.mount != nil {
+		cfg.mount(routes, pool)
+	}
 	e.srv = httptest.NewServer(httpx.Chain(rt, logging.New(e.logs, slog.LevelDebug), e.metrics))
 	t.Cleanup(e.srv.Close)
 	// Ninguna línea del log contiene el token ni su sha256 (hex o base64), en ningún test.
@@ -565,6 +576,21 @@ func TestConcurrentRequestsDetachOnce(t *testing.T) {
 
 // ---- sesión impersonada ----
 
+// withScope le da a la impersonada el alcance del grant, que iam.session_lookup
+// todavía no devuelve (ola 6): el adaptador lo deja en desconocido.
+type withScope struct {
+	auth.SessionResolver
+	scope auth.ImpersonationScope
+}
+
+func (w withScope) Lookup(ctx context.Context, h [32]byte) (auth.SessionRecord, bool, error) {
+	rec, ok, err := w.SessionResolver.Lookup(ctx, h)
+	rec.ImpersonationScope = w.scope
+	return rec, ok, err
+}
+
+func fullScope(r auth.SessionResolver) auth.SessionResolver { return withScope{r, auth.ScopeFull} }
+
 func TestImpersonatedSessionIgnoresMembershipLoss(t *testing.T) {
 	loss := map[string]string{
 		"deleted":   `DELETE FROM iam.memberships WHERE tenant_id = $1`,
@@ -572,7 +598,7 @@ func TestImpersonatedSessionIgnoresMembershipLoss(t *testing.T) {
 	}
 	for name, sql := range loss {
 		t.Run(name, func(t *testing.T) {
-			e := newEnv(t, envConfig{})
+			e := newEnv(t, envConfig{wrap: fullScope})
 			s := e.seed(dbtest.SessionSpec{Kind: dbtest.SessionImpersonated})
 			e.exec(sql, s.TenantID)
 			before := e.row(s.SessionID)
@@ -605,7 +631,7 @@ func TestImpersonatedSessionRevokedOrExpiredIs401(t *testing.T) {
 	}
 	for name, sql := range cases {
 		t.Run(name, func(t *testing.T) {
-			e := newEnv(t, envConfig{})
+			e := newEnv(t, envConfig{wrap: fullScope})
 			s := e.seed(dbtest.SessionSpec{Kind: dbtest.SessionImpersonated})
 			if e.get("/v1/items", s.Token).status != 200 {
 				t.Fatal("the impersonated session must work before it is cut")

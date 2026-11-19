@@ -11,6 +11,7 @@ import (
 	"github.com/bacsystem/wanka/apps/api/internal/platform/entitlements"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/httpx"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/metrics"
+	"github.com/bacsystem/wanka/apps/api/internal/platform/permission"
 )
 
 // Valores reservados de x-module y x-permission para «ninguno» (ADR 0009, «Cómo
@@ -34,7 +35,9 @@ type Spec struct {
 	// Module es el código de módulo de platform.modules, o NoModule.
 	Module string
 	// Permission es el código del catálogo de resources.md, o NoPermission. Lo
-	// aplica el paso de RBAC (#176); aquí solo se exige que esté declarado.
+	// aplica el paso de permisos de Routes.Handle. En Public y NoTenant es
+	// NoPermission; en Tenant, un código del catálogo (NoPermission solo en las
+	// rutas de noPermissionTenant). Cualquier otra cosa hace fallar el arranque.
 	Permission string
 	// Limit es la clave del límite que la ruta consume (entitlements.LimitUsers,
 	// LimitCPEPerMonth); LimitSites hace fallar el arranque hasta que alguien mida
@@ -65,6 +68,12 @@ func checkSpec(pattern string, class RouteClass, spec Spec) {
 		panic(fmt.Sprintf("auth: route %q needs a module: a platform.modules code or auth.NoModule", pattern))
 	case spec.Permission == "":
 		panic(fmt.Sprintf("auth: route %q needs a permission: a resources.md code or auth.NoPermission", pattern))
+	case class != Tenant && spec.Permission != NoPermission:
+		panic(fmt.Sprintf("auth: route %q is %s and has no permission step: its permission must be auth.NoPermission", pattern, class))
+	case class == Tenant && spec.Permission == NoPermission && !noPermissionTenant[pattern]:
+		panic(fmt.Sprintf("auth: route %q is a Tenant route with auth.NoPermission, which only GET /v1/me/entitlements may be", pattern))
+	case class == Tenant && spec.Permission != NoPermission && !permission.Code(spec.Permission).Valid():
+		panic(fmt.Sprintf("auth: route %q declares the permission %q, which is not in the catalog", pattern, spec.Permission))
 	case class != Tenant && spec.Module != NoModule:
 		panic(fmt.Sprintf("auth: route %q is %s and does not go through entitlements: its module must be auth.NoModule", pattern, class))
 	case class == Tenant && (spec.Module == NoModule) != inactivePass[pattern]:

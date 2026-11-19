@@ -17,11 +17,14 @@ import (
 
 	"github.com/jackc/pgx/v5/pgtype"
 
+	"github.com/bacsystem/wanka/apps/api/internal/platform/audit"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/auth"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/clock"
+	"github.com/bacsystem/wanka/apps/api/internal/platform/db"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/entitlements"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/httpx"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/logging"
+	"github.com/bacsystem/wanka/apps/api/internal/platform/permission"
 )
 
 var t0 = time.Date(2026, 11, 18, 10, 0, 0, 0, time.UTC)
@@ -65,7 +68,7 @@ func noCompany() auth.SessionRecord {
 
 func impersonated() auth.SessionRecord {
 	r := noCompany()
-	r.TenantID, r.UserID, r.ImpersonatorID, r.MFAMethod = uid(3), pgtype.UUID{}, uid(9), "platform"
+	r.TenantID, r.UserID, r.ImpersonatorID, r.MFAMethod, r.ImpersonationScope = uid(3), pgtype.UUID{}, uid(9), "platform", auth.ScopeFull
 	return r
 }
 
@@ -74,8 +77,17 @@ type fakeResolver struct {
 	mu      sync.Mutex
 	lookup  func(ctx context.Context, h [32]byte) (auth.SessionRecord, bool, error)
 	detach  func(ctx context.Context, sid, mid pgtype.UUID) (bool, error)
+	bind    func(ctx context.Context, sid, mid pgtype.UUID, v int64) (bool, error)
+	revoke  func(ctx context.Context, sid pgtype.UUID) error
 	hashes  [][32]byte
 	detachs [][2]pgtype.UUID
+	binds   []bindCall
+	revokes []pgtype.UUID
+}
+
+type bindCall struct {
+	sid, mid pgtype.UUID
+	version  int64
 }
 
 var _ auth.SessionResolver = (*fakeResolver)(nil)
@@ -95,6 +107,38 @@ func (f *fakeResolver) Detach(ctx context.Context, sid, mid pgtype.UUID) (bool, 
 		return true, nil
 	}
 	return f.detach(ctx, sid, mid)
+}
+
+func (f *fakeResolver) BindVersion(ctx context.Context, sid, mid pgtype.UUID, v int64) (bool, error) {
+	f.mu.Lock()
+	f.binds = append(f.binds, bindCall{sid, mid, v})
+	f.mu.Unlock()
+	if f.bind == nil {
+		return true, nil
+	}
+	return f.bind(ctx, sid, mid, v)
+}
+
+func (f *fakeResolver) Revoke(ctx context.Context, sid pgtype.UUID) error {
+	f.mu.Lock()
+	f.revokes = append(f.revokes, sid)
+	f.mu.Unlock()
+	if f.revoke == nil {
+		return nil
+	}
+	return f.revoke(ctx, sid)
+}
+
+func (f *fakeResolver) bound() []bindCall {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return append([]bindCall(nil), f.binds...)
+}
+
+func (f *fakeResolver) revoked() []pgtype.UUID {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return append([]pgtype.UUID(nil), f.revokes...)
 }
 
 func (f *fakeResolver) lookups() int {
@@ -251,8 +295,81 @@ func plan() entitlements.Entitlements {
 		Usage:  map[string]int64{"users": 1, "cpe_per_month": 10}}
 }
 
+// fakePerms es el doble de auth.PermissionResolver. Por defecto concede todo el
+// catálogo con la versión actual de la sesión; fn lo reemplaza.
+type fakePerms struct {
+	mu    sync.Mutex
+	fn    func(ctx context.Context, s auth.Session) (auth.Authz, error)
+	calls []auth.Session
+}
+
+var _ auth.PermissionResolver = (*fakePerms)(nil)
+
+func (f *fakePerms) Resolve(ctx context.Context, s auth.Session) (auth.Authz, error) {
+	f.mu.Lock()
+	f.calls = append(f.calls, s)
+	fn := f.fn
+	f.mu.Unlock()
+	if fn != nil {
+		return fn(ctx, s)
+	}
+	return auth.Authz{Version: s.CurrentAuthzVersion.Int64, Permissions: permSet(permission.All()...)}, nil
+}
+
+func (f *fakePerms) set(fn func(ctx context.Context, s auth.Session) (auth.Authz, error)) {
+	f.mu.Lock()
+	f.fn = fn
+	f.mu.Unlock()
+}
+
+func (f *fakePerms) resolves() int {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return len(f.calls)
+}
+
+func permSet(codes ...permission.Code) map[permission.Code]struct{} {
+	m := make(map[permission.Code]struct{}, len(codes))
+	for _, c := range codes {
+		m[c] = struct{}{}
+	}
+	return m
+}
+
+// grantOnly devuelve un resolver que concede solo codes, con la versión actual.
+func grantOnly(codes ...permission.Code) func(context.Context, auth.Session) (auth.Authz, error) {
+	return func(_ context.Context, s auth.Session) (auth.Authz, error) {
+		return auth.Authz{Version: s.CurrentAuthzVersion.Int64, Permissions: permSet(codes...)}, nil
+	}
+}
+
+// fakeDenials es el doble de auth.DenialRecorder.
+type fakeDenials struct {
+	mu     sync.Mutex
+	err    error
+	actors []db.Actor
+	events []audit.Event
+}
+
+var _ auth.DenialRecorder = (*fakeDenials)(nil)
+
+func (f *fakeDenials) RecordDenied(_ context.Context, a db.Actor, ev audit.Event) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.actors, f.events = append(f.actors, a), append(f.events, ev)
+	return f.err
+}
+
+func (f *fakeDenials) recorded() []audit.Event {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return append([]audit.Event(nil), f.events...)
+}
+
 type env struct {
 	h       http.Handler
+	perms   *fakePerms
+	denials *fakeDenials
 	ents    *fakeEnts
 	log     *logBuf
 	metrics *fakeMetrics
@@ -285,13 +402,13 @@ func newEnv(t *testing.T, res *fakeResolver, mod func(*auth.Options)) *env {
 
 func newEnvEnts(t *testing.T, res *fakeResolver, ents *fakeEnts, mod func(*auth.Options)) *env {
 	t.Helper()
-	e := &env{res: res, ents: ents, clk: clock.NewFake(t0), log: &logBuf{}, metrics: &fakeMetrics{}, reached: map[string]int{}, seen: map[string]auth.Session{}}
+	e := &env{res: res, ents: ents, perms: &fakePerms{}, denials: &fakeDenials{}, clk: clock.NewFake(t0), log: &logBuf{}, metrics: &fakeMetrics{}, reached: map[string]int{}, seen: map[string]auth.Session{}}
 	o := auth.Options{Clock: e.clk}
 	if mod != nil {
 		mod(&o)
 	}
 	rt := httpx.NewRouter(httpx.RouterOptions{})
-	routes, err := auth.NewRoutes(rt, res, ents, o)
+	routes, err := auth.NewRoutes(rt, res, ents, e.perms, e.denials, o)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -317,10 +434,10 @@ func newEnvEnts(t *testing.T, res *fakeResolver, ents *fakeEnts, mod func(*auth.
 	for _, m := range []string{"POST", "PUT", "PATCH", "DELETE"} {
 		routes.HandleFunc(m+" /v1/items", auth.Tenant, ventas, record("tenant-write"))
 	}
-	routes.HandleFunc("GET /v1/other", auth.Tenant, auth.Spec{Module: "inventario", Permission: "inventario.items:read"}, record("tenant2"))
-	routes.HandleFunc("GET /v1/exports", auth.Tenant, none, record("exports"))
+	routes.HandleFunc("GET /v1/other", auth.Tenant, auth.Spec{Module: "inventario", Permission: "inventario.stock:read"}, record("tenant2"))
+	routes.HandleFunc("GET /v1/exports", auth.Tenant, auth.Spec{Module: auth.NoModule, Permission: "reportes.management:export"}, record("exports"))
 	routes.HandleFunc("GET /v1/me/entitlements", auth.Tenant, none, record("me-entitlements"))
-	routes.HandleFunc("GET /v1/vet", auth.Tenant, auth.Spec{Module: "rubro.veterinaria", Permission: "vet.pets:read"}, record("vet"))
+	routes.HandleFunc("GET /v1/vet", auth.Tenant, auth.Spec{Module: "rubro.veterinaria", Permission: "veterinaria.records:read"}, record("vet"))
 	routes.HandleFunc("POST /v1/users", auth.Tenant, auth.Spec{Module: "ventas", Permission: "identidad.users:create", Limit: entitlements.LimitUsers}, record("users-create"))
 	routes.HandleFunc("GET /v1/teapot", auth.Tenant, ventas, func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusTeapot)

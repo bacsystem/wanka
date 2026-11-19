@@ -1,6 +1,7 @@
 package httpx_test
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -158,4 +159,30 @@ func countTableRows(t *testing.T) int {
 	text := string(raw)
 	section := text[strings.Index(text, "## 4. Formato de error"):strings.Index(text, "## 5.")]
 	return len(regexp.MustCompile(`(?m)^\| \d{3} \|`).FindAllString(section, -1))
+}
+
+// forbidden lleva el permiso que falta como string; sin él, el miembro no sale.
+func TestForbiddenCarriesPermissionOnlyWhenSet(t *testing.T) {
+	for _, tc := range []struct {
+		name, perm string
+		want       bool
+	}{{"with permission", "ventas.pos:read", true}, {"without", "", false}} {
+		t.Run(tc.name, func(t *testing.T) {
+			h, _, _ := chain(t, func(rt *httpx.Router) {
+				rt.HandleFunc("GET /x", func(w http.ResponseWriter, r *http.Request) {
+					httpx.WriteProblemExt(w, r, "forbidden", "", httpx.Extensions{Permission: tc.perm})
+				})
+			})
+			rec := do(h, httptest.NewRequest(http.MethodGet, "/x", nil))
+			mustProblem(t, rec, http.StatusForbidden, "forbidden")
+			var m map[string]any
+			if err := json.Unmarshal(rec.Body.Bytes(), &m); err != nil {
+				t.Fatal(err)
+			}
+			got, has := m["permission"]
+			if has != tc.want || (has && got != tc.perm) {
+				t.Fatalf("permission = %v (present %v), body %s", got, has, rec.Body.String())
+			}
+		})
+	}
 }

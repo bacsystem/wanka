@@ -88,24 +88,30 @@ func TestServeListenerInvalidatesTheServiceTheRoutesRead(t *testing.T) {
 		_ = admin.QueryRow(ctx, `SELECT count(*) FROM pg_stat_activity WHERE query LIKE 'LISTEN %' AND datname = current_database()`).Scan(&n)
 		return n > 0
 	})
-	get := func() int {
+	get := func() (int, string) {
 		req, _ := http.NewRequest(http.MethodGet, "http://"+addr+"/v1/items", nil)
 		req.Header.Set("Authorization", "Bearer "+s.Token)
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
 			t.Fatal(err)
 		}
-		resp.Body.Close()
-		return resp.StatusCode
+		defer resp.Body.Close()
+		var p struct{ Code string }
+		_ = json.NewDecoder(resp.Body).Decode(&p)
+		return resp.StatusCode, p.Code
 	}
-	if code := get(); code != 200 { // caliente la caché
-		t.Fatalf("GET /v1/items = %d, want 200", code)
+	// Caliente la caché. Los entitlements dejan pasar (el módulo ventas está en el plan) y
+	// decide el paso de permisos con el resolver que cablea serve (DenyAllPermissions hasta #29):
+	// 403 forbidden, y no module_not_enabled.
+	if code, problem := get(); code != 403 || problem != "forbidden" {
+		t.Fatalf("GET /v1/items = %d %s, want 403 forbidden", code, problem)
 	}
 	waitFor(t, "the 402 after the subscription turns morosa (NOTIFY, not the 30 s TTL)", func() bool {
 		if _, err := admin.Exec(ctx, `UPDATE platform.subscriptions SET status = 'morosa' WHERE tenant_id = $1`, s.TenantID); err != nil {
 			t.Fatal(err)
 		}
-		return get() == 402
+		code, _ := get()
+		return code == 402
 	})
 }
 

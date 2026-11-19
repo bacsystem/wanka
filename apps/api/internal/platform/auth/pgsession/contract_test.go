@@ -67,8 +67,9 @@ func TestLookupColumnsMatchTheFunction(t *testing.T) {
 
 	var rec auth.SessionRecord
 	rv := reflect.ValueOf(&rec).Elem()
-	if got := rv.NumField(); got != len(functionColumns) {
-		t.Fatalf("auth.SessionRecord has %d fields, the contract lists %d columns", got, len(functionColumns))
+	// ImpersonationScope no es una columna: iam.session_lookup no la devuelve hasta la ola 6 (#176).
+	if got := rv.NumField() - 1; got != len(functionColumns) {
+		t.Fatalf("auth.SessionRecord has %d column fields, the contract lists %d columns", got, len(functionColumns))
 	}
 	if len(fds) != len(functionColumns) {
 		t.Fatalf("iam.session_lookup returns %d columns, SessionRecord maps %d", len(fds), len(functionColumns))

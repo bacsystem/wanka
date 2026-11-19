@@ -5,14 +5,17 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgconn"
 
+	"github.com/bacsystem/wanka/apps/api/internal/platform/audit"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/clock"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/httpx"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/metrics"
+	"github.com/bacsystem/wanka/apps/api/internal/platform/permission"
 )
 
 // RouteClass es la clase de una ruta /v1 frente a la sesión (api/conventions.md
@@ -79,15 +82,23 @@ type Routes struct {
 	rt       *httpx.Router
 	resolver SessionResolver
 	ent      EntitlementSource
-	session  *httpx.Limiter
-	tenant   *httpx.Limiter
-	timeout  time.Duration
+	perms    PermissionResolver
+	denials  DenialRecorder
+	cache    *authzCache
+	// impersonation son los permisos de cada alcance del grant, calculados una vez al arrancar.
+	impersonation map[ImpersonationScope]map[permission.Code]struct{}
+	registered    []RouteInfo
+	session       *httpx.Limiter
+	tenant        *httpx.Limiter
+	timeout       time.Duration
 }
 
-// NewRoutes valida las opciones y devuelve el registrador sobre rt.
-func NewRoutes(rt *httpx.Router, resolver SessionResolver, ent EntitlementSource, o Options) (*Routes, error) {
-	if rt == nil || resolver == nil || ent == nil {
-		return nil, errors.New("auth: NewRoutes needs a router, a resolver and an entitlements source")
+// NewRoutes valida las opciones y devuelve el registrador sobre rt. perms
+// resuelve rol y permisos de la membresía (DenyAllPermissions hasta que exista
+// el de identidad) y denials registra los intentos denegados (*audit.Writer).
+func NewRoutes(rt *httpx.Router, resolver SessionResolver, ent EntitlementSource, perms PermissionResolver, denials DenialRecorder, o Options) (*Routes, error) {
+	if rt == nil || resolver == nil || ent == nil || perms == nil || denials == nil {
+		return nil, errors.New("auth: NewRoutes needs a router, a resolver, an entitlements source, a permission resolver and a denial recorder")
 	}
 	if o.Clock == nil {
 		o.Clock = clock.System{}
@@ -105,7 +116,10 @@ func NewRoutes(rt *httpx.Router, resolver SessionResolver, ent EntitlementSource
 	if err != nil {
 		return nil, fmt.Errorf("tenant limiter: %w", err)
 	}
-	return &Routes{rt: rt, resolver: resolver, ent: ent, session: sl, tenant: tl, timeout: o.LookupTimeout}, nil
+	return &Routes{rt: rt, resolver: resolver, ent: ent, perms: perms, denials: denials, cache: newAuthzCache(o.Clock),
+		impersonation: map[ImpersonationScope]map[permission.Code]struct{}{
+			ScopeReadOnly: impersonationSet(ScopeReadOnly), ScopeFull: impersonationSet(ScopeFull)},
+		session: sl, tenant: tl, timeout: o.LookupTimeout}, nil
 }
 
 func withDefaults(c httpx.LimiterConfig, name string, burst int, refill time.Duration, maxKeys int, key httpx.KeyFunc, clk clock.Clock) httpx.LimiterConfig {
@@ -176,21 +190,35 @@ func checkRoute(pattern string, class RouteClass) {
 // Handle registra h para pattern ("MÉTODO /v1/camino") con su clase y lo que
 // declara en el spec (Spec). En una ruta Tenant la cadena es sesión ->
 // limitadores -> entitlements (empresa cerrada, suscripción, módulo, límite) ->
-// pasos de opts (httpx.Use; ahí van los de RBAC) -> handler. Entra en pánico si
-// la clase o el spec no cumplen las reglas.
+// authz (versión de la membresía, 2FA del rol, x-permission) -> pasos de opts
+// (httpx.Use) -> idempotencia (httpx.Innermost) -> handler. El orden lo impone
+// este método, no cada ruta. Entra en pánico si la clase o el spec no cumplen
+// las reglas.
 func (r *Routes) Handle(pattern string, class RouteClass, spec Spec, h http.Handler, opts ...httpx.RouteOption) {
 	checkRoute(pattern, class)
 	checkSpec(pattern, class, spec)
+	r.registered = append(r.registered, RouteInfo{Pattern: pattern, Class: class, Spec: spec})
 	if class == Public {
 		r.rt.HandleV1(pattern, h, opts...)
 		return
 	}
 	mws := []httpx.Middleware{r.sessionStep(class == Tenant), r.session.Middleware()}
 	if class == Tenant {
-		mws = append(mws, r.tenant.Middleware(), r.entitlementsStep(pattern, spec))
+		mws = append(mws, r.tenant.Middleware(), r.entitlementsStep(pattern, spec), r.authzStep(pattern, spec))
 	}
 	r.rt.HandleV1(pattern, h, append([]httpx.RouteOption{httpx.Use(mws...)}, opts...)...)
 }
+
+// RouteInfo es una ruta registrada con su clase y lo que declara en el spec.
+type RouteInfo struct {
+	Pattern string
+	Class   RouteClass
+	Spec    Spec
+}
+
+// Registered devuelve las rutas registradas hasta ahora, en orden de registro.
+// Se llama después del arranque (la prueba de paridad con el spec).
+func (r *Routes) Registered() []RouteInfo { return slices.Clone(r.registered) }
 
 // HandleFunc es Handle con una función.
 func (r *Routes) HandleFunc(pattern string, class RouteClass, spec Spec, f http.HandlerFunc, opts ...httpx.RouteOption) {
@@ -227,7 +255,9 @@ func (r *Routes) sessionStep(needTenant bool) httpx.Middleware {
 				httpx.WriteProblem(w, req, "tenant_access_denied", detail)
 				return
 			}
-			next.ServeHTTP(w, req.WithContext(WithSession(req.Context(), s)))
+			// La ip queda vacía por ahora (clientIP); este es el punto donde la lee la auditoría.
+			ctx := audit.WithClientIP(WithSession(req.Context(), s), clientIP(req))
+			next.ServeHTTP(w, req.WithContext(ctx))
 		})
 	}
 }
