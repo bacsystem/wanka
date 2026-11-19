@@ -83,7 +83,7 @@ wanka migrate up                # aplica las migraciones pendientes y termina
 cuerpo) envuelve a un `httpx.Router`. Las rutas que no son `/v1` (salud) se
 registran con `rt.Handle("GET /healthz", h, opts...)`; `Handle` entra en pánico
 con cualquier patrón que `/v1` pueda alcanzar (`/v1`, `/v1/...` o un comodín
-inicial como `/{version}/x`). Las rutas `/v1` van por `auth.Routes` (ver «Sesión»).
+inicial como `/{version}/x`) y con cualquier `%` (ServeMux desescapa `/v%31/x` a `/v1/x`). Las rutas `/v1` van por `auth.Routes` (ver «Sesión»).
 
 - **Errores**: todo error es `application/problem+json` (RFC 9457) con `type`,
   `title`, `status`, `code` y `requestId`. El `code` sale de la lista cerrada de

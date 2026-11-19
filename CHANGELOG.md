@@ -16,7 +16,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - `apps/api`: `wanka serve --plane=tenant` mounts the session chain with the PostgreSQL resolver and the two limiters with the values of `api/conventions.md` §7, and runs a goroutine that calls `Routes.Sweep()` every 10 s and stops on graceful shutdown. `--plane=platform` and `--plane=webhooks` do not mount it. `.go-arch-lint.yml` has a new component for `internal/platform/auth/pgsession` that only `cmd` may wire (#196).
 
 ### Changed
-- `apps/api`: `httpx.Router.Handle` panics on any pattern a `/v1` request can reach (`/v1`, `/v1/...` or a leading wildcard such as `/{version}/x`); `/v1` routes are registered only by `auth.Routes`, through the new `Router.HandleV1`, so a module cannot register a `/v1` route without a class (#196).
+- `apps/api`: `httpx.Router.Handle` panics on any pattern a `/v1` request can reach (`/v1`, `/v1/...`, a leading wildcard such as `/{version}/x`, or any escaped `%` segment such as `/v%31/x`); `/v1` routes are registered only by `auth.Routes`, through the new `Router.HandleV1`, so a module cannot register a `/v1` route without a class (#196).
 
 ## [0.8.0] - 2026-11-19
 

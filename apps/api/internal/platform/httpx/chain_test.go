@@ -597,7 +597,7 @@ func TestAccessLogMarksAbortedRequests(t *testing.T) {
 // (que llama auth.Routes tras validar la clase) lo acepta.
 func TestRouterHandleRejectsV1Patterns(t *testing.T) {
 	noop := func(http.ResponseWriter, *http.Request) {}
-	for _, pattern := range []string{"GET /v1/x", "POST /v1/items/{id}", "GET /v1", "GET /{version}/x", "GET /{v}"} {
+	for _, pattern := range []string{"GET /v1/x", "POST /v1/items/{id}", "GET /v1", "GET /{version}/x", "GET /{v}", "GET /v%31/x", "GET /%76%31/x", "GET /v1%2Fx"} {
 		t.Run(pattern, func(t *testing.T) {
 			rt := httpx.NewRouter(httpx.RouterOptions{})
 			func() {
