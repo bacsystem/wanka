@@ -37,6 +37,7 @@ for m in "naive_session_lookup|wanka_app" \
          "drop_guard_trigger|wanka_app" \
          "drop_user_check|wanka_app" \
          "lookup_without_user_check|wanka_app" \
+         "lookup_not_distinct|superusuario: sesiones impersonadas" \
          "guard_allows_unrevoke|wanka_app" \
          "guard_no_server_created_at|wanka_app" \
          "guard_rerevoke_raises|wanka_app" \

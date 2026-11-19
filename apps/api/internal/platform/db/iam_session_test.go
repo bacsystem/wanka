@@ -1039,3 +1039,22 @@ func TestRevocationIsIrreversibleAndCreatedAtComesFromTheServer(t *testing.T) {
 		t.Errorf("created_at = %v, want the server's now() = %v", created, now)
 	}
 }
+
+// H10: una impersonada con membership_id y sin user_id (la escribe un superusuario o wanka_definer) ve la membresía ausente:
+// NULL no coincide con ningún usuario (por eso la comparación es IS DISTINCT FROM y no <>).
+func TestSessionLookupImpersonatedWithAMembershipSeesItAbsent(t *testing.T) {
+	d := migrated(t)
+	ctx := context.Background()
+	imp := d.SeedSession(t, dbtest.SessionSpec{Kind: dbtest.SessionImpersonated, MembershipVersion: 3})
+	admin := d.Admin(ctx, t)
+	if _, err := admin.Exec(ctx, `UPDATE iam.sessions SET membership_id = $2 WHERE id = $1`, imp.SessionID, imp.MembershipID); err != nil {
+		t.Fatal(err)
+	}
+	rows, err := lookup(ctx, connectAs(t, d, dbtest.App), imp.Token)
+	if err != nil || len(rows) != 1 {
+		t.Fatalf("lookup = %v, %v", rows, err)
+	}
+	if r := rows[0]; r.UserID != nil || r.Membership == nil || r.CurrentVersion != nil || r.MembershipStatus != nil {
+		t.Errorf("row = %+v, want user_id NULL, membership_id set and the membership absent", r)
+	}
+}
