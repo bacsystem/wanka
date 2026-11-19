@@ -3,6 +3,14 @@
 All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Changed
+- `docs/ai-collaboration.md`: how a collaborator works with Claude Code or Gemini, where every rule and state lives (repo docs, issues, PRs, `wanka-memory`, `bacsystem/skills`, never an AI's private memory), how to set up each tool and how to pick up work another person or AI started; owner rules that only lived in conversation are written down.
+- Delivery process: stories ship as independent PRs from `main` that never touch the version; one release PR per batch bumps it and gets one tag. Risky PRs keep separate review and QA; the rest get both in one pass. Rules in `docs/delivery-process.md` and `CLAUDE.md` (owner decision, 2026-11-19).
+- Release tags are created by the new `release-tag.yml` workflow when a `chore(release): vX.Y.Z` PR is merged and CI and API are green on that commit.
+- `docs/architecture/review-checklist.md`: known defect classes from the kernel batches, read by developers before coding and used by reviews; `docs/delivery-process.md` adds the performance rules (one full suite run per PR, architect pre-review, shared test database, short reports).
+
 ## [0.18.0] - 2026-11-19
 
 ### Added

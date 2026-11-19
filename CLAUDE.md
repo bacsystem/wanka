@@ -31,10 +31,10 @@ pnpm workspace monorepo. Only app so far: `apps/web` (Next.js 16 App Router, Rea
 
 ## Team rules
 
-- Commits and PRs, including those opened by agents, go through the `/git-flow` skill, not a hand-run `gh pr create`.
-- Every PR bumps the version (root and `apps/web` `package.json`, `CHANGELOG.md`): `feat` and breaking changes → minor (even in 0.x), everything else → patch. Bump right before merge, in merge order.
-- Every PR goes through `/pr-review` and its report is posted as a PR comment; re-reviews after new commits too.
-- No merge, tag or release without the owner's explicit approval.
+- Commits and PRs (agents' too) go through `/git-flow`, never a hand-run `gh pr create`.
+- Delivery and done: `docs/delivery-process.md`; working with Claude or Gemini and handing work over: `docs/ai-collaboration.md`. Story PRs from `main`, no version bump, a `CHANGELOG` `[Unreleased]` entry; one release PR per batch, tagged by `release-tag.yml`.
+- Every PR gets `/pr-review` posted as a PR comment (re-reviews too) and QA on its final SHA.
+- No merge or release without the owner's explicit approval.
 - bacsystem standard: the UI is built with khipu-design-system components, never hardcoded styles (`[...]` values, hex/rgb, palette colors, inline `style`); a missing component or variant goes to the DS first. Until the migration plan (PR #128, `docs/frontend-migration-khipu.md`) lands, the local wrappers below are the transition path: don't add new look-alikes.
 
 ## Commands
