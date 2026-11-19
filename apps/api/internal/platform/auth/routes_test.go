@@ -646,8 +646,9 @@ func TestNewRoutesValidatesItsInputs(t *testing.T) {
 
 // --- WWW-Authenticate ---
 
-func TestWWWAuthenticateOnlyOnTheTwoKernel401Codes(t *testing.T) {
-	for code, want := range map[string]string{"unauthenticated": "Bearer", "session_expired": "Bearer", "invalid_credentials": "", "forbidden": "", "internal": ""} {
+// Todo 401 lleva el desafío (RFC 9110 §15.5.2), también invalid_credentials; nada más lo lleva.
+func TestWWWAuthenticateOnEvery401AndOnlyOn401(t *testing.T) {
+	for code, want := range map[string]string{"unauthenticated": "Bearer", "session_expired": "Bearer", "invalid_credentials": "Bearer", "forbidden": "", "tenant_access_denied": "", "internal": ""} {
 		rec := httptest.NewRecorder()
 		httpx.WriteProblem(rec, httptest.NewRequest(http.MethodGet, "/x", nil), code, "")
 		if got := rec.Header().Get("WWW-Authenticate"); got != want {
