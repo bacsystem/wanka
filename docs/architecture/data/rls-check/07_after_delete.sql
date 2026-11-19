@@ -35,3 +35,9 @@ SELECT test.assert((SELECT tenant_id IS NULL AND membership_id IS NULL AND site_
                            AND mfa_satisfied AND mfa_method = 'none' AND impersonator_id IS NULL
                       FROM iam.session_lookup(sha256('tok-cajero'))), 'sesion desligada: sigue viva, sin tenant, conserva la 2FA');
 SELECT test.assert((SELECT revoked_at IS NULL FROM iam.sessions WHERE id = '5e000000-0000-0000-0000-000000000001'), 'sesion desligada: no revocada');
+\echo '== A9b. (wanka_app) membresia borrada: sin tenant, el ex miembro no ve su empresa ni su membresia (issue #187) =='
+BEGIN;
+SELECT set_config('app.user_id','eeeeeeee-0000-0000-0000-000000000002', true);
+SELECT test.assert((SELECT count(*) FROM org.tenants) = 0 AND (SELECT count(*) FROM iam.memberships) = 0
+                   AND (SELECT count(*) FROM iam.roles) = 0 AND (SELECT count(*) FROM iam.list_my_memberships) = 0, 'borrada: 0 filas de la empresa sin tenant');
+COMMIT;

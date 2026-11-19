@@ -10,6 +10,7 @@ require (
 	github.com/riverqueue/river v0.44.1
 	github.com/riverqueue/river/riverdriver/riverpgxv5 v0.44.1
 	github.com/riverqueue/river/rivertype v0.44.1
+	github.com/shopspring/decimal v1.4.0
 )
 
 require (

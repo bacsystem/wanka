@@ -19,6 +19,14 @@ COMMIT;
 DO $$ DECLARE n int; BEGIN DELETE FROM iam.sessions; GET DIAGNOSTICS n = ROW_COUNT; PERFORM test.assert(n > 0, 'wanka_worker borra sesiones'); RAISE EXCEPTION 'rollback' USING ERRCODE = 'P0001'; EXCEPTION WHEN SQLSTATE 'P0001' THEN NULL; END $$;
 \echo '== K1c. (wanka_worker) tablas de River: todo el DML de la cola, sin river_migration =='
 SELECT test.river_worker_full();
+\echo '== K1c. (wanka_worker) iam.mfa_enrollments: limpieza por expires_at sin leer hashes ni secretos (#25) =='
+SELECT test.expect_error('SELECT token_hash FROM iam.mfa_enrollments', '42501', 'wanka_worker no lee token_hash');
+SELECT test.expect_error('SELECT email_code_hmac FROM iam.mfa_enrollments', '42501', 'wanka_worker no lee el HMAC del emailCode');
+SELECT test.expect_error('SELECT totp_secret_enc FROM iam.mfa_enrollments', '42501', 'wanka_worker no lee el secreto pendiente');
+DO $$ DECLARE n int; BEGIN DELETE FROM iam.mfa_enrollments WHERE expires_at < now() + interval '1 day'; GET DIAGNOSTICS n = ROW_COUNT;
+  PERFORM test.assert(n > 0, 'wanka_worker borra tokens de enrolamiento por expires_at'); RAISE EXCEPTION 'rollback' USING ERRCODE = 'P0001';
+  EXCEPTION WHEN SQLSTATE 'P0001' THEN NULL; END $$;
+SELECT test.expect_error('INSERT INTO iam.mfa_enrollments DEFAULT VALUES', '42501', 'wanka_worker no inserta tokens de enrolamiento');
 \echo '== K2. catalogo: duenio y search_path de las funciones SECURITY DEFINER, roles y FORCE RLS =='
 SELECT test.assert((SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
                      WHERE p.prosecdef AND n.nspname IN ('iam','ops','platform_fn')
@@ -64,3 +72,33 @@ DO $$ DECLARE n int; BEGIN
   PERFORM test.assert(n = 1, 'con tenant A fijado, la limpieza no alcanza las vencidas de B');
   RAISE EXCEPTION 'rollback' USING ERRCODE = 'RR177';
   EXCEPTION WHEN SQLSTATE 'RR177' THEN NULL; END $$;
+\echo '== K3. ops.exchange_rates (issue #170): wanka_worker solo inserta, y la base valida moneda, fuente y valores =='
+SELECT test.expect_error('SELECT buy FROM ops.exchange_rates', '42501', 'wanka_worker no lee los tipos de cambio');
+SELECT test.expect_error($$UPDATE ops.exchange_rates SET buy = 1$$, '42501', 'wanka_worker no actualiza tipos de cambio');
+SELECT test.expect_error($$DELETE FROM ops.exchange_rates$$, '42501', 'wanka_worker no borra tipos de cambio');
+SELECT test.expect_error($$INSERT INTO ops.exchange_rates VALUES ('2026-11-20', 'EUR', 3.7, 3.8, 'official')$$, '23514', 'moneda distinta de USD');
+SELECT test.expect_error($$INSERT INTO ops.exchange_rates VALUES ('2026-11-20', 'USD', 0, 3.8, 'official')$$, '23514', 'compra en cero');
+SELECT test.expect_error($$INSERT INTO ops.exchange_rates VALUES ('2026-11-20', 'USD', 3.7, -3.8, 'official')$$, '23514', 'venta negativa');
+SELECT test.expect_error($$INSERT INTO ops.exchange_rates VALUES ('2026-11-20', 'USD', 3.7, 3.8, 'sbs')$$, '23514', 'fuente desconocida');
+INSERT INTO ops.exchange_rates VALUES ('2026-11-20', 'USD', 3.7, 3.8, 'manual');
+\echo '== E2. entitlements (#171): wanka_worker lee las tablas de entitlements y escribe SOLO platform.tenant_usage =='
+SELECT test.assert((SELECT count(*) FROM platform.modules) >= 21 AND (SELECT count(*) FROM platform.plans) >= 1
+                   AND (SELECT count(*) FROM platform.subscriptions) = 0, 'wanka_worker lee los entitlements');
+BEGIN;
+INSERT INTO platform.tenant_usage (tenant_id, period, cpe_issued) VALUES ('aaaaaaaa-0000-0000-0000-000000000001', '2026-11-01', 1);
+INSERT INTO platform.tenant_usage (tenant_id, period, cpe_issued) VALUES ('aaaaaaaa-0000-0000-0000-000000000001', '2026-11-01', 2)
+  ON CONFLICT (tenant_id, period) DO UPDATE SET cpe_issued = platform.tenant_usage.cpe_issued + EXCLUDED.cpe_issued;
+SELECT test.assert((SELECT cpe_issued FROM platform.tenant_usage WHERE tenant_id = 'aaaaaaaa-0000-0000-0000-000000000001') = 3, 'wanka_worker inserta y actualiza el uso');
+ROLLBACK;
+SELECT test.expect_error($$DELETE FROM platform.tenant_usage$$, '42501', 'wanka_worker no borra uso');
+SELECT test.expect_error($$INSERT INTO platform.subscriptions (id, tenant_id, plan_id, status)
+  VALUES (gen_random_uuid(), 'aaaaaaaa-0000-0000-0000-000000000001', (SELECT id FROM platform.plans LIMIT 1), 'activa')$$, '42501', 'wanka_worker no inserta suscripciones');
+SELECT test.expect_error($$UPDATE platform.subscriptions SET status = 'activa'$$, '42501', 'wanka_worker no actualiza suscripciones');
+SELECT test.expect_error($$UPDATE platform.plans SET name = 'x'$$, '42501', 'wanka_worker no edita planes');
+SELECT test.expect_error($$INSERT INTO platform.tenant_module_overrides (tenant_id, module_code, enabled) VALUES ('aaaaaaaa-0000-0000-0000-000000000001', 'ventas', true)$$,
+                         '42501', 'wanka_worker no escribe overrides');
+\echo '== K3. (wanka_worker) iam.permissions es de solo lectura (issue #172) =='
+SELECT test.assert((SELECT count(*) FROM iam.permissions) > 100, 'wanka_worker lee el catalogo de permisos');
+SELECT test.expect_error($$INSERT INTO iam.permissions (code, description) VALUES ('ventas.pos:void', 'Anular ventas')$$, '42501', 'wanka_worker no inserta permisos');
+SELECT test.expect_error($$UPDATE iam.permissions SET description = 'x'$$, '42501', 'wanka_worker no actualiza permisos');
+SELECT test.expect_error($$DELETE FROM iam.permissions$$, '42501', 'wanka_worker no borra permisos');

@@ -27,13 +27,21 @@ sh "$run" || { echo "FAIL: rls-check/run.sh falló sin mutación" >&2; exit 1; }
 
 # Cada mutación rompe una línea clave y debe hacer fallar el paso que la prueba.
 for m in "naive_session_lookup|wanka_app" \
-         "session_lookup_no_restore|wanka_app (membresia borrada)" \
+         "session_lookup_no_restore|wanka_app" \
+         "session_lookup_no_restore_deleted|wanka_app (membresia borrada)" \
+         "member_read_tenants_no_status|wanka_app" \
+         "own_memberships_no_status|wanka_app" \
          "drop_authz_check|wanka_app" \
          "revoke_app_sessions_insert|wanka_app" \
          "grant_app_update_tenants|wanka_app" \
          "drop_impersonated_check|superusuario: sesiones impersonadas" \
          "revoke_worker_session_columns|wanka_worker" \
          "grant_app_update_all_sessions|wanka_app" \
+         "grant_app_update_all_mfa_enrollments|wanka_app" \
+         "drop_mfa_guard_trigger|wanka_app" \
+         "mfa_guard_no_server_created_at|wanka_app" \
+         "mfa_guard_allows_reopen|wanka_app" \
+         "revoke_worker_mfa_enrollment_columns|wanka_worker" \
          "drop_guard_trigger|wanka_app" \
          "drop_user_check|wanka_app" \
          "lookup_without_user_check|wanka_app" \
@@ -41,7 +49,19 @@ for m in "naive_session_lookup|wanka_app" \
          "guard_allows_unrevoke|wanka_app" \
          "guard_no_server_created_at|wanka_app" \
          "guard_rerevoke_raises|wanka_app" \
+         "grant_app_write_subscriptions|wanka_app" \
+         "enable_rls_platform_subscriptions|wanka_app" \
+         "grant_worker_write_subscriptions|wanka_worker" \
+         "revoke_worker_usage_write|wanka_worker" \
+         "grant_webhooks_platform|wanka_webhooks" \
+         "grant_app_write_permissions|wanka_app" \
+         "grant_worker_write_permissions|wanka_worker" \
+         "revoke_platform_permissions|wanka_platform" \
+         "grant_webhooks_permissions|wanka_webhooks" \
          "drop_force_rls|wanka_migrator: borra la membresia" \
+         "grant_app_write_exchange_rates|wanka_app" \
+         "grant_worker_read_exchange_rates|wanka_worker" \
+         "drop_exchange_rates_currency_check|wanka_worker" \
          "grant_app_select_river_job|wanka_app" \
          "revoke_app_river_sequence|wanka_app" \
          "revoke_platform_river_insert|wanka_platform" \

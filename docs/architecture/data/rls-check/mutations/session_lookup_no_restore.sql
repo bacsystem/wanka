@@ -1,6 +1,6 @@
 -- Mutacion: session_lookup sin restaurar app.tenant_id del llamador (deja fijado el tenant de la sesion).
--- Demuestra que el caso A9 de 07_after_delete.sql distingue (lo comprueba dentro de una transaccion).
--- Uso: MUTATION=session_lookup_no_restore sh run.sh   (debe terminar con exit distinto de 0)
+-- Demuestra que los casos A1 de 05_app.sql y A9 de 07_after_delete.sql distinguen (los dos comprueban dentro de una transaccion).
+-- Uso: MUTATION=session_lookup_no_restore sh run.sh   (debe fallar en el paso «wanka_app», el primero que lo ve)
 \set ON_ERROR_STOP on
 CREATE OR REPLACE FUNCTION iam.session_lookup(p_access_hash bytea)
   RETURNS TABLE (session_id uuid, user_id uuid, tenant_id uuid, site_id uuid, cash_register_id uuid, membership_id uuid,

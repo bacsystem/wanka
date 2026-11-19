@@ -308,3 +308,73 @@ func TestLogsAreJSONWithRequestIDAndNoSecrets(t *testing.T) {
 		t.Fatalf("stderr leaks: %s", p.stderr)
 	}
 }
+
+// mailerWarnings arranca serve (plano webhooks), lee el log hasta «listening» y
+// devuelve los avisos WARN sobre el correo. El aviso sale antes de «listening».
+// No usa el worker: sin base sale con código 1 antes de arrancar (#169).
+func mailerWarnings(t *testing.T, extra ...string) []map[string]any {
+	t.Helper()
+	p := start(t, append(okEnv(), extra...), "serve", "--plane=webhooks")
+	var warns []map[string]any
+	timeout := time.After(10 * time.Second)
+	for done := false; !done; {
+		select {
+		case m, ok := <-p.lines:
+			if !ok {
+				t.Fatalf("process ended before \"listening\"; stderr: %s", p.stderr)
+			}
+			if m["level"] == "WARN" && strings.Contains(fmt.Sprint(m["msg"]), "mailer") {
+				warns = append(warns, m)
+			}
+			done = m["msg"] == "listening"
+		case <-timeout:
+			t.Fatal("timeout waiting for \"listening\"")
+		}
+	}
+	p.terminate(t)
+	return warns
+}
+
+func TestStubMailerInProductionWarns(t *testing.T) {
+	// Por defecto: MAILER=stub y APP_ENV=production.
+	if w := mailerWarnings(t); len(w) != 1 {
+		t.Fatalf("want one mailer WARN, got %v", w)
+	}
+	if w := mailerWarnings(t, "MAILER=stub", "APP_ENV=production"); len(w) != 1 {
+		t.Fatalf("want one mailer WARN, got %v", w)
+	}
+}
+
+func TestMailerWarningIsAbsentInDevelopment(t *testing.T) {
+	for _, env := range [][]string{
+		{"APP_ENV=development"},
+		{"MAILER=none", "APP_ENV=development"},
+	} {
+		if w := mailerWarnings(t, env...); len(w) != 0 {
+			t.Errorf("%v: unexpected WARN %v", env, w)
+		}
+	}
+}
+
+// staging cuenta como producción; sin correo real, también avisa MAILER=none.
+func TestMailerWarnsInStagingAndWhenDisabledInProduction(t *testing.T) {
+	for _, env := range [][]string{
+		{"APP_ENV=staging"},
+		{"MAILER=none"},
+		{"MAILER=none", "APP_ENV=staging"},
+	} {
+		if w := mailerWarnings(t, env...); len(w) != 1 {
+			t.Errorf("%v: want one mailer WARN, got %v", env, w)
+		}
+	}
+}
+
+func TestInvalidMailerExitsNonZeroNamingTheVariable(t *testing.T) {
+	cmd := exec.Command(binPath, "worker")
+	cmd.Env = append(okEnv(), "MAILER=smtp")
+	out, err := cmd.CombinedOutput()
+	var ee *exec.ExitError
+	if !asExit(err, &ee) || ee.ExitCode() == 0 || !strings.Contains(string(out), "MAILER") {
+		t.Fatalf("want non-zero exit naming MAILER, got %v: %s", err, out)
+	}
+}

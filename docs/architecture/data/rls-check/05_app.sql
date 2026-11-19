@@ -4,16 +4,44 @@
 \echo '== A1. session_lookup sin variables: sesion en version 1, membresia en version 2 y activa =='
 SELECT test.assert(current_user = 'wanka_app' AND NULLIF(current_setting('app.tenant_id', true),'') IS NULL, 'rol wanka_app y sin tenant');
 SELECT test.assert(current_setting('statement_timeout') = '5s', 'wanka_app hereda statement_timeout 5s del bootstrap');
+-- La busqueda y la comprobacion de app.tenant_id van en UNA transaccion: set_config(..., true) dura hasta su fin, asi que
+-- fuera de ella el valor ya se borro y la asercion no distingue (mismo defecto que H6 en 07_after_delete.sql).
+BEGIN;
 SELECT test.assert((SELECT session_authz_version = 1 AND current_authz_version = 2 AND membership_status = 'activo'
                            AND site_id = 'a5000000-0000-0000-0000-0000000000a1' AND cash_register_id = 'ca000000-0000-0000-0000-0000000000a1'
                            AND mfa_satisfied AND mfa_method = 'none'
                       FROM iam.session_lookup(sha256('tok-cajero'))), 'session_lookup: version 1 -> 2/activo, con sede y caja');
-SELECT test.assert(NULLIF(current_setting('app.tenant_id', true),'') IS NULL, 'session_lookup no filtra app.tenant_id');
+SELECT test.assert(NULLIF(current_setting('app.tenant_id', true),'') IS NULL, 'TX: session_lookup no filtra app.tenant_id');
+COMMIT;
 SELECT test.assert((SELECT count(*) FROM iam.session_lookup(sha256('tok-a-medio-login'))) = 0, 'session_lookup ignora sesiones con mfa_satisfied = false');
 \echo '== A2. lectura directa de iam.memberships sin tenant =='
 SELECT test.assert((SELECT count(*) FROM iam.memberships) = 0, 'RLS: 0 membresias sin tenant');
 SELECT test.assert((SELECT count(*) FROM iam.roles) = 0, 'RLS: 0 roles sin tenant');
 SELECT test.assert((SELECT count(*) FROM org.tenants) = 0, 'RLS: 0 empresas sin tenant');
+\echo '== A2b. ex miembro (membresia suspendida) sin tenant: la base no le da ninguna fila de la empresa (issue #187) =='
+-- Sin app.tenant_id y solo con app.user_id, como GET /v1/me/memberships. No depende de que un handler filtre.
+BEGIN;
+SELECT set_config('app.user_id','eeeeeeee-0000-0000-0000-000000000003', true);
+SELECT test.assert((SELECT count(*) FROM org.tenants) = 0, 'ex miembro: 0 filas de org.tenants');
+SELECT test.assert((SELECT count(*) FROM iam.memberships) = 0, 'ex miembro: 0 membresias (la suspendida no se lee)');
+SELECT test.assert((SELECT count(*) FROM iam.roles) = 0 AND (SELECT count(*) FROM org.sites) = 0, 'ex miembro: 0 roles y 0 sedes');
+SELECT test.assert((SELECT count(*) FROM iam.list_my_memberships) = 0, 'ex miembro: list_my_memberships vacia');
+COMMIT;
+-- Las membresias invitado/activo siguen visibles: el filtro no cierra de mas.
+BEGIN;
+SELECT set_config('app.user_id','eeeeeeee-0000-0000-0000-000000000002', true);   -- cajero: activo en A
+SELECT test.assert((SELECT string_agg(t.name || ':' || m.status, ',') FROM org.tenants t JOIN iam.memberships m ON m.tenant_id = t.id) = 'Empresa A:activo', 'activo: ve su empresa y su membresia');
+COMMIT;
+BEGIN;
+SELECT set_config('app.user_id','eeeeeeee-0000-0000-0000-000000000009', true);   -- propietario de B: invitado
+SELECT test.assert((SELECT string_agg(t.name || ':' || m.status, ',') FROM org.tenants t JOIN iam.memberships m ON m.tenant_id = t.id) = 'Empresa B:invitado', 'invitado: ve su empresa y su membresia');
+COMMIT;
+-- Catalogo: el filtro de estado esta escrito en las dos politicas. Con own_memberships filtrando, la subconsulta de member_read
+-- ya no ve la suspendida, asi que quitarlo de member_read no cambia ninguna fila: solo el catalogo lo distingue.
+SELECT test.assert((SELECT qual ~ 'status' AND qual ~ 'invitado' AND qual ~ 'activo' AND qual ~ 'current_tenant' FROM pg_policies
+                     WHERE schemaname = 'org' AND tablename = 'tenants' AND policyname = 'member_read'), 'org.tenants member_read exige invitado/activo');
+SELECT test.assert((SELECT qual ~ 'status' AND qual ~ 'invitado' AND qual ~ 'activo' FROM pg_policies
+                     WHERE schemaname = 'iam' AND tablename = 'memberships' AND policyname = 'own_memberships'), 'iam.memberships own_memberships exige invitado/activo');
 \echo '== A3. list_my_memberships (security_invoker) con solo app.user_id del cajero =='
 BEGIN;
 SELECT set_config('app.user_id','eeeeeeee-0000-0000-0000-000000000002', true);
@@ -191,4 +219,110 @@ DO $$ DECLARE n int; BEGIN
   PERFORM test.assert(n = 1, 'U2 inserta la misma clave que U1: es otra fila');
 END $$;
 SELECT test.assert((SELECT count(*) FROM ops.idempotency_keys WHERE key = 'dos-usuarios') = 2, 'U1 y U2 con la misma clave dejan dos filas');
+\echo '== A10. ops.exchange_rates (global, sin RLS; issue #170): wanka_app solo lee =='
+SELECT test.expect_error($$INSERT INTO ops.exchange_rates VALUES ('2026-11-19', 'USD', 3.7, 3.8, 'official')$$, '42501', 'wanka_app no inserta tipos de cambio');
+SELECT test.expect_error($$UPDATE ops.exchange_rates SET buy = 1$$, '42501', 'wanka_app no actualiza tipos de cambio');
+SELECT test.expect_error($$DELETE FROM ops.exchange_rates$$, '42501', 'wanka_app no borra tipos de cambio');
+SELECT test.assert((SELECT count(*) FROM ops.exchange_rates) = 1, 'wanka_app lee la tasa sembrada sin tenant fijado (tabla global)');
+\echo '== E1. entitlements (#171): wanka_app solo LEE las tablas de platform de entitlements, que no tienen RLS =='
+SELECT test.assert((SELECT count(*) FROM platform.modules) >= 21 AND (SELECT count(*) FROM platform.plan_modules) >= 21,
+                   'wanka_app lee el catalogo de modulos y los modulos del plan');
+SELECT test.assert((SELECT count(*) FROM platform.plans WHERE code = 'semilla' AND non_production) = 1, 'wanka_app lee el plan semilla, marcado no productivo');
+SELECT test.assert((SELECT count(*) FROM platform.subscriptions) = 0 AND (SELECT count(*) FROM platform.tenant_module_overrides) = 0
+                   AND (SELECT count(*) FROM platform.feature_flags) = 0 AND (SELECT count(*) FROM platform.tenant_flag_overrides) = 0
+                   AND (SELECT count(*) FROM platform.tenant_usage) = 0, 'wanka_app lee el resto de las tablas de entitlements (vacias)');
+SELECT test.assert((SELECT count(*) = 8 AND NOT bool_or(c.relrowsecurity OR c.relforcerowsecurity) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+                     WHERE n.nspname = 'platform' AND c.relname IN ('modules','plans','plan_modules','subscriptions','tenant_module_overrides',
+                                                                   'feature_flags','tenant_flag_overrides','tenant_usage')),
+                   'las 8 tablas de entitlements existen y no tienen RLS');
+SELECT test.expect_error($$INSERT INTO platform.subscriptions (id, tenant_id, plan_id, status)
+  VALUES (gen_random_uuid(), 'aaaaaaaa-0000-0000-0000-000000000001', (SELECT id FROM platform.plans LIMIT 1), 'activa')$$, '42501', 'wanka_app no inserta suscripciones');
+SELECT test.expect_error($$UPDATE platform.subscriptions SET status = 'activa'$$, '42501', 'wanka_app no actualiza suscripciones');
+SELECT test.expect_error($$DELETE FROM platform.subscriptions$$, '42501', 'wanka_app no borra suscripciones');
+SELECT test.expect_error($$INSERT INTO platform.tenant_module_overrides (tenant_id, module_code, enabled) VALUES ('aaaaaaaa-0000-0000-0000-000000000001', 'ventas', true)$$,
+                         '42501', 'wanka_app no escribe overrides de modulos');
+SELECT test.expect_error($$INSERT INTO platform.tenant_flag_overrides (tenant_id, flag_key, enabled) VALUES ('aaaaaaaa-0000-0000-0000-000000000001', 'f', true)$$,
+                         '42501', 'wanka_app no escribe overrides de flags');
+SELECT test.expect_error($$INSERT INTO platform.tenant_usage (tenant_id, period) VALUES ('aaaaaaaa-0000-0000-0000-000000000001', '2026-11-01')$$,
+                         '42501', 'wanka_app no escribe el uso (lo escribe wanka_worker)');
+SELECT test.expect_error($$UPDATE platform.plans SET name = 'x'$$, '42501', 'wanka_app no edita planes');
+SELECT test.expect_error($$INSERT INTO platform.modules (code, kind, description) VALUES ('x', 'core', 'x')$$, '42501', 'wanka_app no edita modulos');
+SELECT test.expect_error($$INSERT INTO platform.plan_modules (plan_id, module_code) VALUES ((SELECT id FROM platform.plans LIMIT 1), 'x')$$, '42501', 'wanka_app no edita plan_modules');
+SELECT test.expect_error($$INSERT INTO platform.feature_flags (key) VALUES ('x')$$, '42501', 'wanka_app no edita flags');
+-- Catalogo de permisos (issue #172): wanka_app lo lee y no lo escribe, sin importar el tenant fijado.
+\echo '== C1. wanka_app: iam.permissions es de solo lectura =='
+SELECT test.assert((SELECT count(*) FROM iam.permissions) > 100
+                   AND EXISTS (SELECT 1 FROM iam.permissions WHERE code = 'ventas.pos:create'), 'wanka_app lee el catalogo de permisos');
+SELECT test.expect_error($$INSERT INTO iam.permissions (code, description) VALUES ('ventas.pos:void', 'Anular ventas')$$, '42501', 'wanka_app no inserta permisos');
+SELECT test.expect_error($$UPDATE iam.permissions SET description = 'x'$$, '42501', 'wanka_app no actualiza permisos');
+SELECT test.expect_error($$DELETE FROM iam.permissions$$, '42501', 'wanka_app no borra permisos');
+SELECT test.expect_error($$TRUNCATE iam.permissions$$, '42501', 'wanka_app no vacia permisos');
+
+\echo '== E1. iam.mfa_enrollments (#25): grants por columna, CHECK y trigger del token de enrolamiento =='
+-- e1: token consumido con dos envios; e2: token vivo con el secreto pendiente fijado.
+BEGIN;
+INSERT INTO iam.mfa_enrollments (id, user_id, token_hash, email_code_hmac, expires_at)
+  VALUES ('e0000000-0000-0000-0000-0000000000e1', 'eeeeeeee-0000-0000-0000-000000000002', sha256('wk_en_prueba'),
+          sha256('hmac-prueba'), now() + interval '10 minutes'),
+         ('e0000000-0000-0000-0000-0000000000e2', 'eeeeeeee-0000-0000-0000-000000000002', sha256('wk_en_vivo'),
+          sha256('hmac-vivo'), now() + interval '10 minutes');
+-- reenvio, secreto pendiente y consumo: lo que el contrato permite
+UPDATE iam.mfa_enrollments SET email_code_hmac = sha256('hmac-2'), email_sends = 2, totp_secret_enc = '\x00', consumed_at = now()
+ WHERE id = 'e0000000-0000-0000-0000-0000000000e1';
+UPDATE iam.mfa_enrollments SET totp_secret_enc = '\x01' WHERE id = 'e0000000-0000-0000-0000-0000000000e2';
+SELECT test.assert((SELECT email_sends = 2 AND consumed_at IS NOT NULL FROM iam.mfa_enrollments WHERE id = 'e0000000-0000-0000-0000-0000000000e1'),
+                   'wanka_app reenvia, guarda el secreto pendiente y consume el token');
+COMMIT;
+SELECT test.expect_error($$UPDATE iam.mfa_enrollments SET expires_at = expires_at + interval '1 hour'$$, '42501', 'wanka_app no alarga un token de enrolamiento');
+SELECT test.expect_error($$UPDATE iam.mfa_enrollments SET user_id = 'eeeeeeee-0000-0000-0000-000000000001'$$, '42501', 'wanka_app no pasa el token a otro usuario');
+SELECT test.expect_error($$UPDATE iam.mfa_enrollments SET token_hash = sha256('otro')$$, '42501', 'wanka_app no cambia token_hash');
+SELECT test.expect_error($$DELETE FROM iam.mfa_enrollments$$, '42501', 'wanka_app no borra tokens de enrolamiento');
+SELECT test.assert(NOT has_column_privilege('wanka_app', 'iam.mfa_enrollments', c, 'UPDATE'), 'wanka_app sin UPDATE en iam.mfa_enrollments.' || c)
+  FROM unnest(ARRAY['id','user_id','token_hash','expires_at','created_at']) AS c;
+SELECT test.expect_error($$INSERT INTO iam.mfa_enrollments (id, user_id, token_hash, email_code_hmac, expires_at)
+  VALUES (gen_random_uuid(), 'eeeeeeee-0000-0000-0000-000000000002', sha256('t2'), sha256('h2'), now() + interval '11 minutes')$$,
+  '23514', 'token de enrolamiento de mas de 10 min');
+SELECT test.expect_error($$INSERT INTO iam.mfa_enrollments (id, user_id, token_hash, email_code_hmac, expires_at)
+  VALUES (gen_random_uuid(), 'eeeeeeee-0000-0000-0000-000000000002', sha256('t3'), '\x00', now() + interval '5 minutes')$$,
+  '23514', 'email_code_hmac de 32 bytes');
+SELECT test.expect_error($$UPDATE iam.users SET mfa_failed_attempts = 5 WHERE id = 'eeeeeeee-0000-0000-0000-000000000002'$$, '23514', 'el 5o fallo bloquea, no se guarda');
+SELECT test.expect_error($$UPDATE iam.users SET mfa_lockouts = 4 WHERE id = 'eeeeeeee-0000-0000-0000-000000000002'$$, '23514', 'con 3 bloqueos el segundo paso ya esta cerrado');
+-- Trigger, INSERT: created_at lo fija el servidor. Un created_at futuro no hace pasar un TTL largo por el CHECK.
+SELECT test.expect_error($$INSERT INTO iam.mfa_enrollments (id, user_id, token_hash, email_code_hmac, created_at, expires_at)
+  VALUES (gen_random_uuid(), 'eeeeeeee-0000-0000-0000-000000000002', sha256('t4'), sha256('h4'), now() + interval '30 days' - interval '5 minutes', now() + interval '30 days')$$,
+  '23514', 'un created_at futuro no deja un token vigente semanas');
+BEGIN;
+INSERT INTO iam.mfa_enrollments (id, user_id, token_hash, email_code_hmac, created_at, email_sent_at, email_sends, consumed_at, expires_at)
+  VALUES ('e0000000-0000-0000-0000-0000000000e3', 'eeeeeeee-0000-0000-0000-000000000002', sha256('t5'), sha256('h5'),
+          now() - interval '1 day', now() - interval '1 day', 3, now(), now() + interval '5 minutes');
+SELECT test.assert((SELECT created_at = now() AND email_sent_at = now() AND email_sends = 1 AND consumed_at IS NULL
+                      FROM iam.mfa_enrollments WHERE id = 'e0000000-0000-0000-0000-0000000000e3'),
+                   'el INSERT fija created_at, email_sent_at, email_sends = 1 y consumed_at NULL');
+ROLLBACK;
+-- Trigger, UPDATE de un token consumido: no se reabre ni cambia; consumir otra vez conserva el instante viejo.
+SELECT test.expect_error($$UPDATE iam.mfa_enrollments SET consumed_at = NULL WHERE id = 'e0000000-0000-0000-0000-0000000000e1'$$, '42501', 'un token consumido no se reabre');
+SELECT test.expect_error($$UPDATE iam.mfa_enrollments SET email_sends = 3, email_code_hmac = sha256('h-otra') WHERE id = 'e0000000-0000-0000-0000-0000000000e1'$$,
+  '42501', 'un token consumido no recibe reenvios');
+BEGIN;
+UPDATE iam.mfa_enrollments SET consumed_at = now() + interval '1 hour' WHERE user_id = 'eeeeeeee-0000-0000-0000-000000000002';
+SELECT test.assert((SELECT consumed_at < now() FROM iam.mfa_enrollments WHERE id = 'e0000000-0000-0000-0000-0000000000e1'),
+                   'consumir otra vez (UPDATE masivo del restablecimiento) conserva el instante viejo');
+SELECT test.assert((SELECT consumed_at = now() FROM iam.mfa_enrollments WHERE id = 'e0000000-0000-0000-0000-0000000000e2'),
+                   'consumed_at lo fija el servidor');
+ROLLBACK;
+-- Trigger, UPDATE de un token vivo: envios solo suben, el codigo cambia solo con un envio, el secreto no rota, email_sent_at no se finge.
+SELECT test.expect_error($$UPDATE iam.mfa_enrollments SET email_code_hmac = sha256('h-sin-envio') WHERE id = 'e0000000-0000-0000-0000-0000000000e2'$$,
+  '42501', 'un codigo nuevo exige un envio nuevo');
+SELECT test.expect_error($$UPDATE iam.mfa_enrollments SET totp_secret_enc = '\x02' WHERE id = 'e0000000-0000-0000-0000-0000000000e2'$$,
+  '42501', 'el secreto pendiente no rota');
+BEGIN;
+UPDATE iam.mfa_enrollments SET email_code_hmac = sha256('h-3'), email_sends = 2 WHERE id = 'e0000000-0000-0000-0000-0000000000e2';
+SELECT test.expect_error($$UPDATE iam.mfa_enrollments SET email_sends = 1 WHERE id = 'e0000000-0000-0000-0000-0000000000e2'$$,
+  '42501', 'email_sends no baja');
+UPDATE iam.mfa_enrollments SET email_code_hmac = sha256('h-4'), email_sends = 3 WHERE id = 'e0000000-0000-0000-0000-0000000000e2';
+SELECT test.expect_error($$UPDATE iam.mfa_enrollments SET email_sends = 4, email_code_hmac = sha256('h-5') WHERE id = 'e0000000-0000-0000-0000-0000000000e2'$$,
+  '23514', 'mas de 3 envios por token');
+UPDATE iam.mfa_enrollments SET email_sent_at = now() - interval '1 hour' WHERE id = 'e0000000-0000-0000-0000-0000000000e2';
+SELECT test.assert((SELECT email_sent_at = now() FROM iam.mfa_enrollments WHERE id = 'e0000000-0000-0000-0000-0000000000e2'),
+                   'email_sent_at no se finge: lo fija el servidor en cada envio');
 ROLLBACK;

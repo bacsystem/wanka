@@ -13,9 +13,11 @@
 set -u
 D=$(cd "$(dirname "$0")" && pwd)
 M=$(cd "$D/../../../../apps/api/migrations" && pwd)   # migraciones reales del kernel (issue #195)
-N=wanka-rls-check
+# Un contenedor por corrida: dos worktrees pueden correr esta verificacion a la vez sin borrarse el contenedor.
+N=${RLS_CHECK_CONTAINER:-wanka-rls-check-$$}
 cleanup() { docker rm -f "$N" >/dev/null 2>&1; }
 cleanup
+trap cleanup EXIT INT TERM
 docker run -d --name "$N" -e POSTGRES_PASSWORD=x -e POSTGRES_DB=wanka -e POSTGRES_HOST_AUTH_METHOD=trust \
   -v "$D":/sql:ro -v "$M":/migrations:ro postgres:16-alpine >/dev/null || exit 2
 for i in $(seq 1 30); do docker exec "$N" pg_isready -U postgres -d wanka -h 127.0.0.1 >/dev/null 2>&1 && break; sleep 1; done
