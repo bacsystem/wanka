@@ -3,6 +3,11 @@
 All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Changed
+- Delivery process: stories ship as independent PRs from `main` that never touch the version; one release PR per batch bumps it and gets one tag. Risky PRs keep separate review and QA; the rest get both in one pass. Rules in `docs/delivery-process.md` and `CLAUDE.md` (owner decision, 2026-11-19).
+
 ## [0.12.0] - 2026-11-19
 
 ### Added
