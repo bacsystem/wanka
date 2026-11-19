@@ -14,19 +14,23 @@ Ajustes de forma respecto a los mocks, comunes a todos los recursos:
 
 | Método y ruta | Pantalla / uso | Forma (mock) | Permiso |
 |---|---|---|---|
-| `POST /v1/auth/login` | `/login` | — | público, rate limit |
+| `POST /v1/auth/login` | `/login` | — | público (clase `Public`), cuotas de §7 y bloqueo de la cuenta ([ADR 0004](../adr/0004-in-house-auth.md), nota del 2026-11-19). Responde `200` con `status` `authenticated`, `mfa_required` o `mfa_enrollment_required` (#24, #25) |
 | `POST /v1/auth/mfa/verify` | `/login` paso 2FA | — | `challengeToken` en el cuerpo (clase `Public`, `conventions.md` §2) |
 | `POST /v1/auth/mfa/totp/enroll`, `.../confirm` | `/perfil` (activar 2FA con la sesión ya iniciada) | — | sesión (clase `NoTenant`); sin `emailCode` (`conventions.md` §2) |
 | `POST /v1/auth/mfa/enrollment/totp`, `.../confirm` | `/login`, enrolamiento obligatorio antes de tener sesión | — | `enrollmentToken` en el cuerpo, solo para enrolar y válido hasta el `confirm` correcto (clase `Public`, `conventions.md` §2); `confirm` crea la sesión y exige `{enrollmentToken, code, emailCode}`: el `emailCode` es el código de 6 dígitos que el login manda al correo al responder `mfa_enrollment_required` (decisión del dueño del 2026-11-19, [#25](https://github.com/bacsystem/wanka/issues/25); forma, intentos y topes en `conventions.md` §2) |
 | `POST /v1/auth/mfa/enrollment/email-code/resend` | `/login`, «Reenviar código» del enrolamiento obligatorio | — | `enrollmentToken` en el cuerpo (clase `Public`); 3 envíos por token, 60 s entre envíos, y por usuario 10 por hora y 20 en 24 h (`conventions.md` §2) |
-| `POST /v1/auth/refresh` | BFF | — | refresh token |
-| `POST /v1/auth/logout` | topbar | — | sesión |
-| `POST /v1/auth/password/forgot`, `.../reset` | `/login` recuperar | — | público, rate limit |
+| `POST /v1/auth/refresh` | BFF | — | refresh token en el cuerpo (clase `Public`; historia propia, desglose de #24) |
+| `POST /v1/auth/logout` | topbar | — | sesión (clase `NoTenant`); revoca la sesión actual, `204` |
+| `POST /v1/auth/password/forgot`, `.../reset` | `/login` recuperar | — | público, rate limit (#26). `forgot` responde `202` siempre; el token (`wk_pr_`) vive 15 min ([ADR 0004](../adr/0004-in-house-auth.md)) |
+| `POST /v1/auth/password/change` | `/perfil`, cambiar contraseña | — | sesión (clase `NoTenant`), con la contraseña actual; revoca las demás sesiones del usuario (#30) |
+| `POST /v1/auth/email-change`, `POST /v1/auth/email-change/confirm` | `/perfil`, cambiar correo | — | `email-change`: sesión (`NoTenant`), con la contraseña actual, `202` siempre; `confirm`: token `wk_ec_` del enlace en el cuerpo (`Public`), 24 h (#30) |
+| `POST /v1/auth/invitations/lookup`, `POST /v1/auth/invitations/accept` | pantalla de aceptación de la invitación | — | token `wk_iv_` del enlace en el cuerpo (clase `Public`); 7 días (#28) |
 | `GET /v1/me/memberships` | `/seleccionar-empresa` | `auth/mocks/tenants.ts` `TenantOption`, `tenantSites` | sesión sin tenant |
 | `POST /v1/auth/session/tenant` | `/seleccionar-empresa`, `TenantSwitcher` | — | membresía activa |
 | `GET /v1/me`, `GET /v1/me/entitlements` | shell (sidebar por rubro y módulos) | `Tenant`, `config/navigation.ts` | sesión |
-| `GET/POST /v1/users`, `PATCH /v1/users/{id}`, `POST /v1/users/invitations` | `/configuracion/usuarios`, invite drawer | `Collaborator`, `securitySummary` | `identidad.users:*` |
-| `GET/POST/PATCH /v1/roles`, `GET /v1/permissions` | matriz de permisos | `permissionMatrix`, `permissionModules` | `identidad.roles:*` |
+| `PATCH /v1/me` | `/perfil` (nombre y teléfono) | — | sesión (clase `NoTenant`, `conventions.md` §2) (#30) |
+| `GET /v1/users`, `PATCH /v1/users/{id}`, `POST /v1/users/invitations`, `POST /v1/users/invitations/{id}/resend`, `DELETE /v1/users/invitations/{id}` | `/configuracion/usuarios`, invite drawer. `{id}` es el id de la **membresía** en la empresa, no el del usuario global. No hay `POST /v1/users`: la única alta es la invitación (corrección del 2026-11-19, #28; compatible, sin consumidores) | `Collaborator`, `securitySummary` | `identidad.users:read` (listar), `:create` (invitar y reenviar), `:update` (cambiar rol, sedes o estado, y anular una invitación) |
+| `GET/POST /v1/roles`, `PATCH /v1/roles/{id}` (`If-Match`), `DELETE /v1/roles/{id}`, `GET /v1/permissions` | matriz de permisos. Los roles base (`system`) no se editan ni se borran; sus permisos salen de su plantilla (#29) | `permissionMatrix`, `permissionModules` | `identidad.roles:read` (listar roles y el catálogo), `:create`, `:update` (editar y borrar un rol propio sin miembros) |
 | `GET /v1/sessions`, `DELETE /v1/sessions/{id}` | sesiones activas | `securitySummary.sessions` | `identidad.sessions:*` |
 | `GET /v1/support-access/requests`, `POST /{id}/approve`, `/reject`, `/revoke` | consentimiento de acceso de soporte (#90). La lectura va por `iam.list_support_requests()` y la decisión por `iam.decide_impersonation()`, ambas `SECURITY DEFINER` acotadas a `app.current_tenant()` (ADR 0001) | `IMPERSONATION_GRANTS` | `identidad.support_access:read`, `:approve`. **Nunca** desde una sesión impersonada (403) |
 
@@ -305,6 +309,21 @@ Historias de negocio abiertas que no citan un código. Con esta tabla y la anter
 | #122 | Cambios y devoluciones | `ventas.returns:create`; sin ticket, `ventas.returns:approve` |
 
 Las historias del kernel (épica #154), las de frontend y las épicas no exponen rutas de negocio propias: aplican los permisos de las rutas que tocan.
+
+## Plantillas de los roles base (identidad, #29)
+
+Estado: **propuesta del architect (2026-11-19), a confirmar por el po en #29 antes de implementarla.** Los seis roles base existen en toda empresa desde su alta (#31), con `system = true`: no se borran, no se renombran y sus permisos no se editan, porque salen de su plantilla (`iam.role_templates`, [data-model §6](../data/data-model.md)). Quien necesita otra combinación crea un rol propio. `requires_mfa` se puede subir a `true` en cualquier rol, pero nunca bajar en los que la plantilla marca. Un permiso nuevo del catálogo entra en `dueno` siempre (un test lo exige) y en las demás plantillas solo si el PR que lo agrega lo dice. La migración que siembra las plantillas tiene un test de paridad contra esta tabla.
+
+| Código | Nombre | 2FA | Permisos |
+|---|---|---|---|
+| `dueno` | Dueño | obligatoria | todo el catálogo |
+| `administrador` | Administrador | obligatoria | todo el catálogo salvo `identidad.support_access:approve` y `empresas.einvoicing:update` (credenciales SOL y certificado: solo el dueño) |
+| `contador` | Contador | obligatoria | toda acción `read`, `read_all` y `export` de `facturacion`, `compras`, `finanzas`, `reportes` y `auditoria`; `ventas.pos:read`, `clientes.customers:read`, `:export`, `inventario.stock:read`, `:export`, `empresas.config:read` |
+| `cajero` | Cajero | opcional | `ventas.pos:read`, `:create`, `ventas.discounts:create`, `ventas.quotes:read`, `clientes.customers:read`, `:create`, `catalogo.items:read`, `catalogo.prices:read`, `inventario.stock:read`, `finanzas.cash:read`, `:create`, `:update`, `facturacion.cpe:read`, `:send`, `agenda.appointments:read`, `:update`, `restaurante.tables:read`, `:update`, `restaurante.orders:read`, `:create`, `:update` |
+| `vendedor` | Vendedor | opcional | `ventas.pos:read`, `:create`, `ventas.discounts:create`, `ventas.quotes:read`, `:create`, `:update`, `:send`, `clientes.customers:read`, `:create`, `:update`, `catalogo.items:read`, `catalogo.prices:read`, `inventario.stock:read`, `facturacion.cpe:read`, `:send` |
+| `almacenero` | Almacenero | opcional | `inventario.warehouses:read`, `inventario.stock:read`, `:update`, `inventario.transfers:read`, `:create`, `:update`, `inventario.counts:read`, `:create`, `:update`, `inventario.consignments:read`, `inventario.supplier_returns:read`, `:create`, `catalogo.items:read`, `compras.orders:read`, `facturacion.gre:read`, `:create` |
+
+Los permisos de rubro (`lubricentro.*`, `libreria.*`, `veterinaria.*`, `odontologia.*`, `restaurante.reservations:*`, `retail.*`) van solo en `dueno` y `administrador` hasta que el po defina las plantillas por rubro (ADR 0004 las prevé); el módulo apagado los vuelve inertes igual (ADR 0005).
 
 ## Catálogo de permisos de plataforma (plano super-admin)
 
