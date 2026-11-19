@@ -3,6 +3,11 @@
 All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+- `apps/api`: the `Mailer` port (`internal/platform/mailer`) with `Send(ctx, Message{To, Subject, TextBody, HTMLBody, Tags, IdempotencyKey})`, `Validate` (a single plain address and a non-empty subject, no line breaks in either; a `*ValidationError` that wraps `ErrInvalidMessage` and never repeats the values), `Mask` and the `Disabled` adapter (`MAILER=none`, `ErrDisabled`), and its stub adapter (`internal/platform/mailerstub`): an in-memory inbox readable with `Sent()` (bounded to 1000 messages, copies on the way in and out), one message per `IdempotencyKey`, and a JSON log line with only the masked recipient (`a***@example.com`) and the subject, never the body, links, tags or key. Modules import the port only. New variables `MAILER=stub|none` (default `stub`) and `APP_ENV=production|development` (default `production`): the stub in production starts but emits a `WARN` until a real adapter exists. Designed to carry the one-time code of the 2FA enrolment (#25), which goes in the body only (#168).
+
 ## [0.8.0] - 2026-11-19
 
 ### Added
