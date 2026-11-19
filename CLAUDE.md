@@ -35,6 +35,7 @@ pnpm workspace monorepo. Only app so far: `apps/web` (Next.js 16 App Router, Rea
 - Delivery and done: `docs/delivery-process.md`; working with Claude or Gemini and handing work over: `docs/ai-collaboration.md`. Story PRs from `main`, no version bump, a `CHANGELOG` `[Unreleased]` entry; one release PR per batch, tagged by `release-tag.yml`.
 - Every PR gets `/pr-review` posted as a PR comment (re-reviews too) and QA on its final SHA.
 - No merge or release without the owner's explicit approval.
+- State docs and the GitHub board stay current on every change (`delivery-process.md` «Tablero», skill `docs-sync`); status answers come from `gh`.
 - bacsystem standard: the UI is built with khipu-design-system components, never hardcoded styles (`[...]` values, hex/rgb, palette colors, inline `style`); a missing component or variant goes to the DS first. Until the migration plan (PR #128, `docs/frontend-migration-khipu.md`) lands, the local wrappers below are the transition path: don't add new look-alikes.
 
 ## Commands
@@ -51,9 +52,9 @@ pnpm test                # vitest run (unit, jsdom)
 pnpm test:e2e            # playwright (desktop 1440 / tablet 1024 / mobile Pixel 7); starts its own dev server on :3100
 ```
 
-Single tests: `pnpm --filter web exec vitest run src/lib/format.test.ts` · `pnpm --filter web exec playwright test --project=mobile -g "sidebar"`. First E2E run needs `pnpm --filter web exec playwright install chromium`.
+Single tests: `pnpm --filter web exec vitest run src/lib/format.test.ts` · `pnpm --filter web exec playwright test --project=mobile -g "sidebar"`. First E2E run: `pnpm --filter web exec playwright install chromium`.
 
-Note: `next dev` re-writes `apps/web/AGENTS.md`; that file points to the Next 16 docs in `node_modules/next/dist/docs/` — check them before assuming Next API from memory.
+Note: `next dev` re-writes `apps/web/AGENTS.md`, which points to the Next 16 docs in `node_modules/next/dist/docs/`: check them, not memory.
 
 ## Two interfaces
 
@@ -116,7 +117,7 @@ The tokens, the Tailwind theme, the recipes and the appearance preferences come 
 
 - `docs/superpowers/specs/` — approved design specs (one per phase).
 - `prompt/ui-ux-stitch.md` — Stitch prompts and project ids; `prompt/stitch-flujos-faltantes.md` — prompts for the second batch. Generate with the Stitch MCP tool `generate_screen_from_text` (projectId `3747912429457694633`); HTML/PNG URLs are in `outputComponents[].design.screens[0]` (`list_screens` is capped/stale, `get_screen` by id works; the design-system JSON contains `on_error`, so don't grep responses for "error"). `design/stitch/screens/` — the 48 reference screens exported from the user's Stitch project (`index.json` maps file → screen id/title); `design/stitch/DESIGN.md` — design tokens. The Stitch HTML uses Material Symbols; the app uses Phosphor (see Icons).
-- Mermaid diagrams: write `.mmd` files and validate syntax; do not hand-edit diagrams managed by Mermaid Chart Sync (frontmatter with `id:`). See `.github/instructions/mermaid.instructions.md`.
+- Mermaid diagrams (docs and `docs/architecture`): `.mmd` files validated before committing; never hand-edit diagrams managed by Mermaid Chart Sync (frontmatter `id:`). See `.github/instructions/mermaid.instructions.md`.
 
 ## Backend architecture (`docs/architecture`)
 
@@ -130,7 +131,6 @@ Kernel (wave 0) built in `apps/api`; business modules start in wave 1. The desig
 - **Money and numbering** (ADR 0008): `numeric` with explicit scale, never float; `currency` (PEN/USD) on every amount, `exchange_rate numeric(6,3)`; correlatives per series per cash register, inside the document's transaction.
 - **E-invoicing** (ADR 0003): only through Khipu behind `InvoicingProvider`, never SUNAT directly; the Khipu BETA checks gate #56.
 - **Deployment** (ADR 0007): Railway; only `web` and `webhooks` are public; write secret names, never values.
-- **Diagrams**: Mermaid `.mmd`, validated before committing (`.github/instructions/mermaid.instructions.md`).
 
 ## Agent context files
 
