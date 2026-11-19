@@ -158,8 +158,11 @@ def line_values(line):
     return {"aff": aff, "pt": pt, "rb": rb, "ri": ri, "unitValue": unit_value}
 
 
-def allocate(d_cents, group_cents):
-    """§5: reparte D en céntimos entre gravado, exonerado e inafecto."""
+def allocate(d_cents, group_cents, tie_last=False):
+    """§5: reparte D en céntimos entre gravado, exonerado e inafecto.
+
+    `tie_last` es la regla alternativa (incorrecta) en la que gana el último
+    grupo en un empate; solo sirve para probar que un vector discrimina."""
     total = sum(group_cents)
     if d_cents == 0 or total == 0:
         return [0, 0, 0]
@@ -172,7 +175,7 @@ def allocate(d_cents, group_cents):
     # Mayor resto primero; en empate, el orden fijo gravado, exonerado, inafecto.
     order = sorted(
         (k for k in range(3) if group_cents[k] > 0),
-        key=lambda k: (-remainders[k], k),
+        key=lambda k: (-remainders[k], -k if tie_last else k),
     )
     assert leftover <= len(order)
     for k in order[:leftover]:
@@ -187,8 +190,12 @@ def cents(x):
     return int(c)
 
 
-def compute_raw(inp):
-    """Cálculo completo (§3-§6) sin el control posterior del §2.d."""
+def compute_raw(inp, tie_last=False, free_price=False):
+    """Cálculo completo (§3-§6) sin el control posterior del §2.d.
+
+    `tie_last` y `free_price` activan reglas alternativas (incorrectas): el
+    céntimo empatado al último grupo, o la gratuita con la fórmula de `price`
+    aun en `base_rate`. Solo se usan para probar que un vector discrimina."""
     vals = [line_values(l) for l in inp["lines"]]
 
     drift = ZERO
@@ -201,7 +208,7 @@ def compute_raw(inp):
     for v in vals:
         aff, pt = v["aff"], v["pt"]
         if aff in ("gravado", "gratuito"):
-            if mode == "price":
+            if mode == "price" or (free_price and aff == "gratuito"):
                 base = rnd(CTX.divide(pt, IGV_DIVISOR), 2)
                 igv = pt - base
             else:
@@ -230,7 +237,7 @@ def compute_raw(inp):
     if D > cap:
         return {"capError": True}
 
-    s_g, s_e, s_i = (Decimal(c) / 100 for c in allocate(cents(D), [cents(G), cents(E), cents(I)]))
+    s_g, s_e, s_i = (Decimal(c) / 100 for c in allocate(cents(D), [cents(G), cents(E), cents(I)], tie_last))
     assert s_g + s_e + s_i == D
 
     # §5, grupo gravado.
@@ -298,6 +305,19 @@ def assert_invariants(inp, res):
     assert t["igv"] <= bt["igv"]
     assert t["total"] <= bt["total"]
     assert res["mode"] == base_res["mode"]
+
+
+def discriminates(inp, **alt):
+    """Verdadero si la regla alternativa da otro `want` para esta entrada."""
+    kind, res = compute(inp, check_invariants=False)
+    assert kind == "want"
+    other = compute_raw(inp, **alt)
+    assert not other["capError"]
+    return render_want(res) != render_want(other)
+
+
+def assert_discriminates(inp, **alt):
+    assert discriminates(inp, **alt), ("vector does not discriminate", alt)
 
 
 def render_want(res):
@@ -498,6 +518,27 @@ def build():
             cap = cap_of(make_input(three))
             if Decimal(gd) <= cap:
                 b.add("three-way-tie", f"{price}-global-{gd}", make_input(three, gd))
+    # Empates en los que el grupo que recibe el céntimo cambia el resultado: el
+    # céntimo que va al gravado mueve el IGV y el que va a otro grupo no.
+    for price in ("118.00", "1.18", "11.80"):
+        three = [line("1", price, afectacion=a) for a in ("gravado", "exonerado", "inafecto")]
+        # Con 0.01-0.05 el céntimo al gravado no mueve el IGV (redondear2(s/1.18)
+        # absorbe el céntimo); se barren descuentos y se quedan los que discriminan.
+        for gd in (dec_str(k, 2) for k in range(1, 61)):
+            inp = make_input(three, gd)
+            # Solo entran los que discriminan (no todos los céntimos mueven el IGV).
+            if discriminates(inp, tie_last=True):
+                b.add("three-way-tie-discriminating", f"{price}-global-{gd}", inp)
+    # Empate en base_rate: 100 líneas de 0.43 dan G = 42.00; exonerado e
+    # inafecto de 42.00 empatan con él.
+    tie_br = [line("1", "0.43") for _ in range(100)]
+    tie_br += [line("1", "42.00", afectacion=a) for a in ("exonerado", "inafecto")]
+    for gd in (dec_str(k, 2) for k in range(1, 61)):
+        inp = make_input(tie_br, gd)
+        if discriminates(inp, tie_last=True):
+            b.add("three-way-tie-discriminating", f"base-rate-42.00-global-{gd}", inp, expect_mode="base_rate")
+    assert b.categories.get("three-way-tie-discriminating", 0) >= 10
+
     # Empate con otro orden de líneas (el orden de grupos es fijo, no el de líneas).
     rev = [line("1", "10.00", afectacion=a) for a in ("inafecto", "exonerado", "gravado")]
     b.add("three-way-tie", "reversed-lines-global-0.02", make_input(rev, "0.02"))
@@ -552,6 +593,23 @@ def build():
     b.add("free", "free-with-discount-price",
           make_input([line("1", "3.00"), line("4", "2.35", "1.11", afectacion="gratuito")]),
           expect_mode="price")
+    # Gratuitas en base_rate cuyos base e igv difieren entre la fórmula de
+    # price y la de base_rate.
+    # Con cantidad 7, 0.10, 0.16 y 0.43 dan lo mismo en los dos modos; se
+    # barren cantidades y se quedan solo las que discriminan.
+    for price in ("0.10", "0.16", "0.43", "0.05", "0.99", "1.50"):
+        for qty in range(1, 14):
+            inp = make_input([line("1", "0.43") for _ in range(100)]
+                             + [line(str(qty), price, afectacion="gratuito")])
+            if discriminates(inp, free_price=True):
+                b.add("free-base-rate-discriminating", f"{qty}x{price}", inp, expect_mode="base_rate")
+    assert b.categories.get("free-base-rate-discriminating", 0) >= 8
+    inp = make_input([line("1", "0.43") for _ in range(100)]
+                     + [line("1", "0.16", afectacion="gratuito"),
+                        line("1", "0.10", afectacion="gratuito"),
+                        line("8", "0.43", "0.02", afectacion="gratuito")], "0.07")
+    b.add("free-base-rate-discriminating", "two-free-with-discount-global", inp, expect_mode="base_rate")
+    assert_discriminates(inp, free_price=True)
     b.add("free", "free-4dp-quantity",
           make_input([line("1.2345", "9.9999", afectacion="gratuito"), line("1", "1.00")]))
 
