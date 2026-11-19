@@ -662,6 +662,19 @@ func TestInTenantTxClassifiesRealFailures(t *testing.T) {
 			t.Fatalf("killed in fn = %v, want ErrUnavailable and not commit-uncertain", err)
 		}
 	})
+	t.Run("socket closed inside fn, no SQLSTATE", func(t *testing.T) {
+		// Sin SQLSTATE: solo IsClosed() puede decir que la base se fue.
+		err := p.InTenantTx(ctx, a, func(tx pgx.Tx) error {
+			if err := tx.Conn().PgConn().Conn().Close(); err != nil {
+				return err
+			}
+			_, err := tx.Exec(ctx, `SELECT 1`)
+			return err
+		})
+		if !errors.Is(err, db.ErrUnavailable) || errors.Is(err, db.ErrCommitUncertain) {
+			t.Fatalf("socket closed in fn = %v, want ErrUnavailable and not commit-uncertain", err)
+		}
+	})
 	t.Run("connection lost at COMMIT is uncertain", func(t *testing.T) {
 		err := p.InTenantTx(ctx, a, func(tx pgx.Tx) error {
 			return tx.Conn().PgConn().Conn().Close() // el COMMIT que sigue ya no tiene conexión

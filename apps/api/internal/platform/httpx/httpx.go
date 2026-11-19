@@ -33,7 +33,7 @@ const (
 	writeTimeout = 30 * time.Second
 	// idleTimeout es mayor que el keep-alive del proxy (60 s, supuesto).
 	idleTimeout = 120 * time.Second
-	// maxHeaderBytes: cabeceras de más de 64 KiB reciben 431 de net/http (conventions.md §4);
+	// maxHeaderBytes: cabeceras que pasan de 64 KiB (más ~4 KiB de holgura de Go) reciben 431 de net/http (conventions.md §4);
 	// el BFF envía unos pocos KB y el valor por defecto de Go (1 MB) es excesivo por conexión.
 	maxHeaderBytes = 64 << 10
 )
