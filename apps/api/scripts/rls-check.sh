@@ -36,6 +36,9 @@ for m in "naive_session_lookup|wanka_app" \
          "grant_app_update_all_sessions|wanka_app" \
          "drop_guard_trigger|wanka_app" \
          "drop_user_check|wanka_app" \
+         "lookup_without_user_check|wanka_app" \
+         "guard_allows_unrevoke|wanka_app" \
+         "guard_no_server_created_at|wanka_app" \
          "drop_force_rls|wanka_migrator: borra la membresia"; do
   name="${m%%|*}" step="${m#*|}"
   echo "== MUTATION=${name}: debe fallar en «${step}» =="
@@ -46,6 +49,17 @@ for m in "naive_session_lookup|wanka_app" \
   fi
   echo "OK: la mutación ${name} se detectó en «${step}»"
 done
+
+# run.sh aplica solo la seccion Up de cada migracion (como goose) y respeta NO TRANSACTION: una migracion extra cuyo
+# Down borraria el esquema, y otra NO TRANSACTION con CREATE INDEX CONCURRENTLY, no deben romper la verificacion.
+echo "== caso negativo: run.sh no ejecuta la seccion Down ni falla con NO TRANSACTION =="
+extra="$(mktemp)"
+printf -- '-- +goose Up\nSELECT 1;\n-- +goose Down\nDROP SCHEMA iam CASCADE;\n' > "$extra"
+RLS_CHECK_EXTRA_MIGRATION="$extra" sh "$run" > "$log" 2>&1 || { cat "$log"; echo "FAIL: una migracion con Down destructivo rompio rls-check/run.sh" >&2; rm -f "$extra"; exit 1; }
+printf -- '-- +goose NO TRANSACTION\n-- +goose Up\nCREATE INDEX CONCURRENTLY roles_name_idx ON iam.roles (name);\n-- +goose Down\nDROP SCHEMA iam CASCADE;\n' > "$extra"
+RLS_CHECK_EXTRA_MIGRATION="$extra" sh "$run" > "$log" 2>&1 || { cat "$log"; echo "FAIL: una migracion NO TRANSACTION con Down destructivo rompio rls-check/run.sh" >&2; rm -f "$extra"; exit 1; }
+rm -f "$extra"
+echo "OK: la seccion Down no se ejecuta y NO TRANSACTION se respeta"
 
 echo "== caso negativo: una mutación inexistente no cuenta como detectada =="
 if detected naive_sesion_lookup "wanka_app"; then

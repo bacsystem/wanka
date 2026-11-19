@@ -10,6 +10,6 @@ CREATE OR REPLACE FUNCTION iam.session_lookup(p_access_hash bytea)
 AS $$
   SELECT s.id, s.user_id, s.tenant_id, s.site_id, s.cash_register_id, s.membership_id, s.authz_version,
          s.mfa_satisfied, s.mfa_method, s.impersonator_id, m.authz_version, m.status
-    FROM iam.sessions s LEFT JOIN iam.memberships m ON m.id = s.membership_id AND m.tenant_id = s.tenant_id
+    FROM iam.sessions s LEFT JOIN iam.memberships m ON m.id = s.membership_id AND m.tenant_id = s.tenant_id AND m.user_id = s.user_id
    WHERE s.access_hash = p_access_hash AND s.revoked_at IS NULL AND s.access_expires_at > now() AND s.mfa_satisfied
 $$;

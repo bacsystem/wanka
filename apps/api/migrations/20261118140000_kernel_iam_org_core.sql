@@ -116,7 +116,8 @@ CREATE INDEX sessions_created_at_idx ON iam.sessions (created_at);  -- limpieza 
 -- trigger sin SECURITY DEFINER (corre con el rol que escribe) lo hace cumplir: cualquier otro rol que no sea
 -- wanka_definer ni superusuario (las semillas de prueba) recibe 42501 al insertar una con impersonator_id y al cambiar
 -- cualquier columna de una, salvo poner revoked_at de NULL a un instante. Así created_at, los vencimientos y el
--- tenant de una impersonada no se mueven aunque el GRANT por columna los permita en las sesiones normales.
+-- tenant de una impersonada no se mueven aunque el GRANT por columna los permita en las sesiones normales. Además,
+-- en toda sesión la revocación no se deshace y created_at lo pone el servidor en el INSERT.
 -- +goose StatementBegin
 CREATE FUNCTION iam.guard_impersonated_session() RETURNS trigger
   LANGUAGE plpgsql
@@ -131,10 +132,17 @@ BEGIN
     IF NEW.impersonator_id IS NOT NULL THEN
       RAISE EXCEPTION 'impersonated sessions are created only by iam.redeem_impersonation' USING ERRCODE = 'insufficient_privilege';
     END IF;
-  ELSIF OLD.impersonator_id IS NOT NULL OR NEW.impersonator_id IS NOT NULL THEN
-    IF NOT (OLD.revoked_at IS NULL AND NEW.revoked_at IS NOT NULL
-            AND pg_catalog.to_jsonb(NEW) - 'revoked_at' = pg_catalog.to_jsonb(OLD) - 'revoked_at') THEN
-      RAISE EXCEPTION 'an impersonated session can only be revoked' USING ERRCODE = 'insufficient_privilege';
+    NEW.created_at := pg_catalog.now();   -- la fija el servidor: ninguna sesión escapa de la limpieza por antigüedad
+  ELSE
+    -- La revocación es irreversible para quien no es definer ni superusuario: revoked_at solo pasa de NULL a un instante.
+    IF OLD.revoked_at IS NOT NULL AND NEW.revoked_at IS DISTINCT FROM OLD.revoked_at THEN
+      RAISE EXCEPTION 'a revoked session stays revoked' USING ERRCODE = 'insufficient_privilege';
+    END IF;
+    IF OLD.impersonator_id IS NOT NULL OR NEW.impersonator_id IS NOT NULL THEN
+      -- Solo puede cambiar revoked_at (y únicamente de NULL a un instante, por el IF de arriba).
+      IF pg_catalog.to_jsonb(NEW) - 'revoked_at' <> pg_catalog.to_jsonb(OLD) - 'revoked_at' THEN
+        RAISE EXCEPTION 'an impersonated session can only be revoked' USING ERRCODE = 'insufficient_privilege';
+      END IF;
     END IF;
   END IF;
   RETURN NEW;
@@ -165,7 +173,8 @@ BEGIN
   IF NOT FOUND THEN RETURN; END IF;
   IF s.membership_id IS NOT NULL THEN
     PERFORM pg_catalog.set_config('app.tenant_id', s.tenant_id::text, true);   -- el tenant de ESA sesión
-    SELECT m.authz_version, m.status INTO v, st FROM iam.memberships m WHERE m.id = s.membership_id;  -- vía tenant_isolation
+    SELECT m.authz_version, m.status INTO v, st FROM iam.memberships m
+     WHERE m.id = s.membership_id AND m.user_id = s.user_id;  -- vía tenant_isolation; la membresía debe ser DEL usuario de la sesión
     PERFORM pg_catalog.set_config('app.tenant_id', coalesce(prev, ''), true);  -- restaura el valor del llamador
   END IF;
   RETURN QUERY SELECT s.id, s.user_id, s.tenant_id, s.site_id, s.cash_register_id, s.membership_id, s.authz_version,

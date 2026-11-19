@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -773,8 +774,10 @@ func TestTableGrantsMatchTheADR0001Matrix(t *testing.T) {
 	}
 }
 
-// Criterio no funcional: la búsqueda lee por índice único dos veces, nunca recorre la tabla.
-func TestSessionLookupQueriesUseUniqueIndexesWith100kSessions(t *testing.T) {
+// Criterio no funcional: la búsqueda lee por índice único dos veces, nunca recorre la tabla. Se mide la función misma,
+// llamada como wanka_app: auto_explain (cargado por el superusuario de la sesión) manda al cliente el plan de cada sentencia
+// anidada, con RLS activa y con el rol que de verdad las ejecuta (wanka_definer).
+func TestSessionLookupUsesUniqueIndexesWith100kSessions(t *testing.T) {
 	d := migrated(t)
 	ctx := context.Background()
 	s := d.SeedSession(t, dbtest.SessionSpec{Kind: dbtest.SessionBound})
@@ -793,34 +796,39 @@ func TestSessionLookupQueriesUseUniqueIndexesWith100kSessions(t *testing.T) {
 	if _, err := admin.Exec(ctx, `ANALYZE iam.sessions; ANALYZE iam.memberships`); err != nil {
 		t.Fatal(err)
 	}
-	plan := func(sql string, args ...any) string {
-		rows, err := admin.Query(ctx, `EXPLAIN `+sql, args...)
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer rows.Close()
-		var out string
-		for rows.Next() {
-			var l string
-			if err := rows.Scan(&l); err != nil {
-				t.Fatal(err)
-			}
-			out += l + "\n"
-		}
-		if err := rows.Err(); err != nil {
-			t.Fatal(err)
-		}
-		return out
+
+	cfg, err := pgx.ParseConfig(d.SuperuserURL())
+	if err != nil {
+		t.Fatal(err)
 	}
-	// Las mismas dos sentencias que ejecuta la función.
-	p1 := plan(`SELECT * FROM iam.sessions x WHERE x.access_hash = $1::bytea AND x.revoked_at IS NULL AND x.access_expires_at > now() AND x.mfa_satisfied`, []byte{1})
-	p2 := plan(`SELECT m.authz_version, m.status FROM iam.memberships m WHERE m.id = $1::uuid`, s.MembershipID)
-	for name, p := range map[string]string{"sessions by access_hash": p1, "memberships by id": p2} {
-		if regexp.MustCompile(`Seq Scan`).MatchString(p) || !regexp.MustCompile(`Index (Only )?Scan`).MatchString(p) {
-			t.Errorf("%s uses no unique index:\n%s", name, p)
+	var plans []string
+	cfg.OnNotice = func(_ *pgconn.PgConn, n *pgconn.Notice) { plans = append(plans, n.Message) }
+	conn, err := pgx.ConnectConfig(ctx, cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = conn.Close(context.Background()) })
+	for _, stmt := range []string{`LOAD 'auto_explain'`, `SET auto_explain.log_min_duration = 0`, `SET auto_explain.log_nested_statements = on`,
+		`SET client_min_messages = log`, `SET ROLE wanka_app`} {
+		if _, err := conn.Exec(ctx, stmt); err != nil {
+			t.Fatalf("%s: %v", stmt, err)
 		}
 	}
-	t.Logf("EXPLAIN sessions:\n%s\nEXPLAIN memberships:\n%s", p1, p2)
+	rows, err := lookup(ctx, conn, s.Token)
+	if err != nil || len(rows) != 1 || rows[0].CurrentVersion == nil {
+		t.Fatalf("lookup as wanka_app = %v, %v", rows, err)
+	}
+	all := strings.Join(plans, "\n")
+	t.Logf("auto_explain of iam.session_lookup as wanka_app with 100 000 sessions:\n%s", all)
+	if strings.Contains(all, "Seq Scan") {
+		t.Errorf("session_lookup does a Seq Scan:\n%s", all)
+	}
+	// Con la condición m.user_id el planificador puede preferir memberships_user_id_idx a la PK; ambas son lecturas por índice.
+	for _, idx := range []string{`Index Scan using sessions_access_hash_key on sessions`, `Index Scan using memberships_\w+ on memberships`} {
+		if !regexp.MustCompile(idx).MatchString(all) {
+			t.Errorf("plan lacks %q:\n%s", idx, all)
+		}
+	}
 }
 
 func TestSeedSessionStoresOnlyTheHashOfAWellFormedToken(t *testing.T) {
@@ -944,4 +952,57 @@ func TestRefreshFamilyIsSetOnInsertAndNeverChanged(t *testing.T) {
 	}
 	_, err = app.Exec(ctx, `UPDATE iam.sessions SET refresh_family = gen_random_uuid() WHERE id = $1`, id)
 	wantState(t, err, "42501", "changing refresh_family")
+}
+
+// H1: una sesión del usuario A con el tenant y la membresía de B no ve la membresía de B como vigente.
+func TestSessionLookupIgnoresAMembershipOfAnotherUser(t *testing.T) {
+	d := migrated(t)
+	ctx := context.Background()
+	a := d.SeedSession(t, dbtest.SessionSpec{Kind: dbtest.SessionBound, MembershipVersion: 2})
+	b := d.SeedSession(t, dbtest.SessionSpec{Kind: dbtest.SessionBound, MembershipVersion: 7})
+	app := connectAs(t, d, dbtest.App)
+	if rows, err := lookup(ctx, app, a.Token); err != nil || len(rows) != 1 || rows[0].CurrentVersion == nil || *rows[0].CurrentVersion != 2 {
+		t.Fatalf("control: %v, %v", rows, err)
+	}
+	// wanka_app puede escribir tenant_id y membership_id de su sesión: se cruza con la membresía de B.
+	if _, err := app.Exec(ctx, `UPDATE iam.sessions SET tenant_id = $2, membership_id = $3 WHERE id = $1`, a.SessionID, b.TenantID, b.MembershipID); err != nil {
+		t.Fatal(err)
+	}
+	rows, err := lookup(ctx, app, a.Token)
+	if err != nil || len(rows) != 1 {
+		t.Fatalf("crossed lookup = %v, %v", rows, err)
+	}
+	if r := rows[0]; r.CurrentVersion != nil || r.MembershipStatus != nil || r.Membership == nil {
+		t.Errorf("crossed session sees %v/%v, want the membership absent (it is unbound by ADR 0011, never current)", r.CurrentVersion, deref(r.MembershipStatus))
+	}
+}
+
+// Revocación irreversible, re-revocar una impersonada y created_at del servidor (seguimientos de seguridad de #200).
+func TestRevocationIsIrreversibleAndCreatedAtComesFromTheServer(t *testing.T) {
+	d := migrated(t)
+	ctx := context.Background()
+	b := d.SeedSession(t, dbtest.SessionSpec{Kind: dbtest.SessionBound})
+	imp := d.SeedSession(t, dbtest.SessionSpec{Kind: dbtest.SessionImpersonated})
+	app := connectAs(t, d, dbtest.App)
+	upd := func(id, set string) error {
+		_, err := app.Exec(ctx, `UPDATE iam.sessions SET `+set+` WHERE id = $1`, id)
+		return err
+	}
+	for name, id := range map[string]string{"normal": b.SessionID, "impersonated": imp.SessionID} {
+		if err := upd(id, `revoked_at = now()`); err != nil {
+			t.Fatalf("%s: revoking: %v", name, err)
+		}
+		wantState(t, upd(id, `revoked_at = NULL`), "42501", name+": un-revoking")
+		wantState(t, upd(id, `revoked_at = now() + interval '1 day'`), "42501", name+": revoking again")
+	}
+
+	var created, now time.Time
+	err := app.QueryRow(ctx, `INSERT INTO iam.sessions (id, user_id, access_hash, access_expires_at, mfa_satisfied, mfa_method, created_at)
+		VALUES (gen_random_uuid(), $1, sha256('created'), now(), true, 'none', now() - interval '400 days') RETURNING created_at, now()`, b.UserID).Scan(&created, &now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !created.Equal(now) {
+		t.Errorf("created_at = %v, want the server's now() = %v", created, now)
+	}
 }

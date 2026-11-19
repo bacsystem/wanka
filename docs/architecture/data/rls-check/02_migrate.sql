@@ -173,7 +173,10 @@ DO $$ DECLARE f text; BEGIN
   END LOOP; END $$;
 REVOKE CREATE ON SCHEMA iam, ops, platform_fn FROM wanka_definer;
 COMMIT;
-GRANT USAGE ON SCHEMA app, audit, ops, platform TO wanka_definer;   -- iam y org: migracion del kernel. app: las funciones de plataforma llaman a app.current_tenant() en su cuerpo (session_lookup no: solo la usa la politica)
+-- app: lo da esta referencia y NO la migracion del kernel. Las funciones de plataforma (ola 6, aun no migradas) llaman a
+-- app.current_tenant() en su cuerpo y necesitan USAGE; su migracion tendra que concederlo. iam.session_lookup no lo necesita
+-- (la politica RLS se evalua sin el), y el test de la mutacion que lo quitaba lo confirmo. iam y org: migracion del kernel.
+GRANT USAGE ON SCHEMA app, audit, ops, platform TO wanka_definer;
 GRANT EXECUTE ON FUNCTION app.current_tenant(), app.current_user_id() TO wanka_definer, wanka_app, wanka_platform, wanka_worker, wanka_webhooks;
 -- Privilegios de escritura de wanka_definer que necesitan las funciones de plataforma (ola 6); la migracion del kernel
 -- le da solo SELECT en iam.sessions e iam.memberships, lo que necesita iam.session_lookup.

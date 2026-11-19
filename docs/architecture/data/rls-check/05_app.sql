@@ -103,3 +103,28 @@ UPDATE iam.sessions SET mfa_satisfied = true, mfa_method = 'totp', access_hash =
 SELECT test.assert((SELECT mfa_satisfied AND refresh_family IS NOT NULL FROM iam.sessions WHERE id = '5e000000-0000-0000-0000-0000000000e1'), 'insert a medio login y verify funcionan');
 COMMIT;
 SELECT test.expect_error($$UPDATE iam.sessions SET refresh_family = gen_random_uuid() WHERE id = '5e000000-0000-0000-0000-0000000000e1'$$, '42501', 'wanka_app no cambia refresh_family');
+\echo '== A10. sesion cruzada, revocacion irreversible y created_at del servidor =='
+-- H1: la sesion del cajero con la membresia de OTRO usuario de la misma empresa (la app puede escribir membership_id):
+-- session_lookup ve la membresia ausente (lo trata el desligue del ADR 0011), nunca la ajena como vigente.
+BEGIN;
+SELECT set_config('app.tenant_id','aaaaaaaa-0000-0000-0000-000000000001', true);
+UPDATE iam.sessions SET membership_id = (SELECT id FROM iam.memberships WHERE user_id = 'eeeeeeee-0000-0000-0000-000000000001')
+ WHERE access_hash = sha256('tok-cajero');
+SELECT set_config('app.tenant_id','', true);
+SELECT test.assert((SELECT membership_id IS NOT NULL AND current_authz_version IS NULL AND membership_status IS NULL
+                      FROM iam.session_lookup(sha256('tok-cajero'))), 'sesion cruzada: membresia ajena = ausente, no vigente');
+ROLLBACK;
+-- La revocacion no se deshace ni se repite, en una sesion normal y en una impersonada.
+BEGIN;
+UPDATE iam.sessions SET revoked_at = now() WHERE access_hash = sha256('tok-cajero');
+SELECT test.expect_error($$UPDATE iam.sessions SET revoked_at = NULL WHERE access_hash = sha256('tok-cajero')$$, '42501', 'una sesion normal revocada no se reactiva');
+UPDATE iam.sessions SET revoked_at = now() WHERE access_hash = sha256('tok-imp-a');
+SELECT test.expect_error($$UPDATE iam.sessions SET revoked_at = NULL WHERE access_hash = sha256('tok-imp-a')$$, '42501', 'una impersonada revocada no se reactiva');
+SELECT test.expect_error($$UPDATE iam.sessions SET revoked_at = now() + interval '1 day' WHERE access_hash = sha256('tok-imp-a')$$, '42501', 'una impersonada ya revocada no se vuelve a revocar');
+ROLLBACK;
+-- created_at lo pone el servidor aunque la app mande otro.
+BEGIN;
+INSERT INTO iam.sessions (id, user_id, access_hash, access_expires_at, mfa_satisfied, mfa_method, created_at)
+  VALUES ('5e000000-0000-0000-0000-0000000000e2', 'eeeeeeee-0000-0000-0000-000000000002', sha256('old-created'), now(), true, 'none', now() - interval '400 days');
+SELECT test.assert((SELECT created_at = now() FROM iam.sessions WHERE id = '5e000000-0000-0000-0000-0000000000e2'), 'created_at del INSERT lo fija el servidor');
+ROLLBACK;

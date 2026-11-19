@@ -24,11 +24,23 @@ step() { label=$1; shift; echo "### $label"; "$@" || { echo "FAILED at: $label";
 docker exec "$N" psql -h 127.0.0.1 -U postgres -d wanka -X -At -c 'select version()'
 step "superusuario: bootstrap de roles"    $P -U postgres -f /sql/01_schema.sql
 step "superusuario: bootstrap otra vez (idempotente)" $P -U postgres -f /sql/01_schema.sql
-# Las migraciones reales del kernel, en orden y como wanka_migrator, cada una en UNA transaccion (-1) como en goose:
-# lo que esta verificacion prueba es lo que se despliega, no una copia. 02_migrate.sql agrega solo lo que todavia no es del kernel.
+# Las migraciones reales del kernel, en orden y como wanka_migrator: lo que esta verificacion prueba es lo que se despliega,
+# no una copia. psql no entiende las anotaciones de goose, asi que apply_migration hace lo que goose: ejecuta solo la
+# seccion Up (corta en «-- +goose Down») y respeta NO TRANSACTION (sin -1; con -1 un CREATE INDEX CONCURRENTLY falla).
+# 02_migrate.sql agrega despues solo lo que todavia no es del kernel.
+PI="docker exec -i $N psql -h 127.0.0.1 -d wanka -X -q -v VERBOSITY=terse"
+apply_migration() {
+  f=$1; opts="-1"
+  grep -qi "^-- *+goose  *no  *transaction" "$f" && opts=""
+  awk 'tolower($0) ~ /^-- *\+goose +down/ { exit } { print }' "$f" | $PI -U wanka_migrator $opts -v ON_ERROR_STOP=1 -f -
+}
 for f in $(ls "$M"/*.sql | sort); do
-  step "wanka_migrator: migracion real $(basename "$f")" $P -U wanka_migrator -1 -v ON_ERROR_STOP=1 -f "/migrations/$(basename "$f")"
+  step "wanka_migrator: migracion real $(basename "$f")" apply_migration "$f"
 done
+# Solo para el caso negativo de scripts/rls-check.sh: una migracion extra cuyo Down rompería el esquema si se ejecutara.
+if [ -n "${RLS_CHECK_EXTRA_MIGRATION:-}" ]; then
+  step "wanka_migrator: migracion extra" apply_migration "$RLS_CHECK_EXTRA_MIGRATION"
+fi
 step "wanka_migrator: migracion"           $P -U wanka_migrator -f /sql/02_migrate.sql
 if [ -n "${MUTATION:-}" ]; then
   step "wanka_migrator: MUTACION $MUTATION" $P -U wanka_migrator -f "/sql/mutations/$MUTATION.sql"

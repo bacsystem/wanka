@@ -16,7 +16,7 @@ BEGIN
   IF NOT FOUND THEN RETURN; END IF;
   IF s.membership_id IS NOT NULL THEN
     PERFORM set_config('app.tenant_id', s.tenant_id::text, true);
-    SELECT m.authz_version, m.status INTO v, st FROM iam.memberships m WHERE m.id = s.membership_id;
+    SELECT m.authz_version, m.status INTO v, st FROM iam.memberships m WHERE m.id = s.membership_id AND m.user_id = s.user_id;
     -- defecto: falta restaurar el valor del llamador
   END IF;
   RETURN QUERY SELECT s.id, s.user_id, s.tenant_id, s.site_id, s.cash_register_id, s.membership_id, s.authz_version,
