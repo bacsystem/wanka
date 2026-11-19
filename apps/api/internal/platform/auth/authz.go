@@ -84,9 +84,9 @@ var impersonationExcluded = []string{
 	"identidad.support_access:", "identidad.users:", "identidad.roles:", "identidad.sessions:", "empresas.einvoicing:update",
 }
 
-// impersonationSet devuelve los permisos del alcance: read_only solo la acción
-// read (ni read_all ni export); full todo menos impersonationExcluded. Un
-// alcance desconocido no tiene conjunto.
+// impersonationSet devuelve los permisos del alcance, siempre sin
+// impersonationExcluded: read_only solo la acción read (ni read_all ni export);
+// full todas las acciones. Un alcance desconocido no tiene conjunto.
 func impersonationSet(scope ImpersonationScope) map[permission.Code]struct{} {
 	if scope != ScopeReadOnly && scope != ScopeFull {
 		return nil
