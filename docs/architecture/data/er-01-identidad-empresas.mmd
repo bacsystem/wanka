@@ -76,7 +76,7 @@ erDiagram
     timestamptz locked_until
     smallint mfa_failed_attempts "segundo paso: TOTP o emailCode malos, compartido con mfa/verify; CHECK 0 a 4, el 5o bloquea 15 min"
     timestamptz mfa_locked_until
-    smallint mfa_lockouts "bloqueos desde el ultimo segundo paso correcto; CHECK 0 a 3, con 3 cerrado hasta restablecer la contrasena"
+    smallint mfa_lockouts "bloqueos desde el ultimo restablecimiento de contrasena, solo este lo pone a 0; CHECK 0 a 3, con 3 cerrado"
     timestamptz created_at
   }
   USER_TOTP {

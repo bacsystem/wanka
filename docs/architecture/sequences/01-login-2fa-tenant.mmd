@@ -44,7 +44,7 @@ sequenceDiagram
       end
       W->>A: POST /v1/auth/mfa/enrollment/totp {enrollmentToken} (mismo secreto si se repite) y luego /confirm {enrollmentToken, code, emailCode}, rutas Public sin sesion y sin Idempotency-Key (desde /perfil, con sesion, son /v1/auth/mfa/totp/enroll y /confirm, sin emailCode)
       break token vencido, consumido (tambien por un bloqueo) o inexistente: se comprueba antes que el bloqueo
-        A-->>W: 401 con el code de issue 187, el BFF vuelve a /login
+        A-->>W: 401 session_expired (issue 187), el BFF vuelve a /login
       end
       A->>DB: tx: users FOR UPDATE, mfa_enrollments FOR UPDATE, evalua TOTP y emailCode (hmac.Equal) siempre los dos
       break TOTP o emailCode malos, fallo 1 a 4
@@ -52,10 +52,10 @@ sequenceDiagram
         A-->>W: 422 validation_failed, errors[] por campo (code, emailCode) con meta.attemptsRemaining
       end
       break 5o fallo seguido
-        A->>DB: mfa_locked_until = +15 min, contador a 0, mfa_lockouts++, consumed_at en todos los tokens de paso vivos del usuario, COMMIT. Si mfa_lockouts llega a 3, segundo paso cerrado y aviso por el outbox
+        A->>DB: mfa_locked_until = +15 min, contador a 0, mfa_lockouts++, consumed_at en todos los tokens de paso vivos del usuario, aviso por el outbox, COMMIT. Si mfa_lockouts llega a 3, segundo paso cerrado hasta restablecer la contrasena
         A-->>W: 429 rate_limited con Retry-After (hay que volver a iniciar sesion)
       end
-      A->>DB: los dos correctos: INSERT user_totp (secreto cifrado), codigos de recuperacion, contador y mfa_lockouts a 0, consumed_at, INSERT sessions mfa_satisfied=true, mfa_method=totp, con refresh_family y refresh_hash en el INSERT
+      A->>DB: los dos correctos: INSERT user_totp (secreto cifrado), codigos de recuperacion, mfa_failed_attempts a 0 (mfa_lockouts solo lo limpia el restablecimiento), consumed_at, INSERT sessions mfa_satisfied=true, mfa_method=totp, con refresh_family y refresh_hash en el INSERT
     else sin TOTP y ningun rol lo exige
       A->>DB: INSERT sessions (mfa_satisfied=true, mfa_method=none, tenant_id=null): la 2FA no se requeria, la sesion la cumple
     end
