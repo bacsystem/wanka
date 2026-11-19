@@ -36,6 +36,16 @@ Decisión del dueño, 2026-11-19. Reemplaza la regla anterior de que cada PR sub
 - **El e2e (Playwright)** corre en los PR que tocan `apps/web` o sus dependencias. El PR de release siempre lo corre, porque sube la versión de `apps/web/package.json`.
 - Así cada historia llega a la revisión con su CI en verde, los errores aparecen en el PR que los causa y la validación completa queda en el release.
 
+## Retrospectiva por lote (decisión del dueño, 2026-11-19)
+
+Al cerrar cada lote, junto con el PR de release, quien coordina (con Claude o con Gemini) corre el skill `retro` de `bacsystem/skills`, que produce tres cosas:
+
+1. `docs/retros/AAAA-MM-DD-<lote>.md`, con las métricas del lote tomadas de GitHub (rondas de revisión, hallazgos por severidad, horas hasta el merge y minutos y fallos de CI), los cuellos de botella con su evidencia, las clases de defecto y las mejoras.
+2. Los tipos de defecto nuevos se agregan a [`architecture/review-checklist.md`](architecture/review-checklist.md). Si cambia una regla del equipo, se edita `CLAUDE.md` (nunca `GEMINI.md`, que solo lo importa).
+3. Un PR a `bacsystem/skills` con las mejoras genéricas para agentes y skills.
+
+Cada retro compara contra la lista «a vigilar» de la anterior. El dueño aprueba las mejoras mergeando esos PR.
+
 ## Tags automáticos
 
 `.github/workflows/release-tag.yml` crea el tag `vX.Y.Z` cuando el dueño mergea en `main` un PR de release (`chore(release): vX.Y.Z`), y solo después de que los workflows `CI` y `API` pasen sobre ese commit. Lee la versión del `package.json` del commit. Si el tag ya existe no hace nada, y en cualquier otro commit de `main` tampoco. El merge del release es la aprobación del dueño. Ninguna persona ni agente empuja tags a mano. Si la CI de ese commit falla y el arreglo llega en otro commit, el dueño lanza el workflow a mano (`workflow_dispatch`) con el SHA del **primer** commit en verde después del release. Si elige uno posterior, el tag arrastraría historias que siguen en `[Unreleased]`. El workflow comprueba que la versión de ese commit sea la del release y que su CI esté en verde. Si el tag ya existe sobre otro commit, falla y no lo mueve.

@@ -38,7 +38,7 @@ Cada IA puede guardar su propia memoria local, como la *auto-memory* de Claude C
 3. **Durante el trabajo.** TDD y una mutación por cada protección importante. Corre solo los paquetes que tocas. La suite completa se corre una vez, al final.
 4. **Commit y PR con `/git-flow`.** Commits en inglés y Conventional Commits. No subas la versión: agrega tu entrada en `CHANGELOG.md` bajo `[Unreleased]`.
 5. **Revisión con `/pr-review`**, publicada en el PR. **QA** se hace sobre el SHA final, en otro worktree. CI en verde. Los checkboxes de la issue se tildan con evidencia.
-6. **El dueño mergea por lotes y después llega el release.** El tag lo crea `release-tag.yml`.
+6. **El dueño mergea por lotes y después llega el release.** El tag lo crea `release-tag.yml`. Al cerrar el lote, quien coordina corre el skill `retro` (ver «Retrospectiva por lote» en [`delivery-process.md`](delivery-process.md)).
 7. **Frontend (`apps/web`):** antes de empezar, avisa al dueño. Él fija una regla para el frontend que todavía no está escrita.
 
 ## 4. Retomar un trabajo empezado por otro
