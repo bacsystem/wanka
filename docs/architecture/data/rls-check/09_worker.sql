@@ -35,3 +35,19 @@ SELECT test.assert(NOT has_schema_privilege('wanka_definer', 'iam', 'CREATE')
                    AND NOT has_schema_privilege('wanka_definer', 'ops', 'CREATE')
                    AND NOT has_schema_privilege('wanka_definer', 'platform_fn', 'CREATE'),
                    'wanka_definer sin CREATE tras el cambio de duenio');
+\echo '== E2. entitlements (#171): wanka_worker lee las tablas de entitlements y escribe SOLO platform.tenant_usage =='
+SELECT test.assert((SELECT count(*) FROM platform.modules) >= 21 AND (SELECT count(*) FROM platform.plans) >= 1
+                   AND (SELECT count(*) FROM platform.subscriptions) = 0, 'wanka_worker lee los entitlements');
+BEGIN;
+INSERT INTO platform.tenant_usage (tenant_id, period, cpe_issued) VALUES ('aaaaaaaa-0000-0000-0000-000000000001', '2026-11-01', 1);
+INSERT INTO platform.tenant_usage (tenant_id, period, cpe_issued) VALUES ('aaaaaaaa-0000-0000-0000-000000000001', '2026-11-01', 2)
+  ON CONFLICT (tenant_id, period) DO UPDATE SET cpe_issued = platform.tenant_usage.cpe_issued + EXCLUDED.cpe_issued;
+SELECT test.assert((SELECT cpe_issued FROM platform.tenant_usage WHERE tenant_id = 'aaaaaaaa-0000-0000-0000-000000000001') = 3, 'wanka_worker inserta y actualiza el uso');
+ROLLBACK;
+SELECT test.expect_error($$DELETE FROM platform.tenant_usage$$, '42501', 'wanka_worker no borra uso');
+SELECT test.expect_error($$INSERT INTO platform.subscriptions (id, tenant_id, plan_id, status)
+  VALUES (gen_random_uuid(), 'aaaaaaaa-0000-0000-0000-000000000001', (SELECT id FROM platform.plans LIMIT 1), 'activa')$$, '42501', 'wanka_worker no inserta suscripciones');
+SELECT test.expect_error($$UPDATE platform.subscriptions SET status = 'activa'$$, '42501', 'wanka_worker no actualiza suscripciones');
+SELECT test.expect_error($$UPDATE platform.plans SET name = 'x'$$, '42501', 'wanka_worker no edita planes');
+SELECT test.expect_error($$INSERT INTO platform.tenant_module_overrides (tenant_id, module_code, enabled) VALUES ('aaaaaaaa-0000-0000-0000-000000000001', 'ventas', true)$$,
+                         '42501', 'wanka_worker no escribe overrides');

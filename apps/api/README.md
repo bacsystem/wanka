@@ -12,8 +12,8 @@ más adelante).
 
 ```
 cmd/wanka/            main: serve, worker, migrate up
-internal/platform/    kernel: config, logging, httpx, auth, metrics, clock, db (+ db/dbtest para tests) en uso;
-                      jobs, money, entitlements, idgen (paquetes vacíos por ahora)
+internal/platform/    kernel: config, logging, httpx, auth, metrics, clock, db (+ db/dbtest para tests), entitlements en uso;
+                      jobs, money, idgen (paquetes vacíos por ahora)
 bootstrap/roles.sql   bootstrap de roles: lo corre el superusuario con psql, fuera de goose
 migrations/           goose, SQL con timestamp, embebido en el binario, solo hacia adelante
 openapi/              contrato (vacío)
@@ -193,6 +193,40 @@ de sesión que otra petición dejó en la conexión no se hereda. Los errores so
 los de `InTenantTx`. En las dos puertas sigue prohibido `set_config(..., false)`
 dentro de `fn`. Las pruebas usan la tabla `rlstest.items`, que solo existe en
 `internal/platform/db/testdata/` y se aplica con `dbtest.MigrateWith`.
+
+## Entitlements (`internal/platform/entitlements`)
+
+`entitlements.New(pool, Options{}).For(ctx, tenantID)` devuelve lo que una empresa
+tiene habilitado (ADR 0005): `Modules` y `Flags` (ordenados), `Limits` y `Usage`
+(`users`, `sites`, `cpe_per_month`), `Status`, `ReadOnly` y `Version`. Es solo
+lectura; el middleware que responde `402`, `403 tenant_read_only` o
+`403 module_not_enabled` es de #175, y `GET /v1/me/entitlements` lo cablea identidad
+(contrato en `docs/architecture/api/openapi.yaml`).
+
+- **Una consulta** agregada en `InTenantReadTx` (rol `wanka_app`, `Actor` de tipo
+  `KindSystem`): `org.tenants`, la suscripción, `plan_modules`, overrides, flags y
+  `tenant_usage`. Las tablas de `platform` no tienen RLS: cada una se filtra por
+  `app.current_tenant()`, nunca por un parámetro.
+- **Módulos** = los del plan, menos los overrides en `false`, más los overrides en
+  `true`. **Flags**: un override de la empresa gana; si no, `default_on` lo enciende para
+  todas; si no, entra la empresa cuyo `sha256(tenant_id, 0x00, flag)` (8 bytes, módulo
+  100) es menor que `rollout_pct`, igual en cualquier réplica.
+- **Falla cerrado**: sin suscripción `Status` es `sin_plan` (no el plan `semilla`); con
+  `morosa`, `suspendida` o `cancelada` (`Status.Inactive()`), `Modules` y `Flags` vienen
+  vacíos; una empresa cerrada tiene `ReadOnly`. Una empresa que no existe es
+  `ErrTenantNotFound`; un error de la base sale como `db.ErrOverloaded`,
+  `db.ErrUnavailable` o `db.ErrStatementTimeout` y nunca se guarda.
+- **Caché** por empresa, TTL 30 s, con tope de 10 000 entradas; las lecturas en frío de
+  la misma empresa comparten una sola consulta. `For` devuelve una copia.
+  `Service.Run(ctx)` escucha `entitlements_changed` (`db.Pool.Listen`, en una conexión
+  propia fuera del pool) e invalida la entrada del tenant del payload, o todo si va vacío o
+  al reconectar. Triggers de la migración notifican los cambios de suscripción,
+  overrides, catálogo, planes, flags y el cierre de una empresa; el uso no notifica. Quien
+  construye el servicio (`serve`, #175) lanza `Run` en una goroutine suya y la termina al
+  cancelar el contexto.
+- El plan `semilla` (todos los módulos, límites holgados, `non_production`) existe para
+  desarrollo y pruebas; asignarlo a una empresa real lo decide el dueño (#31).
+- Medir: `go test -run '^$' -bench 'HotCache|ColdRead' -benchmem ./internal/platform/entitlements`.
 
 ## Variables de entorno
 
