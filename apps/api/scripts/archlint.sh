@@ -68,3 +68,11 @@ forbidden internal/platform/httpx github.com/riverqueue/river
 forbidden cmd/wanka github.com/riverqueue/river
 forbidden internal/platform/logging github.com/riverqueue/river/rivertype
 forbidden internal/platform/httpx github.com/riverqueue/river/riverdriver/riverpgxv5
+
+# #166: el kernel no conoce el contrato de los módulos (platform no importa internal/apigen), y el
+# runtime de oapi-codegen solo lo usa el código generado.
+echo "== apps/api: platform must not import internal/apigen; the oapi-codegen runtime stays in it =="
+forbidden internal/platform/httpx github.com/bacsystem/wanka/apps/api/internal/apigen/ventas
+forbidden internal/platform/logging github.com/bacsystem/wanka/apps/api/internal/apigen/components
+forbidden internal/platform/httpx github.com/oapi-codegen/runtime
+forbidden cmd/wanka github.com/oapi-codegen/runtime

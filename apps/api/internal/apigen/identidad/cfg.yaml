@@ -1,0 +1,19 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/oapi-codegen/oapi-codegen/HEAD/configuration-schema.json
+package: identidad
+output: api.gen.go
+compatibility:
+  always-prefix-enum-values: true
+generate:
+  models: true
+  strict-server: true
+  std-http-server: true
+import-mapping:
+  ../components/money.yaml: github.com/bacsystem/wanka/apps/api/internal/apigen/components
+  ../components/documents.yaml: github.com/bacsystem/wanka/apps/api/internal/apigen/components
+  ../components/pagination.yaml: github.com/bacsystem/wanka/apps/api/internal/apigen/components
+  ../components/problem.yaml: github.com/bacsystem/wanka/apps/api/internal/apigen/components
+  ../components/headers.yaml: github.com/bacsystem/wanka/apps/api/internal/apigen/components
+output-options:
+  skip-prune: true
+  user-templates:
+    request-bodies.tmpl: ../operations.tmpl

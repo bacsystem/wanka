@@ -28,6 +28,12 @@ components:
   # Adaptador de prueba del correo: lo cablea cmd y lo usan los tests (go-arch-lint no
   # los analiza). Ni platform ni los módulos lo importan: dependen del puerto platform/mailer.
   platform_mailer_stub: { in: internal/platform/mailer/stub }
+  # Servidor generado de openapi/ (go generate, #166): un paquete por módulo. Solo depende de otros
+  # paquetes generados y del runtime de oapi-codegen; platform no lo conoce y cada módulo lo usa por
+  # el ServerInterfaceWrapper, nunca por HandlerWithOptions (ver el README, «Servidor generado»).
+  apigen: { in: internal/apigen/** }
+  # Prueba de contrato del spec (openapi/contract_test.go): lee las tablas de los paquetes generados.
+  openapi_contract: { in: openapi }
   main: { in: cmd/** }
   migrations: { in: migrations }
   bootstrap: { in: bootstrap }
@@ -40,6 +46,8 @@ vendors:
   # River (ADR 0006): el cliente y sus tipos solo en jobs; su driver de pgx lo construye db sobre su pool.
   river: { in: [github.com/riverqueue/river, github.com/riverqueue/river/rivertype, github.com/riverqueue/river/rivermigrate] }
   riverdriver: { in: github.com/riverqueue/river/riverdriver/riverpgxv5 }
+  # oapi-codegen runtime: solo lo importa el código generado (internal/apigen).
+  oapiruntime: { in: [github.com/oapi-codegen/runtime, github.com/oapi-codegen/runtime/**] }
   # decimal: dinero y cantidades (internal/platform/money y pricing, ADR 0008).
   decimal: { in: github.com/shopspring/decimal }
 deps:
@@ -57,8 +65,14 @@ deps:
     canUse: [pgx]
   platform_mailer_stub:
     mayDependOn: [platform, platform_mailer_stub]
+  # platform solo lo importan las pruebas del paquete (httpx en el ejemplo de manejo de errores).
+  apigen:
+    mayDependOn: [apigen, platform]
+    canUse: [oapiruntime]
+  openapi_contract:
+    mayDependOn: [apigen, platform, platform_db]
   main:
-    mayDependOn: [platform, platform_pg, platform_mailer_stub, platform_db, platform_jobs, migrations]
+    mayDependOn: [apigen, platform, platform_pg, platform_mailer_stub, platform_db, platform_jobs, migrations]
     canUse: [pgx]
 exclude:
   - testdata

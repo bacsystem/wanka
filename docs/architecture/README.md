@@ -98,7 +98,7 @@ Modelo y reglas en [`data/data-model.md`](data/data-model.md): `tenant_id` y RLS
 
 - [`api/conventions.md`](api/conventions.md): REST `/v1`, `camelCase`, tenant tomado de la sesión (sin cabecera), `Idempotency-Key`, errores RFC 9457 con `code`, paginación por cursor, dinero como string, rate limits y cadena de timeouts.
 - [`api/resources.md`](api/resources.md): recursos por módulo derivados de cada pantalla y su mock, con permiso y módulo.
-- [`api/openapi.yaml`](api/openapi.yaml): esqueleto OpenAPI 3.1 (`POST /v1/sales`, `GET /v1/einvoicing/documents`, esquemas comunes).
+- [`apps/api/openapi/openapi.yaml`](../../apps/api/openapi/openapi.yaml): el contrato OpenAPI 3.1, partido por módulo (`paths/<módulo>.yaml`, uno por código de `platform.modules`) con `components/` compartido (ADR 0009). Ya no hay copia en esta carpeta.
 
 ## 8. Capacidad y caminos calientes
 
@@ -116,7 +116,7 @@ Modelo y reglas en [`data/data-model.md`](data/data-model.md): `tenant_id` y RLS
 | [0006](adr/0006-async-jobs-outbox.md) | Jobs y outbox en Postgres con River | propuesto |
 | [0007](adr/0007-deployment-railway.md) | Railway con Docker, portable | aceptado |
 | [0008](adr/0008-money-and-numbering.md) | Dinero `numeric` y correlativos sin huecos | propuesto |
-| [0009](adr/0009-api-contract-openapi.md) | Contrato spec-first OpenAPI 3.1 | propuesto |
+| [0009](adr/0009-api-contract-openapi.md) | Contrato spec-first OpenAPI 3.1 | propuesto; distribución por módulo fijada en #166 |
 | [0010](adr/0010-frontend-khipu-migration.md) | Migración total del frontend al design system khipu | propuesto |
 | [0011](adr/0011-membership-loss-keeps-user-session.md) | Perder la membresía desliga la sesión de esa empresa (a `/seleccionar-empresa`), no la revoca; modifica 0004 | aceptado |
 | [0012](adr/0012-maintenance-without-tenant.md) | Mantenimiento sin tenant en tablas con RLS: políticas `purge_*` de `wanka_worker` acotadas por antigüedad; modifica 0001 | aceptado (2026-11-19, decisión del dueño) |
@@ -127,7 +127,7 @@ Modelo y reglas en [`data/data-model.md`](data/data-model.md): `tenant_id` y RLS
 - Para revertirlo o reemplazarlo se escribe un ADR nuevo que lo cita, y el anterior pasa a *reemplazado por NNNN*. Lo único que se le edita al anterior es la línea de estado.
 - Las correcciones que no cambian la decisión (erratas, enlaces, números de línea) se pueden hacer en el mismo ADR.
 
-El dueño aprobó el 2026-11-17 las librerías del [ADR 0002](adr/0002-modular-monolith-go.md): River, sqlc, goose, oapi-codegen, shopspring/decimal, pquerna/otp, OpenTelemetry y el SDK de S3, más pgx/v5, golang.org/x/crypto y go-arch-lint, y después golang.org/x/term (aprobada el 2026-11-17 para el comando temporal de activación, ADR 0003, PR #158). Cualquier otra dependencia **requiere aprobación del usuario** antes de agregarse.
+El dueño aprobó el 2026-11-17 las librerías del [ADR 0002](adr/0002-modular-monolith-go.md): River, sqlc, goose, oapi-codegen, shopspring/decimal, pquerna/otp, OpenTelemetry y el SDK de S3, más pgx/v5, golang.org/x/crypto y go-arch-lint, y después golang.org/x/term (aprobada el 2026-11-17 para el comando temporal de activación, ADR 0003, PR #158). El 2026-11-19 aprobó dos herramientas de CI que no son dependencias Go: Redocly CLI y oasdiff (ADR 0002 y 0009, #166). Cualquier otra dependencia **requiere aprobación del usuario** antes de agregarse.
 
 ## 10. Supuestos y preguntas abiertas
 
@@ -173,7 +173,7 @@ Supuestos de carga: los de toda la plataforma en `capacity.md`, sujetos a la pru
   - las funciones `SECURITY DEFINER` tienen `REVOKE ALL ... FROM PUBLIC`, y cuando necesitan un tenant que el llamador no fijó, lo fijan desde sus propios datos y restauran el valor del llamador;
   - las únicas políticas extra permitidas son las de solo lectura con nombre, más `platform_rw` en `org.tenants`, limitada a `wanka_platform`.
 - **RLS check:** `MUTATION=naive_session_lookup sh data/rls-check/run.sh` muestra una corrida que falla.
-- **API:** REST `/v1`, `camelCase`, errores RFC 9457 con `code`, paginación por cursor, `Idempotency-Key` obligatoria en los `POST` que crean, y dinero como string decimal (`api/conventions.md`). El catálogo de permisos tiene el plano tenant y el `plataforma.*`. Los mocks del frontend se reemplazan por funciones `lib/api/*` tipadas con `openapi.yaml`.
+- **API:** REST `/v1`, `camelCase`, errores RFC 9457 con `code`, paginación por cursor, `Idempotency-Key` obligatoria en los `POST` que crean, y dinero como string decimal (`api/conventions.md`). El catálogo de permisos tiene el plano tenant y el `plataforma.*`. Los mocks del frontend se reemplazan por funciones `lib/api/*` tipadas con `apps/api/openapi/openapi.yaml`.
 - **Dinero (ADR 0008):** importes `(14,2)`, precios unitarios `(14,4)`, costos `(18,6)` y cantidades `(14,4)`. `exchange_rate numeric(6,3)` es el formato de Khipu. Los correlativos salen de un contador por serie, sin llamadas de red dentro de la transacción.
 - **Facturación (ADR 0003):** asíncrona con outbox, un emisor en orden por serie, y webhooks más conciliación. Las verificaciones en BETA (criterios de #56) son la regresión de redondeo contra `POST /v1/facturas/calcular`, la confirmación ligera de N+1 antes que N y la baja rechazada sin webhook, resuelta sondeando `GET /v1/bajas/{id}`.
 - **Despliegue (ADR 0007):** servicios `web`, `api`, `platform-api`, `worker` y `webhooks`. `/v1` solo se alcanza por la red privada, con configuración 12-factor.

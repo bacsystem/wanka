@@ -1,0 +1,29 @@
+openapi: 3.1.0
+info:
+  title: Wanka API - paginación
+  version: 0.1.0-draft
+paths: {}
+components:
+  parameters:
+    Limit:
+      name: limit
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 25 }
+    Cursor:
+      name: cursor
+      in: query
+      schema: { type: string }
+  schemas:
+    PageInfo:
+      type: object
+      required: [hasMore]
+      properties:
+        nextCursor: { type: [string, 'null'] }
+        hasMore: { type: boolean }
+        total:
+          type: integer
+          minimum: 0
+          description: Solo si el endpoint lo declara y la petición trae includeTotal=true (conventions.md §5).
+        totalIsEstimate:
+          type: boolean
+          description: Presente junto con total; true si es una estimación o un conteo con tope.

@@ -1,0 +1,34 @@
+openapi: 3.1.0
+info:
+  title: Wanka API - comprobantes
+  version: 0.1.0-draft
+paths: {}
+components:
+  schemas:
+    DocumentType:
+      type: string
+      description: Abierto; los clientes deben tolerar valores nuevos.
+      enum: [boleta, factura, nota_credito, nota_debito, guia_remision]
+    CpeStatus:
+      type: string
+      enum: [pendiente, enviado, aceptado, observado, rechazado, anulado]
+    SalesDocument:
+      type: object
+      description: Forma de SalesDocument de types/domain.ts, con importes como string. number es null en una GRE hasta que Khipu la numera.
+      required: [id, type, series, number, customerName, customerDocument, total, currency, sunatStatus, issuedAt]
+      properties:
+        id: { type: string, format: uuid }
+        type: { $ref: '#/components/schemas/DocumentType' }
+        series: { type: string, pattern: '^[A-Z0-9]{4}$' }
+        number: { type: [integer, 'null'], minimum: 1, maximum: 99999999 }
+        display: { type: [string, 'null'], examples: ['F001-00000842'] }
+        customerName: { type: string }
+        customerDocument: { type: string }
+        total: { $ref: 'money.yaml#/components/schemas/MoneyNonNegative' }
+        currency: { $ref: 'money.yaml#/components/schemas/Currency' }
+        exchangeRate:
+          oneOf:
+            - $ref: 'money.yaml#/components/schemas/ExchangeRate'
+            - type: 'null'
+        sunatStatus: { $ref: '#/components/schemas/CpeStatus' }
+        issuedAt: { type: string, format: date-time }

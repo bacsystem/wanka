@@ -2,7 +2,7 @@
 
 Estado: **congelado (2026-11-18)**, historia #160. Un cambio a este documento (ruta, forma, permiso o catálogo) es un PR de contrato aprobado por el architect, con las reglas de [`conventions.md` §0](conventions.md#0-contrato-congelado-cómo-se-cambia). Derivado de las pantallas (`apps/web/src/app/**/page.tsx`) y de sus mocks (`apps/web/src/features/*/mocks/*.ts`), que reflejan la forma que devolverá la API. Cada fila indica la pantalla que lo consume, el mock que fija la forma de la respuesta y el permiso requerido (`modulo.recurso:accion`, acciones `read | create | update | void | export` que corresponden a "Ver, Crear, Editar, Anular, Exportar" de `settings/mocks/settings.ts`).
 
-Convenciones (cursor, errores, idempotencia, dinero como string): [`conventions.md`](conventions.md). Todo `POST` marcado **(I)** exige `Idempotency-Key`. Los contratos definitivos de cada endpoint (request/response con tipos y opcionalidad) se publican en el issue que lo implementa y terminan en `openapi.yaml`.
+Convenciones (cursor, errores, idempotencia, dinero como string): [`conventions.md`](conventions.md). Todo `POST` marcado **(I)** exige `Idempotency-Key`. Los contratos definitivos de cada endpoint (request/response con tipos y opcionalidad) se publican en el issue que lo implementa y terminan en el archivo de su módulo en `apps/api/openapi/paths/`.
 
 Ajustes de forma respecto a los mocks, comunes a todos los recursos:
 - Importes `number` → string decimal; IDs → UUID string.
