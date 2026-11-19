@@ -93,10 +93,10 @@ func impersonationSet(scope ImpersonationScope) map[permission.Code]struct{} {
 	}
 	set := map[permission.Code]struct{}{}
 	for _, c := range permission.All() {
-		if scope == ScopeReadOnly && !strings.HasSuffix(string(c), ":read") {
+		if excludedFromImpersonation(c) { // la exclusión vale en todo alcance (ADR 0001, resources.md)
 			continue
 		}
-		if scope == ScopeFull && excludedFromImpersonation(c) {
+		if scope == ScopeReadOnly && !strings.HasSuffix(string(c), ":read") {
 			continue
 		}
 		set[c] = struct{}{}

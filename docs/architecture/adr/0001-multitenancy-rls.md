@@ -165,7 +165,7 @@ La revisión los reprodujo en PG16 (cero filas o `new row violates row-level sec
      ```
      No recibe argumentos: el tenant sale de `app.current_tenant()`, que solo fija `InTenantTx`. Sin tenant fijado devuelve 0 filas. No devuelve el `exchange_token_hash` ni los datos del staff, salvo el ticket. `iam.decide_impersonation` aplica la misma condición.
    - **Una sesión impersonada no puede autorizar accesos de soporte ni gestionar identidad.** La sesión creada por `iam.redeem_impersonation` lleva `impersonator_id`.
-     - **Permisos:** los del alcance del grant, nunca los de un rol del tenant. `read_only` tiene solo las acciones `read`. `full` tiene todas las acciones del catálogo **menos** `identidad.support_access:*`, `identidad.users:*`, `identidad.roles:*`, `identidad.sessions:*` y `empresas.einvoicing:update` (credenciales de Khipu).
+     - **Permisos:** los del alcance del grant, nunca los de un rol del tenant. **En todo alcance** se excluyen `identidad.support_access:*`, `identidad.users:*`, `identidad.roles:*`, `identidad.sessions:*` y `empresas.einvoicing:update` (credenciales de Khipu). Sobre lo que queda, `read_only` tiene solo las acciones `read` y `full` tiene todas las acciones del catálogo.
      - **Doble barrera, que falla cerrada:**
        1. El middleware arma el conjunto de permisos con esa lista de exclusión.
        2. `iam.decide_impersonation` solo actúa si `NULLIF(current_setting('app.session_kind', true), '') = 'user'` **y** `app.impersonator_id` está vacío. Si `app.session_kind` no está fijado, vale `impersonated` o vale `system`, lanza `insufficient_privilege`: **ausencia de la variable = rechazo**, no aprobación. La revisión reprodujo el caso inverso (sin la variable, la versión anterior aprobaba).

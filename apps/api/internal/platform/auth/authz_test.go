@@ -450,16 +450,35 @@ var (
 		"empresas.einvoicing:update",
 	}
 	// empresas.einvoicing:read sí entra en full; solo :update está excluida.
+
+	// readOnlyAllowed son, escritos a mano, los únicos códigos que alcanza una
+	// impersonada read_only: las acciones read del catálogo menos las excluidas.
+	readOnlyAllowed = []permission.Code{
+		"agenda.appointments:read", "auditoria.events:read", "catalogo.categories:read", "catalogo.items:read",
+		"catalogo.prices:read", "clientes.customers:read", "compras.documents:read", "compras.orders:read",
+		"compras.suppliers:read", "empresas.config:read", "empresas.einvoicing:read", "empresas.series:read",
+		"empresas.sites:read", "facturacion.cpe:read", "facturacion.gre:read", "finanzas.cash:read",
+		"finanzas.payables:read", "finanzas.receivables:read", "integraciones.config:read",
+		"inventario.consignments:read", "inventario.counts:read", "inventario.stock:read",
+		"inventario.supplier_returns:read", "inventario.transfers:read", "inventario.warehouses:read",
+		"libreria.books:read", "libreria.school_lists:read", "lubricentro.service_orders:read",
+		"lubricentro.vehicles:read", "notificaciones.reminders:read", "odontologia.records:read",
+		"reportes.dashboard:read", "reportes.management:read", "reportes.tax:read", "restaurante.orders:read",
+		"restaurante.reservations:read", "restaurante.tables:read", "retail.variants:read", "ventas.pos:read",
+		"ventas.quotes:read", "veterinaria.grooming:read", "veterinaria.hospital:read", "veterinaria.records:read",
+	}
 )
 
-func isExcluded(c permission.Code) bool {
-	for _, x := range impersonationExcluded {
+func inList(list []permission.Code, c permission.Code) bool {
+	for _, x := range list {
 		if x == c {
 			return true
 		}
 	}
 	return false
 }
+
+func isExcluded(c permission.Code) bool { return inList(impersonationExcluded, c) }
 
 // permRoutes registra una ruta Tenant por cada código del catálogo y devuelve
 // el camino de cada una.
@@ -487,7 +506,7 @@ func TestImpersonatedPermissionsAreTheGrantScope(t *testing.T) {
 		scope auth.ImpersonationScope
 		want  func(permission.Code) bool
 	}{
-		{"read_only is only the read action", auth.ScopeReadOnly, func(c permission.Code) bool { return strings.HasSuffix(string(c), ":read") }},
+		{"read_only is only the read action", auth.ScopeReadOnly, func(c permission.Code) bool { return inList(readOnlyAllowed, c) }},
 		{"full is everything but the excluded", auth.ScopeFull, func(c permission.Code) bool { return !isExcluded(c) }},
 		{"unknown scope is nothing", 0, func(permission.Code) bool { return false }},
 		{"a scope outside the type is nothing", 7, func(permission.Code) bool { return false }},
@@ -510,6 +529,17 @@ func TestImpersonatedPermissionsAreTheGrantScope(t *testing.T) {
 					}
 				} else if rec.Code != 403 || permOf(t, rec).Code != "forbidden" || permOf(t, rec).Permission != string(c) {
 					t.Errorf("%s = %d %s, want 403 forbidden", c, rec.Code, rec.Body.String())
+				}
+			}
+			if tc.scope == auth.ScopeReadOnly && allowed != len(readOnlyAllowed) {
+				t.Errorf("read_only allowed %d codes, want %d", allowed, len(readOnlyAllowed))
+			}
+			for _, c := range impersonationExcluded { // ningún alcance alcanza un código excluido
+				if tc.want(c) {
+					t.Errorf("%s: an excluded code is allowed by the test's own list", c)
+				}
+				if rec := e.get(paths[c], bearer(token(1))); rec.Code != 403 {
+					t.Errorf("excluded %s = %d, want 403", c, rec.Code)
 				}
 			}
 			if tc.scope == auth.ScopeFull && allowed != len(permission.All())-len(impersonationExcluded) {
@@ -636,5 +666,16 @@ func TestCancelledRequestNeverReachesTheHandler(t *testing.T) {
 	e.h.ServeHTTP(httptest.NewRecorder(), req)
 	if e.hits("tenant") != 0 {
 		t.Fatal("the handler ran on a cancelled request")
+	}
+}
+
+// resources.md: identidad.support_access:read nunca desde una impersonada, tampoco read_only.
+func TestReadOnlyImpersonationCannotReadSupportAccess(t *testing.T) {
+	e := newEnv(t, returns(impersonatedWith(auth.ScopeReadOnly)), nil)
+	e.routes.HandleFunc("GET /v1/support-access", auth.Tenant, auth.Spec{Module: "ventas", Permission: "identidad.support_access:read"}, func(http.ResponseWriter, *http.Request) {})
+	rec := e.get("/v1/support-access", bearer(token(1)))
+	mustProblem(t, rec, 403, "forbidden")
+	if permOf(t, rec).Permission != "identidad.support_access:read" {
+		t.Fatalf("body %s", rec.Body.String())
 	}
 }
