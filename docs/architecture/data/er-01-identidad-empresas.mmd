@@ -36,7 +36,8 @@ erDiagram
     text ubigeo "domicilio fiscal: catalogo 13, se sincroniza con Khipu (ADR 0013)"
     text fiscal_address "3 a 200 caracteres, regla 4094"
     text fiscal_urbanization "nullable, hasta 25 caracteres"
-    bigint provider_synced_version "version enviada a Khipu; pendiente si es menor que version"
+    bigint provider_synced_version "version enviada a Khipu; pendiente si es menor que version; solo la escribe wanka_worker"
+    bigint provider_sync_seq "marca sucio: empresas la sube en cada cambio para Khipu; el job la relee al terminar"
     text default_currency "PEN; USD tambien desde R1"
     boolean allow_negative_stock "default false"
     jsonb print_settings
@@ -47,7 +48,7 @@ erDiagram
     uuid tenant_id FK "RLS: tenant_isolation + member_read (sedes del alcance de app.user_id, solo SELECT y solo sin tenant fijado)"
     text code "UK tenant_id+code"
     text name
-    text sunat_annex "nullable: 4 digitos, CHECK formato, UK parcial tenant_id+sunat_annex; 0000 es el domicilio fiscal; no cambia una vez sincronizado"
+    text sunat_annex "nullable: 4 digitos, CHECK formato, UK parcial tenant_id+sunat_annex; 0000 es el domicilio fiscal; no cambia si el local tiene una serie sincronizada"
     text address
     boolean active "baja solo en Wanka: Khipu no da de baja un anexo con series (ADR 0013)"
     bigint version

@@ -73,6 +73,9 @@ for m in "naive_session_lookup|wanka_app" \
          "grant_app_update_idempotency_hash|wanka_app" \
          "idempotency_open_policy|wanka_app" \
          "drop_idempotency_2xx_check|wanka_app" \
+         "grant_worker_update_series|wanka_worker" \
+         "revoke_worker_series_sync|wanka_worker" \
+         "grant_app_update_series_sync|wanka_app" \
          "purge_policy_always|wanka_worker" \
          "purge_policy_any_tenant|wanka_worker" \
          "idempotency_pk_without_principal|wanka_app" \

@@ -129,3 +129,24 @@ SELECT test.assert((SELECT count(*) FROM iam.permissions) > 100, 'wanka_worker l
 SELECT test.expect_error($$INSERT INTO iam.permissions (code, description) VALUES ('ventas.pos:void', 'Anular ventas')$$, '42501', 'wanka_worker no inserta permisos');
 SELECT test.expect_error($$UPDATE iam.permissions SET description = 'x'$$, '42501', 'wanka_worker no actualiza permisos');
 SELECT test.expect_error($$DELETE FROM iam.permissions$$, '42501', 'wanka_worker no borra permisos');
+\echo '== K5. (wanka_worker) sincronizacion con Khipu (ADR 0013): solo marca sincronizado o en conflicto, nunca numera ni edita org =='
+SELECT test.assert((SELECT count(*) FROM org.document_series) = 0, 'worker sin tenant: 0 series (RLS)');
+BEGIN;
+SELECT set_config('app.tenant_id','aaaaaaaa-0000-0000-0000-000000000001', true);
+UPDATE org.document_series SET provider_conflict_at = now() WHERE id = 'd5000000-0000-0000-0000-0000000000a1';
+UPDATE org.document_series SET provider_synced_at = now() WHERE id = 'd5000000-0000-0000-0000-0000000000a1' AND last_number = 10;
+UPDATE org.sites SET provider_synced_version = version WHERE id = 'a5000000-0000-0000-0000-0000000000a1';
+UPDATE org.tenant_settings SET provider_synced_version = version;
+SELECT test.assert((SELECT provider_conflict_at IS NOT NULL FROM org.document_series WHERE id = 'd5000000-0000-0000-0000-0000000000a1')
+                   AND (SELECT provider_synced_version = 1 FROM org.tenant_settings), 'wanka_worker marca conflicto y sincronizacion');
+SELECT test.expect_error($$UPDATE org.document_series SET last_number = 99$$, '42501', 'wanka_worker no numera');
+SELECT test.expect_error($$UPDATE org.document_series SET active = true$$, '42501', 'wanka_worker no reactiva series');
+SELECT test.expect_error($$UPDATE org.document_series SET series = 'B999'$$, '42501', 'wanka_worker no renombra series');
+SELECT test.expect_error($$INSERT INTO org.document_series (id, tenant_id, site_id, doc_type, series)
+                           VALUES (gen_random_uuid(), app.current_tenant(), 'a5000000-0000-0000-0000-0000000000a1', '01', 'F009')$$,
+                         '42501', 'wanka_worker no crea series');
+SELECT test.expect_error($$DELETE FROM org.document_series$$, '42501', 'wanka_worker no borra series');
+SELECT test.expect_error($$UPDATE org.sites SET sunat_annex = '0002'$$, '42501', 'wanka_worker no cambia el anexo');
+SELECT test.expect_error($$UPDATE org.tenant_settings SET fiscal_address = 'x'$$, '42501', 'wanka_worker no edita los datos fiscales');
+SELECT test.expect_error($$UPDATE org.document_series SET provider_synced_at = now() WHERE doc_type = 'PRO'$$, '23514', 'una serie interna nunca se sincroniza con Khipu');
+ROLLBACK;

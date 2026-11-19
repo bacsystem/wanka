@@ -83,7 +83,18 @@ END $$;
 CREATE TRIGGER mfa_enrollments_guard_writes BEFORE INSERT OR UPDATE ON iam.mfa_enrollments
   FOR EACH ROW EXECUTE FUNCTION iam.guard_mfa_enrollment_writes();
 
-CREATE TABLE org.sites (id uuid PRIMARY KEY, tenant_id uuid NOT NULL REFERENCES org.tenants, name text NOT NULL, UNIQUE (tenant_id, id));
+CREATE TABLE org.sites (id uuid PRIMARY KEY, tenant_id uuid NOT NULL REFERENCES org.tenants, name text NOT NULL, UNIQUE (tenant_id, id),
+  sunat_annex text CHECK (sunat_annex ~ '^[0-9]{4}$'), active boolean NOT NULL DEFAULT true, version bigint NOT NULL DEFAULT 1,
+  provider_synced_version bigint);
+-- Sincronizacion con Khipu (ADR 0013): solo wanka_worker marca lo sincronizado o en conflicto; wanka_app edita el resto.
+CREATE TABLE org.tenant_settings (tenant_id uuid PRIMARY KEY REFERENCES org.tenants, ubigeo text, fiscal_address text,
+  version bigint NOT NULL DEFAULT 1, provider_sync_seq bigint NOT NULL DEFAULT 0, provider_synced_version bigint);
+CREATE TABLE org.document_series (id uuid PRIMARY KEY, tenant_id uuid NOT NULL REFERENCES org.tenants, site_id uuid NOT NULL,
+  doc_type text NOT NULL CHECK (doc_type IN ('01','03','07','08','09','PRO','OC','Z','OT')), series text NOT NULL,
+  last_number bigint NOT NULL DEFAULT 0 CHECK (last_number >= 0), active boolean NOT NULL DEFAULT true,
+  provider_synced_at timestamptz, provider_conflict_at timestamptz,
+  UNIQUE (tenant_id, doc_type, series), FOREIGN KEY (tenant_id, site_id) REFERENCES org.sites (tenant_id, id),
+  CHECK (doc_type IN ('01','03','07','08','09') OR (provider_synced_at IS NULL AND provider_conflict_at IS NULL)));
 CREATE TABLE ops.webhook_routes (route_id text PRIMARY KEY, tenant_id uuid NOT NULL, provider text NOT NULL, webhook_secret_enc bytea NOT NULL, revoked_at timestamptz);
 CREATE TABLE platform.impersonation_grants (id uuid PRIMARY KEY, platform_user_id uuid NOT NULL, tenant_id uuid NOT NULL, ticket_id uuid NOT NULL,
   scope text NOT NULL, reason text, status text NOT NULL, created_at timestamptz NOT NULL DEFAULT now(), approved_by uuid, approved_at timestamptz,
@@ -93,7 +104,7 @@ CREATE TABLE platform.audit_events (id bigserial PRIMARY KEY, platform_user_id u
 -- RLS habilitado y FORZADO en las demas tablas de tenant (ADR 0001); iam.roles, iam.memberships, org.tenants y audit.events
 -- ya lo traen de la migracion del kernel, con su tenant_isolation.
 DO $$ DECLARE t text; BEGIN
-  FOREACH t IN ARRAY ARRAY['org.sites'] LOOP
+  FOREACH t IN ARRAY ARRAY['org.sites','org.tenant_settings','org.document_series'] LOOP
     EXECUTE format('ALTER TABLE %s ENABLE ROW LEVEL SECURITY', t);
     EXECUTE format('ALTER TABLE %s FORCE ROW LEVEL SECURITY', t);
     EXECUTE format('CREATE POLICY tenant_isolation ON %s USING (tenant_id = app.current_tenant()) WITH CHECK (tenant_id = app.current_tenant())', t);
@@ -265,7 +276,16 @@ GRANT SELECT, INSERT, UPDATE ON platform.impersonation_grants TO wanka_definer;
 
 -- Permisos de los roles de aplicación (extracto de la matriz del ADR 0001)
 -- app, audit, iam y org, y los GRANT de iam.*, org.tenants y audit.events: migracion del kernel
-GRANT SELECT, INSERT, UPDATE ON org.sites TO wanka_app;
+-- org.sites, org.tenant_settings y org.document_series (ADR 0013): wanka_app no escribe las columnas de sincronizacion con Khipu
+-- (provider_synced_version, provider_synced_at, provider_conflict_at); las marca solo wanka_worker, que no toca nada mas.
+GRANT SELECT ON org.sites, org.tenant_settings, org.document_series TO wanka_app;
+GRANT INSERT (id, tenant_id, name, sunat_annex, active, version), UPDATE (name, sunat_annex, active, version) ON org.sites TO wanka_app;
+GRANT UPDATE (ubigeo, fiscal_address, version, provider_sync_seq) ON org.tenant_settings TO wanka_app;
+GRANT INSERT (id, tenant_id, site_id, doc_type, series, last_number, active),
+      UPDATE (last_number, active) ON org.document_series TO wanka_app;
+GRANT SELECT ON org.sites, org.tenant_settings, org.document_series TO wanka_worker;
+GRANT UPDATE (provider_synced_version) ON org.sites, org.tenant_settings TO wanka_worker;
+GRANT UPDATE (provider_synced_at, provider_conflict_at) ON org.document_series TO wanka_worker;
 GRANT SELECT ON iam.list_my_memberships TO wanka_app;
 -- iam.mfa_enrollments (#25): la app no mueve user_id, token_hash, expires_at ni created_at, ni borra; el worker solo limpia.
 GRANT SELECT, INSERT ON iam.mfa_enrollments TO wanka_app;

@@ -3,6 +3,12 @@
 BEGIN;
 SELECT set_config('app.tenant_id','aaaaaaaa-0000-0000-0000-000000000001', true);
 UPDATE iam.memberships SET status = 'activo' WHERE user_id = 'eeeeeeee-0000-0000-0000-000000000001';
+-- ADR 0013: configuracion de A con una serie de boleta ya sincronizada con Khipu y una proforma (interna)
+UPDATE org.sites SET sunat_annex = '0000' WHERE id = 'a5000000-0000-0000-0000-0000000000a1';
+INSERT INTO org.tenant_settings (tenant_id, ubigeo, fiscal_address) VALUES ('aaaaaaaa-0000-0000-0000-000000000001', '150122', 'Av. Prueba 123');
+INSERT INTO org.document_series (id, tenant_id, site_id, doc_type, series, last_number, provider_synced_at) VALUES
+  ('d5000000-0000-0000-0000-0000000000a1','aaaaaaaa-0000-0000-0000-000000000001','a5000000-0000-0000-0000-0000000000a1','03','B001', 10, now()),
+  ('d5000000-0000-0000-0000-0000000000a2','aaaaaaaa-0000-0000-0000-000000000001','a5000000-0000-0000-0000-0000000000a1','PRO','P001', 0, NULL);
 INSERT INTO iam.roles (id, tenant_id, name, requires_mfa) VALUES ('a0000000-0000-0000-0000-0000000000a2','aaaaaaaa-0000-0000-0000-000000000001','Cajero', false);
 INSERT INTO iam.users (id, email) VALUES ('eeeeeeee-0000-0000-0000-000000000002','cajero@a.pe');
 INSERT INTO iam.memberships (id, tenant_id, user_id, role_id, status, authz_version)

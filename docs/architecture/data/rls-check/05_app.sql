@@ -377,3 +377,25 @@ UPDATE iam.mfa_enrollments SET email_sent_at = now() - interval '1 hour' WHERE i
 SELECT test.assert((SELECT email_sent_at = now() FROM iam.mfa_enrollments WHERE id = 'e0000000-0000-0000-0000-0000000000e2'),
                    'email_sent_at no se finge: lo fija el servidor en cada envio');
 ROLLBACK;
+\echo '== A12. (wanka_app) org.document_series, org.sites y org.tenant_settings: numera y edita, pero no marca la sincronizacion con Khipu (ADR 0013) =='
+BEGIN;
+SELECT set_config('app.tenant_id','aaaaaaaa-0000-0000-0000-000000000001', true);
+SELECT test.assert((SELECT count(*) FROM org.document_series) = 2, 'wanka_app ve las series de A');
+UPDATE org.document_series SET last_number = last_number + 1 WHERE id = 'd5000000-0000-0000-0000-0000000000a1'
+   AND active AND provider_conflict_at IS NULL AND (doc_type NOT IN ('01','03','07','08','09') OR provider_synced_at IS NOT NULL);
+SELECT test.assert((SELECT last_number FROM org.document_series WHERE id = 'd5000000-0000-0000-0000-0000000000a1') = 11, 'NextNumber: N+1 en una serie sincronizada');
+UPDATE org.tenant_settings SET fiscal_address = 'Av. Nueva 456', version = version + 1, provider_sync_seq = provider_sync_seq + 1;
+SELECT test.assert((SELECT provider_sync_seq FROM org.tenant_settings) = 1, 'wanka_app pide la sincronizacion (provider_sync_seq)');
+SELECT test.expect_error($$UPDATE org.document_series SET provider_synced_at = now()$$, '42501', 'wanka_app no marca una serie como sincronizada');
+SELECT test.expect_error($$UPDATE org.document_series SET provider_conflict_at = NULL$$, '42501', 'wanka_app no levanta un congelado');
+SELECT test.expect_error($$INSERT INTO org.document_series (id, tenant_id, site_id, doc_type, series, provider_synced_at)
+                           VALUES (gen_random_uuid(), app.current_tenant(), 'a5000000-0000-0000-0000-0000000000a1', '01', 'F001', now())$$,
+                         '42501', 'wanka_app no crea una serie ya sincronizada');
+SELECT test.expect_error($$UPDATE org.sites SET provider_synced_version = 99$$, '42501', 'wanka_app no marca un anexo como sincronizado');
+SELECT test.expect_error($$UPDATE org.tenant_settings SET provider_synced_version = 99$$, '42501', 'wanka_app no marca los datos fiscales como sincronizados');
+SELECT test.expect_error($$DELETE FROM org.document_series$$, '42501', 'ninguna serie se borra');
+ROLLBACK;
+BEGIN;
+SELECT set_config('app.tenant_id','bbbbbbbb-0000-0000-0000-000000000002', true);
+SELECT test.assert((SELECT count(*) FROM org.document_series) = 0 AND (SELECT count(*) FROM org.tenant_settings) = 0, 'wanka_app con tenant B no ve la configuracion de A');
+ROLLBACK;
