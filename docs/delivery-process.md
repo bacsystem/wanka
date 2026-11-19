@@ -12,7 +12,7 @@ Decisión del dueño, 2026-11-19. Reemplaza la regla anterior de que cada PR sub
   - `## [Unreleased]` pasa a `## [X.Y.Z] - YYYY-MM-DD`.
 
   La versión sigue SemVer, aun en 0.x: **minor** si el lote tiene algún `feat` o un cambio incompatible; si no, **patch**.
-- Después del merge del release, el dueño crea un tag por lote: `git tag -a vX.Y.Z -m "vX.Y.Z" <merge commit del release>`, sobre un commit de `main` con la CI en verde.
+- Después del merge del release, `release-tag.yml` crea el tag del lote sobre ese commit de `main`, en cuanto la CI pasa en verde (ver «Tags automáticos»).
 - Commits y PR van con `/git-flow`. En este proceso, `/git-flow` no calcula ni aplica la versión en los PR de historia; solo lo hace en el PR de release.
 
 ## Definición de terminado (antes de pedir el merge)
@@ -31,7 +31,7 @@ Decisión del dueño, 2026-11-19. Reemplaza la regla anterior de que cada PR sub
 
 ## Tags automáticos
 
-`.github/workflows/release-tag.yml` crea el tag `vX.Y.Z` cuando el dueño mergea en `main` un PR de release (`chore(release): vX.Y.Z`), y solo después de que los workflows `CI` y `API` pasen sobre ese commit. Lee la versión del `package.json` del commit. Si el tag ya existe no hace nada, y en cualquier otro commit de `main` tampoco. El merge del release es la aprobación del dueño. Ninguna persona ni agente empuja tags a mano.
+`.github/workflows/release-tag.yml` crea el tag `vX.Y.Z` cuando el dueño mergea en `main` un PR de release (`chore(release): vX.Y.Z`), y solo después de que los workflows `CI` y `API` pasen sobre ese commit. Lee la versión del `package.json` del commit. Si el tag ya existe no hace nada, y en cualquier otro commit de `main` tampoco. El merge del release es la aprobación del dueño. Ninguna persona ni agente empuja tags a mano. Si la CI de ese commit falla y el arreglo llega en otro commit, el dueño lanza el workflow a mano (`workflow_dispatch`) con el SHA del commit que quedó en verde. El workflow comprueba que la versión de ese commit sea la del release y que su CI esté en verde. Si el tag ya existe sobre otro commit, falla y no lo mueve.
 
 ## Rendimiento (lecciones del lote 2 del kernel, 2026-11-19)
 

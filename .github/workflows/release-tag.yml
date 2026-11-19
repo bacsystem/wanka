@@ -8,6 +8,13 @@ on:
     workflows: [CI, API]
     types: [completed]
     branches: [main]
+  # Salida manual, la lanza el dueño: tag de un commit de main ya en verde,
+  # cuando el arreglo del release llegó en otro commit.
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: commit de main a etiquetar (40 hex)
+        required: true
 
 permissions:
   contents: write
@@ -20,34 +27,50 @@ concurrency:
 
 jobs:
   tag:
-    if: github.event.workflow_run.event == 'push' && github.event.workflow_run.conclusion == 'success'
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.event == 'push' && github.event.workflow_run.conclusion == 'success')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+          ref: main
           fetch-depth: 0
       - name: tag the release merge
         env:
           GH_TOKEN: ${{ github.token }}
-          SHA: ${{ github.event.workflow_run.head_sha }}
+          RUN_SHA: ${{ github.event.workflow_run.head_sha }}
+          INPUT_SHA: ${{ inputs.sha }}
           REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
-          # Solo un merge de un PR de release.
-          title=$(gh api "repos/$REPO/commits/$SHA/pulls" --jq '.[0].title // ""')
-          case "$title" in
-            "chore(release): v"*) ;;
-            *) echo "not a release merge ($title); nothing to tag"; exit 0 ;;
-          esac
+          SHA="${RUN_SHA:-$INPUT_SHA}"
+          if ! printf '%s' "$SHA" | grep -Eq '^[0-9a-f]{40}$'; then echo "invalid sha"; exit 1; fi
+          # El commit tiene que estar en main.
+          git merge-base --is-ancestor "$SHA" origin/main || { echo "$SHA is not on main"; exit 1; }
+          git checkout -q "$SHA"
+          # Automático: solo el merge de un PR de release. Manual (dispatch): el dueño
+          # elige un commit de main posterior al release; la versión manda.
+          title=""
+          if [ -n "${RUN_SHA:-}" ]; then
+            title=$(gh api "repos/$REPO/commits/$SHA/pulls" --jq '.[0].title // ""')
+            case "$title" in
+              "chore(release): v"*) ;;
+              *) echo "not a release merge ($title); nothing to tag"; exit 0 ;;
+            esac
+          fi
           version=$(node -p "require('./package.json').version")
           if ! printf '%s' "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then echo "invalid version $version"; exit 1; fi
+          web=$(node -p "require('./apps/web/package.json').version")
+          if [ "$web" != "$version" ]; then echo "apps/web/package.json is $web, root is $version"; exit 1; fi
           tag="v$version"
-          if [ "${title#chore(release): }" != "$tag" ]; then
+          if [ -n "$title" ] && [ "${title#chore(release): }" != "$tag" ]; then
             echo "PR title says ${title#chore(release): } but package.json is $version"; exit 1
           fi
           if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
-            echo "$tag already exists"; exit 0
+            at=$(git rev-list -n 1 "$tag")
+            if [ "$at" = "$SHA" ]; then echo "$tag already exists at $SHA"; exit 0; fi
+            echo "$tag already exists at $at, not at $SHA: not moving it"; exit 1
           fi
           # Los dos workflows tienen que haber pasado sobre este commit.
           for wf in CI API; do
