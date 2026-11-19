@@ -134,3 +134,11 @@ INSERT INTO iam.sessions (id, user_id, access_hash, access_expires_at, mfa_satis
   VALUES ('5e000000-0000-0000-0000-0000000000e2', 'eeeeeeee-0000-0000-0000-000000000002', sha256('old-created'), now(), true, 'none', now() - interval '400 days');
 SELECT test.assert((SELECT created_at = now() FROM iam.sessions WHERE id = '5e000000-0000-0000-0000-0000000000e2'), 'created_at del INSERT lo fija el servidor');
 ROLLBACK;
+-- Catalogo de permisos (issue #172): wanka_app lo lee y no lo escribe, sin importar el tenant fijado.
+\echo '== C1. wanka_app: iam.permissions es de solo lectura =='
+SELECT test.assert((SELECT count(*) FROM iam.permissions) > 100
+                   AND EXISTS (SELECT 1 FROM iam.permissions WHERE code = 'ventas.pos:create'), 'wanka_app lee el catalogo de permisos');
+SELECT test.expect_error($$INSERT INTO iam.permissions (code, description) VALUES ('ventas.pos:void', 'Anular ventas')$$, '42501', 'wanka_app no inserta permisos');
+SELECT test.expect_error($$UPDATE iam.permissions SET description = 'x'$$, '42501', 'wanka_app no actualiza permisos');
+SELECT test.expect_error($$DELETE FROM iam.permissions$$, '42501', 'wanka_app no borra permisos');
+SELECT test.expect_error($$TRUNCATE iam.permissions$$, '42501', 'wanka_app no vacia permisos');

@@ -709,6 +709,10 @@ func TestTableGrantsMatchTheADR0001Matrix(t *testing.T) {
 		"wanka_worker|org.tenants":      "SELECT",
 		"wanka_definer|iam.sessions":    "SELECT",
 		"wanka_definer|iam.memberships": "SELECT",
+		// Catálogo de permisos (#172): solo lectura para api, worker y plataforma.
+		"wanka_app|iam.permissions":      "SELECT",
+		"wanka_worker|iam.permissions":   "SELECT",
+		"wanka_platform|iam.permissions": "SELECT",
 	}
 	rows, err := admin.Query(ctx, `
 		SELECT grantee, table_schema || '.' || table_name, string_agg(privilege_type, ',' ORDER BY privilege_type)
@@ -765,8 +769,15 @@ func TestTableGrantsMatchTheADR0001Matrix(t *testing.T) {
 			}
 		}
 	}
+	// wanka_platform lee iam.permissions (#172): USAGE en iam, y nada en org. wanka_webhooks no tiene ninguno.
+	if !queryOne[bool](t, admin, `SELECT has_schema_privilege('wanka_platform', 'iam', 'USAGE')`) {
+		t.Error("wanka_platform lacks USAGE on iam (needed to read iam.permissions)")
+	}
 	for _, role := range []string{"wanka_webhooks", "wanka_platform"} {
 		for _, schema := range []string{"iam", "org"} {
+			if role == "wanka_platform" && schema == "iam" {
+				continue
+			}
 			if queryOne[bool](t, admin, `SELECT has_schema_privilege($1, $2, 'USAGE')`, role, schema) {
 				t.Errorf("%s must not have USAGE on %s", role, schema)
 			}

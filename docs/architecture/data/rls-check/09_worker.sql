@@ -35,3 +35,8 @@ SELECT test.assert(NOT has_schema_privilege('wanka_definer', 'iam', 'CREATE')
                    AND NOT has_schema_privilege('wanka_definer', 'ops', 'CREATE')
                    AND NOT has_schema_privilege('wanka_definer', 'platform_fn', 'CREATE'),
                    'wanka_definer sin CREATE tras el cambio de duenio');
+\echo '== K3. (wanka_worker) iam.permissions es de solo lectura (issue #172) =='
+SELECT test.assert((SELECT count(*) FROM iam.permissions) > 100, 'wanka_worker lee el catalogo de permisos');
+SELECT test.expect_error($$INSERT INTO iam.permissions (code, description) VALUES ('ventas.pos:void', 'Anular ventas')$$, '42501', 'wanka_worker no inserta permisos');
+SELECT test.expect_error($$UPDATE iam.permissions SET description = 'x'$$, '42501', 'wanka_worker no actualiza permisos');
+SELECT test.expect_error($$DELETE FROM iam.permissions$$, '42501', 'wanka_worker no borra permisos');
