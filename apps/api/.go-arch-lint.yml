@@ -1,11 +1,14 @@
-# Architecture rules for apps/api (ADR 0002). Check: scripts/archlint.sh
+# Reglas de arquitectura de apps/api (ADR 0002). Se comprueban con scripts/archlint.sh.
 #
-# The kernel (internal/platform) is shared by everyone and imports no module.
-# The rule that keeps modules apart is exercised on a fixture:
-# testdata/archlint/.go-arch-lint.yml. When a module is added under
-# internal/<module>/, add its pair of components to this file following that
-# fixture: <module> (the facade, package internal/<module>) and <module>_inner
-# (domain, app, adapters), so no other module can import its inner packages.
+# El kernel (internal/platform) es de todos y no importa ningún módulo. La regla
+# que mantiene separados a los módulos se prueba sobre un fixture:
+# testdata/archlint/.go-arch-lint.yml. Al añadir un módulo en internal/<módulo>/,
+# agrega su par de componentes a este archivo siguiendo ese fixture: <módulo> (la
+# fachada, paquete internal/<módulo>) y <módulo>_inner (domain, app, adapters),
+# para que ningún otro módulo importe sus paquetes internos.
+#
+# Un paquete anidado de platform (p. ej. internal/platform/jobs/river) da «not
+# attached» hasta que se añada aquí: falla cerrado a propósito.
 #
 # workdir es la raíz del módulo para que entren al grafo los paquetes que
 # embeben archivos SQL, que deben estar junto a ellos (migrations/, bootstrap/).
@@ -13,19 +16,30 @@
 version: 3
 workdir: .
 components:
-  platform: { in: internal/platform/** }
+  # db es el único dueño de pgxpool (ADR 0001): el resto del kernel y los módulos
+  # reciben *db.Pool y no pueden construir ni usar un pgxpool.Pool propio.
+  platform_db: { in: internal/platform/db/** }
+  platform: { in: internal/platform/* }
   main: { in: cmd/** }
   migrations: { in: migrations }
   bootstrap: { in: bootstrap }
 vendors:
-  pgx: { in: [github.com/jackc/pgx/v5, github.com/jackc/pgx/v5/**] }
+  # pgx sin pgxpool ni stdlib: son vendors aparte que solo usa internal/platform/db.
+  pgx: { in: [github.com/jackc/pgx/v5, github.com/jackc/pgx/v5/pgconn, github.com/jackc/pgx/v5/pgconn/**, github.com/jackc/pgx/v5/pgtype, github.com/jackc/pgx/v5/pgtype/**, github.com/jackc/pgx/v5/pgproto3] }
+  pgxpool: { in: github.com/jackc/pgx/v5/pgxpool }
+  pgxstdlib: { in: github.com/jackc/pgx/v5/stdlib }
   goose: { in: [github.com/pressly/goose/v3, github.com/pressly/goose/v3/**] }
 deps:
+  platform_db:
+    mayDependOn: [platform, platform_db, migrations, bootstrap]
+    canUse: [pgx, pgxpool, pgxstdlib, goose]
   platform:
-    mayDependOn: [platform, migrations, bootstrap]
+    mayDependOn: [platform, platform_db, migrations, bootstrap]
     canUse: [pgx, goose]
   main:
-    mayDependOn: [platform, migrations]
+    mayDependOn: [platform, platform_db, migrations]
     canUse: [pgx]
 exclude:
   - testdata
+  # fixture de rawconn_test.go: código que no se compila (usa los nombres prohibidos a propósito)
+  - internal/platform/db/testdata

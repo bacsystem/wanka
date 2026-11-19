@@ -3,6 +3,16 @@
 All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.4.0] - 2026-11-18
+
+### Added
+- `apps/api`: `db.Pool.InTenantTx` and `InTenantReadTx` open every tenant transaction with `app.tenant_id`, `app.user_id`, `app.session_kind` and `app.impersonator_id` set locally (`set_config(..., true)`), commit on `nil` and roll back on error or panic. `Actor{TenantID, UserID, Kind, ImpersonatorID}` has no valid zero `Kind`; an empty tenant returns `ErrNoTenant`, an incoherent actor `ErrInvalidActor`, and a `statement_timeout` arrives as `ErrStatementTimeout`. RLS isolation, connection reuse and rollback are tested on a real PostgreSQL 16 with a test-only table (#190, #163).
+- CI: `api.yml` runs `rls-check/run.sh` (must pass) and `MUTATION=naive_session_lookup` (must fail), also when `docs/architecture/data/rls-check/` changes; go-arch-lint rejects `pgxpool` and `pgx/stdlib` outside `internal/platform/db` and `scripts/archlint.sh` proves it (#190, #163).
+- `docs/architecture/capacity.md`: measured overhead of `BEGIN` + `set_config` (one round trip, 0.26 ms in the measurement) (#190, #163).
+
+### Changed
+- `apps/api`: `db.Pool.Acquire` is no longer exported: the pool no longer hands out raw connections, and a test fails if code outside `internal/platform/db` calls `pgx.Connect`, `pgconn.Connect*`, `pgxpool.New*` or `stdlib.Open*` (#190, #163).
+
 ## [0.3.1] - 2026-11-18
 
 ### Changed

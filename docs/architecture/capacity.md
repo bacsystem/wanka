@@ -37,6 +37,24 @@ Estado: propuesto (2026-11-17). La carga por tenant (50 usuarios concurrentes, 3
 
 Las cuentas: **una cuenta por usuario virtual** (si no, se mide el lock de una sola sesión), generador de carga en una máquina distinta del servidor, y corrida de control en la misma tanda. Herramienta propuesta: k6 (scripts en el repo; decisión del tech-lead).
 
+### Sobrecarga medida de `InTenantTx`
+
+Medida en #163 con el comando
+
+```sh
+cd apps/api && go test -run '^$' -bench 'Tx|Autocommit' -benchtime 2000x -count 8 ./internal/platform/db
+```
+
+(`apps/api/internal/platform/db/tenant_bench_test.go`), contra PostgreSQL 16 real en Docker sobre macOS (Apple M4 Max), conectando por loopback con un solo cliente y una consulta `SELECT 1` por transacción. Mediana de las 8 corridas de 2 000 iteraciones:
+
+| Caso | Tiempo por operación | Idas y vueltas |
+|---|---|---|
+| Consulta suelta (autocommit) | 0,23 ms | 1 |
+| `BEGIN` + consulta + `COMMIT`, sin variables | 0,64 ms | 3 |
+| `InTenantTx` (`BEGIN` + `set_config` ×4 + consulta + `COMMIT`) | 0,91 ms | 4 |
+
+`InTenantTx` suma **una ida y vuelta** (RTT) por transacción respecto de una transacción normal: 0,26 ms en esta medición, que coincide con el coste de una consulta suelta (0,23 ms). En el servidor, el `SELECT set_config(...)` de las cuatro variables tarda 0,03-0,04 ms (`EXPLAIN ANALYZE`), así que el coste es de red y no de cómputo. Por eso la sobrecarga se debe leer como "1 RTT entre la API y la base", y su valor en ms en cada entorno se mide en la prueba de carga: esta medición no dice qué cifra dará la red entre servicios del despliegue. Es la referencia para el presupuesto de ~10-30 ms por transacción de arriba. Si hiciera falta recortarlo, `BEGIN` y `set_config` pueden ir en una sola ida y vuelta con un lote de pgx; hoy no se justifica.
+
 ## 3. Degradación y backpressure
 
 - Pool de conexiones lleno más de 200 ms → la API responde `503 overloaded` con `Retry-After: 1` en vez de encolar indefinidamente (`pgxpool` con `context` de 200 ms para adquirir conexión).
