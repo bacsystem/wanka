@@ -1,6 +1,6 @@
 # ADR 0011: Perder la membresía termina la sesión en esa empresa, no la sesión del usuario
 
-- Estado: propuesto
+- Estado: aceptado (2026-11-18: el dueño eligió la opción 4, «Desligar la sesión en su sitio», en la pregunta 3 del PR #181; en el PR #185 eligió además la subdecisión (a), que con una sola empresa activa restante igual muestra `/seleccionar-empresa`, y aprobó el merge)
 - Fecha: 2026-11-18
 - Modifica: [ADR 0004](0004-in-house-auth.md), solo en lo que lista «Qué reemplaza del ADR 0004». El resto del ADR 0004 sigue vigente. Su texto no se reescribe ([README §9](../README.md)): ante una diferencia, manda este ADR.
 
@@ -31,7 +31,7 @@ Opción 4.
 **Qué reemplaza del ADR 0004** (el texto del 0004 queda como estaba; estas frases dejan de valer):
 - «Revocación: … suspensión de usuario **o de membresía** ⇒ `revoked_at`». Ahora solo revoca la suspensión del usuario, definida abajo. Quitar o suspender una membresía desliga la sesión.
 - «Si una sesión de tenant no impersonada … no tiene versión actual … o la membresía no está activa, **se revoca y se responde 401**». Ahora se desliga, y la ruta de tenant responde `403 tenant_access_denied`. La frase «nunca se escribe NULL en la sesión» se refiere a `authz_version` cuando la versión actual falta y la sesión sigue ligada. Desligar sí escribe `NULL`, en todas las columnas del tenant a la vez.
-- «Prueba de integración: borrar o suspender la membresía hace que la siguiente petición responda 401 y revoque la sesión». La reemplaza la prueba de #174: `403 tenant_access_denied` en una ruta de tenant, sesión sin tenant y sin revocar, y `200` en `GET /v1/me/memberships`.
+- «Prueba de integración: borrar o suspender la membresía hace que la siguiente petición responda 401 y revoque la sesión». La reemplaza la prueba de #174 (con un doble del resolver) y #196 (contra PostgreSQL): `403 tenant_access_denied` en una ruta de tenant, sesión sin tenant y sin revocar, y `200` en `GET /v1/me/memberships`.
 - En «Dónde se decide», «recibiera `402` en vez de `401` … y no lo lleva a `/login`». El lugar y el orden de la decisión no cambian; cambia el código, que ahora es `403 tenant_access_denied`, y el destino, que ahora es `/seleccionar-empresa`.
 
 **En la API (paso de sesión del middleware, issue #174)**
@@ -54,7 +54,7 @@ Opción 4.
 - **Qué es cada suspensión.** La **suspensión del usuario** bloquea la cuenta global (`iam.users.status = bloqueado`, [er-01](../data/er-01-identidad-empresas.mmd)). Vale para todas sus empresas, revoca todas sus sesiones y no la puede hacer un administrador de una empresa: es del plano plataforma, y su endpoint no existe todavía. Lo que un administrador de empresa hace desde `/configuracion/usuarios` (`PATCH /v1/users/{id}`, [`resources.md`](../api/resources.md)) es suspender **la membresía** en su empresa, que desliga y no revoca.
 - **Si la membresía vuelve a estar activa** antes de la siguiente petición del usuario, la sesión sigue en A. No hay estado intermedio que limpiar.
 
-**Sesiones impersonadas** (`impersonator_id`, ADR 0001, camino 6): son del staff (`user_id` es el usuario de plataforma del grant) y el grant es por empresa, no por usuario. No tienen membresía (`membership_id IS NULL`), así que nunca se desligan y el `UPDATE` las excluye. Borrar o suspender cualquier membresía de esa empresa no las cambia. Si su grant se revoca o vence, la sesión se **revoca entera**, como hasta ahora (ADR 0001: «la revocación corta la sesión»; acceso de 60 min desde el canje). La siguiente búsqueda no devuelve fila y la API responde `401 session_expired`: el staff no tiene una sesión de usuario del plano tenant a la que volver, y su salida es la consola.
+**Sesiones impersonadas** (`impersonator_id`, ADR 0001, camino 6): son del staff (el usuario de plataforma del grant; se guarda en `impersonator_id` y `user_id` queda en `NULL`, aclaración del 2026-11-19, [data-model §6](../data/data-model.md)) y el grant es por empresa, no por usuario. No tienen membresía (`membership_id IS NULL`), así que nunca se desligan y el `UPDATE` las excluye. Borrar o suspender cualquier membresía de esa empresa no las cambia. Si su grant se revoca o vence, la sesión se **revoca entera**, como hasta ahora (ADR 0001: «la revocación corta la sesión»; acceso de 60 min desde el canje). La siguiente búsqueda no devuelve fila y la API responde `401 session_expired`: el staff no tiene una sesión de usuario del plano tenant a la que volver, y su salida es la consola.
 
 **En el BFF**
 - `403 tenant_access_denied` en cualquier ruta lleva a `/seleccionar-empresa` con el aviso «Ya no tienes acceso a esa empresa». No hace refresh ni escribe cookies: los tokens no cambiaron. Por eso funciona también desde un Server Component, que solo hace `redirect`.
