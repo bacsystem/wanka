@@ -3,6 +3,15 @@
 All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.15.1] - 2026-11-19
+
+### Changed
+- `docs/architecture`: a membership that is not `invitado` or `activo` gives no read access to any row of its company, even with no tenant set. `member_read` of `org.tenants` and `own_memberships` of `iam.memberships` now require `status IN ('invitado','activo')`, like the `iam.roles` policy, so «A is not in `GET /v1/me/memberships`» is guaranteed by the database and not by a handler (ADR 0001, clarification). `rls-check` seeds an ex member (suspended) and proves 0 rows with no tenant for him and for a deleted membership, and that an `invitado` and an `activo` member still read theirs; four new mutations (`member_read_tenants_no_status`, `member_read_with_suspended`, `own_memberships_no_status`, `session_lookup_no_restore_deleted`). `member_read` is checked in `pg_policies.qual` against the exact set `{activo, invitado}` (an extra `suspendido` fails too), because `own_memberships` already hides the row from its subquery (#187).
+- `docs/architecture`: a failed `POST /v1/auth/refresh` or `POST /platform/v1/auth/refresh` (nonexistent, revoked or expired refresh, or the previous one reused outside the 10 s grace, which also revokes the family) is `401 session_expired`; added to `api/conventions.md` §4, ADR 0004 and sequence 01. The BFF does not retry it and goes to `/login`. The same `401 session_expired` answers a login step token (`challengeToken` or `enrollmentToken`) that is expired, consumed or nonexistent; it gets no `code` of its own because the client action is the same. Every `401` of both planes, from the kernel or from identity (`invalid_credentials` included), carries `WWW-Authenticate: Bearer` without parameters (`api/conventions.md` §2, §3 and §4). `httpx.WriteProblem` now sets the header on every `401` by status, not by a list of codes, so `invalid_credentials` carries it too; the test is `TestWWWAuthenticateOnEvery401AndOnlyOn401` (#187). Compatible (§0): no new `code` (#187).
+
+### Fixed
+- `docs/architecture/data/rls-check/05_app.sql`: the «session_lookup does not leak `app.tenant_id`» assertion ran in its own statement, after the transaction setting had been cleared, so it could not tell. The lookup and the check now share one `BEGIN … COMMIT`, and `MUTATION=session_lookup_no_restore` fails in the `wanka_app` step too (#187).
+
 ## [0.15.0] - 2026-11-19
 
 ### Added

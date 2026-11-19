@@ -99,10 +99,12 @@ DO $$ DECLARE t text; BEGIN
     EXECUTE format('ALTER TABLE %s FORCE ROW LEVEL SECURITY', t);
     EXECUTE format('CREATE POLICY tenant_isolation ON %s USING (tenant_id = app.current_tenant()) WITH CHECK (tenant_id = app.current_tenant())', t);
   END LOOP; END $$;
+-- Solo las membresias invitado/activo dan lectura sin tenant (ADR 0001, issue #187): una suspendida no ve ni su empresa.
 CREATE POLICY member_read ON org.tenants FOR SELECT USING (app.current_tenant() IS NULL AND id IN
-  (SELECT tenant_id FROM iam.memberships WHERE user_id = app.current_user_id()));
+  (SELECT tenant_id FROM iam.memberships WHERE user_id = app.current_user_id() AND status IN ('invitado','activo')));
 CREATE POLICY platform_rw ON org.tenants TO wanka_platform USING (true) WITH CHECK (true);
-CREATE POLICY own_memberships ON iam.memberships FOR SELECT USING (app.current_tenant() IS NULL AND user_id = app.current_user_id());
+CREATE POLICY own_memberships ON iam.memberships FOR SELECT USING (app.current_tenant() IS NULL AND user_id = app.current_user_id()
+  AND status IN ('invitado','activo'));
 CREATE POLICY member_read ON iam.roles FOR SELECT USING (app.current_tenant() IS NULL AND id IN
   (SELECT role_id FROM iam.memberships WHERE user_id = app.current_user_id() AND status IN ('invitado','activo')));
 CREATE POLICY member_read ON org.sites FOR SELECT USING (app.current_tenant() IS NULL AND EXISTS
