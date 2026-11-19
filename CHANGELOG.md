@@ -3,6 +3,12 @@
 All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Changed
+- API contract for the owner's decision on #25 (option a): when login answers `mfa_enrollment_required`, the API emails a one-time `emailCode` and `POST /v1/auth/mfa/enrollment/totp/confirm` requires it next to the TOTP code. The code is 6 digits from the CSPRNG, stored only as an `HMAC-SHA256` keyed with the `enrollmentToken` and compared in constant time; it lives and dies with the token (10 min, a resend does not extend it). A wrong TOTP or `emailCode` counts one failure in the user's second-step counter, shared with `mfa/verify` (`422 validation_failed` per field with `attemptsRemaining`); the fifth one locks the second step for 15 minutes and consumes the token (`429 rate_limited`). The email is sent through `Mailer` after the commit, without links, and a failed send never fails the login (`emailCodeSent: false`). New `POST /v1/auth/mfa/enrollment/email-code/resend` (3 sends per token, 60 s apart, 10 per user per hour). Enrolling from `/perfil` does not ask for it. No new error `code` (`api/conventions.md` §2, §4, §7 and §8, `api/resources.md`, `api/openapi.yaml`, sequence 01) (#25).
+- `docs/architecture/data`: new table `iam.mfa_enrollments` (no RLS, column-level `UPDATE` for `wanka_app`, cleanup by `wanka_worker` 24 h after expiry) and `iam.users.mfa_failed_attempts` and `mfa_locked_until` (`data-model.md` §5 and §6, er-01); `rls-check` covers its grants and `CHECK`s (cases E1 and K1c) and adds the mutations `grant_app_update_all_mfa_enrollments` and `revoke_worker_mfa_enrollment_columns` (#25).
+
 ## [0.8.0] - 2026-11-19
 
 ### Added

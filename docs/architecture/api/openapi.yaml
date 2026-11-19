@@ -12,11 +12,117 @@ servers:
 security:
   - tenantSession: []
 tags:
+  - name: identidad
+    description: Login, 2FA y sesión (rutas /v1/auth/*)
   - name: ventas
     description: POS y proformas
   - name: facturacion-electronica
     description: CPE, notas, bajas y guías vía InvoicingProvider
 paths:
+  /v1/auth/mfa/enrollment/totp:
+    post:
+      tags: [identidad]
+      operationId: startMfaEnrollment
+      security: []
+      summary: Entrega el secreto TOTP pendiente del enrolamiento obligatorio del login
+      description: |
+        Clase Public (conventions.md §2): sin sesión, con el enrollmentToken en el cuerpo y nunca como
+        Bearer. Lo llama el BFF después de que POST /v1/auth/login respondió MfaEnrollmentRequired.
+        Sin efectos visibles: con el mismo token vigente devuelve siempre el mismo secreto (no lo rota)
+        y no manda correo (el emailCode sale en el login). Token vencido, consumido o inexistente: 401
+        con el code que fije #187 para los tokens de un solo uso. Con el segundo paso del usuario
+        bloqueado: 429 rate_limited con Retry-After.
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MfaEnrollmentTokenRequest' }
+      responses:
+        '200':
+          description: Secreto pendiente; se confirma con /v1/auth/mfa/enrollment/totp/confirm
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MfaTotpSecret' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+  /v1/auth/mfa/enrollment/totp/confirm:
+    post:
+      tags: [identidad]
+      operationId: confirmMfaEnrollment
+      security: []
+      summary: Activa la 2FA con el primer código TOTP y el emailCode, y crea la sesión
+      description: |
+        Clase Public. Exige el código TOTP del autenticador recién configurado y el emailCode que el
+        login mandó al correo del usuario (decisión del dueño, #25; reglas en conventions.md §2).
+        - Los dos correctos: guarda el TOTP y los códigos de recuperación, crea la sesión con
+          mfa_method = totp, consume el token y pone en 0 el contador de segundo paso. Responde 200.
+        - Uno o los dos incorrectos: 422 validation_failed con un elemento de errors[] por campo
+          incorrecto (field code o emailCode, code validation_failed, meta.attemptsRemaining). Cuenta un
+          fallo en el contador del usuario, compartido con /v1/auth/mfa/verify; no consume el token.
+        - 5.º fallo seguido: el segundo paso queda bloqueado 15 min, el token se consume sin crear
+          sesión y responde 429 rate_limited con Retry-After hasta el fin del bloqueo. Durante el
+          bloqueo, todo confirm responde lo mismo sin evaluar los códigos.
+        - Formato inválido (no son 6 dígitos): 422 validation_failed del esquema; no cuenta.
+        - Sin el secreto pendiente (no se llamó /v1/auth/mfa/enrollment/totp con este token): 409
+          invalid_state_transition; no cuenta.
+        - Token vencido, consumido o inexistente: 401 con el code que fije #187. El emailCode vence con
+          el token (10 min desde el login).
+        Sin Idempotency-Key: el 422 y el 429 confirman el contador y el bloqueo (conventions.md §2).
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MfaEnrollmentConfirmRequest' }
+      responses:
+        '200':
+          description: 2FA activa y sesión creada, sin empresa elegida
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MfaEnrollmentConfirmed' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+  /v1/auth/mfa/enrollment/email-code/resend:
+    post:
+      tags: [identidad]
+      operationId: resendMfaEnrollmentEmailCode
+      security: []
+      summary: Manda un emailCode nuevo al correo del usuario del enrollmentToken
+      description: |
+        Clase Public, con el enrollmentToken en el cuerpo. Genera un código nuevo (el anterior deja de
+        valer) y lo manda por el Mailer después del COMMIT; no alarga el token. Topes (conventions.md
+        §2): 3 envíos por token contando el del login, 60 s entre envíos y 10 envíos por usuario por
+        hora. Pasado un tope, o con el segundo paso bloqueado: 429 rate_limited con Retry-After. Si el
+        Mailer falla o vence (5 s): 503 dependency_unavailable con Retry-After 60, y el envío cuenta.
+        Token vencido, consumido o inexistente: 401 con el code que fije #187.
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MfaEnrollmentTokenRequest' }
+      responses:
+        '202':
+          description: Código nuevo enviado al Mailer
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MfaEmailCodeResent' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '422': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
   /v1/sales:
     post:
       tags: [ventas]
@@ -112,6 +218,75 @@ components:
         application/problem+json:
           schema: { $ref: '#/components/schemas/Problem' }
   schemas:
+    EnrollmentToken:
+      type: string
+      description: Token de paso del enrolamiento (wk_en_ + 32 bytes en base64url sin relleno, conventions.md §2). TTL 10 min desde el login.
+      pattern: '^wk_en_[A-Za-z0-9_-]{43}$'
+    TotpCode:
+      type: string
+      description: Código TOTP de 6 dígitos (RFC 6238, 30 s, ventana ±1).
+      pattern: '^[0-9]{6}$'
+    EmailCode:
+      type: string
+      description: Código de un solo uso enviado al correo en el enrolamiento obligatorio. Vence con el enrollmentToken; en la base solo va su HMAC (conventions.md §2).
+      pattern: '^[0-9]{6}$'
+    MfaEnrollmentRequired:
+      type: object
+      description: |
+        Variante del 200 de POST /v1/auth/login (forma completa del login: #24) cuando el usuario no
+        tiene TOTP y algún rol de sus membresías lo exige. No trae tokens de acceso. emailCodeSent es
+        false si el Mailer no respondió o no había cupo de envío: el token sirve igual y el usuario
+        pide un reenvío (conventions.md §2).
+      required: [status, enrollmentToken, expiresAt, emailCodeSent]
+      properties:
+        status: { type: string, const: mfa_enrollment_required }
+        enrollmentToken: { $ref: '#/components/schemas/EnrollmentToken' }
+        expiresAt: { type: string, format: date-time, description: Vencimiento del token y del emailCode. }
+        emailCodeSent: { type: boolean }
+    MfaEnrollmentTokenRequest:
+      type: object
+      additionalProperties: false
+      required: [enrollmentToken]
+      properties:
+        enrollmentToken: { $ref: '#/components/schemas/EnrollmentToken' }
+    MfaTotpSecret:
+      type: object
+      required: [secret, otpauthUri]
+      properties:
+        secret: { type: string, description: 'Secreto TOTP en base32, para escribirlo a mano.' }
+        otpauthUri: { type: string, description: 'URI otpauth://totp/... que el BFF convierte en QR.' }
+    MfaEnrollmentConfirmRequest:
+      type: object
+      additionalProperties: false
+      required: [enrollmentToken, code, emailCode]
+      properties:
+        enrollmentToken: { $ref: '#/components/schemas/EnrollmentToken' }
+        code: { $ref: '#/components/schemas/TotpCode' }
+        emailCode: { $ref: '#/components/schemas/EmailCode' }
+    MfaEnrollmentConfirmed:
+      type: object
+      description: Misma sesión sin empresa que el login con 2FA (secuencia 01); el BFF pone las cookies y lleva a /seleccionar-empresa.
+      required: [accessToken, refreshToken, expiresAt, recoveryCodes, memberships]
+      properties:
+        accessToken: { type: string, pattern: '^wk_at_[A-Za-z0-9_-]{43}$' }
+        refreshToken: { type: string, pattern: '^wk_rt_[A-Za-z0-9_-]{43}$' }
+        expiresAt: { type: string, format: date-time, description: Vencimiento del accessToken. }
+        recoveryCodes:
+          type: array
+          description: Los 10 códigos de recuperación; se muestran esta única vez (ADR 0004).
+          minItems: 10
+          maxItems: 10
+          items: { type: string }
+        memberships:
+          type: array
+          description: Misma forma que GET /v1/me/memberships; se fija en #27.
+          items: { type: object }
+    MfaEmailCodeResent:
+      type: object
+      required: [resendAvailableAt, sendsRemaining]
+      properties:
+        resendAvailableAt: { type: string, format: date-time, description: Desde cuándo se puede pedir otro envío (60 s después de este). }
+        sendsRemaining: { type: integer, minimum: 0, maximum: 2, description: Envíos que le quedan a este token. }
     MoneyPositive:
       type: string
       description: Importe mayor que cero (CHECK amount > 0 / total > 0 en la base). Sin lookahead, porque Go (RE2) no lo soporta; cada patrón se compila con regexp en CI.
