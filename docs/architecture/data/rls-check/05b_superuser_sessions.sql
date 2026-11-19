@@ -1,4 +1,4 @@
--- Como superusuario (el trigger iam.guard_impersonated_session lo admite, como a las semillas de prueba): los CHECK de una
+-- Como superusuario (el trigger iam.guard_session_writes lo admite, como a las semillas de prueba): los CHECK de una
 -- sesion impersonada, que wanka_app no puede alcanzar porque el trigger lo para antes. Cada INSERT va en su subtransaccion.
 \set ON_ERROR_STOP on
 \echo '== S1. CHECK de la sesion impersonada (sin refresh, 60 min como maximo, sin user_id ni version) =='

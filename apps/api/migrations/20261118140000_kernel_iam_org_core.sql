@@ -119,7 +119,7 @@ CREATE INDEX sessions_created_at_idx ON iam.sessions (created_at);  -- limpieza 
 -- tenant de una impersonada no se mueven aunque el GRANT por columna los permita en las sesiones normales. Además,
 -- en toda sesión la revocación no se deshace y created_at lo pone el servidor en el INSERT.
 -- +goose StatementBegin
-CREATE FUNCTION iam.guard_impersonated_session() RETURNS trigger
+CREATE FUNCTION iam.guard_session_writes() RETURNS trigger
   LANGUAGE plpgsql
   SET search_path = pg_catalog, pg_temp
 AS $$
@@ -135,8 +135,13 @@ BEGIN
     NEW.created_at := pg_catalog.now();   -- la fija el servidor: ninguna sesión escapa de la limpieza por antigüedad
   ELSE
     -- La revocación es irreversible para quien no es definer ni superusuario: revoked_at solo pasa de NULL a un instante.
-    IF OLD.revoked_at IS NOT NULL AND NEW.revoked_at IS DISTINCT FROM OLD.revoked_at THEN
-      RAISE EXCEPTION 'a revoked session stays revoked' USING ERRCODE = 'insufficient_privilege';
+    -- Des-revocar da 42501; revocar otra vez es un no-op que conserva el instante viejo (así un UPDATE masivo
+    -- «SET revoked_at = <instante> WHERE user_id = ...» revoca las vivas aunque alguna ya estuviera revocada).
+    IF OLD.revoked_at IS NOT NULL THEN
+      IF NEW.revoked_at IS NULL THEN
+        RAISE EXCEPTION 'a revoked session stays revoked' USING ERRCODE = 'insufficient_privilege';
+      END IF;
+      NEW.revoked_at := OLD.revoked_at;
     END IF;
     IF OLD.impersonator_id IS NOT NULL OR NEW.impersonator_id IS NOT NULL THEN
       -- Solo puede cambiar revoked_at (y únicamente de NULL a un instante, por el IF de arriba).
@@ -148,8 +153,8 @@ BEGIN
   RETURN NEW;
 END $$;
 -- +goose StatementEnd
-CREATE TRIGGER sessions_guard_impersonated BEFORE INSERT OR UPDATE ON iam.sessions
-  FOR EACH ROW EXECUTE FUNCTION iam.guard_impersonated_session();
+CREATE TRIGGER sessions_guard_writes BEFORE INSERT OR UPDATE ON iam.sessions
+  FOR EACH ROW EXECUTE FUNCTION iam.guard_session_writes();
 
 -- Búsqueda de sesión (ADR 0004). La corre wanka_app sin tenant ni usuario. Un JOIN directo contra
 -- iam.memberships devolvería NULL (FORCE RLS y un dueño que no se salta las políticas), por eso es plpgsql: lee la
@@ -165,7 +170,7 @@ CREATE FUNCTION iam.session_lookup(p_access_hash bytea)
   LANGUAGE plpgsql STABLE SECURITY DEFINER
   SET search_path = pg_catalog, pg_temp
 AS $$
-DECLARE s iam.sessions%ROWTYPE; v bigint; st text; prev text := pg_catalog.current_setting('app.tenant_id', true);
+DECLARE s iam.sessions%ROWTYPE; v bigint; st text; mu uuid; prev text := pg_catalog.current_setting('app.tenant_id', true);
 BEGIN
   SELECT * INTO s FROM iam.sessions x
    WHERE x.access_hash = p_access_hash AND x.revoked_at IS NULL AND x.access_expires_at > pg_catalog.now()
@@ -173,8 +178,11 @@ BEGIN
   IF NOT FOUND THEN RETURN; END IF;
   IF s.membership_id IS NOT NULL THEN
     PERFORM pg_catalog.set_config('app.tenant_id', s.tenant_id::text, true);   -- el tenant de ESA sesión
-    SELECT m.authz_version, m.status INTO v, st FROM iam.memberships m
-     WHERE m.id = s.membership_id AND m.user_id = s.user_id;  -- vía tenant_isolation; la membresía debe ser DEL usuario de la sesión
+    SELECT m.user_id, m.authz_version, m.status INTO mu, v, st FROM iam.memberships m
+     WHERE m.id = s.membership_id;  -- por la PK y vía tenant_isolation
+    IF mu IS DISTINCT FROM s.user_id THEN   -- la membresía debe ser DEL usuario de la sesión; si no, se ve ausente
+      v := NULL; st := NULL;
+    END IF;
     PERFORM pg_catalog.set_config('app.tenant_id', coalesce(prev, ''), true);  -- restaura el valor del llamador
   END IF;
   RETURN QUERY SELECT s.id, s.user_id, s.tenant_id, s.site_id, s.cash_register_id, s.membership_id, s.authz_version,

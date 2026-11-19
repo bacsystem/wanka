@@ -353,7 +353,7 @@ func TestUnbindingASessionKeepsItAliveAndPartialUnbindsFail(t *testing.T) {
 }
 
 // A7 y los demás CHECK de iam.sessions. Las filas impersonadas se insertan como superusuario: wanka_app no puede
-// (el trigger iam.guard_impersonated_session lo para antes de los CHECK), y los CHECK valen igual para quien sí.
+// (el trigger iam.guard_session_writes lo para antes de los CHECK), y los CHECK valen igual para quien sí.
 func TestSessionChecks(t *testing.T) {
 	d := migrated(t)
 	ctx := context.Background()
@@ -663,7 +663,7 @@ func TestCatalogRules(t *testing.T) {
 	})
 
 	t.Run("guard trigger: invoker's rights, pinned search_path, qualified names", func(t *testing.T) {
-		const fn = `'iam.guard_impersonated_session()'::regprocedure`
+		const fn = `'iam.guard_session_writes()'::regprocedure`
 		if queryOne[bool](t, admin, `SELECT prosecdef FROM pg_proc WHERE oid = `+fn) {
 			t.Error("the guard trigger must not be SECURITY DEFINER")
 		}
@@ -677,8 +677,8 @@ func TestCatalogRules(t *testing.T) {
 				t.Errorf("guard body has the unqualified %q", bare)
 			}
 		}
-		if n := queryOne[int](t, admin, `SELECT count(*) FROM pg_trigger WHERE tgrelid = 'iam.sessions'::regclass AND tgname = 'sessions_guard_impersonated' AND tgenabled = 'O'`); n != 1 {
-			t.Error("trigger sessions_guard_impersonated is missing or disabled")
+		if n := queryOne[int](t, admin, `SELECT count(*) FROM pg_trigger WHERE tgrelid = 'iam.sessions'::regclass AND tgname = 'sessions_guard_writes' AND tgenabled = 'O'`); n != 1 {
+			t.Error("trigger sessions_guard_writes is missing or disabled")
 		}
 	})
 
@@ -823,8 +823,8 @@ func TestSessionLookupUsesUniqueIndexesWith100kSessions(t *testing.T) {
 	if strings.Contains(all, "Seq Scan") {
 		t.Errorf("session_lookup does a Seq Scan:\n%s", all)
 	}
-	// Con la condición m.user_id el planificador puede preferir memberships_user_id_idx a la PK; ambas son lecturas por índice.
-	for _, idx := range []string{`Index Scan using sessions_access_hash_key on sessions`, `Index Scan using memberships_\w+ on memberships`} {
+	// Las dos lecturas son por índice único: access_hash y la PK de memberships (user_id se compara en plpgsql).
+	for _, idx := range []string{`Index Scan using sessions_access_hash_key on sessions`, `Index Scan using memberships_pkey on memberships`} {
 		if !regexp.MustCompile(idx).MatchString(all) {
 			t.Errorf("plan lacks %q:\n%s", idx, all)
 		}
@@ -993,11 +993,44 @@ func TestRevocationIsIrreversibleAndCreatedAtComesFromTheServer(t *testing.T) {
 			t.Fatalf("%s: revoking: %v", name, err)
 		}
 		wantState(t, upd(id, `revoked_at = NULL`), "42501", name+": un-revoking")
-		wantState(t, upd(id, `revoked_at = now() + interval '1 day'`), "42501", name+": revoking again")
+		// Revocar otra vez no falla ni mueve el instante (la transacción anterior ya terminó: now() cambió).
+		var before, after time.Time
+		if err := app.QueryRow(ctx, `SELECT revoked_at FROM iam.sessions WHERE id = $1`, id).Scan(&before); err != nil {
+			t.Fatal(err)
+		}
+		if err := upd(id, `revoked_at = now() + interval '1 day'`); err != nil {
+			t.Errorf("%s: revoking again: %v", name, err)
+		}
+		if err := app.QueryRow(ctx, `SELECT revoked_at FROM iam.sessions WHERE id = $1`, id).Scan(&after); err != nil || !after.Equal(before) {
+			t.Errorf("%s: revoked_at moved from %v to %v (err %v)", name, before, after, err)
+		}
+	}
+	// UPDATE masivo por usuario: revoca las vivas aunque alguna ya estuviera revocada, y no mueve el instante de las viejas.
+	live := d.SeedSession(t, dbtest.SessionSpec{Kind: dbtest.SessionBound})
+	admin := d.Admin(ctx, t)
+	if _, err := admin.Exec(ctx, `UPDATE iam.sessions SET user_id = $1 WHERE id = $2`, b.UserID, live.SessionID); err != nil {
+		t.Fatal(err)
+	}
+	var bBefore time.Time
+	if err := app.QueryRow(ctx, `SELECT revoked_at FROM iam.sessions WHERE id = $1`, b.SessionID).Scan(&bBefore); err != nil {
+		t.Fatal(err)
+	}
+	tag, err := app.Exec(ctx, `UPDATE iam.sessions SET revoked_at = now() WHERE user_id = $1`, b.UserID)
+	if err != nil || tag.RowsAffected() != 2 {
+		t.Fatalf("bulk revoke = %v, %v; want 2 rows with no error", tag, err)
+	}
+	var liveRevoked bool
+	var bAt time.Time
+	if err := app.QueryRow(ctx, `SELECT (SELECT revoked_at IS NOT NULL FROM iam.sessions WHERE id = $1),
+		(SELECT revoked_at FROM iam.sessions WHERE id = $2)`, live.SessionID, b.SessionID).Scan(&liveRevoked, &bAt); err != nil {
+		t.Fatal(err)
+	}
+	if !liveRevoked || !bAt.Equal(bBefore) {
+		t.Errorf("bulk revoke: live revoked = %v, already-revoked instant %v moved to %v", liveRevoked, bBefore, bAt)
 	}
 
 	var created, now time.Time
-	err := app.QueryRow(ctx, `INSERT INTO iam.sessions (id, user_id, access_hash, access_expires_at, mfa_satisfied, mfa_method, created_at)
+	err = app.QueryRow(ctx, `INSERT INTO iam.sessions (id, user_id, access_hash, access_expires_at, mfa_satisfied, mfa_method, created_at)
 		VALUES (gen_random_uuid(), $1, sha256('created'), now(), true, 'none', now() - interval '400 days') RETURNING created_at, now()`, b.UserID).Scan(&created, &now)
 	if err != nil {
 		t.Fatal(err)

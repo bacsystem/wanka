@@ -66,7 +66,7 @@ SELECT test.expect_error($$INSERT INTO iam.sessions (id, user_id, access_hash, a
   VALUES (gen_random_uuid(), gen_random_uuid(), sha256('v3'), now(), true, 'none')$$, '23503', 'sesion de un usuario inexistente');
 -- GRANT del ADR 0001: wanka_app escribe sesiones pero no empresas.
 SELECT test.expect_error($$UPDATE org.tenants SET status = 'activa'$$, '42501', 'wanka_app no escribe org.tenants');
--- H13: GRANT por columna y trigger iam.guard_impersonated_session (sondeo de data-model §6, regla 2).
+-- H13: GRANT por columna y trigger iam.guard_session_writes (sondeo de data-model §6, regla 2).
 -- (a) columnas fuera del GRANT
 SELECT test.expect_error($$UPDATE iam.sessions SET created_at = created_at + interval '30 days' WHERE access_hash = sha256('tok-cajero')$$, '42501', '(a) wanka_app no mueve created_at');
 SELECT test.expect_error($$UPDATE iam.sessions SET created_at = created_at + interval '30 days' WHERE access_hash = sha256('tok-imp-a')$$, '42501', '(a) ni en la impersonada');
@@ -120,7 +120,13 @@ UPDATE iam.sessions SET revoked_at = now() WHERE access_hash = sha256('tok-cajer
 SELECT test.expect_error($$UPDATE iam.sessions SET revoked_at = NULL WHERE access_hash = sha256('tok-cajero')$$, '42501', 'una sesion normal revocada no se reactiva');
 UPDATE iam.sessions SET revoked_at = now() WHERE access_hash = sha256('tok-imp-a');
 SELECT test.expect_error($$UPDATE iam.sessions SET revoked_at = NULL WHERE access_hash = sha256('tok-imp-a')$$, '42501', 'una impersonada revocada no se reactiva');
-SELECT test.expect_error($$UPDATE iam.sessions SET revoked_at = now() + interval '1 day' WHERE access_hash = sha256('tok-imp-a')$$, '42501', 'una impersonada ya revocada no se vuelve a revocar');
+ROLLBACK;
+-- Revocar otra vez es un no-op que conserva el instante viejo, y un UPDATE masivo revoca las vivas aunque alguna ya este revocada.
+BEGIN;
+UPDATE iam.sessions SET revoked_at = '2026-01-01 00:00:00+00' WHERE access_hash = sha256('tok-imp-a');
+UPDATE iam.sessions SET revoked_at = now() WHERE user_id = 'eeeeeeee-0000-0000-0000-000000000002' OR impersonator_id IS NOT NULL;
+SELECT test.assert((SELECT revoked_at = '2026-01-01 00:00:00+00' FROM iam.sessions WHERE access_hash = sha256('tok-imp-a')), 're-revocar conserva el instante viejo');
+SELECT test.assert((SELECT revoked_at IS NOT NULL FROM iam.sessions WHERE access_hash = sha256('tok-cajero')), 'el UPDATE masivo revoca la sesion viva del cajero');
 ROLLBACK;
 -- created_at lo pone el servidor aunque la app mande otro.
 BEGIN;

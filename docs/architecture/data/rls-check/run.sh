@@ -27,6 +27,8 @@ step "superusuario: bootstrap otra vez (idempotente)" $P -U postgres -f /sql/01_
 # Las migraciones reales del kernel, en orden y como wanka_migrator: lo que esta verificacion prueba es lo que se despliega,
 # no una copia. psql no entiende las anotaciones de goose, asi que apply_migration hace lo que goose: ejecuta solo la
 # seccion Up (corta en «-- +goose Down») y respeta NO TRANSACTION (sin -1; con -1 un CREATE INDEX CONCURRENTLY falla).
+# apply_migration NO aplica «-- +goose ENVSUB ON/OFF»: ninguna migracion del kernel usa ${VAR}; si una la usa, hay que
+# sustituir las variables aqui antes de pasar el SQL a psql.
 # 02_migrate.sql agrega despues solo lo que todavia no es del kernel.
 PI="docker exec -i $N psql -h 127.0.0.1 -d wanka -X -q -v VERBOSITY=terse"
 apply_migration() {
