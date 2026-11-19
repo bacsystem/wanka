@@ -1,7 +1,7 @@
 // Package auth define el puerto de la sesión del plano tenant: el formato del
 // token de acceso, la sesión que devuelve la búsqueda y el contrato
 // SessionResolver que implementa el adaptador de PostgreSQL (iam.session_lookup).
-// El middleware que lo usa vive en httpx. Ver api/conventions.md §2 y ADR 0004.
+// El middleware que lo usa vive en auth.Routes (routes.go). Ver api/conventions.md §2 y ADR 0004.
 package auth
 
 import (
@@ -57,8 +57,12 @@ func validAccessToken(tok string) bool {
 }
 
 // validBody exige exactamente 43 caracteres de [A-Za-z0-9_-], uno por uno y
-// antes de decodificar: el decodificador de Go ignora \r y \n (también con
-// Strict), así que sin esto un salto de línea intercalado pasaría.
+// antes de decodificar. El decodificador de Go ignora \r y \n (también con
+// Strict), así que la validación de forma no debe depender de él. Hoy esta
+// comprobación, la longitud y el len(raw) == 32 posterior se cubren entre sí
+// (un salto dentro de 43 bytes deja 42 caracteres útiles, que son 31 bytes):
+// es defensa en profundidad, no la única barrera. No se quita ninguna sin
+// revisar las otras dos.
 func validBody(body string) bool {
 	if len(body) != tokenBodyLen {
 		return false

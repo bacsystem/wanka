@@ -135,7 +135,7 @@ del handler y el registrador `auth.Routes`. El adaptador de PostgreSQL llega con
 - **Registro**: los módulos registran sus rutas `/v1` con
   `routes.Handle(pattern, class, h, opts...)`, `class` de tipo `auth.RouteClass`
   (`Public`, `NoTenant`, `Tenant`; sin valor cero válido). Nadie recibe el
-  `httpx.Router`. Una clase omitida o que no cumple `conventions.md` §2 entra en
+  `httpx.Router` (`Router.Handle` sigue siendo público: el cableado de #196 no lo expone). Una clase omitida o que no cumple `conventions.md` §2 entra en
   pánico al arrancar. `Public` solo bajo `/v1/auth/`; `NoTenant` es `/v1/auth/*`,
   `GET /v1/me` y `GET /v1/me/memberships`; el resto es `Tenant`. Una ruta tiene
   una sola clase (el enrolamiento TOTP son dos rutas).
@@ -158,8 +158,12 @@ del handler y el registrador `auth.Routes`. El adaptador de PostgreSQL llega con
   con ráfaga de 20, tenant 100/s con ráfaga de 200, con topes de 50 000 y 10 000
   claves por réplica. Son supuestos que ajusta la prueba de carga de #196.
   `Routes.Sweep()` elimina los buckets llenos; llamarlo cada 10 s es de `serve`.
-- El handler lee la sesión con `auth.FromContext(ctx)`; su `Actor` va a
-  `db.InTenantTx`. Los entitlements (fase `entitlements`) llegan con #175.
+- El handler lee la sesión con `auth.FromContext(ctx)`. Solo un handler de ruta
+  `Tenant` pasa su `Actor` a `db.InTenantTx`: ahí corren los entitlements, la
+  versión, la 2FA, el RBAC y el límite del tenant. En una ruta `NoTenant` el
+  tenant de la sesión (si lo tiene) es informativo y no se entra a datos de la
+  empresa. Los módulos registran rutas solo por `auth.Routes`; el `httpx.Router`
+  no sale de `cmd/wanka`. Los entitlements (fase `entitlements`) llegan con #175.
 - Sobrecarga: `go test -run '^$' -bench Session -benchmem -count 5 ./internal/platform/auth`.
 
 ## Transacciones de tenant (`InTenantTx`)

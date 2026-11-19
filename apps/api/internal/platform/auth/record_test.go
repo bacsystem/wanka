@@ -36,7 +36,7 @@ func TestRecordCoherent(t *testing.T) {
 		"tenant without membership": {mod(func(r *SessionRecord) { r.MembershipID = pgtype.UUID{} }), false},
 		"membership without tenant": {mod(func(r *SessionRecord) { r.TenantID = pgtype.UUID{} }), false},
 		"impersonator without tenant": {mod(func(r *SessionRecord) {
-			r.TenantID, r.MembershipID, r.ImpersonatorID = pgtype.UUID{}, pgtype.UUID{}, id(9)
+			r.TenantID, r.MembershipID, r.UserID, r.ImpersonatorID = pgtype.UUID{}, pgtype.UUID{}, pgtype.UUID{}, id(9) // solo falta el tenant
 		}), false},
 		"empty user":                      {mod(func(r *SessionRecord) { r.UserID = pgtype.UUID{} }), false},
 		"zero user":                       {mod(func(r *SessionRecord) { r.UserID = pgtype.UUID{Valid: true} }), false},

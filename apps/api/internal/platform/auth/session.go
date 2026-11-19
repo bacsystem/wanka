@@ -44,6 +44,11 @@ type SessionResolver interface {
 
 // Session es la sesión autenticada que el handler lee con FromContext. Sus
 // valores salen solo de la base, nunca de la petición.
+//
+// Solo un handler de ruta Tenant pasa su Actor a db.InTenantTx: ahí corren los
+// entitlements, la versión, la 2FA, el RBAC y el límite del tenant. En una ruta
+// NoTenant la sesión puede traer tenant (GET /v1/me lo usa para el shell), pero
+// es informativo: esos handlers no entran a datos de la empresa.
 type Session struct {
 	ID                                       pgtype.UUID
 	Actor                                    db.Actor

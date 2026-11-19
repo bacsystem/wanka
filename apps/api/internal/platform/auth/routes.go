@@ -70,7 +70,12 @@ type Options struct {
 }
 
 // Routes es el registrador de rutas /v1: arma la cadena sesión -> limitadores ->
-// pasos de la ruta -> handler. Los módulos no reciben el httpx.Router.
+// pasos de la ruta -> handler.
+//
+// Los módulos registran sus rutas /v1 solo por Routes. httpx.Router.Handle sigue
+// siendo público (httpx lo necesita para /healthz y los tests) y acepta /v1 sin
+// clase, así que el cableado de serve (#196) no expone el *httpx.Router fuera
+// de cmd/wanka.
 type Routes struct {
 	rt       *httpx.Router
 	resolver SessionResolver

@@ -261,7 +261,7 @@ func TestUntypedErrorAndInconsistentRowAre500AndTheHandlerDoesNotRun(t *testing.
 		"tenant without membership": returns(mod(func(r *auth.SessionRecord) { r.MembershipID = pgtype.UUID{} })),
 		"membership without tenant": returns(mod(func(r *auth.SessionRecord) { r.TenantID = pgtype.UUID{} })),
 		"impersonator without tenant": returns(mod(func(r *auth.SessionRecord) {
-			r.TenantID, r.MembershipID, r.ImpersonatorID = pgtype.UUID{}, pgtype.UUID{}, uid(9)
+			r.TenantID, r.MembershipID, r.UserID, r.ImpersonatorID = pgtype.UUID{}, pgtype.UUID{}, pgtype.UUID{}, uid(9) // solo falta el tenant
 		})),
 		"empty user": returns(mod(func(r *auth.SessionRecord) { r.UserID = pgtype.UUID{} })),
 	}
@@ -380,6 +380,28 @@ func TestDetachWithZeroRowsOrAnErrorChangesNothingAndRetriesNextTime(t *testing.
 				t.Fatal("error text in the log")
 			}
 		})
+	}
+}
+
+// Un Detach que se cuelga no retiene la petición más allá del plazo propio: la
+// respuesta sigue siendo la de la membresía perdida, nunca 503 ni 500.
+func TestHangingDetachIsCutByTheDeadlineAndTheAnswerDoesNotChange(t *testing.T) {
+	res := returns(suspended())
+	res.detach = func(ctx context.Context, _, _ pgtype.UUID) (bool, error) {
+		<-ctx.Done()
+		return false, ctx.Err()
+	}
+	e := newEnv(t, res, func(o *auth.Options) { o.LookupTimeout = 30 * time.Millisecond })
+	start := time.Now()
+	mustProblem(t, e.get("/v1/items", bearer(token(1))), 403, "tenant_access_denied")
+	if resp := e.get("/v1/me", bearer(token(1))); resp.Code != 200 {
+		t.Fatalf("no-tenant route %d", resp.Code)
+	}
+	if time.Since(start) > 2*time.Second {
+		t.Fatal("Detach held the request past its deadline")
+	}
+	if e.metrics.get("auth_session_detach_total{outcome,failed}") != 2 {
+		t.Fatalf("counters %v", e.metrics.counts)
 	}
 }
 
