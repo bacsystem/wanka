@@ -254,7 +254,7 @@ allí primero. En la parte alta de `catalog_test.go`, una entrada con su motivo,
 que tiene que contener «ADR NNNN» (`TestCatalogRules` lo comprueba, y que el
 objeto exista, para que no queden entradas viejas):
 
-- `noRLSTables`: tabla con `tenant_id` que por diseño no es de tenant (clave `esquema.tabla`). Hoy solo `iam.sessions`. Una tabla `platform.*` sin RLS por ADR entra aquí.
+- `noRLSTables`: tabla con `tenant_id` que por diseño no es de tenant (clave `esquema.tabla`). Hoy `iam.sessions` y las cuatro tablas `platform.*` de entitlements con `tenant_id` (`subscriptions`, `tenant_module_overrides`, `tenant_flag_overrides`, `tenant_usage`). Una tabla `platform.*` sin RLS por ADR entra aquí.
 - `uniqueAllow`: `UNIQUE` global marcado (clave `esquema.tabla(col1,col2)`).
 - `fkAllow`: FK entre tablas de tenant sin `tenant_id` (clave `esquema.tabla.restricción`).
 - `policyAllow`: política adicional (clave `esquema.tabla:política`), con comandos, roles y si exige la rama `IS NULL`.

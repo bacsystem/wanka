@@ -38,6 +38,11 @@ var tenantRoots = map[string]string{
 // la regla de RLS y de políticas. Valor: el motivo, que cita el ADR.
 var noRLSTables = map[string]string{
 	"iam.sessions": "ADR 0001 («sin RLS: identidad global») y ADR 0004: se busca por hash antes de conocer el tenant; su tenant_id es la empresa elegida y puede ser NULL",
+	// Tablas de entitlements (#171): platform.* es global y sin RLS; entitlements filtra por app.current_tenant().
+	"platform.subscriptions":           "ADR 0001, matriz de GRANT, fila «platform.* (sin RLS)», y ADR 0005: suscripción de la empresa, la lee entitlements filtrando por app.current_tenant()",
+	"platform.tenant_module_overrides": "ADR 0001, matriz de GRANT, fila «platform.* (sin RLS)», y ADR 0005: override de módulos por empresa, la lee entitlements filtrando por app.current_tenant()",
+	"platform.tenant_flag_overrides":   "ADR 0001, matriz de GRANT, fila «platform.* (sin RLS)», y ADR 0005: override de flags por empresa, la lee entitlements filtrando por app.current_tenant()",
+	"platform.tenant_usage":            "ADR 0001, matriz de GRANT, fila «platform.* (sin RLS)», y ADR 0001 «Uso por tenant para la consola»: la escribe wanka_worker y la lee entitlements filtrando por app.current_tenant()",
 }
 
 // policyRule describe una política adicional permitida (además de tenant_isolation).
