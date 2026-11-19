@@ -177,3 +177,71 @@ func TestStatementTimeoutEndToEnd(t *testing.T) {
 		t.Fatalf("access log = %v", lines)
 	}
 }
+
+// Con un pool caliente cuyas sesiones mueren (reinicio, failover,
+// pg_terminate_backend), cada petición da 503 dependency_unavailable y nunca 500.
+func TestDeadPoolConnectionsAre503NotInternalError(t *testing.T) {
+	p, admin, actor := httpDB(t, 3)
+	ctx := context.Background()
+	h, buf, _ := chain(t, func(rt *httpx.Router) {
+		rt.HandleFunc("GET /items", func(w http.ResponseWriter, r *http.Request) {
+			err := p.InTenantReadTx(r.Context(), actor(), func(tx pgx.Tx) error {
+				var n int
+				return tx.QueryRow(r.Context(), `SELECT count(*) FROM rlstest.items`).Scan(&n)
+			})
+			if err != nil {
+				httpx.WriteError(w, r, err)
+			}
+		})
+	})
+	// Calienta las 3 conexiones: tres transacciones abiertas a la vez.
+	var txs []pgx.Tx
+	release := make(chan struct{})
+	started := make(chan struct{}, 3)
+	done := make(chan struct{}, 3)
+	for i := 0; i < 3; i++ {
+		go func() {
+			_ = p.InTenantReadTx(ctx, actor(), func(tx pgx.Tx) error {
+				started <- struct{}{}
+				<-release
+				return nil
+			})
+			done <- struct{}{}
+		}()
+	}
+	for i := 0; i < 3; i++ {
+		<-started
+	}
+	_ = txs
+	close(release)
+	for i := 0; i < 3; i++ {
+		<-done
+	}
+	if _, err := admin.Exec(ctx, `SELECT pg_terminate_backend(pid) FROM pg_stat_activity
+		WHERE usename = 'wanka_app' AND datname = current_database() AND pid <> pg_backend_pid()`); err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(200 * time.Millisecond)
+
+	var unavailable int
+	for i := 0; i < 5; i++ {
+		rec := do(h, httptest.NewRequest(http.MethodGet, "/items", nil))
+		switch rec.Code {
+		case http.StatusServiceUnavailable:
+			mustProblem(t, rec, http.StatusServiceUnavailable, "dependency_unavailable")
+			if rec.Header().Get("Retry-After") != "1" {
+				t.Fatalf("Retry-After = %q", rec.Header().Get("Retry-After"))
+			}
+			if strings.Contains(strings.ToLower(rec.Body.String()), "terminating") || strings.Contains(rec.Body.String(), "57P01") {
+				t.Fatalf("body leaks the PostgreSQL message: %s", rec.Body.String())
+			}
+			unavailable++
+		case http.StatusOK:
+		default:
+			t.Fatalf("request %d: %d (a dead connection must never be a 500): %s %s", i, rec.Code, rec.Body.String(), buf.String())
+		}
+	}
+	if unavailable == 0 {
+		t.Fatal("no request hit a dead connection: the test did not exercise the failure")
+	}
+}

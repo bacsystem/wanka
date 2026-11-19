@@ -409,3 +409,26 @@ func TestAbortAfterTheDeadlineIsNotLogged(t *testing.T) {
 		t.Fatalf("ErrAbortHandler must not be logged with a trace: %s", buf.String())
 	}
 }
+
+// Un handler de streaming que, vencido el presupuesto y antes del primer byte,
+// escribe él mismo el problema: el cliente lo recibe completo.
+func TestStreamingHandlerWritingAProblemAfterTheBudgetIsDelivered(t *testing.T) {
+	h, _, _ := chainWith(t, httpx.RouterOptions{StreamTimeout: 100 * time.Millisecond}, func(rt *httpx.Router) {
+		rt.HandleFunc("GET /export", func(w http.ResponseWriter, r *http.Request) {
+			<-r.Context().Done()
+			httpx.WriteError(w, r, httpx.NewError("overloaded", "the server is busy, retry shortly"))
+		}, httpx.Streaming())
+	})
+	srv := httptest.NewServer(h)
+	defer srv.Close()
+	resp, err := http.Get(srv.URL + "/export")
+	if err != nil {
+		t.Fatalf("the problem written by the handler never reached the client: %v", err)
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil || resp.StatusCode != http.StatusServiceUnavailable || resp.Header.Get("Content-Type") != "application/problem+json" ||
+		!strings.Contains(string(body), `"code":"overloaded"`) {
+		t.Fatalf("got %d %v %q (%v)", resp.StatusCode, resp.Header, body, err)
+	}
+}

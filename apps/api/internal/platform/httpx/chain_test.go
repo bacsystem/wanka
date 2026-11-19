@@ -556,3 +556,38 @@ func TestPanicOnAStreamingRouteDropsTheHandlerHeaders(t *testing.T) {
 		t.Fatalf("handler headers reached the 500: %v", rec.Header())
 	}
 }
+
+// El log de acceso de una conexión cortada no dice 200: dice que se abortó.
+func TestAccessLogMarksAbortedRequests(t *testing.T) {
+	h, buf, _ := chain(t, func(rt *httpx.Router) {
+		rt.HandleFunc("GET /abort", func(http.ResponseWriter, *http.Request) { panic(http.ErrAbortHandler) })
+		rt.HandleFunc("GET /mid", func(w http.ResponseWriter, _ *http.Request) {
+			_, _ = io.WriteString(w, "partial")
+			panic(http.ErrAbortHandler)
+		}, httpx.Streaming())
+		rt.HandleFunc("GET /ok", func(w http.ResponseWriter, _ *http.Request) { _, _ = io.WriteString(w, "ok") })
+	})
+	for _, path := range []string{"/abort", "/mid", "/ok"} {
+		func() {
+			defer func() { _ = recover() }()
+			do(h, httptest.NewRequest(http.MethodGet, path, nil))
+		}()
+	}
+	lines := buf.lines(t, "request")
+	if len(lines) != 3 {
+		t.Fatalf("access log lines = %d: %s", len(lines), buf.String())
+	}
+	byPath := map[string]map[string]any{}
+	for _, l := range lines {
+		byPath[fmt.Sprint(l["path"])] = l
+	}
+	if l := byPath["/abort"]; l["aborted"] != true || l["status"] != float64(0) {
+		t.Fatalf("nothing was sent, so status 0 and aborted: %v", l)
+	}
+	if l := byPath["/mid"]; l["aborted"] != true || l["status"] != float64(200) {
+		t.Fatalf("200 was sent and the rest cut: %v", l)
+	}
+	if l := byPath["/ok"]; l["aborted"] != nil || l["status"] != float64(200) {
+		t.Fatalf("a normal request has no aborted field: %v", l)
+	}
+}

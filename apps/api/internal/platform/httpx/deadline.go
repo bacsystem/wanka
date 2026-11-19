@@ -151,7 +151,8 @@ func (tw *timeoutWriter) WriteHeader(code int) {
 // llegada de la petición. No guarda nada: el handler escribe directo y puede
 // hacer Flush. Si el presupuesto vence antes del primer byte, responde 503
 // overloaded; si vence con la respuesta empezada, corta la conexión para que el
-// cliente no tome por completo un archivo truncado (ADR 0003).
+// cliente no tome por completo un archivo truncado (ADR 0003). Si el handler ya
+// escribió un problema RFC 9457 (completo en una sola escritura), se deja pasar.
 func streamBudget(next http.Handler, d time.Duration) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		dp := depsFrom(r.Context())
@@ -167,8 +168,11 @@ func streamBudget(next http.Handler, d time.Duration) http.Handler {
 		dp.log.WarnContext(r.Context(), "stream budget exceeded",
 			"route", route, "budget_ms", d.Milliseconds(), "elapsed_ms", time.Since(dp.start).Milliseconds(), "started", sw.wrote)
 		dp.metrics.Inc(metrics.HandlerTimeouts, "route", route)
-		if sw.wrote {
+		if sw.wrote && !sw.problem {
 			panic(http.ErrAbortHandler)
+		}
+		if sw.wrote {
+			return // el handler ya respondió un problema completo; llega al cliente
 		}
 		WriteProblem(sw, r, "overloaded", "the server is busy, retry shortly")
 	})

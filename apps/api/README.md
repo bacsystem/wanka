@@ -118,6 +118,7 @@ cuerpo) envuelve a un `httpx.Router`; los módulos registran ahí sus rutas con
   la ruta. Con `MaxKeys` buckets no llenos, una clave nueva recibe `503 overloaded`.
   Las claves de sesión y tenant y los valores por defecto los fija #174.
 - La sobrecarga de la cadena se repite con `go test -run '^$' -bench Overhead -benchmem ./internal/platform/httpx` y, con carga real, con `testdata/loadtest` (servidor + script k6).
+- Una conexión perdida del pool (reinicio o failover de la base) es `503 dependency_unavailable`, no `500`. El log de acceso marca con `aborted` una conexión cortada con `http.ErrAbortHandler` (status 0 si no se envió nada). Las peticiones que `net/http` rechaza antes de la cadena (`/%zz`, línea de petición inválida) las responde Go en `text/plain` (conventions.md §4).
 - Todo `429` y `503` del kernel lleva `Retry-After` en segundos enteros >= 1.
 
 Cada respuesta lleva `X-Request-Id`: se conserva el entrante si son de 1 a 128

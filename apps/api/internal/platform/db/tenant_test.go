@@ -5,7 +5,10 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"io"
+	"net"
 	"sync"
+	"syscall"
 	"testing"
 	"testing/fstest"
 	"time"
@@ -566,6 +569,51 @@ func TestTypedErrClassifiesBySQLStateNotByMessage(t *testing.T) {
 	}
 }
 
+// Un error de conexión (la base reinició, la sesión murió, la red cayó) con el
+// ctx vivo es ErrUnavailable: 503 dependency_unavailable, no un 500.
+func TestTypedErrClassifiesConnectionFailuresAsUnavailable(t *testing.T) {
+	dead, cancel := context.WithCancel(context.Background())
+	cancel()
+	alive := context.Background()
+	pg := func(code string) error { return fmt.Errorf("fn: %w", &pgconn.PgError{Code: code, Message: "m"}) }
+	cases := []struct {
+		name string
+		ctx  context.Context
+		err  error
+		want bool
+	}{
+		{"admin shutdown 57P01", alive, pg("57P01"), true},
+		{"crash shutdown 57P02", alive, pg("57P02"), true},
+		{"cannot connect now 57P03", alive, pg("57P03"), true},
+		{"connection exception 08006", alive, pg("08006"), true},
+		{"connection failure 08001", alive, pg("08001"), true},
+		{"EOF", alive, fmt.Errorf("beginning transaction: %w", io.EOF), true},
+		{"unexpected EOF", alive, fmt.Errorf("committing: %w", io.ErrUnexpectedEOF), true},
+		{"connection reset", alive, fmt.Errorf("read: %w", &net.OpError{Op: "read", Err: syscall.ECONNRESET}), true},
+		{"safe to retry", alive, fmt.Errorf("x: %w", safeToRetry{}), true},
+		{"caller canceled", dead, pg("57P01"), false},
+		{"statement timeout stays its own", alive, pg("57014"), false},
+		{"constraint violation", alive, pg("23505"), false},
+		{"syntax error", alive, pg("42601"), false},
+		{"domain error", alive, errors.New("insufficient stock"), false},
+		{"context deadline of the caller's own", alive, fmt.Errorf("x: %w", context.DeadlineExceeded), false},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got := db.TypedErr(c.ctx, c.err)
+			if errors.Is(got, db.ErrUnavailable) != c.want {
+				t.Fatalf("unavailable = %v, want %v (%v)", !c.want, c.want, got)
+			}
+			if errors.Is(got, db.ErrStatementTimeout) != (c.name == "statement timeout stays its own") {
+				t.Fatalf("statement timeout typing changed: %v", got)
+			}
+			if !errors.Is(got, c.err) {
+				t.Fatalf("the original error was lost: %v", got)
+			}
+		})
+	}
+}
+
 // Criterio 8: InTenantReadTx corre en BEGIN READ ONLY.
 func TestInTenantReadTxIsReadOnly(t *testing.T) {
 	_, p := tenantDB(t, 2)
@@ -695,3 +743,9 @@ func TestSessionKindStringAndZeroValue(t *testing.T) {
 		}
 	}
 }
+
+// safeToRetry es un error que pgx marca como ocurrido antes de enviar nada.
+type safeToRetry struct{}
+
+func (safeToRetry) Error() string     { return "nothing was sent" }
+func (safeToRetry) SafeToRetry() bool { return true }

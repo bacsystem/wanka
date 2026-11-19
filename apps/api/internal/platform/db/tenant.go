@@ -4,6 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"net"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -179,9 +182,37 @@ func (p *Pool) txError(ctx context.Context, what string, err error) error {
 // un administrador también cae aquí; para la petición es el mismo "la base
 // canceló tu sentencia, reintenta". La causa original se conserva.
 func typedErr(ctx context.Context, err error) error {
+	if ctx.Err() != nil {
+		return err
+	}
 	var pgErr *pgconn.PgError
-	if ctx.Err() == nil && errors.As(err, &pgErr) && pgErr.Code == "57014" {
+	if errors.As(err, &pgErr) && pgErr.Code == "57014" {
 		return fmt.Errorf("%w: %w", ErrStatementTimeout, err)
 	}
+	if connectionLost(err) {
+		return fmt.Errorf("%w: %w", ErrUnavailable, err)
+	}
 	return err
+}
+
+// connectionLost dice si err es la conexión que se perdió o la base que se fue
+// (reinicio, failover, pg_terminate_backend, red caída), no un error de la
+// sentencia. Se reconoce por SQLSTATE (clase 08, 57P01 a 57P03), por los tipos
+// de error de red y por lo que pgx marca como "seguro de reintentar", nunca por
+// el texto. Con la transacción en COMMIT el resultado puede ser incierto: por
+// eso el BFF solo reintenta con Idempotency-Key (conventions.md §3).
+func connectionLost(err error) bool {
+	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+		return false // el plazo propio del llamador no es una base caída
+	}
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) {
+		switch pgErr.Code {
+		case "57P01", "57P02", "57P03":
+			return true
+		}
+		return strings.HasPrefix(pgErr.Code, "08")
+	}
+	var netErr net.Error
+	return pgconn.SafeToRetry(err) || errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) || errors.As(err, &netErr)
 }

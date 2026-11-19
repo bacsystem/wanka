@@ -87,13 +87,15 @@ func newRequestID() string {
 // statusWriter recuerda el status y si ya se escribió algo.
 type statusWriter struct {
 	http.ResponseWriter
-	status int
-	wrote  bool
+	status  int
+	wrote   bool
+	problem bool // lo escrito es un problema RFC 9457 completo, no un envío a medias
 }
 
 func (w *statusWriter) WriteHeader(code int) {
 	if !w.wrote {
 		w.status, w.wrote = code, true
+		w.problem = w.Header().Get("Content-Type") == "application/problem+json"
 	}
 	w.ResponseWriter.WriteHeader(code)
 }
@@ -122,16 +124,30 @@ func accessLog(log *slog.Logger, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 		sw := &statusWriter{ResponseWriter: w, status: http.StatusOK}
+		finished := false
 		defer func() {
+			attrs := []any{"method", r.Method, "path", r.URL.Path}
 			status := sw.status
-			if !sw.wrote && errors.Is(r.Context().Err(), context.Canceled) {
-				status = 499
+			switch {
+			case !finished:
+				// El handler abortó la conexión (http.ErrAbortHandler): no es un 200.
+				// Con nada enviado el status es 0 (no hubo línea de estado); con la
+				// respuesta empezada queda el que se envió. Se distingue del 499,
+				// que es el cliente que se fue, por el campo aborted.
+				if !sw.wrote {
+					status = 0
+				}
+				attrs = append(attrs, "status", status, "aborted", true)
+			case !sw.wrote && errors.Is(r.Context().Err(), context.Canceled):
+				attrs = append(attrs, "status", 499)
+			default:
+				attrs = append(attrs, "status", status)
 			}
-			log.InfoContext(r.Context(), "request",
-				"method", r.Method, "path", r.URL.Path, "status", status,
-				"duration_ms", time.Since(start).Milliseconds())
+			attrs = append(attrs, "duration_ms", time.Since(start).Milliseconds())
+			log.InfoContext(r.Context(), "request", attrs...)
 		}()
 		next.ServeHTTP(sw, r)
+		finished = true
 	})
 }
 

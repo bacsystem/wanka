@@ -117,6 +117,10 @@ RFC 9457 (`application/problem+json`) con un `code` estable que el frontend trad
 | 503 | `dependency_unavailable` | kernel y módulo | una dependencia no responde: la base al buscar la sesión (`iam.session_lookup`) o al leer los entitlements, la base cuando cancela una sentencia por `statement_timeout` en cualquier ruta (SQLSTATE `57014`, `db.ErrStatementTimeout`; ver abajo), o Khipu en las descargas síncronas. Con `Retry-After` (`1` en el kernel y en el `statement_timeout`). Un fallo de la base al buscar la sesión nunca es `401` ni `500`; un pool sin conexión libre es `503 overloaded` |
 | 500 | `internal` | kernel | error no previsto; sin detalles internos, solo `requestId` |
 
+### Peticiones que no llegan a la API: excepción a «todo error es RFC 9457»
+
+`net/http` rechaza antes de llamar a la cadena de la API lo que no logra interpretar como una petición HTTP: un camino con escape inválido (`/%zz`), una línea de petición que no es HTTP, un salto de línea suelto en una cabecera o cabeceras que superan su límite. Esas peticiones **no llegan a la API**: las responde el servidor de Go con `400` (o `431`) en `text/plain`, sin `X-Request-Id`, sin `code` y sin cuerpo RFC 9457, y no pasan por el log de acceso. Es una excepción conocida a la regla de que toda respuesta de error es `application/problem+json`; no se reemplaza el analizador de `net/http`. El BFF solo envía peticiones bien formadas, así que en la práctica solo las ve quien llame a la API directamente.
+
 ### Suscripción inactiva: bloqueo total salvo exportar (decisión del dueño, 2026-11-18)
 
 Con la suscripción en `morosa`, `suspendida` o `cancelada` ([`er-05`](../data/er-05-plataforma-transversal.mmd), `platform.subscriptions.status`) el tenant **no puede operar**: toda ruta del plano tenant responde `402 subscription_inactive`, sea `GET` o no. No hay modo de solo lectura durante la mora. Siguen disponibles:
