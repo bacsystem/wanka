@@ -3,13 +3,11 @@
 All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/).
 
-## [0.6.0] - 2026-11-18
+## [0.6.0] - 2026-11-19
 
 ### Added
-- `apps/api`: session middleware and the `auth.SessionResolver` port (`internal/platform/auth`, `httpx.RouterOptions.Session`), tested with a double and no PostgreSQL. Every `/v1` route declares its class (`httpx.Public()`, `NoTenant()` or `Tenant()`) and `Router.Handle` panics at startup when it breaks the rules of `api/conventions.md` §2. A request goes through: token check without touching the database (one `Authorization` header, `Bearer`, `wk_at_` plus 43 base64url characters that decode to 32 bytes; the hash is `sha256` of the whole token, and neither is ever logged), lookup with a 1 s deadline in phase `session_lookup`, unbinding of a session whose membership was lost without revoking it (ADR 0011), `403 tenant_access_denied` on a tenant route without a company, the per-session limiter (10/s, burst 20, 50 000 keys) and, on tenant routes only, the per-tenant limiter (100/s, burst 200, 10 000 keys). No row is `401 session_expired`; a database failure or the lookup deadline is `503`, never `401` or `500`. Every kernel `401` carries `WWW-Authenticate: Bearer` (#199, #174).
-
-### Changed
-- `apps/api`: `httpx.Router` rejects, at registration, a `/v1` route without a class and a class outside `/v1`; the routes of `chain_test.go` moved out of `/v1` for that reason (#199, #174).
+- `apps/api`: session middleware and the `auth.SessionResolver` port (`internal/platform/auth`), tested with a double and no PostgreSQL. Modules register `/v1` routes with `auth.Routes.Handle(pattern, class, h)`, where `auth.RouteClass` is `Public`, `NoTenant` or `Tenant` (no valid zero value); startup panics when a class is missing or breaks the rules of `api/conventions.md` §2. A request goes through: token check without touching the database (one `Authorization` header, `Bearer`, `wk_at_` plus exactly 43 characters of `[A-Za-z0-9_-]` checked one by one before a strict base64url decode; the hash is `sha256` of the whole token, and neither is ever logged), lookup with a 1 s deadline in phase `session_lookup`, `MFASatisfied` and row coherence checks, unbinding of a session whose membership was lost without revoking it (ADR 0011, counter `auth_session_detach_total{outcome}`), `403 tenant_access_denied` on a tenant route without a company, the per-session limiter (10/s, burst 20, 50 000 keys) and, on tenant routes only, the per-tenant limiter (100/s, burst 200, 10 000 keys), with `Routes.Sweep()` for full buckets. No row or an unfinished 2FA is `401 session_expired`; a database failure or the lookup deadline is `503`, never `401`; an untyped error or an inconsistent row is `500`. An impersonated session arrives with an empty `UserID` and its `Actor.UserID` is the staff `ImpersonatorID`. Every kernel `401` carries `WWW-Authenticate: Bearer` (#199, #174).
+- `apps/api`: `httpx.Logger`, `httpx.Metrics`, `httpx.Route` and `httpx.LogDBFailure` for kernel packages that write their own failures (#199, #174).
 
 ## [0.5.0] - 2026-11-18
 

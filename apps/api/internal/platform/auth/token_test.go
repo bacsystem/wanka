@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -17,6 +18,19 @@ func body32(b byte) string {
 		raw[i] = b + byte(i)
 	}
 	return base64.RawURLEncoding.EncodeToString(raw)
+}
+
+// Vector fijo: el hash esperado se calculó fuera de este código con
+// printf %s wk_at_AAAA...(43 A) | sha256sum.
+func TestParseAuthorizationFixedVector(t *testing.T) {
+	tok := "wk_at_" + strings.Repeat("A", 43)
+	got, err := auth.ParseAuthorization([]string{"Bearer " + tok})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if hex := fmt.Sprintf("%x", got); hex != "50a676a40d56ad2ee980ee8b48cdf0af03003860d32e8eb4e6a4670a491861f2" {
+		t.Fatalf("hash = %s", hex)
+	}
 }
 
 func TestParseAuthorizationHashesTheWholeTokenWithItsPrefix(t *testing.T) {
@@ -80,6 +94,15 @@ func TestParseAuthorizationRejectsEverythingElseWithoutAHash(t *testing.T) {
 		{"standard alphabet", []string{"Bearer wk_at_" + strings.Repeat("+", 43)}},
 		{"non-ASCII", []string{"Bearer wk_at_" + good[:42] + "é"}},
 		{"non-canonical last character", []string{"Bearer wk_at_" + nonCanonical}},
+		{"42 A and a B", []string{"Bearer wk_at_" + strings.Repeat("A", 42) + "B"}},
+		{"line feed replacing a character", []string{"Bearer wk_at_" + good[:20] + "\n" + good[21:]}},
+		{"carriage return replacing a character", []string{"Bearer wk_at_" + good[:20] + "\r" + good[21:]}},
+		{"line feed inside 43 characters of body", []string{"Bearer wk_at_" + good[:20] + "\n" + good[20:42]}},
+		{"carriage return inside 43 characters of body", []string{"Bearer wk_at_" + good[:20] + "\r" + good[20:42]}},
+		{"line feed between 43 characters of body", []string{"Bearer wk_at_" + good[:20] + "\n" + good[20:]}},
+		{"carriage return between 43 characters of body", []string{"Bearer wk_at_" + good[:20] + "\r" + good[20:]}},
+		{"CRLF between 43 characters of body", []string{"Bearer wk_at_" + good[:20] + "\r\n" + good[20:]}},
+		{"line feed at the end of 43 characters", []string{"Bearer wk_at_" + good[:42] + "\n"}},
 		{"two prefixes", []string{"Bearer wk_at_wk_at_" + good}},
 	}
 	for _, tc := range cases {

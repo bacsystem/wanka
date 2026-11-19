@@ -125,32 +125,42 @@ Cada respuesta lleva `X-Request-Id`: se conserva el entrante si son de 1 a 128
 caracteres de `[A-Za-z0-9_-]` y, si falta o no cumple, se reemplaza por uno nuevo
 (nunca `400`).
 
-## Sesión (`internal/platform/auth` y `httpx`)
+## Sesión (`internal/platform/auth`)
 
-`auth` define el puerto `SessionResolver` (`Lookup` por el hash del token y
-`Unbind`), la `Session` que devuelve `iam.session_lookup` y el formato del token.
-El adaptador de PostgreSQL llega con #196; el middleware se prueba con un doble.
-`httpx.RouterOptions.Session` activa el paso de sesión.
+`auth` define el puerto `SessionResolver` (`Lookup` por `sha256` del token y
+`Detach`), la `SessionRecord` que devuelve `iam.session_lookup`, la `Session`
+del handler y el registrador `auth.Routes`. El adaptador de PostgreSQL llega con
+#196; el middleware se prueba con un doble.
 
-- **Clase de ruta obligatoria** en toda ruta `/v1`: `httpx.Public()` (solo bajo
-  `/v1/auth/`), `httpx.NoTenant()` (`/v1/auth/*`, `GET /v1/me`,
-  `GET /v1/me/memberships`) o `httpx.Tenant()` (las demás). `Router.Handle` entra
-  en pánico al arrancar si falta o no cumple las reglas; fuera de `/v1` no se
-  declara clase.
-- **Token**: `Authorization: Bearer wk_at_<43 caracteres base64url>`, una sola
-  cabecera. `auth.ParseAuthorization` devuelve `sha256` del token completo; lo
-  demás es `401 unauthenticated` sin consultar la base. El token y su hash no
-  salen de ahí y no se registran.
-- **Orden**: token, búsqueda (plazo de 1 s, fase `session_lookup`), desligue de la
-  membresía perdida (ADR 0011), `403 tenant_access_denied` en rutas `Tenant` sin
-  empresa, límite por sesión y, solo en `Tenant`, por tenant. Sin fila es
-  `401 session_expired`; un fallo de la base o el plazo vencido es `503`, nunca
-  `401` ni `500`. Todo `401` lleva `WWW-Authenticate: Bearer`.
-- **Límites por defecto** (`httpx.NewSessionLimiter`, `NewTenantLimiter`): sesión
-  10/s con ráfaga de 20, tenant 100/s con ráfaga de 200, con topes de 50 000 y
-  10 000 claves por réplica. Son supuestos que ajusta la prueba de carga de #196.
-- El handler lee la sesión con `auth.SessionFrom(ctx)` y arma el actor con
-  `Session.Actor()`. Los entitlements (fase `entitlements`) llegan con #175.
+- **Registro**: los módulos registran sus rutas `/v1` con
+  `routes.Handle(pattern, class, h, opts...)`, `class` de tipo `auth.RouteClass`
+  (`Public`, `NoTenant`, `Tenant`; sin valor cero válido). Nadie recibe el
+  `httpx.Router`. Una clase omitida o que no cumple `conventions.md` §2 entra en
+  pánico al arrancar. `Public` solo bajo `/v1/auth/`; `NoTenant` es `/v1/auth/*`,
+  `GET /v1/me` y `GET /v1/me/memberships`; el resto es `Tenant`. Una ruta tiene
+  una sola clase (el enrolamiento TOTP son dos rutas).
+- **Token**: `Authorization: Bearer wk_at_<43 caracteres>`, una sola cabecera.
+  `auth.ParseAuthorization` comprueba los 43 caracteres de `[A-Za-z0-9_-]` uno por
+  uno antes de decodificar con `Strict()` (Go ignora `\r` y `\n`) y devuelve el
+  `sha256` del token completo. Lo demás es `401 unauthenticated` sin consultar la
+  base. El token y su hash no salen de ahí y no se registran.
+- **Orden**: token, búsqueda (plazo de 1 s, fase `session_lookup`; la fase no llega
+  al handler), `MFASatisfied` y coherencia de la fila, desligue de la membresía
+  perdida (ADR 0011, una llamada a `Detach` y el contador
+  `auth_session_detach_total{outcome}`), `403 tenant_access_denied` en rutas
+  `Tenant` sin empresa, límite por sesión y, solo en `Tenant`, por tenant, y los
+  pasos de la ruta (`httpx.Use`). Sin fila o `MFASatisfied = false` es
+  `401 session_expired`; un fallo de la base o el plazo vencido es `503`; un error
+  no tipado o una fila incoherente es `500`. Todo `401` lleva
+  `WWW-Authenticate: Bearer`. Una impersonada llega con `UserID` vacío y su
+  `Actor.UserID` es el `ImpersonatorID`.
+- **Límites por defecto** (`auth.Options` los reemplaza en los tests): sesión 10/s
+  con ráfaga de 20, tenant 100/s con ráfaga de 200, con topes de 50 000 y 10 000
+  claves por réplica. Son supuestos que ajusta la prueba de carga de #196.
+  `Routes.Sweep()` elimina los buckets llenos; llamarlo cada 10 s es de `serve`.
+- El handler lee la sesión con `auth.FromContext(ctx)`; su `Actor` va a
+  `db.InTenantTx`. Los entitlements (fase `entitlements`) llegan con #175.
+- Sobrecarga: `go test -run '^$' -bench Session -benchmem -count 5 ./internal/platform/auth`.
 
 ## Transacciones de tenant (`InTenantTx`)
 

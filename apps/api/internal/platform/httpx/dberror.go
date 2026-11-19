@@ -3,6 +3,7 @@ package httpx
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -43,7 +44,7 @@ func WriteDBError(w http.ResponseWriter, r *http.Request, err error) bool {
 	case errors.Is(err, db.ErrOverloaded):
 		WriteProblem(w, r, "overloaded", "the server is busy, retry shortly")
 	case errors.Is(err, db.ErrStatementTimeout):
-		logDBFailure(r, "statement timeout", metrics.StatementTimeouts, phaseFrom(ctx), "57014")
+		LogDBFailure(r, "statement timeout", metrics.StatementTimeouts, phaseFrom(ctx), "57014")
 		WriteProblem(w, r, "dependency_unavailable", "a dependency is not responding")
 	case errors.Is(err, db.ErrUnavailable):
 		// Base caída o conexión perdida. Un COMMIT incierto tiene su propia fase:
@@ -57,16 +58,16 @@ func WriteDBError(w http.ResponseWriter, r *http.Request, err error) bool {
 		if errors.As(err, &pgErr) {
 			sqlstate = pgErr.Code
 		}
-		logDBFailure(r, "database unavailable", metrics.DBUnavailable, phase, sqlstate)
+		LogDBFailure(r, "database unavailable", metrics.DBUnavailable, phase, sqlstate)
 		WriteProblem(w, r, "dependency_unavailable", "a dependency is not responding")
 	}
 	return true
 }
 
-// logDBFailure deja una línea warn y suma un contador por fase y ruta. Lleva la
+// LogDBFailure deja una línea warn y suma un contador por fase y ruta. Lleva la
 // ruta, la fase, el módulo si lo hay, el sqlstate si lo hay y el tiempo
 // transcurrido; nunca el mensaje de PostgreSQL ni el SQL.
-func logDBFailure(r *http.Request, msg, counter, phase, sqlstate string) {
+func LogDBFailure(r *http.Request, msg, counter, phase, sqlstate string) {
 	ctx := r.Context()
 	d := depsFrom(ctx)
 	route := routeOf(r)
@@ -80,6 +81,16 @@ func logDBFailure(r *http.Request, msg, counter, phase, sqlstate string) {
 	d.log.WarnContext(ctx, msg, attrs...)
 	d.metrics.Inc(counter, "phase", phase, "route", route)
 }
+
+// Logger devuelve el logger de la petición (el de Chain), para los middlewares
+// de otros paquetes del kernel. Fuera de Chain, el logger por defecto.
+func Logger(ctx context.Context) *slog.Logger { return depsFrom(ctx).log }
+
+// Metrics devuelve el recorder de métricas de la petición.
+func Metrics(ctx context.Context) metrics.Recorder { return depsFrom(ctx).metrics }
+
+// Route es el patrón de la ruta que atiende r, nunca la URL.
+func Route(r *http.Request) string { return routeOf(r) }
 
 func isDBError(err error) bool {
 	return errors.Is(err, db.ErrOverloaded) || errors.Is(err, db.ErrUnavailable) || errors.Is(err, db.ErrStatementTimeout)
