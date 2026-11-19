@@ -507,3 +507,62 @@ func TestOutputKeepsThreeDecimals(t *testing.T) {
 		t.Errorf("Decimal() = %s", got.Buy.Decimal())
 	}
 }
+
+// Un Rate sobrevive la ida y vuelta por JSON: el día como yyyy-mm-dd y los valores con 3 decimales.
+func TestRateJSONRoundTrip(t *testing.T) {
+	e := setup(t)
+	save(t, e.w, day(2026, 11, 19), "3.75", "3.7", fx.SourceManual)
+	want, err := e.r.Rate(context.Background(), day(2026, 11, 20), fx.USD) // con retroceso
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, err := json.Marshal(want)
+	if err != nil {
+		t.Fatal(err)
+	}
+	const wantJSON = `{"Date":"2026-11-19","Currency":"USD","Buy":"3.750","Sell":"3.700","Source":"fallback"}`
+	if string(b) != wantJSON {
+		t.Errorf("JSON = %s, want %s", b, wantJSON)
+	}
+	var got fx.Rate
+	if err := json.Unmarshal(b, &got); err != nil {
+		t.Fatal(err)
+	}
+	if got.Date != want.Date || got.Currency != want.Currency || got.Source != want.Source ||
+		got.Buy.String() != want.Buy.String() || got.Sell.String() != want.Sell.String() ||
+		!got.Buy.Decimal().Equal(want.Buy.Decimal()) {
+		t.Errorf("round trip = %+v, want %+v", got, want)
+	}
+}
+
+func TestJSONRejectsInvalid(t *testing.T) {
+	t.Run("day", func(t *testing.T) {
+		for _, in := range []string{`"0000-01-01"`, `"2026-02-30"`, `"2026-13-01"`, `"2026-11-00"`, `"2026-1-5"`, `"20261119"`, `""`, `"2026-11-19T00:00:00Z"`, `20261119`, `null`} {
+			var d fx.Day
+			if err := json.Unmarshal([]byte(in), &d); err == nil && in != `null` {
+				t.Errorf("Day %s accepted as %v", in, d)
+			}
+		}
+		var d fx.Day
+		if err := json.Unmarshal([]byte(`"2026-11-19"`), &d); err != nil || d != day(2026, 11, 19) {
+			t.Errorf("valid day = %v (err=%v)", d, err)
+		}
+		if _, err := json.Marshal(day(2026, 2, 30)); err == nil {
+			t.Error("an impossible day was marshaled")
+		}
+	})
+	t.Run("value", func(t *testing.T) {
+		for _, in := range []string{`"3.7501"`, `"0"`, `"0.000"`, `"-1"`, `"-3.750"`, `"1000"`, `"999.9990"`, `"1e2"`, `" 3.7"`, `"3.7 "`, `"+3.7"`, `"3."`, `".5"`, `""`, `"abc"`, `"3,7"`, `3.75`, `null`} {
+			var v fx.Value
+			if err := json.Unmarshal([]byte(in), &v); err == nil && in != `null` {
+				t.Errorf("Value %s accepted as %v", in, v)
+			}
+		}
+		for in, want := range map[string]string{`"3.75"`: "3.750", `"3"`: "3.000", `"0.001"`: "0.001", `"999.999"`: "999.999"} {
+			var v fx.Value
+			if err := json.Unmarshal([]byte(in), &v); err != nil || v.String() != want {
+				t.Errorf("Value %s = %v (err=%v), want %s", in, v, err, want)
+			}
+		}
+	})
+}

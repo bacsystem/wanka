@@ -15,6 +15,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -73,6 +74,28 @@ func (d Day) valid() bool {
 	return d.Year >= 1 && t.Year() == d.Year && t.Month() == d.Month && t.Day() == d.Dom
 }
 
+// MarshalText escribe el día como yyyy-mm-dd; un día inexistente es un error.
+func (d Day) MarshalText() ([]byte, error) {
+	if !d.valid() {
+		return nil, fmt.Errorf("%w: day %v", ErrInvalidRate, d)
+	}
+	return []byte(d.String()), nil
+}
+
+// UnmarshalText lee yyyy-mm-dd y rechaza lo que no sea un día existente (por ejemplo 2026-02-30).
+func (d *Day) UnmarshalText(b []byte) error {
+	t, err := time.Parse(time.DateOnly, string(b))
+	if err != nil {
+		return fmt.Errorf("%w: day %q", ErrInvalidRate, b)
+	}
+	got := Day{Year: t.Year(), Month: t.Month(), Dom: t.Day()}
+	if !got.valid() {
+		return fmt.Errorf("%w: day %q", ErrInvalidRate, b)
+	}
+	*d = got
+	return nil
+}
+
 // Value es un tipo de cambio con exactamente 3 decimales: String y JSON lo escriben con ellos
 // ("3.750", no "3.75"), como pide api/conventions.md §6.
 type Value struct{ d decimal.Decimal }
@@ -85,6 +108,34 @@ func (v Value) String() string { return v.d.StringFixed(scale) }
 
 // MarshalJSON escribe el valor como cadena JSON con 3 decimales.
 func (v Value) MarshalJSON() ([]byte, error) { return json.Marshal(v.String()) }
+
+// UnmarshalJSON lee una cadena decimal (solo dígitos y un punto) con a lo sumo 3 decimales,
+// mayor que 0 y de hasta 999.999. Un número JSON se rechaza: nunca pasa por float64.
+func (v *Value) UnmarshalJSON(b []byte) error {
+	var text string
+	if err := json.Unmarshal(b, &text); err != nil {
+		return fmt.Errorf("%w: value must be a JSON string", ErrInvalidRate)
+	}
+	whole, frac, dot := strings.Cut(text, ".")
+	if whole == "" || (dot && frac == "") || len(frac) > scale || !onlyDigits(whole) || !onlyDigits(frac) {
+		return fmt.Errorf("%w: value %q", ErrInvalidRate, text)
+	}
+	d, err := decimal.NewFromString(text)
+	if err != nil || d.Sign() <= 0 || d.GreaterThan(maxRate) {
+		return fmt.Errorf("%w: value %q", ErrInvalidRate, text)
+	}
+	v.d = d
+	return nil
+}
+
+func onlyDigits(s string) bool {
+	for i := 0; i < len(s); i++ {
+		if s[i] < '0' || s[i] > '9' {
+			return false
+		}
+	}
+	return true
+}
 
 // Rate es una fila de ops.exchange_rates.
 type Rate struct {
