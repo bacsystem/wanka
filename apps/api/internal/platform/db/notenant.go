@@ -20,17 +20,20 @@ type NoTenantScope struct {
 // (la misma ida y vuelta que InTenantTx): lo que haya dejado en la conexión
 // una petición anterior con set_config(..., false) queda tapado durante la
 // transacción, y las funciones que guardan y restauran app.tenant_id (como
-// iam.session_lookup) restauran ”.
+// iam.session_lookup) restauran la cadena vacía.
 const setNoTenantVarsSQL = `SELECT set_config('app.tenant_id', '', true), set_config('app.user_id', $1, true),
 		set_config('app.session_kind', '', true), set_config('app.impersonator_id', '', true)`
 
 // InNoTenantTx abre una transacción de lectura y escritura sin tenant: limpia
 // las variables app.* (solo app.user_id puede traer el UserID del scope) y
 // llama a fn. Hace COMMIT si fn devuelve nil y ROLLBACK si devuelve error o
-// entra en pánico (el pánico se relanza). Es la puerta de los caminos que
-// todavía no tienen tenant (ADR 0001): la búsqueda y el desligue de sesión, el
-// login, iam.list_my_memberships() y el canje de impersonación. Las tablas de
-// tenant no se ven: app.current_tenant() es NULL. Los errores son los de InTenantTx.
+// entra en pánico (el pánico se relanza). Es la puerta de todo acceso a la base
+// sin tenant fijado, de cualquier servicio (data-model.md, «Puerta sin tenant»):
+// en api, la sesión, el login, iam.list_my_memberships y el canje de
+// impersonación; en webhooks, ops.resolve_webhook_route; en platform-api, las
+// platform_fn.* y platform.*; en worker, la limpieza de iam.sessions. Las
+// tablas de tenant no se ven: app.current_tenant() es NULL. Los errores son los
+// de InTenantTx.
 func (p *Pool) InNoTenantTx(ctx context.Context, s NoTenantScope, fn func(pgx.Tx) error) error {
 	return p.runTx(ctx, pgx.ReadWrite, setNoTenantVarsSQL, []any{uuidText(s.UserID)}, fn)
 }

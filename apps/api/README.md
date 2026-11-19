@@ -137,16 +137,20 @@ para todo `Kind`), `ErrInvalidActor` (error de programación: `Kind` indefinido,
 `ErrStatementTimeout` (5 s del rol `wanka_app`); ninguno de los dos primeros
 abre transacción.
 
-Hay una segunda puerta para lo que aún no tiene tenant: `InNoTenantTx` e
-`InNoTenantReadTx` con `NoTenantScope{UserID}` (opcional). Solo sirve para la
-búsqueda y el desligue de sesión (#174 y su resolver real, #196), el login
-(#24), `iam.list_my_memberships()` con `UserID` (#27) y el canje de impersonación
-(plataforma); los datos de tenant van siempre por `InTenantTx`. Antes de `fn`
-limpia `app.tenant_id`, `app.session_kind` y `app.impersonator_id` (y deja
-`app.user_id` en el `UserID` del scope o en `''`) en la misma sentencia que
-fija las variables, sin una ida y vuelta más; un valor de sesión que otra petición
-dejó en la conexión no se hereda. Los errores son los de `InTenantTx`. En las dos
-puertas sigue prohibido `set_config(..., false)` dentro de `fn`. Las pruebas usan la tabla `rlstest.items`, que solo existe en
+Hay una segunda puerta para todo acceso a la base sin tenant fijado, de
+cualquier servicio (`docs/architecture/data/data-model.md`, «Puerta sin
+tenant»): `InNoTenantTx` e `InNoTenantReadTx` con `NoTenantScope{UserID}`
+(opcional). En `api`: la búsqueda y el desligue de sesión (#174, #196), el login
+(#24), `iam.list_my_memberships` con `UserID` (#27) y el canje
+`iam.redeem_impersonation`; en `webhooks`, `ops.resolve_webhook_route`; en
+`platform-api`, las `platform_fn.*` y las tablas `platform.*`; en `worker`, la
+limpieza de `iam.sessions`. Los datos de un tenant van siempre por
+`InTenantTx`. Antes de `fn` limpia `app.tenant_id`, `app.session_kind` y
+`app.impersonator_id` (y deja `app.user_id` en el `UserID` del scope o en `''`)
+en la misma sentencia que fija las variables, sin una ida y vuelta más; un valor
+de sesión que otra petición dejó en la conexión no se hereda. Los errores son
+los de `InTenantTx`. En las dos puertas sigue prohibido `set_config(..., false)`
+dentro de `fn`. Las pruebas usan la tabla `rlstest.items`, que solo existe en
 `internal/platform/db/testdata/` y se aplica con `dbtest.MigrateWith`.
 
 ## Variables de entorno

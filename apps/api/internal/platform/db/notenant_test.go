@@ -88,14 +88,18 @@ type stmt struct {
 }
 
 type recorder struct {
-	mu    sync.Mutex
-	stmts []stmt
+	mu      sync.Mutex
+	stmts   []stmt
+	onStart func(*pgx.Conn, string) // opcional: se llama al empezar cada sentencia
 }
 
-func (r *recorder) TraceQueryStart(ctx context.Context, _ *pgx.Conn, d pgx.TraceQueryStartData) context.Context {
+func (r *recorder) TraceQueryStart(ctx context.Context, c *pgx.Conn, d pgx.TraceQueryStartData) context.Context {
 	r.mu.Lock()
-	defer r.mu.Unlock()
 	r.stmts = append(r.stmts, stmt{strings.Join(strings.Fields(d.SQL), " "), d.Args})
+	r.mu.Unlock()
+	if r.onStart != nil {
+		r.onStart(c, d.SQL)
+	}
 	return ctx
 }
 func (r *recorder) TraceQueryEnd(context.Context, *pgx.Conn, pgx.TraceQueryEndData) {}
@@ -279,6 +283,15 @@ func writeRow(ctx context.Context, tx pgx.Tx) error {
 	return err
 }
 
+// touch escribe una fila en la puerta de escritura, para comprobar después que
+// el ROLLBACK la deshizo; en la de lectura no hay nada que escribir.
+func (door noTenantDoor) touch(ctx context.Context, tx pgx.Tx) error {
+	if door.readOnly {
+		return nil
+	}
+	return writeRow(ctx, tx)
+}
+
 func countWrites(t *testing.T, d *dbtest.DB) int {
 	t.Helper()
 	var n int
@@ -288,21 +301,33 @@ func countWrites(t *testing.T, d *dbtest.DB) int {
 	return n
 }
 
-// Criterios 6 y 7: los errores salen tipados con la misma función que InTenantTx,
-// hay ROLLBACK y la conexión vuelve al pool.
+// Criterios 6 y 7, en las dos puertas: los errores salen tipados con la misma
+// función que InTenantTx, hay ROLLBACK (con un contexto que sobrevive a la
+// cancelación: la conexión vuelve sana al pool, mismo pg_backend_pid) y la
+// conexión vuelve al pool.
 func TestNoTenantTxClassifiesFailuresAndRollsBack(t *testing.T) {
 	for _, door := range doors() {
-		if door.readOnly {
-			continue // las escrituras de estas pruebas solo existen en la puerta de escritura
-		}
 		t.Run(door.name, func(t *testing.T) {
 			d, p := noTenantDB(t, 1)
 			ctx := context.Background()
 			scope := db.NoTenantScope{}
 
+			// sameConnection comprueba que la conexión de pidIn volvió sana al pool.
+			sameConnection := func(t *testing.T, pidIn int) {
+				t.Helper()
+				var pidOut int
+				err := door.run(p, ctx, scope, func(tx pgx.Tx) (err error) {
+					pidOut, err = backendPID(ctx, tx)
+					return err
+				})
+				if err != nil || pidOut != pidIn {
+					t.Fatalf("connection pid %d -> %d (err %v): no ROLLBACK, the pool destroyed it", pidIn, pidOut, err)
+				}
+			}
+
 			t.Run("statement timeout", func(t *testing.T) {
 				err := door.run(p, ctx, scope, func(tx pgx.Tx) error {
-					if err := writeRow(ctx, tx); err != nil {
+					if err := door.touch(ctx, tx); err != nil {
 						return err
 					}
 					if _, err := tx.Exec(ctx, `SET LOCAL statement_timeout = '50ms'`); err != nil {
@@ -317,7 +342,7 @@ func TestNoTenantTxClassifiesFailuresAndRollsBack(t *testing.T) {
 			})
 			t.Run("pg_cancel_backend", func(t *testing.T) {
 				err := door.run(p, ctx, scope, func(tx pgx.Tx) error {
-					if err := writeRow(ctx, tx); err != nil {
+					if err := door.touch(ctx, tx); err != nil {
 						return err
 					}
 					var pid int
@@ -341,12 +366,17 @@ func TestNoTenantTxClassifiesFailuresAndRollsBack(t *testing.T) {
 			})
 			t.Run("caller context canceled", func(t *testing.T) {
 				cctx, cancel := context.WithCancel(ctx)
-				err := door.run(p, cctx, scope, func(tx pgx.Tx) error {
-					if err := writeRow(cctx, tx); err != nil {
+				defer cancel()
+				var pidIn int
+				err := door.run(p, cctx, scope, func(tx pgx.Tx) (err error) {
+					if pidIn, err = backendPID(cctx, tx); err != nil {
+						return err
+					}
+					if err := door.touch(cctx, tx); err != nil {
 						return err
 					}
 					cancel()
-					_, err := tx.Exec(cctx, `SELECT pg_sleep(3)`)
+					_, err = tx.Exec(cctx, `SELECT pg_sleep(3)`)
 					return err
 				})
 				if err == nil || errors.Is(err, db.ErrStatementTimeout) || errors.Is(err, db.ErrUnavailable) {
@@ -355,6 +385,8 @@ func TestNoTenantTxClassifiesFailuresAndRollsBack(t *testing.T) {
 				if !errors.Is(err, context.Canceled) {
 					t.Fatalf("err = %v, want context.Canceled", err)
 				}
+				// El ROLLBACK no depende del ctx cancelado: si lo usara, fallaría y el pool destruiría la conexión.
+				sameConnection(t, pidIn)
 			})
 			t.Run("caller deadline expired", func(t *testing.T) {
 				cctx, cancel := context.WithTimeout(ctx, 80*time.Millisecond)
@@ -386,12 +418,12 @@ func TestNoTenantTxClassifiesFailuresAndRollsBack(t *testing.T) {
 			})
 			t.Run("error of fn", func(t *testing.T) {
 				boom := errors.New("boom")
-				var pidIn, pidOut int
+				var pidIn int
 				err := door.run(p, ctx, scope, func(tx pgx.Tx) (err error) {
 					if pidIn, err = backendPID(ctx, tx); err != nil {
 						return err
 					}
-					if err := writeRow(ctx, tx); err != nil {
+					if err := door.touch(ctx, tx); err != nil {
 						return err
 					}
 					return boom
@@ -399,26 +431,27 @@ func TestNoTenantTxClassifiesFailuresAndRollsBack(t *testing.T) {
 				if !errors.Is(err, boom) {
 					t.Fatalf("err = %v, want fn's error", err)
 				}
-				// Con ROLLBACK la conexión sigue sana y vuelve al pool; sin él, el pool la destruye.
-				if err := door.run(p, ctx, scope, func(tx pgx.Tx) (err error) {
-					pidOut, err = backendPID(ctx, tx)
-					return err
-				}); err != nil || pidOut != pidIn {
-					t.Fatalf("connection pid %d -> %d (err %v): no ROLLBACK, the pool destroyed it", pidIn, pidOut, err)
-				}
+				sameConnection(t, pidIn)
 			})
 			t.Run("panic", func(t *testing.T) {
-				defer func() {
-					if r := recover(); r != "kaboom" {
-						t.Fatalf("recovered %v, want the original panic", r)
-					}
+				var pidIn int
+				func() {
+					defer func() {
+						if r := recover(); r != "kaboom" {
+							t.Fatalf("recovered %v, want the original panic", r)
+						}
+					}()
+					_ = door.run(p, ctx, scope, func(tx pgx.Tx) (err error) {
+						if pidIn, err = backendPID(ctx, tx); err != nil {
+							return err
+						}
+						if err := door.touch(ctx, tx); err != nil {
+							return err
+						}
+						panic("kaboom")
+					})
 				}()
-				_ = door.run(p, ctx, scope, func(tx pgx.Tx) error {
-					if err := writeRow(ctx, tx); err != nil {
-						return err
-					}
-					panic("kaboom")
-				})
+				sameConnection(t, pidIn)
 			})
 
 			if n := countWrites(t, d); n != 0 {
@@ -427,8 +460,30 @@ func TestNoTenantTxClassifiesFailuresAndRollsBack(t *testing.T) {
 			if n := p.AcquiredConns(); n != 0 {
 				t.Fatalf("AcquiredConns = %d, want 0", n)
 			}
-			if err := door.run(p, ctx, scope, func(tx pgx.Tx) error { return writeRow(ctx, tx) }); err != nil {
-				t.Fatalf("pool unusable after the failures: %v", err)
+		})
+	}
+}
+
+// Un set_config que falla porque se perdió la conexión llega tipado, no crudo.
+func TestNoTenantTxSetConfigFailureIsTyped(t *testing.T) {
+	d, _ := noTenantDB(t, 1)
+	ctx := context.Background()
+	for _, door := range doors() {
+		t.Run(door.name, func(t *testing.T) {
+			rec := &recorder{onStart: func(c *pgx.Conn, sql string) {
+				if strings.Contains(sql, "set_config") {
+					_ = c.PgConn().Conn().Close() // la base se fue entre el BEGIN y el set_config
+				}
+			}}
+			p, err := db.OpenTraced(ctx, d.URL(dbtest.App), rec)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer p.Close()
+			called := false
+			err = door.run(p, ctx, db.NoTenantScope{}, func(pgx.Tx) error { called = true; return nil })
+			if !errors.Is(err, db.ErrUnavailable) || errors.Is(err, db.ErrCommitUncertain) || called {
+				t.Fatalf("err=%v fn called=%v, want ErrUnavailable, not commit-uncertain, and no fn", err, called)
 			}
 		})
 	}
