@@ -13,12 +13,16 @@
 //   - Se calculan ambos modos por línea gravada. Si la suma de |total price −
 //     total base_rate| supera 0.50, TODO el comprobante usa base_rate.
 //   - Exonerado e inafecto: base = total = round2(cantidad × precio − descuento); IGV 0.
-//   - Gratuito: la base y el IGV son informativos (Totals.Gratuito, Totals.FreeIGV);
-//     no suman al total ni reciben descuento global.
+//   - Gratuito: la base y el IGV son informativos (Totals.Gratuito, Totals.FreeIGV) y
+//     siguen el modo del comprobante; no suman al total ni reciben descuento global.
 //   - Descuento global (con IGV, como los precios): se reparte entre los grupos
 //     gravado, exonerado e inafecto en proporción a su total, por mayor resto en
 //     centavos con empate por orden fijo de grupo; así no depende del orden de las
-//     líneas. Se resta a la base del grupo y el IGV se recalcula sobre la base nueva.
+//     líneas. En el gravado (igual en ambos modos) se parte de la base y el IGV ya
+//     sumados por línea: la base baja round2(descuento / 1.18) y el IGV baja el resto,
+//     de modo que el IGV nunca sube y el total baja exactamente el descuento.
+//   - El valor unitario se calcula con 10 decimales y se expone con 4 (data-model §2);
+//     en exonerado e inafecto es el precio mismo, sin dividir.
 //
 // Redondeo: half-up (mitad se aleja de cero), como BigDecimal.HALF_UP de Khipu.
 // Lo que los documentos no fijan (reparto del descuento global, definición del
@@ -101,7 +105,7 @@ type Input struct {
 
 // LineResult es el resultado de una línea, en el orden de la entrada.
 type LineResult struct {
-	UnitValue money.Amount `json:"unitValue"` // precio / 1.18 a 10 decimales
+	UnitValue money.Amount `json:"unitValue"` // precio / 1.18 a 4 decimales
 	Base      money.Amount `json:"base"`
 	IGV       money.Amount `json:"igv"`
 	Total     money.Amount `json:"total"` // base + IGV; 0 si es gratuita
@@ -161,6 +165,10 @@ var (
 	maxAmt  = decimal.RequireFromString("999999999999.99") // numeric(14,2)
 	maxRate = decimal.RequireFromString("999.999")
 	hundred = decimal.NewFromInt(100)
+
+	// internalUnitScale son los decimales del valor unitario en el cálculo (UBL admite 10);
+	// el resultado lo expone a ScalePrice (4), como data-model §2.
+	internalUnitScale int32 = 10
 )
 
 func r2(d decimal.Decimal) decimal.Decimal { return d.Round(2) }
@@ -188,14 +196,16 @@ func Compute(in Input) (Result, error) {
 	for i, l := range in.Lines {
 		c := calc{qty: l.Quantity.Decimal(), price: l.UnitPrice.Decimal(), disc: l.Discount.Decimal()}
 		c.priceTotal = r2(c.qty.Mul(c.price).Sub(c.disc))
-		c.unit = c.price.DivRound(divisor, money.ScaleUnit)
-		if l.Afectacion == Gravado {
-			discNet := c.disc.DivRound(divisor, money.ScaleUnit)
+		c.unit = c.price.DivRound(divisor, internalUnitScale)
+		if l.Afectacion == Gravado || l.Afectacion == Gratuito {
+			discNet := c.disc.DivRound(divisor, internalUnitScale)
 			c.rateBase = r2(c.qty.Mul(c.unit).Sub(discNet))
 			if c.rateBase.IsNegative() {
 				c.rateBase = decimal.Zero
 			}
 			c.rateIGV = r2(c.rateBase.Mul(igvRate))
+		}
+		if l.Afectacion == Gravado {
 			deviation = deviation.Add(c.priceTotal.Sub(c.rateBase.Add(c.rateIGV)).Abs())
 		}
 		cs[i] = c
@@ -211,7 +221,7 @@ func Compute(in Input) (Result, error) {
 		res.ExchangeRate = &a
 	}
 
-	var gravBase, gravGross, exoGross, inaGross, freeBase, freeIGV decimal.Decimal
+	var gravBase, gravIGV, gravGross, exoGross, inaGross, freeBase, freeIGV decimal.Decimal
 	for i, l := range in.Lines {
 		c := cs[i]
 		var base, igv, total decimal.Decimal
@@ -226,6 +236,7 @@ func Compute(in Input) (Result, error) {
 				total = base.Add(igv)
 			}
 			gravBase = gravBase.Add(base)
+			gravIGV = gravIGV.Add(igv)
 			gravGross = gravGross.Add(total)
 		case Exonerado:
 			base, total = c.priceTotal, c.priceTotal
@@ -234,14 +245,18 @@ func Compute(in Input) (Result, error) {
 			base, total = c.priceTotal, c.priceTotal
 			inaGross = inaGross.Add(total)
 		case Gratuito:
-			base = r2(c.priceTotal.DivRound(divisor, 2))
-			igv = c.priceTotal.Sub(base)
+			// Informativo; sigue el modo del comprobante para que el XML sea coherente.
+			if mode == ModePrice {
+				base = r2(c.priceTotal.DivRound(divisor, 2))
+				igv = c.priceTotal.Sub(base)
+			} else {
+				base, igv = c.rateBase, c.rateIGV
+			}
 			freeBase = freeBase.Add(base)
 			freeIGV = freeIGV.Add(igv)
-			total = decimal.Zero
 		}
 		res.Lines[i] = LineResult{
-			UnitValue: money.New(c.unit, money.ScaleUnit),
+			UnitValue: money.New(unitValue(l.Afectacion, c.price), money.ScalePrice),
 			Base:      m2(base),
 			IGV:       m2(igv),
 			Total:     m2(total),
@@ -255,36 +270,14 @@ func Compute(in Input) (Result, error) {
 	}
 	shares := splitDiscount(gd, []decimal.Decimal{gravGross, exoGross, inaGross})
 
-	// Grupo gravado: la base baja en round2(descuento / 1.18) y el IGV se recalcula.
-	gravAfter, gravIGV := gravBase, gravGross.Sub(gravBase)
-	if mode == ModeBaseRate {
-		gravIGV = decimal.Zero
-		for _, lr := range res.Lines {
-			gravIGV = gravIGV.Add(lr.IGV.Decimal())
-		}
-	}
-	if !shares[0].IsZero() {
-		if shares[0].Equal(gravGross) {
-			gravAfter, gravIGV = decimal.Zero, decimal.Zero
-		} else if mode == ModePrice {
-			net := gravGross.Sub(shares[0])
-			gravAfter = r2(net.DivRound(divisor, 2))
-			gravIGV = net.Sub(gravAfter)
-		} else {
-			gravAfter = gravBase.Sub(r2(shares[0].DivRound(divisor, 2)))
-			if gravAfter.IsNegative() {
-				gravAfter = decimal.Zero
-			}
-			gravIGV = r2(gravAfter.Mul(igvRate))
-		}
-	}
-	discounts := gravBase.Sub(gravAfter).Add(shares[1]).Add(shares[2])
+	// Grupo gravado, igual en los dos modos: se parte de la base y el IGV ya sumados
+	// por línea. El descuento (con IGV) baja la base en round2(descuento / 1.18) y el
+	// resto del descuento baja el IGV; el IGV nunca sube y la base nunca queda negativa.
+	gravBaseAfter, gravIGVAfter := applyGroupDiscount(gravBase, gravIGV, shares[0])
+	discounts := gravBase.Sub(gravBaseAfter).Add(shares[1]).Add(shares[2])
 	subtotal := gravBase.Add(exoGross).Add(inaGross)
 	oc := in.OtherCharges.Decimal()
-	total := subtotal.Sub(discounts).Add(gravIGV).Add(oc)
-	if total.GreaterThan(maxAmt) {
-		return Result{}, invalid("total", "exceeds the maximum amount")
-	}
+	total := subtotal.Sub(discounts).Add(gravIGVAfter).Add(oc)
 
 	res.Totals = Totals{
 		Gravado:      m2(gravBase),
@@ -293,11 +286,25 @@ func Compute(in Input) (Result, error) {
 		Gratuito:     m2(freeBase),
 		Subtotal:     m2(subtotal),
 		Discounts:    m2(discounts),
-		IGV:          m2(gravIGV),
+		IGV:          m2(gravIGVAfter),
 		FreeIGV:      m2(freeIGV),
 		OtherCharges: m2(oc),
 		Total:        m2(total),
 	}
+	// Todo importe de Totals cabe en numeric(14,2): si no, validation_failed y no un 500 al guardar.
+	for _, f := range []struct {
+		name string
+		v    money.Amount
+	}{
+		{"gravado", res.Totals.Gravado}, {"exonerado", res.Totals.Exonerado}, {"inafecto", res.Totals.Inafecto},
+		{"gratuito", res.Totals.Gratuito}, {"subtotal", res.Totals.Subtotal}, {"discounts", res.Totals.Discounts},
+		{"igv", res.Totals.IGV}, {"freeIgv", res.Totals.FreeIGV}, {"total", res.Totals.Total},
+	} {
+		if f.v.Decimal().GreaterThan(maxAmt) {
+			return Result{}, invalid("totals."+f.name, "exceeds the maximum amount")
+		}
+	}
+	gravIGV = gravIGVAfter
 
 	if d := in.Declared; d != nil {
 		if d.Total != nil {
@@ -312,6 +319,36 @@ func Compute(in Input) (Result, error) {
 		}
 	}
 	return res, nil
+}
+
+// applyGroupDiscount aplica el descuento share (con IGV) a un grupo gravado cuya base
+// y cuyo IGV ya son la suma de las líneas redondeadas. El total del grupo baja
+// exactamente share. Garantiza 0 <= baseAfter <= base y 0 <= igvAfter <= igv.
+func applyGroupDiscount(base, igv, share decimal.Decimal) (baseAfter, igvAfter decimal.Decimal) {
+	if share.IsZero() {
+		return base, igv
+	}
+	gross := base.Add(igv)
+	totalAfter := gross.Sub(share)
+	baseCut := r2(share.DivRound(divisor, 2))
+	igvAfter = igv.Sub(share.Sub(baseCut))
+	if igvAfter.IsNegative() {
+		igvAfter = decimal.Zero
+	}
+	if igvAfter.GreaterThan(totalAfter) {
+		igvAfter = totalAfter
+	}
+	return totalAfter.Sub(igvAfter), igvAfter
+}
+
+// unitValue es el valor unitario que se expone (4 decimales). En gravado y gratuito
+// el precio lleva IGV y se divide entre 1.18; en exonerado e inafecto no hay IGV y el
+// valor unitario es el precio mismo.
+func unitValue(a Afectacion, price decimal.Decimal) decimal.Decimal {
+	if a == Exonerado || a == Inafecto {
+		return price.Round(money.ScalePrice)
+	}
+	return price.DivRound(divisor, money.ScalePrice)
 }
 
 func mismatch(field string, want, got decimal.Decimal) *Error {

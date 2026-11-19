@@ -13,7 +13,9 @@ ALTER TABLE iam.users ADD COLUMN email text UNIQUE NOT NULL;
 -- enrollmentToken. Sin tenant_id, asi que sin RLS (identidad global, como iam.users e iam.sessions).
 ALTER TABLE iam.users ADD COLUMN mfa_failed_attempts smallint NOT NULL DEFAULT 0
     CONSTRAINT users_mfa_failed_attempts_range CHECK (mfa_failed_attempts BETWEEN 0 AND 4),
-  ADD COLUMN mfa_locked_until timestamptz;
+  ADD COLUMN mfa_locked_until timestamptz,
+  ADD COLUMN mfa_lockouts smallint NOT NULL DEFAULT 0
+    CONSTRAINT users_mfa_lockouts_range CHECK (mfa_lockouts BETWEEN 0 AND 3);  -- 3: segundo paso cerrado hasta restablecer la contrasena
 CREATE TABLE iam.mfa_enrollments (
   id uuid PRIMARY KEY,
   user_id uuid NOT NULL REFERENCES iam.users,
@@ -30,6 +32,56 @@ CREATE TABLE iam.mfa_enrollments (
 );
 CREATE INDEX mfa_enrollments_user_created_idx ON iam.mfa_enrollments (user_id, created_at);  -- FK y tope de correos por hora
 CREATE INDEX mfa_enrollments_expires_at_idx ON iam.mfa_enrollments (expires_at);             -- limpieza (data-model §5)
+-- Equivalente de iam.guard_session_writes() (revision del PR #203): los GRANT por columna no bastan, porque el INSERT es
+-- de fila completa y consumed_at esta en el UPDATE. Sin SECURITY DEFINER (corre con el rol que escribe); solo un
+-- superusuario (las semillas de prueba) lo salta. Todo rechazo es 42501.
+CREATE FUNCTION iam.guard_mfa_enrollment_writes() RETURNS trigger
+  LANGUAGE plpgsql
+  SET search_path = pg_catalog, pg_temp
+AS $$
+BEGIN
+  IF coalesce((SELECT r.rolsuper FROM pg_catalog.pg_roles r WHERE r.rolname = current_user), false) THEN
+    RETURN NEW;
+  END IF;
+  IF TG_OP = 'INSERT' THEN
+    NEW.created_at := pg_catalog.now();      -- la fija el servidor: el CHECK del TTL se mide contra el reloj real
+    NEW.email_sent_at := pg_catalog.now();
+    NEW.email_sends := 1;
+    NEW.consumed_at := NULL;
+    RETURN NEW;
+  END IF;
+  IF OLD.consumed_at IS NOT NULL THEN
+    -- Un token consumido no se reabre ni cambia; consumir otra vez es un no-op que conserva el instante viejo.
+    IF NEW.consumed_at IS NULL THEN
+      RAISE EXCEPTION 'a consumed enrollment stays consumed' USING ERRCODE = 'insufficient_privilege';
+    END IF;
+    NEW.consumed_at := OLD.consumed_at;
+    IF pg_catalog.to_jsonb(NEW) <> pg_catalog.to_jsonb(OLD) THEN
+      RAISE EXCEPTION 'a consumed enrollment cannot change' USING ERRCODE = 'insufficient_privilege';
+    END IF;
+    RETURN NEW;
+  END IF;
+  IF NEW.consumed_at IS NOT NULL THEN
+    NEW.consumed_at := pg_catalog.now();     -- lo fija el servidor
+  END IF;
+  IF NEW.email_sends < OLD.email_sends THEN
+    RAISE EXCEPTION 'email_sends never decreases' USING ERRCODE = 'insufficient_privilege';
+  END IF;
+  IF OLD.totp_secret_enc IS NOT NULL AND NEW.totp_secret_enc IS DISTINCT FROM OLD.totp_secret_enc THEN
+    RAISE EXCEPTION 'the pending TOTP secret does not rotate' USING ERRCODE = 'insufficient_privilege';
+  END IF;
+  IF NEW.email_code_hmac IS DISTINCT FROM OLD.email_code_hmac AND NEW.email_sends <> OLD.email_sends + 1 THEN
+    RAISE EXCEPTION 'a new email code is a new send' USING ERRCODE = 'insufficient_privilege';
+  END IF;
+  IF NEW.email_sends > OLD.email_sends THEN
+    NEW.email_sent_at := pg_catalog.now();   -- los 60 s entre envios no dependen de lo que escriba la app
+  ELSE
+    NEW.email_sent_at := OLD.email_sent_at;
+  END IF;
+  RETURN NEW;
+END $$;
+CREATE TRIGGER mfa_enrollments_guard_writes BEFORE INSERT OR UPDATE ON iam.mfa_enrollments
+  FOR EACH ROW EXECUTE FUNCTION iam.guard_mfa_enrollment_writes();
 
 CREATE TABLE org.sites (id uuid PRIMARY KEY, tenant_id uuid NOT NULL REFERENCES org.tenants, name text NOT NULL, UNIQUE (tenant_id, id));
 CREATE TABLE audit.events (id bigserial PRIMARY KEY, tenant_id uuid NOT NULL, actor_type text NOT NULL, action text NOT NULL, at timestamptz NOT NULL DEFAULT now());

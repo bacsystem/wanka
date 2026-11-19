@@ -59,6 +59,14 @@ func TestUnmarshal(t *testing.T) {
 		{`"--1"`, "", true},
 		{`"1.23456789012"`, "", true}, // más de 10 decimales
 		{`"NaN"`, "", true},
+		{`"00012.50"`, "", true}, // ceros a la izquierda
+		{`"01"`, "", true},
+		{`"-0"`, "", true}, // cero negativo
+		{`"-0.00"`, "", true},
+		{`"0"`, "0", false},
+		{`"0.00"`, "0.00", false},
+		{`"-0.01"`, "-0.01", false},
+		{`"10"`, "10", false},
 	}
 	for _, tc := range tests {
 		t.Run(tc.in, func(t *testing.T) {

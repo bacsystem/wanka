@@ -41,7 +41,7 @@ func New(d decimal.Decimal, scale int32) Amount {
 }
 
 // Parse lee un decimal plano ("118.00", "-0.5"). Rechaza vacío, signo +, exponente,
-// espacios, separadores de miles y más de maxScale decimales. La escala del
+// ceros a la izquierda, cero negativo, espacios, separadores de miles y más de maxScale decimales. La escala del
 // resultado es la cantidad de decimales escritos.
 func Parse(s string, maxScale int32) (Amount, error) {
 	if err := validPlain(s); err != nil {
@@ -50,6 +50,9 @@ func Parse(s string, maxScale int32) (Amount, error) {
 	d, err := decimal.NewFromString(s)
 	if err != nil {
 		return Amount{}, fmt.Errorf("%w: %q", ErrInvalid, s)
+	}
+	if d.IsZero() && strings.HasPrefix(s, "-") {
+		return Amount{}, fmt.Errorf("%w: %q is a negative zero", ErrInvalid, s)
 	}
 	scale := int32(0)
 	if i := strings.IndexByte(s, '.'); i >= 0 {
@@ -67,6 +70,9 @@ func validPlain(s string) error {
 	whole, frac, hasDot := strings.Cut(t, ".")
 	if whole == "" || (hasDot && frac == "") || len(s) > 64 {
 		return fmt.Errorf("%w: %q", ErrInvalid, s)
+	}
+	if len(whole) > 1 && whole[0] == '0' {
+		return fmt.Errorf("%w: %q has leading zeros", ErrInvalid, s)
 	}
 	for _, part := range []string{whole, frac} {
 		for i := 0; i < len(part); i++ {
