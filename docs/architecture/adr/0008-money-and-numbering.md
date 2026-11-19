@@ -36,3 +36,11 @@ Numeración: opción 2, con el lock **intencional** sobre la fila de la serie. P
 - Buenas: exactitud tributaria; correlativos sin huecos ni duplicados (respaldado por `UNIQUE`); un solo mecanismo para todas las series.
 - Malas: el frontend debe tratar importes como string (cambio respecto a los mocks; `lib/format.ts` y `parseNumber` ya existen); serie compartida por muchas cajas serializa; `numeric` es más lento que enteros (irrelevante a este volumen).
 - Qué haría cambiar la decisión: espera de lock en la serie p95 > 20 ms medida en producción ⇒ partir (más series) o, si la serie compartida es requisito del cliente, asignación diferida (opción 3) con número provisional.
+
+## Nota del 2026-11-19 (architect, épica #4)
+
+Correcciones que no cambian la decisión (detalle en el [ADR 0013](0013-khipu-company-config-sync.md)):
+
+- **GRE (tipo 09): excepción documentada a «un solo mecanismo para todas las series».** La numera Khipu (`EmitirGuiaRemisionService.java:64`; su endpoint no admite `correlativo`), como ya decían el ADR 0003 y [data-model §3](../data/data-model.md). `empresas.NextNumber` nunca numera el 09, y la ausencia de huecos en el 09 es responsabilidad de Khipu. Todas las demás series, de CPE e internas, siguen este ADR.
+- **Huecos:** Khipu acepta saltos (`GREATEST(ultimo_numero, n)`; solo rechaza el repetido). La ausencia de huecos en las series que numera Wanka depende **solo** de este mecanismo; Khipu no la vigila.
+- **«Exclusivas»:** Khipu no marca dueño en la serie. La exclusividad la sostiene Wanka, y una serie de CPE solo numera si está sincronizada con Khipu y sin conflicto: el `UPDATE` de la serie suma esas condiciones, sobre la misma fila y con el mismo lock (ADR 0013, §3 y §4).

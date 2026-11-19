@@ -333,3 +333,16 @@ El ticket muestra la serie y el número que asignó Wanka, con el CPE "pendiente
   - la regresión de redondeo (200 carritos contra `/calcular`, punto 1) y la confirmación ligera de N+1 antes que N (punto 2);
   - una baja rechazada sin webhook, resuelta sondeando `GET /v1/bajas/{id}`;
   - el CDR no existe en BETA ([entornos]), así que su prueba es un criterio aparte; la GRE va en R2.
+
+## Nota del 2026-11-19 (architect, épica #4)
+
+Correcciones tras contrastar la épica #4 con el código de Khipu. El detalle y su porqué están en el [ADR 0013](0013-khipu-company-config-sync.md); aquí solo lo que cambia de este ADR:
+
+- **Paso 1 del alta asistida:** el correo que recibe la invitación al portal de Khipu es un buzón de soporte de Wanka, uno por tenant, nunca el del cliente. La serie inicial es la boleta (`03`) del local principal (anexo `0000`) que creó el onboarding. Antes del alta, el operador busca el RUC con `GET /v1/admin/empresas?q=`. Si el RUC ya tiene empresa en Khipu (`409 DUPLICADO`, `AltaAsistidaService.java:71`), el tenant sigue pendiente y la única salida es vincular esa empresa (ADR 0013, §1).
+- **Paso 6:** el dueño carga el certificado y las credenciales SOL y API SUNAT. Los datos fiscales, los anexos y las series **no** los carga a mano: Wanka los registra con el job `einv.company_sync` a partir de lo que el dueño configura en #32 y #33 (ADR 0013, §3).
+- **Validación de `activate`:** además de `--company-ref`, compara `ruc`, `razonSocial` y `entorno` de `GET /v1/empresa` con el tenant y con `--environment`. Si difieren, rechaza con `einvoicing:activate_rejected` («El RUC de Khipu no coincide», «La razón social de Khipu no coincide», «El entorno de Khipu no coincide»). Al activar, encola `einv.company_sync` y `einv.series_reconcile`.
+- **`409 DUPLICADO` al emitir que no se puede adoptar** (otro total o receptor): además de la alerta crítica, la serie queda congelada (`provider_conflict_at`) y el documento con `blocked_reason = series_conflict` (ADR 0013, §4).
+- **«Las series son exclusivas de Wanka»** (Consecuencias): Khipu no lo impone. Wanka lo sostiene por construcción (el cliente no entra al portal) y lo vigila con la conciliación diaria de `GET /v1/series` (ADR 0013, §4).
+- **Preguntas a Khipu nuevas:**
+  - 13. Cómo genera el operador una API key para una empresa que ya existe en otra cuenta, sin que pase por terceros (el caso del RUC duplicado).
+  - 14. Cómo se corrige la razón social de una empresa: hoy no hay endpoint, ni para el operador.

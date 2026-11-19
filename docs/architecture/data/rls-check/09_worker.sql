@@ -129,3 +129,36 @@ SELECT test.assert((SELECT count(*) FROM iam.permissions) > 100, 'wanka_worker l
 SELECT test.expect_error($$INSERT INTO iam.permissions (code, description) VALUES ('ventas.pos:void', 'Anular ventas')$$, '42501', 'wanka_worker no inserta permisos');
 SELECT test.expect_error($$UPDATE iam.permissions SET description = 'x'$$, '42501', 'wanka_worker no actualiza permisos');
 SELECT test.expect_error($$DELETE FROM iam.permissions$$, '42501', 'wanka_worker no borra permisos');
+\echo '== K5. (wanka_worker) sincronizacion con Khipu (ADR 0013): solo marca sincronizado o en conflicto, nunca numera ni edita org =='
+SELECT test.assert((SELECT count(*) FROM org.document_series) = 0, 'worker sin tenant: 0 series (RLS)');
+BEGIN;
+SELECT set_config('app.tenant_id','aaaaaaaa-0000-0000-0000-000000000001', true);
+UPDATE org.document_series SET provider_conflict_at = now() WHERE id = 'd5000000-0000-0000-0000-0000000000a1';
+UPDATE org.document_series SET provider_synced_at = now() WHERE id = 'd5000000-0000-0000-0000-0000000000a1' AND last_number = 10;
+UPDATE org.sites SET provider_synced_version = version WHERE id = 'a5000000-0000-0000-0000-0000000000a1';
+UPDATE org.tenant_settings SET provider_synced_version = version;
+SELECT test.assert((SELECT provider_conflict_at IS NOT NULL FROM org.document_series WHERE id = 'd5000000-0000-0000-0000-0000000000a1')
+                   AND (SELECT provider_synced_version = 1 FROM org.tenant_settings), 'wanka_worker marca conflicto y sincronizacion');
+SELECT test.expect_error($$UPDATE org.document_series SET provider_conflict_at = NULL WHERE id = 'd5000000-0000-0000-0000-0000000000a1'$$,
+                         '42501', 'el congelado es irreversible tambien para wanka_worker');
+INSERT INTO einv.company_sync_state (tenant_id, holder, lease_until) VALUES (app.current_tenant(), 'job-1', now() + interval '60 seconds')
+  ON CONFLICT (tenant_id) DO UPDATE SET holder = EXCLUDED.holder, lease_until = EXCLUDED.lease_until
+  WHERE einv.company_sync_state.holder IS NULL OR einv.company_sync_state.lease_until < now();
+-- Un segundo job no pisa el arrendamiento vigente (ADR 0013, H14 del PR #228).
+INSERT INTO einv.company_sync_state (tenant_id, holder, lease_until) VALUES (app.current_tenant(), 'job-2', now() + interval '60 seconds')
+  ON CONFLICT (tenant_id) DO UPDATE SET holder = EXCLUDED.holder, lease_until = EXCLUDED.lease_until
+  WHERE einv.company_sync_state.holder IS NULL OR einv.company_sync_state.lease_until < now();
+SELECT test.assert((SELECT holder FROM einv.company_sync_state) = 'job-1', 'un arrendamiento vigente no se pisa');
+UPDATE einv.company_sync_state SET synced_seq = greatest(synced_seq, 3), holder = NULL WHERE holder = 'job-1';
+SELECT test.assert((SELECT synced_seq FROM einv.company_sync_state) = 3, 'wanka_worker toma, usa y suelta el arrendamiento de company_sync');
+SELECT test.expect_error($$UPDATE org.document_series SET last_number = 99$$, '42501', 'wanka_worker no numera');
+SELECT test.expect_error($$UPDATE org.document_series SET active = true$$, '42501', 'wanka_worker no reactiva series');
+SELECT test.expect_error($$UPDATE org.document_series SET series = 'B999'$$, '42501', 'wanka_worker no renombra series');
+SELECT test.expect_error($$INSERT INTO org.document_series (id, tenant_id, site_id, doc_type, series)
+                           VALUES (gen_random_uuid(), app.current_tenant(), 'a5000000-0000-0000-0000-0000000000a1', '01', 'F009')$$,
+                         '42501', 'wanka_worker no crea series');
+SELECT test.expect_error($$DELETE FROM org.document_series$$, '42501', 'wanka_worker no borra series');
+SELECT test.expect_error($$UPDATE org.sites SET sunat_annex = '0002'$$, '42501', 'wanka_worker no cambia el anexo');
+SELECT test.expect_error($$UPDATE org.tenant_settings SET fiscal_address = 'x'$$, '42501', 'wanka_worker no edita los datos fiscales');
+SELECT test.expect_error($$UPDATE org.document_series SET provider_synced_at = now() WHERE doc_type = 'PRO'$$, '23514', 'una serie interna nunca se sincroniza con Khipu');
+ROLLBACK;
