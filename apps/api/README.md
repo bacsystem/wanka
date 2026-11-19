@@ -206,7 +206,7 @@ dentro de `fn`. Las pruebas usan la tabla `rlstest.items`, que solo existe en
 
 `entitlements.New(pool, Options{}).For(ctx, tenantID)` devuelve lo que una empresa
 tiene habilitado (ADR 0005): `Modules` y `Flags` (ordenados), `Limits` y `Usage`
-(`users`, `sites`, `cpe_per_month`; todo plan declara las tres y `Limit(key)` de una ausente es 0), `Status`, `ReadOnly` y `Version`. Es solo
+(`Limits`: `users`, `sites`, `cpe_per_month`; todo plan declara las tres y `Limit(key)` de una ausente es 0. `Usage` solo trae `users` y `cpe_per_month`: `sites` no se mide), `Status`, `ReadOnly` y `Version`. Es solo
 lectura; el middleware que responde `402`, `403 tenant_read_only` o
 `403 module_not_enabled` es de #175, y `GET /v1/me/entitlements` lo cablea identidad
 (contrato en `docs/architecture/api/openapi.yaml`).

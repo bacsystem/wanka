@@ -26,6 +26,8 @@ CREATE TABLE platform.plans (
     AND limits - ARRAY['users', 'sites', 'cpe_per_month'] = '{}'::jsonb
     -- strict: en lax un array se desenvuelve y `[1]` pasaría por número
     AND NOT jsonb_path_exists(limits, 'strict $.* ? (@.type() != "number")')
+    -- jsonb conserva la escala: 1.0 y 9223372036854775807.0 son números pero no enteros de int64
+    AND limits::text !~ '\.'
     AND NOT jsonb_path_exists(limits, '$.* ? (@ < 0 || @ > 9223372036854775807 || @ != @.floor())')
   ),
   active boolean NOT NULL DEFAULT true,

@@ -122,6 +122,62 @@ func TestInvalidationDuringALoadPreventsCachingIt(t *testing.T) {
 	}
 }
 
+// Una petición que llega después del NOTIFY no se une a la lectura que empezó antes del cambio: lanza una nueva.
+func TestRequestAfterAnInvalidationDoesNotJoinTheStaleInflightLoad(t *testing.T) {
+	e := newEnv(t)
+	tenant := e.seeded("ventas")
+	counter := &countingDB{DB: e.pool(4)}
+	release := make(chan struct{})
+	started := make(chan struct{})
+	counter.before = func() {
+		if counter.reads.Load() == 1 { // solo la primera lectura espera
+			close(started)
+			<-release
+		}
+	}
+	s := entitlements.New(counter, entitlements.Options{})
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() { defer wg.Done(); _, _ = s.For(ctx(t), tenant) }()
+	<-started
+	s.Invalidate(tenant) // el cambio ya está hecho y avisado; la primera lectura es anterior
+	done := make(chan struct{})
+	go func() { defer close(done); _, _ = s.For(ctx(t), tenant) }()
+	waitFor(t, "a fresh read instead of joining the stale one", func() bool { return counter.reads.Load() == 2 })
+	close(release)
+	wg.Wait()
+	<-done
+}
+
+// Al reconectar, Listen avisa y la caché se vacía: lo que se notificó mientras no había conexión se perdió.
+func TestRunDropsTheCacheWhenTheListenerReconnects(t *testing.T) {
+	e := newEnv(t)
+	tenant := e.seeded("ventas")
+	counter := &countingDB{DB: e.pool(4)}
+	s := entitlements.New(counter, entitlements.Options{Clock: newFake()}) // el reloj quieto: solo el reconectar puede vaciar
+	runCtx, stop := context.WithCancel(ctx(t))
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() { defer wg.Done(); _ = s.Run(runCtx) }()
+	t.Cleanup(func() { stop(); wg.Wait() })
+	listeners := func() int {
+		var n int
+		_ = e.admin.QueryRow(ctx(t), `SELECT count(*) FROM pg_stat_activity WHERE query LIKE 'LISTEN %' AND datname = current_database()`).Scan(&n)
+		return n
+	}
+	waitFor(t, "listening", func() bool { return listeners() == 1 })
+	mustFor(t, s, tenant)
+	mustFor(t, s, tenant)
+	if n := counter.reads.Load(); n != 1 {
+		t.Fatalf("reads = %d, want 1 (cached)", n)
+	}
+	e.exec(`SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE query LIKE 'LISTEN %' AND datname = current_database()`)
+	waitFor(t, "cache dropped after reconnecting", func() bool {
+		mustFor(t, s, tenant)
+		return counter.reads.Load() > 1
+	})
+}
+
 // La caché tiene tope de entradas.
 func TestCacheIsBounded(t *testing.T) {
 	e := newEnv(t)
