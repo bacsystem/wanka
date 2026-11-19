@@ -1,5 +1,5 @@
 ---
-title: plataforma (esquema platform, SIN RLS, solo roles de plataforma) + transversales (audit con RLS, ops)
+title: plataforma (esquema platform, SIN RLS; wanka_app y wanka_worker solo leen las tablas de entitlements) + transversales (audit con RLS, ops)
 ---
 erDiagram
   PLANS ||--o{ PLAN_MODULES : incluye
@@ -23,7 +23,7 @@ erDiagram
     uuid id PK
     text code UK
     text name
-    jsonb limits "usuarios, sedes, CPE por mes"
+    jsonb limits "users, sites, cpe_per_month: las tres obligatorias (CHECK), sin tope ilimitado"
     boolean active
   }
   PLAN_MODULES {
@@ -141,10 +141,12 @@ erDiagram
   }
   IDEMPOTENCY_KEYS {
     uuid tenant_id PK
+    uuid principal_id PK "app.current_user_id(): usuario o staff impersonando; DEFAULT, sin FK"
     text key PK
-    bytea request_hash
-    int status_code "solo 2xx: CHECK status_code BETWEEN 200 AND 299"
-    jsonb response
+    bytea request_hash "sha256 de metodo, URL con query y cuerpo canonico"
+    smallint status_code "NULL solo dentro de la transaccion; solo 2xx: CHECK status_code BETWEEN 200 AND 299"
+    bytea response "bytes exactos de la respuesta"
+    jsonb response_headers "Content-Type, Location, ETag"
     timestamptz created_at "limpieza a las 24 h"
   }
   RIVER_JOB {

@@ -442,7 +442,7 @@ func TestEntitlementStepsNeverRunForAFormerMember(t *testing.T) {
 	}
 	// Con una sesión ligada y activa el mismo paso sí corre y responde 402.
 	e = newEnv(t, returns(bound()), nil)
-	mustProblem(t, e.get("/v1/paid", bearer(token(1))), 402, "subscription_inactive")
+	mustProblem(t, e.get("/v1/paid", bearer(token(1))), 403, "forbidden")
 	if e.hits("entitlements") != 1 {
 		t.Fatal("the test step never runs: the test proves nothing")
 	}
@@ -611,7 +611,7 @@ func TestRouteClassRulesPanicAtRegistration(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			routes, err := auth.NewRoutes(httpx.NewRouter(httpx.RouterOptions{}), returns(bound()), auth.Options{})
+			routes, err := auth.NewRoutes(httpx.NewRouter(httpx.RouterOptions{}), returns(bound()), grants(plan()), auth.Options{})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -620,31 +620,35 @@ func TestRouteClassRulesPanicAtRegistration(t *testing.T) {
 					t.Fatalf("panic = %v, want panic: %v", r, !c.ok)
 				}
 			}()
-			routes.HandleFunc(c.pattern, c.class, func(http.ResponseWriter, *http.Request) {})
+			routes.HandleFunc(c.pattern, c.class, specFor(c.class, c.pattern), func(http.ResponseWriter, *http.Request) {})
 		})
 	}
 }
 
 func TestNewRoutesValidatesItsInputs(t *testing.T) {
 	rt := httpx.NewRouter(httpx.RouterOptions{})
-	if _, err := auth.NewRoutes(nil, returns(bound()), auth.Options{}); err == nil {
+	if _, err := auth.NewRoutes(nil, returns(bound()), grants(plan()), auth.Options{}); err == nil {
 		t.Error("nil router accepted")
 	}
-	if _, err := auth.NewRoutes(rt, nil, auth.Options{}); err == nil {
+	if _, err := auth.NewRoutes(rt, nil, grants(plan()), auth.Options{}); err == nil {
 		t.Error("nil resolver accepted")
 	}
-	if _, err := auth.NewRoutes(rt, returns(bound()), auth.Options{SessionLimiter: httpx.LimiterConfig{Capacity: 1}}); err == nil {
+	if _, err := auth.NewRoutes(rt, returns(bound()), nil, auth.Options{}); err == nil {
+		t.Error("nil entitlements source accepted")
+	}
+	if _, err := auth.NewRoutes(rt, returns(bound()), grants(plan()), auth.Options{SessionLimiter: httpx.LimiterConfig{Capacity: 1}}); err == nil {
 		t.Error("invalid session limiter accepted")
 	}
-	if _, err := auth.NewRoutes(rt, returns(bound()), auth.Options{TenantLimiter: httpx.LimiterConfig{Capacity: 1}}); err == nil {
+	if _, err := auth.NewRoutes(rt, returns(bound()), grants(plan()), auth.Options{TenantLimiter: httpx.LimiterConfig{Capacity: 1}}); err == nil {
 		t.Error("invalid tenant limiter accepted")
 	}
 }
 
 // --- WWW-Authenticate ---
 
-func TestWWWAuthenticateOnlyOnTheTwoKernel401Codes(t *testing.T) {
-	for code, want := range map[string]string{"unauthenticated": "Bearer", "session_expired": "Bearer", "invalid_credentials": "", "forbidden": "", "internal": ""} {
+// Todo 401 lleva el desafío (RFC 9110 §15.5.2), también invalid_credentials; nada más lo lleva.
+func TestWWWAuthenticateOnEvery401AndOnlyOn401(t *testing.T) {
+	for code, want := range map[string]string{"unauthenticated": "Bearer", "session_expired": "Bearer", "invalid_credentials": "Bearer", "forbidden": "", "tenant_access_denied": "", "internal": ""} {
 		rec := httptest.NewRecorder()
 		httpx.WriteProblem(rec, httptest.NewRequest(http.MethodGet, "/x", nil), code, "")
 		if got := rec.Header().Get("WWW-Authenticate"); got != want {
@@ -942,4 +946,12 @@ func TestDefaultKeyCaps(t *testing.T) {
 			noQuota(t, rec)
 		})
 	}
+}
+
+// specFor da a una ruta de prueba un spec que cumple el ADR 0009 para su clase.
+func specFor(class auth.RouteClass, pattern string) auth.Spec {
+	if class != auth.Tenant || pattern == "GET /v1/exports" || pattern == "GET /v1/me/entitlements" {
+		return auth.Spec{Module: auth.NoModule, Permission: auth.NoPermission}
+	}
+	return auth.Spec{Module: "ventas", Permission: "ventas.pos:read"}
 }

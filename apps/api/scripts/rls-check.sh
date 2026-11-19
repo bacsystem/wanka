@@ -27,7 +27,11 @@ sh "$run" || { echo "FAIL: rls-check/run.sh falló sin mutación" >&2; exit 1; }
 
 # Cada mutación rompe una línea clave y debe hacer fallar el paso que la prueba.
 for m in "naive_session_lookup|wanka_app" \
-         "session_lookup_no_restore|wanka_app (membresia borrada)" \
+         "session_lookup_no_restore|wanka_app" \
+         "session_lookup_no_restore_deleted|wanka_app (membresia borrada)" \
+         "member_read_tenants_no_status|wanka_app" \
+         "member_read_with_suspended|wanka_app" \
+         "own_memberships_no_status|wanka_app" \
          "drop_authz_check|wanka_app" \
          "revoke_app_sessions_insert|wanka_app" \
          "grant_app_update_tenants|wanka_app" \
@@ -46,11 +50,49 @@ for m in "naive_session_lookup|wanka_app" \
          "guard_allows_unrevoke|wanka_app" \
          "guard_no_server_created_at|wanka_app" \
          "guard_rerevoke_raises|wanka_app" \
+         "grant_app_write_subscriptions|wanka_app" \
+         "enable_rls_platform_subscriptions|wanka_app" \
+         "grant_worker_write_subscriptions|wanka_worker" \
+         "revoke_worker_usage_write|wanka_worker" \
+         "grant_webhooks_platform|wanka_webhooks" \
          "grant_app_write_permissions|wanka_app" \
          "grant_worker_write_permissions|wanka_worker" \
          "revoke_platform_permissions|wanka_platform" \
          "grant_webhooks_permissions|wanka_webhooks" \
-         "drop_force_rls|wanka_migrator: borra la membresia"; do
+         "drop_force_rls|wanka_migrator: borra la membresia" \
+         "grant_app_write_exchange_rates|wanka_app" \
+         "grant_worker_read_exchange_rates|wanka_worker" \
+         "drop_exchange_rates_currency_check|wanka_worker" \
+         "grant_app_select_river_job|wanka_app" \
+         "revoke_app_river_sequence|wanka_app" \
+         "revoke_platform_river_insert|wanka_platform" \
+         "grant_webhooks_update_river_job|wanka_webhooks" \
+         "revoke_worker_river_delete|wanka_worker" \
+         "grant_worker_river_migration|wanka_worker" \
+         "grant_app_delete_idempotency_keys|wanka_app" \
+         "grant_app_update_idempotency_hash|wanka_app" \
+         "idempotency_open_policy|wanka_app" \
+         "drop_idempotency_2xx_check|wanka_app" \
+         "purge_policy_always|wanka_worker" \
+         "purge_policy_any_tenant|wanka_worker" \
+         "idempotency_pk_without_principal|wanka_app" \
+         "drop_purge_policy|wanka_worker" \
+         "grant_worker_select_idempotency_response|wanka_worker" \
+         "revoke_worker_idempotency_delete|wanka_worker" \
+         "grant_app_update_audit|wanka_app" \
+         "grant_app_delete_audit|wanka_app" \
+         "grant_worker_delete_audit|wanka_worker" \
+         "grant_webhooks_insert_audit|wanka_webhooks" \
+         "audit_policy_allows_all|wanka_app" \
+         "drop_force_rls_audit|wanka_migrator: borra la membresia" \
+         "drop_audit_user_check|wanka_app" \
+         "drop_audit_system_check|wanka_app" \
+         "drop_audit_staff_check|wanka_app" \
+         "drop_audit_action_check|wanka_app" \
+         "drop_audit_impersonator_check|wanka_app" \
+         "ensure_partitions_to_public|wanka_app" \
+         "ensure_partitions_no_search_path|wanka_worker" \
+         "grant_app_partition_select|wanka_app"; do
   name="${m%%|*}" step="${m#*|}"
   echo "== MUTATION=${name}: debe fallar en «${step}» =="
   if ! detected "$name" "$step"; then

@@ -1,6 +1,8 @@
 -- Como wanka_platform: alta, suspension y solicitud de impersonacion solo por funciones acotadas.
 -- Cada caso compara contra lo esperado con test.assert / test.expect_error y aborta (exit != 0) si no coincide.
 \set ON_ERROR_STOP on
+-- El staff que actua (la funcion lo guarda como impersonator_id del evento de auditoria).
+SELECT set_config('app.user_id','cccccccc-0000-0000-0000-000000000009', false);
 \echo '== P1. provision_tenant (duenio wanka_definer) crea A y B =='
 SELECT test.assert(platform_fn.provision_tenant('aaaaaaaa-0000-0000-0000-000000000001','20100000001','Empresa A',
   'eeeeeeee-0000-0000-0000-000000000001','u@a.pe','a0000000-0000-0000-0000-0000000000a1','a5000000-0000-0000-0000-0000000000a1')
@@ -22,6 +24,11 @@ SELECT test.assert(platform_fn.request_impersonation('99999999-0000-0000-0000-00
 SELECT test.assert(platform_fn.request_impersonation('99999999-0000-0000-0000-000000000002','5aff0000-0000-0000-0000-000000000001',
   'bbbbbbbb-0000-0000-0000-000000000002','7c000000-0000-0000-0000-000000000002','read_only','\x02'::bytea) IS NOT NULL, 'solicitud B');
 SELECT test.assert(NULLIF(current_setting('app.tenant_id', true), '') IS NULL, 'las funciones no filtran app.tenant_id al llamador');
+\echo '== P5. (wanka_platform) tablas de River: solo INSERT en ops.river_job =='
+SELECT test.river_enqueue_only();
+\echo '== P6. ops.exchange_rates (issue #170): wanka_platform solo lee =='
+SELECT test.assert((SELECT count(*) FROM ops.exchange_rates) = 0, 'wanka_platform lee la tabla global (vacia en este paso)');
+SELECT test.expect_error($$INSERT INTO ops.exchange_rates VALUES ('2026-11-19', 'USD', 3.7, 3.8, 'official')$$, '42501', 'wanka_platform no inserta tipos de cambio');
 \echo '== P5. wanka_platform: iam.permissions es de solo lectura (issue #172) =='
 SELECT test.assert((SELECT count(*) FROM iam.permissions) > 100, 'wanka_platform lee el catalogo de permisos');
 SELECT test.expect_error($$INSERT INTO iam.permissions (code, description) VALUES ('ventas.pos:void', 'Anular ventas')$$, '42501', 'wanka_platform no inserta permisos');

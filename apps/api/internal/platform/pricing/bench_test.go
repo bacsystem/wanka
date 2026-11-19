@@ -32,6 +32,9 @@ func BenchmarkCompute200Lines(b *testing.B) {
 // Criterio: un comprobante de 200 líneas en menos de 5 ms. Se toma el mejor de varias
 // corridas para que un tropiezo del planificador de la CI no lo vuelva intermitente.
 func TestCompute200LinesUnder5ms(t *testing.T) {
+	if raceEnabled {
+		t.Skip("timing bound is not meaningful under -race; run without -race to check it")
+	}
 	in := lines200(t)
 	best := time.Hour
 	for range 20 {

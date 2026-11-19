@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -151,10 +152,31 @@ func TestServePlanesStartAndStopOnSIGTERM(t *testing.T) {
 	}
 }
 
-func TestWorkerStopsOnSIGTERM(t *testing.T) {
-	p := start(t, okEnv(), "worker")
-	p.waitMsg(t, "started")
-	p.terminate(t)
+// Sin base el worker no puede levantar sus colas: sale con código 1 y sin la contraseña.
+func TestWorkerExitsWithErrorWhenTheDatabaseIsDown(t *testing.T) {
+	cmd := exec.Command(binPath, "worker")
+	cmd.Env = append([]string{"PATH=" + os.Getenv("PATH")}, okEnv()...)
+	out, err := cmd.CombinedOutput()
+	var exit *exec.ExitError
+	if !errors.As(err, &exit) || exit.ExitCode() != 1 {
+		t.Fatalf("want exit code 1, got %v; output: %s", err, out)
+	}
+	if !strings.Contains(string(out), "starting the job queues") || strings.Contains(string(out), "TOP-SECRET") {
+		t.Fatalf("unexpected output: %s", out)
+	}
+}
+
+func TestWorkerRejectsABadQueueSetting(t *testing.T) {
+	cmd := exec.Command(binPath, "worker")
+	cmd.Env = append(append([]string{"PATH=" + os.Getenv("PATH")}, okEnv()...), "JOBS_CONCURRENCY_CPE=lots-123")
+	out, err := cmd.CombinedOutput()
+	var exit *exec.ExitError
+	if !errors.As(err, &exit) || exit.ExitCode() != 1 {
+		t.Fatalf("want exit code 1, got %v; output: %s", err, out)
+	}
+	if !strings.Contains(string(out), "JOBS_CONCURRENCY_CPE") || strings.Contains(string(out), "lots-123") {
+		t.Fatalf("the error must name the variable and not its value: %s", out)
+	}
 }
 
 func TestBadInvocationExitsNonZero(t *testing.T) {
@@ -287,25 +309,26 @@ func TestLogsAreJSONWithRequestIDAndNoSecrets(t *testing.T) {
 	}
 }
 
-// mailerWarnings arranca el worker, lee el log hasta «started» y devuelve los
-// avisos WARN sobre el correo. El aviso sale antes de «started».
+// mailerWarnings arranca serve (plano webhooks), lee el log hasta «listening» y
+// devuelve los avisos WARN sobre el correo. El aviso sale antes de «listening».
+// No usa el worker: sin base sale con código 1 antes de arrancar (#169).
 func mailerWarnings(t *testing.T, extra ...string) []map[string]any {
 	t.Helper()
-	p := start(t, append(okEnv(), extra...), "worker")
+	p := start(t, append(okEnv(), extra...), "serve", "--plane=webhooks")
 	var warns []map[string]any
 	timeout := time.After(10 * time.Second)
 	for done := false; !done; {
 		select {
 		case m, ok := <-p.lines:
 			if !ok {
-				t.Fatalf("process ended before \"started\"; stderr: %s", p.stderr)
+				t.Fatalf("process ended before \"listening\"; stderr: %s", p.stderr)
 			}
 			if m["level"] == "WARN" && strings.Contains(fmt.Sprint(m["msg"]), "mailer") {
 				warns = append(warns, m)
 			}
-			done = m["msg"] == "started"
+			done = m["msg"] == "listening"
 		case <-timeout:
-			t.Fatal("timeout waiting for \"started\"")
+			t.Fatal("timeout waiting for \"listening\"")
 		}
 	}
 	p.terminate(t)

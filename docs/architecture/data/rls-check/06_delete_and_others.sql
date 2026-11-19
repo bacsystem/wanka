@@ -7,3 +7,5 @@ BEGIN;
 SELECT set_config('app.tenant_id','aaaaaaaa-0000-0000-0000-000000000001', true);
 DELETE FROM iam.memberships WHERE id = '3e000000-0000-0000-0000-0000000000c1';
 COMMIT;
+-- (como wanka_migrator) FORCE ROW LEVEL SECURITY tambien en audit.events: el duenio sin tenant fijado ve 0 eventos aunque haya (#173).
+SELECT test.assert((SELECT count(*) FROM audit.events) = 0, 'FORCE RLS: el duenio sin tenant ve 0 eventos de audit.events');

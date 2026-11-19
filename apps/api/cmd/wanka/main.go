@@ -16,11 +16,15 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/bacsystem/wanka/apps/api/internal/platform/audit"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/auth"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/auth/pgsession"
+	"github.com/bacsystem/wanka/apps/api/internal/platform/clock"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/config"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/db"
+	"github.com/bacsystem/wanka/apps/api/internal/platform/entitlements"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/httpx"
+	"github.com/bacsystem/wanka/apps/api/internal/platform/jobs"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/logging"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/mailer"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/mailer/stub"
@@ -43,8 +47,16 @@ type wiring struct {
 	sweepInterval time.Duration
 	// auth son las opciones de auth.NewRoutes; vacías toman los valores de conventions.md §7.
 	auth auth.Options
+	// entitlements son las opciones de entitlements.New (TTL 30 s por defecto);
+	// el Logger lo pone serve.
+	entitlements entitlements.Options
 	// wrapSweeper, si no es nil, envuelve o reemplaza el barredor (solo los tests).
 	wrapSweeper func(sweeper) sweeper
+	// mount, si no es nil, registra rutas en el registrador del plano tenant
+	// (solo los tests; los módulos llegan con sus historias).
+	mount func(*auth.Routes)
+	// wrapListener, si no es nil, envuelve o reemplaza el escucha de NOTIFY (solo los tests).
+	wrapListener func(listener) listener
 }
 
 // defaultWiring es el cableado de producción.
@@ -140,7 +152,7 @@ func run(ctx context.Context, args []string, getenv func(string) string, stdout,
 	case "migrate":
 		err = migrate(ctx, log, cfg)
 	default:
-		err = worker(ctx, log, cfg, svc)
+		err = worker(ctx, log, cfg, svc, getenv)
 	}
 	if err != nil {
 		log.Error("terminated with error", "err", err.Error())
@@ -187,12 +199,16 @@ func serve(ctx context.Context, log *slog.Logger, cfg config.Config, svc config.
 	// session chain. The module routes arrive with their stories (tenant never
 	// mounts plataforma, ADR 0002).
 	rt := httpx.NewMux(ready)
-	sw, err := mountPlane(plane, rt, pool, w.auth)
+	w.entitlements.Logger = log
+	sw, ls, err := mountPlane(plane, rt, pool, w)
 	if err != nil {
 		return err
 	}
 	if sw != nil && w.wrapSweeper != nil {
 		sw = w.wrapSweeper(sw)
+	}
+	if ls != nil && w.wrapListener != nil {
+		ls = w.wrapListener(ls)
 	}
 	handler := httpx.Chain(rt, log, metrics.Nop{})
 	srv := httpx.NewServer(cfg.HTTPAddr, handler)
@@ -211,6 +227,13 @@ func serve(ctx context.Context, log *slog.Logger, cfg config.Config, svc config.
 		sweepCtx, stopSweep := context.WithCancel(ctx)
 		sweepDone := startSweepLoop(sweepCtx, sw, w.sweepInterval)
 		defer func() { stopSweep(); <-sweepDone }()
+	}
+	if ls != nil {
+		// Igual con el escucha de entitlements_changed: sin él la caché sigue
+		// siendo correcta, solo tarda hasta el TTL en enterarse de un cambio.
+		listenCtx, stopListen := context.WithCancel(ctx)
+		listenDone := startListener(listenCtx, ls, log)
+		defer func() { stopListen(); <-listenDone }()
 	}
 
 	select {
@@ -234,21 +257,45 @@ func serve(ctx context.Context, log *slog.Logger, cfg config.Config, svc config.
 // sweeper es lo que el bucle de barrido necesita de auth.Routes.
 type sweeper interface{ Sweep() int }
 
+// listener es el escucha de NOTIFY que invalida la caché de entitlements.
+type listener interface {
+	Run(ctx context.Context) error
+}
+
 // mountPlane monta en rt lo propio de cada plano. En el plano tenant arma el
-// registrador de rutas /v1 con el resolver de PostgreSQL y los dos limitadores
-// con los valores de conventions.md §7, y devuelve quien barre sus buckets; en
-// los demás no monta nada y devuelve nil. El *auth.Routes no sale de aquí hacia
-// los módulos todavía: cuando haya rutas /v1 de módulo, se les pasará solo
-// ese registrador y nunca rt, para que ninguna ruta /v1 quede sin clase.
-func mountPlane(plane string, rt *httpx.Router, pool *db.Pool, opts auth.Options) (sweeper, error) {
+// servicio de entitlements, el registrador de rutas /v1 con el resolver de
+// PostgreSQL, los dos limitadores con los valores de conventions.md §7 y el
+// paso de entitlements, y devuelve quien barre los buckets y quien escucha los
+// NOTIFY; en los demás no monta nada y devuelve nil. El *auth.Routes no sale de
+// aquí hacia los módulos todavía: cuando haya rutas /v1 de módulo, se les
+// pasará solo ese registrador y nunca rt, para que ninguna ruta /v1 quede sin clase.
+func mountPlane(plane string, rt *httpx.Router, pool *db.Pool, w wiring) (sweeper, listener, error) {
 	if plane != "tenant" {
-		return nil, nil
+		return nil, nil, nil
 	}
-	routes, err := auth.NewRoutes(rt, pgsession.New(pool), opts)
+	ent := entitlements.New(pool, w.entitlements)
+	routes, err := auth.NewRoutes(rt, pgsession.New(pool), ent, w.auth)
 	if err != nil {
-		return nil, fmt.Errorf("mounting the session chain: %w", err)
+		return nil, nil, fmt.Errorf("mounting the session chain: %w", err)
 	}
-	return routes, nil
+	if w.mount != nil {
+		w.mount(routes)
+	}
+	return routes, ent, nil
+}
+
+// startListener corre l.Run hasta que ctx termine; el canal devuelto se cierra
+// cuando salió. Run solo devuelve error si no puede seguir: se registra y la
+// caché queda acotada por su TTL.
+func startListener(ctx context.Context, l listener, log *slog.Logger) <-chan struct{} {
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		if err := l.Run(ctx); err != nil && ctx.Err() == nil {
+			log.Error("entitlements listener stopped, the cache falls back to its TTL", "err", err.Error())
+		}
+	}()
+	return done
 }
 
 // startSweepLoop llama a s.Sweep cada interval hasta que ctx termine; el canal
@@ -282,17 +329,41 @@ func migrate(ctx context.Context, log *slog.Logger, cfg config.Config) error {
 	return nil
 }
 
-// worker es el stub del ejecutor de jobs: abre su pool (una URL o un tamaño
-// inválidos lo detienen al arrancar), espera la señal de parada y sale limpio.
-// Los jobs llegan con su historia.
-func worker(ctx context.Context, log *slog.Logger, cfg config.Config, svc config.Service) error {
+// worker ejecuta los jobs (internal/platform/jobs): abre su pool (una URL o un
+// tamaño inválidos lo detienen al arrancar), levanta las colas y, al recibir la
+// señal de parada, espera a los jobs en curso hasta JOBS_SHUTDOWN_TIMEOUT. Registra
+// los jobs de mantenimiento del kernel; los handlers de cada módulo se registran
+// aquí cuando llegan sus historias.
+func worker(ctx context.Context, log *slog.Logger, cfg config.Config, svc config.Service, getenv func(string) string) error {
+	jcfg, err := jobs.ConfigFromEnv(getenv)
+	if err != nil {
+		return fmt.Errorf("job configuration: %w", err)
+	}
 	pool, err := db.Open(ctx, cfg.DatabaseURL, db.Options{MaxConns: cfg.DBPoolMax, AppName: "wanka-" + svc.Name})
 	if err != nil {
 		return fmt.Errorf("opening database pool: %w", err)
 	}
 	defer pool.Close()
-	log.Info("started", "note", "worker is a stub until its story lands")
-	<-ctx.Done()
+	reg := jobs.NewRegistry(pool)
+	if err := jobs.RegisterMaintenance(reg, pool); err != nil {
+		return err
+	}
+	clk := clock.System{}
+	if err := registerKernelJobs(reg, pool, clk, log); err != nil {
+		return err
+	}
+	// Al arrancar se aseguran las particiones sin esperar al ciclo del periódico (River lo reinicia con
+	// cada despliegue). Si falla, el job lo reintenta; las que creó la migración cubren unos meses.
+	if _, err := audit.EnsurePartitions(ctx, pool, clk.Now(), audit.PartitionsAhead); err != nil {
+		log.Warn("could not ensure the audit partitions at startup", "err", err.Error())
+	}
+	w, err := jobs.NewWorker(pool, reg, jcfg, log)
+	if err != nil {
+		return err
+	}
+	if err := w.Run(ctx); err != nil {
+		return err
+	}
 	log.Info("stopped")
 	return nil
 }

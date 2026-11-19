@@ -93,8 +93,8 @@ func (a Actor) validate() error {
 	if emptyUUID(a.TenantID) {
 		return ErrNoTenant
 	}
-	// Solo system puede ir sin usuario (ADR 0001: webhooks; ADR 0003: activación de facturación; «Workers» pasa systemUser); una
-	// sesión de usuario sin UserID dejaría app.current_user_id() en NULL.
+	// Solo system puede ir sin usuario (ADR 0001: webhooks, «Workers»; ADR 0003: activación de facturación): no existe un
+	// usuario de sistema, y app.current_user_id() queda en NULL. Una sesión de usuario sin UserID haría lo mismo.
 	if a.Kind != KindSystem && emptyUUID(a.UserID) {
 		return fmt.Errorf("%w: session kind %s without UserID", ErrInvalidActor, a.Kind)
 	}

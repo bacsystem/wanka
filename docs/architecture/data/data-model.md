@@ -92,12 +92,22 @@ RETURNING series, last_number;
 | `iam.sessions` | revocadas/expiradas + 30 días | job diario `iam.purge_sessions` por `created_at` |
 | `iam.password_resets`, invitaciones | 7 días | job diario |
 | `iam.mfa_enrollments` (token de enrolamiento y `emailCode`, #25) | vencidos + 24 h | job diario `iam.purge_mfa_enrollments` por `expires_at` (índice), como `wanka_worker` |
-| `ops.idempotency_keys` | 24 h | job horario por `created_at` (índice) |
+| `ops.idempotency_keys` | 24 h | job horario `ops.purge_idempotency_keys` por `created_at` (índice), sin tenant, por las políticas `purge_expired*` ([ADR 0012](../adr/0012-maintenance-without-tenant.md)) |
 | `einv.provider_webhook_events` | 90 días | job diario |
 | Tabla de jobs de River | completados 7 días, descartados 30 días | `JobCleaner` de River |
-| `audit.events` | 5 años | particiones mensuales; se separan las antiguas |
+| `audit.events` | 5 años | particiones mensuales en UTC; las crea `audit.ensure_partitions` (job diario y arranque del worker, mes actual + 3) y las antiguas se separan y se descartan enteras, nunca con `DELETE` (ADR 0001, «Excepción: DDL de particiones», #173). Sin partición `DEFAULT`. `platform_fn.purge_closed_tenant` no toca `audit.events`: la bitácora de una empresa cerrada sale con su partición |
 | Datos de una empresa cerrada | 5 años en solo lectura (decisión del usuario) | `org.tenants.status = cerrada` y `closed_at`; pasados 5 años, el job `org.purge_closed_tenants` borra por tenant, en lotes y con auditoría |
 | `inv.stock_reservations` | hasta `expires_at` | job cada 5 min |
+
+**Quién actúa en `audit.events`** (architect, 2026-11-19, #173). `actor_type` decide qué columnas de actor van llenas, y la base lo hace cumplir con un CHECK por regla:
+
+| `actor_type` | `actor_user_id` | `impersonator_id` | Cuándo |
+|---|---|---|---|
+| `user` | usuario de la empresa (`iam.users`), obligatorio | `NULL` | sesión normal |
+| `platform_staff` | `NULL` | el staff (`platform.platform_users`), obligatorio | sesión impersonada, y las funciones de plataforma que actúan sobre un tenant (alta, suspensión, pedido de acceso, ADR 0001) |
+| `system` | `NULL` | `NULL` | job o webhook: el origen va en `action` o `diff` (ADR 0001, «Workers») |
+
+En una sesión impersonada `app.user_id` lleva el id del staff (data-model §6, PR #200), así que el escritor nunca copia `app.user_id` a `actor_user_id` salvo con `session_kind = user`: esa columna solo apunta a `iam.users`.
 
 El XML, el CDR y el PDF de los CPE no se guardan en Wanka: Khipu los conserva 5 años con el plan Emprende o superior (requisito, ADR 0003) y se piden bajo demanda ([ADR 0003](../adr/0003-einvoicing-khipu-port.md), «Artefactos: Khipu los conserva»). La base guarda solo `provider_ref`, `hash` y `xml_sha256` (este último se fija en la primera descarga; el CDR y el PDF no llevan huella). En R1 no hay bucket: el puerto `BlobStore` queda en el kernel sin adaptador, y el bucket de Railway o S3 entra más adelante, según el crecimiento. Los adjuntos esperan a ese adaptador. Los exportes se generan al momento y no se guardan.
 

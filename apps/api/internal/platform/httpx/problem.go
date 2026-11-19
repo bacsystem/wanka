@@ -63,9 +63,6 @@ var retryAfterCodes = map[string]bool{
 	"rate_limited": true, "overloaded": true, "dependency_unavailable": true, "request_in_progress": true,
 }
 
-// wwwAuthenticateCodes son los 401 del kernel, que llevan WWW-Authenticate: Bearer.
-var wwwAuthenticateCodes = map[string]bool{"unauthenticated": true, "session_expired": true}
-
 // FieldError es un elemento de errors[] del problema (openapi.yaml Problem).
 type FieldError struct {
 	Field string         `json:"field"`
@@ -97,6 +94,19 @@ type problemBody struct {
 	Detail    string       `json:"detail,omitempty"`
 	RequestID string       `json:"requestId"`
 	Errors    []FieldError `json:"errors,omitempty"`
+	// Miembros de extensión (RFC 9457 §3.2) de los code del kernel de entitlements.
+	Module string `json:"module,omitempty"`
+	Limit  *int64 `json:"limit,omitempty"`
+	Used   *int64 `json:"used,omitempty"`
+}
+
+// Extensions son los miembros extra del problema que llevan module_not_enabled
+// (Module) y plan_limit_reached (Limit y Used, conventions.md §4). Limit y Used
+// son punteros para que un 0 se envíe.
+type Extensions struct {
+	Module string
+	Limit  *int64
+	Used   *int64
 }
 
 // WriteProblem escribe un problema RFC 9457 con los campos que exige el
@@ -105,23 +115,33 @@ type problemBody struct {
 // 500 internal sin detalle. Los code de 429 y 503 llevan Retry-After: 1 si
 // quien llama no fijó otro.
 func WriteProblem(w http.ResponseWriter, r *http.Request, code, detail string, fields ...FieldError) {
+	writeProblem(w, r, code, detail, Extensions{}, fields)
+}
+
+// WriteProblemExt es WriteProblem con los miembros de extensión de ext.
+func WriteProblemExt(w http.ResponseWriter, r *http.Request, code, detail string, ext Extensions) {
+	writeProblem(w, r, code, detail, ext, nil)
+}
+
+func writeProblem(w http.ResponseWriter, r *http.Request, code, detail string, ext Extensions, fields []FieldError) {
 	status, ok := statusByCode[code]
 	if !ok {
 		depsFrom(r.Context()).log.ErrorContext(r.Context(), "problem code not in catalog", "code", code)
-		code, status, detail, fields = "internal", http.StatusInternalServerError, "", nil
+		code, status, detail, ext, fields = "internal", http.StatusInternalServerError, "", Extensions{}, nil
 	}
 	h := w.Header()
 	if retryAfterCodes[code] && h.Get("Retry-After") == "" {
 		h.Set("Retry-After", "1")
 	}
-	if wwwAuthenticateCodes[code] {
-		h.Set("WWW-Authenticate", "Bearer") // sin error ni error_description: el motivo va en el code (conventions.md §3)
+	if status == http.StatusUnauthorized { // todo 401, sea cual sea su code: una sola regla aquí, no en cada handler (conventions.md §3)
+		h.Set("WWW-Authenticate", "Bearer") // sin error ni error_description: el motivo va en el code
 	}
 	h.Set("Content-Type", "application/problem+json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(problemBody{
 		Type: "about:blank", Title: http.StatusText(status), Status: status, Code: code,
 		Detail: detail, RequestID: logging.RequestID(r.Context()), Errors: fields,
+		Module: ext.Module, Limit: ext.Limit, Used: ext.Used,
 	})
 }
 

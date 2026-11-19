@@ -4,16 +4,50 @@
 \echo '== A1. session_lookup sin variables: sesion en version 1, membresia en version 2 y activa =='
 SELECT test.assert(current_user = 'wanka_app' AND NULLIF(current_setting('app.tenant_id', true),'') IS NULL, 'rol wanka_app y sin tenant');
 SELECT test.assert(current_setting('statement_timeout') = '5s', 'wanka_app hereda statement_timeout 5s del bootstrap');
+-- La busqueda y la comprobacion de app.tenant_id van en UNA transaccion: set_config(..., true) dura hasta su fin, asi que
+-- fuera de ella el valor ya se borro y la asercion no distingue (mismo defecto que H6 en 07_after_delete.sql).
+BEGIN;
 SELECT test.assert((SELECT session_authz_version = 1 AND current_authz_version = 2 AND membership_status = 'activo'
                            AND site_id = 'a5000000-0000-0000-0000-0000000000a1' AND cash_register_id = 'ca000000-0000-0000-0000-0000000000a1'
                            AND mfa_satisfied AND mfa_method = 'none'
                       FROM iam.session_lookup(sha256('tok-cajero'))), 'session_lookup: version 1 -> 2/activo, con sede y caja');
-SELECT test.assert(NULLIF(current_setting('app.tenant_id', true),'') IS NULL, 'session_lookup no filtra app.tenant_id');
+SELECT test.assert(NULLIF(current_setting('app.tenant_id', true),'') IS NULL, 'TX: session_lookup no filtra app.tenant_id');
+COMMIT;
 SELECT test.assert((SELECT count(*) FROM iam.session_lookup(sha256('tok-a-medio-login'))) = 0, 'session_lookup ignora sesiones con mfa_satisfied = false');
 \echo '== A2. lectura directa de iam.memberships sin tenant =='
 SELECT test.assert((SELECT count(*) FROM iam.memberships) = 0, 'RLS: 0 membresias sin tenant');
 SELECT test.assert((SELECT count(*) FROM iam.roles) = 0, 'RLS: 0 roles sin tenant');
 SELECT test.assert((SELECT count(*) FROM org.tenants) = 0, 'RLS: 0 empresas sin tenant');
+\echo '== A2b. ex miembro (membresia suspendida) sin tenant: la base no le da ninguna fila de la empresa (issue #187) =='
+-- Sin app.tenant_id y solo con app.user_id, como GET /v1/me/memberships. No depende de que un handler filtre.
+BEGIN;
+SELECT set_config('app.user_id','eeeeeeee-0000-0000-0000-000000000003', true);
+SELECT test.assert((SELECT count(*) FROM org.tenants) = 0, 'ex miembro: 0 filas de org.tenants');
+SELECT test.assert((SELECT count(*) FROM iam.memberships) = 0, 'ex miembro: 0 membresias (la suspendida no se lee)');
+SELECT test.assert((SELECT count(*) FROM iam.roles) = 0 AND (SELECT count(*) FROM org.sites) = 0, 'ex miembro: 0 roles y 0 sedes');
+SELECT test.assert((SELECT count(*) FROM iam.list_my_memberships) = 0, 'ex miembro: list_my_memberships vacia');
+COMMIT;
+-- Las membresias invitado/activo siguen visibles: el filtro no cierra de mas.
+BEGIN;
+SELECT set_config('app.user_id','eeeeeeee-0000-0000-0000-000000000002', true);   -- cajero: activo en A
+SELECT test.assert((SELECT string_agg(t.name || ':' || m.status, ',') FROM org.tenants t JOIN iam.memberships m ON m.tenant_id = t.id) = 'Empresa A:activo', 'activo: ve su empresa y su membresia');
+COMMIT;
+BEGIN;
+SELECT set_config('app.user_id','eeeeeeee-0000-0000-0000-000000000009', true);   -- propietario de B: invitado
+SELECT test.assert((SELECT string_agg(t.name || ':' || m.status, ',') FROM org.tenants t JOIN iam.memberships m ON m.tenant_id = t.id) = 'Empresa B:invitado', 'invitado: ve su empresa y su membresia');
+COMMIT;
+-- Catalogo: el filtro de estado esta escrito en las dos politicas. Con own_memberships filtrando, la subconsulta de member_read
+-- ya no ve la suspendida, asi que quitarlo de member_read no cambia ninguna fila: solo el catalogo lo distingue.
+-- El conjunto EXACTO de estados: todo literal entre comillas de la politica (solo hay estados) debe ser {activo,invitado}; un
+-- 'suspendido' de mas, o uno de menos, falla. Se mira tambien que la rama por usuario siga bajo app.current_tenant() IS NULL.
+SELECT test.assert((SELECT qual ~ 'status' AND qual ~ 'current_tenant'
+                           AND (SELECT array_agg(DISTINCT m[1] ORDER BY m[1]) FROM regexp_matches(qual, '''([^'']*)''', 'g') AS m) = ARRAY['activo','invitado']
+                      FROM pg_policies WHERE schemaname = 'org' AND tablename = 'tenants' AND policyname = 'member_read'),
+                   'org.tenants member_read exige exactamente invitado/activo');
+SELECT test.assert((SELECT qual ~ 'status'
+                           AND (SELECT array_agg(DISTINCT m[1] ORDER BY m[1]) FROM regexp_matches(qual, '''([^'']*)''', 'g') AS m) = ARRAY['activo','invitado']
+                      FROM pg_policies WHERE schemaname = 'iam' AND tablename = 'memberships' AND policyname = 'own_memberships'),
+                   'iam.memberships own_memberships exige exactamente invitado/activo');
 \echo '== A3. list_my_memberships (security_invoker) con solo app.user_id del cajero =='
 BEGIN;
 SELECT set_config('app.user_id','eeeeeeee-0000-0000-0000-000000000002', true);
@@ -134,6 +168,138 @@ INSERT INTO iam.sessions (id, user_id, access_hash, access_expires_at, mfa_satis
   VALUES ('5e000000-0000-0000-0000-0000000000e2', 'eeeeeeee-0000-0000-0000-000000000002', sha256('old-created'), now(), true, 'none', now() - interval '400 days');
 SELECT test.assert((SELECT created_at = now() FROM iam.sessions WHERE id = '5e000000-0000-0000-0000-0000000000e2'), 'created_at del INSERT lo fija el servidor');
 ROLLBACK;
+\echo '== A10. (wanka_app) tablas de River: solo INSERT en ops.river_job =='
+SELECT test.river_enqueue_only();
+\echo '== A11. (wanka_app) ops.idempotency_keys: aislada por tenant, la respuesta se guarda en UPDATE, sin DELETE =='
+SELECT test.assert((SELECT count(*) FROM ops.idempotency_keys) = 0, 'RLS: 0 claves sin tenant');
+SELECT test.expect_error($$INSERT INTO ops.idempotency_keys (tenant_id, key, request_hash) VALUES ('aaaaaaaa-0000-0000-0000-000000000001', 'sin-tenant', sha256('x'))$$,
+  '42501', 'sin tenant fijado no se inserta una clave');
+BEGIN;
+SELECT set_config('app.tenant_id','aaaaaaaa-0000-0000-0000-000000000001', true), set_config('app.user_id','eeeeeeee-0000-0000-0000-000000000001', true);
+SELECT test.assert((SELECT count(*) FROM ops.idempotency_keys) = 2 AND (SELECT count(*) FROM ops.idempotency_keys WHERE key IN ('old-b', 'recent-b')) = 0,
+  'tenant A ve sus 2 claves (la vencida incluida) y ninguna de B');
+-- INSERT primero (sin respuesta), UPDATE despues; created_at lo pone el servidor.
+INSERT INTO ops.idempotency_keys (tenant_id, key, request_hash) VALUES ('aaaaaaaa-0000-0000-0000-000000000001', 'k-new', sha256('body'));
+SELECT test.assert((SELECT status_code IS NULL AND response IS NULL AND created_at = now() FROM ops.idempotency_keys WHERE key = 'k-new'), 'la clave nace sin respuesta y con created_at del servidor');
+DO $$ DECLARE n int; BEGIN
+  INSERT INTO ops.idempotency_keys (tenant_id, key, request_hash) VALUES ('aaaaaaaa-0000-0000-0000-000000000001', 'k-new', sha256('otro')) ON CONFLICT DO NOTHING;
+  GET DIAGNOSTICS n = ROW_COUNT;
+  PERFORM test.assert(n = 0, 'ON CONFLICT DO NOTHING no inserta una clave repetida');
+END $$;
+UPDATE ops.idempotency_keys SET status_code = 201, response = '\x7b226964223a317d', response_headers = '{"Location": "/v1/x/1"}' WHERE key = 'k-new';
+SELECT test.assert((SELECT status_code = 201 AND response = '\x7b226964223a317d' FROM ops.idempotency_keys WHERE key = 'k-new'), 'el UPDATE guarda la respuesta');
+SELECT test.expect_error($$INSERT INTO ops.idempotency_keys (tenant_id, key, request_hash) VALUES ('bbbbbbbb-0000-0000-0000-000000000002', 'k-b', sha256('x'))$$,
+  '42501', 'tenant A no inserta una clave de B (WITH CHECK)');
+SELECT test.expect_error($$UPDATE ops.idempotency_keys SET status_code = 302 WHERE key = 'k-new'$$, '23514', 'solo 2xx: un 302 viola el CHECK');
+SELECT test.expect_error($$UPDATE ops.idempotency_keys SET status_code = 409 WHERE key = 'k-new'$$, '23514', 'solo 2xx: un 409 viola el CHECK');
+SELECT test.expect_error($$INSERT INTO ops.idempotency_keys (tenant_id, key, request_hash) VALUES ('aaaaaaaa-0000-0000-0000-000000000001', 'k-short', '\x00')$$,
+  '23514', 'request_hash de 32 bytes');
+SELECT test.expect_error($$UPDATE ops.idempotency_keys SET request_hash = sha256('otro') WHERE key = 'k-new'$$, '42501', 'el hash no se mueve');
+SELECT test.expect_error($$UPDATE ops.idempotency_keys SET created_at = now() + interval '1 year' WHERE key = 'k-new'$$, '42501', 'created_at no se mueve');
+SELECT test.expect_error($$INSERT INTO ops.idempotency_keys (tenant_id, key, request_hash, created_at) VALUES ('aaaaaaaa-0000-0000-0000-000000000001', 'k-future', sha256('x'), now() + interval '1 year')$$,
+  '42501', 'created_at no se elige en el INSERT');
+SELECT test.expect_error($$INSERT INTO ops.idempotency_keys (tenant_id, principal_id, key, request_hash) VALUES ('aaaaaaaa-0000-0000-0000-000000000001', 'eeeeeeee-0000-0000-0000-000000000002', 'k-imp', sha256('x'))$$,
+  '42501', 'principal_id lo fija el servidor: wanka_app no lo elige');
+SELECT test.assert((SELECT principal_id FROM ops.idempotency_keys WHERE key = 'k-new') = 'eeeeeeee-0000-0000-0000-000000000001', 'principal_id es app.user_id');
+SELECT test.expect_error($$UPDATE ops.idempotency_keys SET principal_id = 'eeeeeeee-0000-0000-0000-000000000002' WHERE key = 'k-new'$$, '42501', 'principal_id no se mueve');
+SELECT test.expect_error($$DELETE FROM ops.idempotency_keys WHERE key = 'k-new'$$, '42501', 'wanka_app no borra claves');
+SELECT test.expect_error($$TRUNCATE ops.idempotency_keys$$, '42501', 'wanka_app no hace TRUNCATE');
+ROLLBACK;
+-- La misma clave en dos tenants no interfiere (PK tenant_id, key).
+BEGIN;
+SELECT set_config('app.tenant_id','aaaaaaaa-0000-0000-0000-000000000001', true), set_config('app.user_id','eeeeeeee-0000-0000-0000-000000000001', true);
+INSERT INTO ops.idempotency_keys (tenant_id, key, request_hash) VALUES ('aaaaaaaa-0000-0000-0000-000000000001', 'compartida', sha256('a'));
+SELECT set_config('app.tenant_id','bbbbbbbb-0000-0000-0000-000000000002', true), set_config('app.user_id','eeeeeeee-0000-0000-0000-0000000000b1', true);
+INSERT INTO ops.idempotency_keys (tenant_id, key, request_hash) VALUES ('bbbbbbbb-0000-0000-0000-000000000002', 'compartida', sha256('b'));
+SELECT test.assert((SELECT count(*) FROM ops.idempotency_keys WHERE key = 'compartida') = 1
+                   AND (SELECT request_hash FROM ops.idempotency_keys WHERE key = 'compartida') = sha256('b'), 'B ve solo su clave compartida, con su hash');
+ROLLBACK;
+-- La clave es del principal: dos usuarios del mismo tenant con la misma clave dejan dos filas, sin conflicto.
+BEGIN;
+SELECT set_config('app.tenant_id','aaaaaaaa-0000-0000-0000-000000000001', true), set_config('app.user_id','eeeeeeee-0000-0000-0000-000000000001', true);
+INSERT INTO ops.idempotency_keys (tenant_id, key, request_hash) VALUES ('aaaaaaaa-0000-0000-0000-000000000001', 'dos-usuarios', sha256('u1'));
+SELECT set_config('app.user_id','eeeeeeee-0000-0000-0000-000000000002', true);
+DO $$ DECLARE n int; BEGIN
+  INSERT INTO ops.idempotency_keys (tenant_id, key, request_hash) VALUES ('aaaaaaaa-0000-0000-0000-000000000001', 'dos-usuarios', sha256('u2')) ON CONFLICT DO NOTHING;
+  GET DIAGNOSTICS n = ROW_COUNT;
+  PERFORM test.assert(n = 1, 'U2 inserta la misma clave que U1: es otra fila');
+END $$;
+SELECT test.assert((SELECT count(*) FROM ops.idempotency_keys WHERE key = 'dos-usuarios') = 2, 'U1 y U2 con la misma clave dejan dos filas');
+\echo '== A11. (wanka_app) audit.events: aislamiento por tenant, solo insercion, sin DDL de particiones (#173) =='
+-- Como Record: el tenant, el usuario y el tipo de sesion salen de las variables app.* de la transaccion.
+BEGIN;
+SELECT set_config('app.tenant_id','aaaaaaaa-0000-0000-0000-000000000001', true), set_config('app.user_id','eeeeeeee-0000-0000-0000-000000000001', true),
+       set_config('app.session_kind','user', true);
+INSERT INTO audit.events (tenant_id, actor_type, actor_user_id, action) VALUES (app.current_tenant(), 'user', app.current_user_id(), 'rls.check:a');
+COMMIT;
+BEGIN;
+SELECT set_config('app.tenant_id','bbbbbbbb-0000-0000-0000-000000000002', true), set_config('app.user_id','eeeeeeee-0000-0000-0000-000000000009', true),
+       set_config('app.session_kind','user', true);
+INSERT INTO audit.events (tenant_id, actor_type, actor_user_id, action) VALUES (app.current_tenant(), 'user', app.current_user_id(), 'rls.check:b');
+COMMIT;
+BEGIN;
+SELECT set_config('app.tenant_id','aaaaaaaa-0000-0000-0000-000000000001', true);
+SELECT test.assert((SELECT count(*) FROM audit.events WHERE action = 'rls.check:a') = 1 AND (SELECT count(*) FROM audit.events WHERE action = 'rls.check:b') = 0,
+                   'A ve su evento y no el de B');
+SELECT test.assert((SELECT count(*) > 0 AND bool_and(tenant_id = 'aaaaaaaa-0000-0000-0000-000000000001') FROM audit.events),
+                   'todo lo que ve A es de A (tambien los eventos de plataforma sobre A)');
+SELECT test.expect_error($$INSERT INTO audit.events (tenant_id, actor_type, actor_user_id, action)
+                           VALUES ('bbbbbbbb-0000-0000-0000-000000000002', 'user', 'eeeeeeee-0000-0000-0000-000000000001', 'rls.check:x')$$,
+                         '42501', 'A no inserta un evento a nombre de B (WITH CHECK)');
+SELECT test.expect_error($$INSERT INTO audit.events (tenant_id, actor_type, actor_user_id, action)
+                           VALUES (app.current_tenant(), 'user', NULL, 'rls.check:x')$$,
+                         '23514', 'una fila user sin usuario es imposible');
+SELECT test.expect_error($$INSERT INTO audit.events (tenant_id, actor_type, actor_user_id, action)
+                           VALUES (app.current_tenant(), 'system', 'eeeeeeee-0000-0000-0000-000000000001', 'rls.check:x')$$,
+                         '23514', 'una fila system no lleva usuario');
+SELECT test.expect_error($$INSERT INTO audit.events (tenant_id, actor_type, action) VALUES (app.current_tenant(), 'platform_staff', 'rls.check:x')$$,
+                         '23514', 'una fila platform_staff sin impersonador es imposible');
+SELECT test.expect_error($$INSERT INTO audit.events (tenant_id, actor_type, actor_user_id, impersonator_id, action)
+                           VALUES (app.current_tenant(), 'platform_staff', 'eeeeeeee-0000-0000-0000-000000000001', 'cccccccc-0000-0000-0000-000000000009', 'rls.check:x')$$,
+                         '23514', 'una fila platform_staff no lleva usuario de la empresa');
+SELECT test.expect_error($$INSERT INTO audit.events (tenant_id, actor_type, actor_user_id, impersonator_id, action)
+                           VALUES (app.current_tenant(), 'user', 'eeeeeeee-0000-0000-0000-000000000001', 'cccccccc-0000-0000-0000-000000000009', 'rls.check:x')$$,
+                         '23514', 'solo el staff lleva impersonador');
+SELECT test.expect_error($$INSERT INTO audit.events (tenant_id, actor_type, actor_user_id, action) VALUES (app.current_tenant(), 'user', 'eeeeeeee-0000-0000-0000-000000000001', 'tenants:create')$$,
+                         '23514', 'una accion sin modulo.recurso:accion se rechaza');
+SELECT test.expect_error($$UPDATE audit.events SET action = 'rls.check:z'$$, '42501', 'wanka_app no actualiza audit.events');
+SELECT test.expect_error('DELETE FROM audit.events', '42501', 'wanka_app no borra audit.events');
+SELECT test.expect_error('TRUNCATE audit.events', '42501', 'wanka_app no vacia audit.events');
+SELECT test.expect_error($$SELECT audit.ensure_partitions(current_date, 0)$$, '42501', 'wanka_app no crea particiones');
+SELECT test.expect_error('SELECT count(*) FROM audit.events_y' || to_char(now() AT TIME ZONE 'UTC', 'YYYY') || 'm' || to_char(now() AT TIME ZONE 'UTC', 'MM'), '42501',
+                         'wanka_app no lee una particion directo');
+COMMIT;
+SELECT test.assert((SELECT count(*) FROM audit.events) = 0, 'sin tenant fijado: 0 eventos');
+\echo '== A11. ops.exchange_rates (global, sin RLS; issue #170): wanka_app solo lee =='
+SELECT test.expect_error($$INSERT INTO ops.exchange_rates VALUES ('2026-11-19', 'USD', 3.7, 3.8, 'official')$$, '42501', 'wanka_app no inserta tipos de cambio');
+SELECT test.expect_error($$UPDATE ops.exchange_rates SET buy = 1$$, '42501', 'wanka_app no actualiza tipos de cambio');
+SELECT test.expect_error($$DELETE FROM ops.exchange_rates$$, '42501', 'wanka_app no borra tipos de cambio');
+SELECT test.assert((SELECT count(*) FROM ops.exchange_rates) = 1, 'wanka_app lee la tasa sembrada sin tenant fijado (tabla global)');
+\echo '== E1. entitlements (#171): wanka_app solo LEE las tablas de platform de entitlements, que no tienen RLS =='
+SELECT test.assert((SELECT count(*) FROM platform.modules) >= 21 AND (SELECT count(*) FROM platform.plan_modules) >= 21,
+                   'wanka_app lee el catalogo de modulos y los modulos del plan');
+SELECT test.assert((SELECT count(*) FROM platform.plans WHERE code = 'semilla' AND non_production) = 1, 'wanka_app lee el plan semilla, marcado no productivo');
+SELECT test.assert((SELECT count(*) FROM platform.subscriptions) = 0 AND (SELECT count(*) FROM platform.tenant_module_overrides) = 0
+                   AND (SELECT count(*) FROM platform.feature_flags) = 0 AND (SELECT count(*) FROM platform.tenant_flag_overrides) = 0
+                   AND (SELECT count(*) FROM platform.tenant_usage) = 0, 'wanka_app lee el resto de las tablas de entitlements (vacias)');
+SELECT test.assert((SELECT count(*) = 8 AND NOT bool_or(c.relrowsecurity OR c.relforcerowsecurity) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+                     WHERE n.nspname = 'platform' AND c.relname IN ('modules','plans','plan_modules','subscriptions','tenant_module_overrides',
+                                                                   'feature_flags','tenant_flag_overrides','tenant_usage')),
+                   'las 8 tablas de entitlements existen y no tienen RLS');
+SELECT test.expect_error($$INSERT INTO platform.subscriptions (id, tenant_id, plan_id, status)
+  VALUES (gen_random_uuid(), 'aaaaaaaa-0000-0000-0000-000000000001', (SELECT id FROM platform.plans LIMIT 1), 'activa')$$, '42501', 'wanka_app no inserta suscripciones');
+SELECT test.expect_error($$UPDATE platform.subscriptions SET status = 'activa'$$, '42501', 'wanka_app no actualiza suscripciones');
+SELECT test.expect_error($$DELETE FROM platform.subscriptions$$, '42501', 'wanka_app no borra suscripciones');
+SELECT test.expect_error($$INSERT INTO platform.tenant_module_overrides (tenant_id, module_code, enabled) VALUES ('aaaaaaaa-0000-0000-0000-000000000001', 'ventas', true)$$,
+                         '42501', 'wanka_app no escribe overrides de modulos');
+SELECT test.expect_error($$INSERT INTO platform.tenant_flag_overrides (tenant_id, flag_key, enabled) VALUES ('aaaaaaaa-0000-0000-0000-000000000001', 'f', true)$$,
+                         '42501', 'wanka_app no escribe overrides de flags');
+SELECT test.expect_error($$INSERT INTO platform.tenant_usage (tenant_id, period) VALUES ('aaaaaaaa-0000-0000-0000-000000000001', '2026-11-01')$$,
+                         '42501', 'wanka_app no escribe el uso (lo escribe wanka_worker)');
+SELECT test.expect_error($$UPDATE platform.plans SET name = 'x'$$, '42501', 'wanka_app no edita planes');
+SELECT test.expect_error($$INSERT INTO platform.modules (code, kind, description) VALUES ('x', 'core', 'x')$$, '42501', 'wanka_app no edita modulos');
+SELECT test.expect_error($$INSERT INTO platform.plan_modules (plan_id, module_code) VALUES ((SELECT id FROM platform.plans LIMIT 1), 'x')$$, '42501', 'wanka_app no edita plan_modules');
+SELECT test.expect_error($$INSERT INTO platform.feature_flags (key) VALUES ('x')$$, '42501', 'wanka_app no edita flags');
 -- Catalogo de permisos (issue #172): wanka_app lo lee y no lo escribe, sin importar el tenant fijado.
 \echo '== C1. wanka_app: iam.permissions es de solo lectura =='
 SELECT test.assert((SELECT count(*) FROM iam.permissions) > 100

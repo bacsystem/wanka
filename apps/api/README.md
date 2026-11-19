@@ -12,8 +12,9 @@ más adelante).
 
 ```
 cmd/wanka/            main: serve, worker, migrate up
-internal/platform/    kernel: config, logging, httpx, auth (+ auth/pgsession, el resolver de sesión), metrics, clock, db (+ db/dbtest para tests), permission en uso;
-                      jobs, money, entitlements, idgen (paquetes vacíos por ahora)
+internal/platform/    kernel: config, logging, httpx, auth (+ auth/pgsession, el resolver de sesión), metrics, clock, db (+ db/dbtest para tests), entitlements, permission, jobs en uso;
+                      fx (tipo de cambio: ops.exchange_rates) en uso;
+                      money, idgen (paquetes vacíos por ahora)
 bootstrap/roles.sql   bootstrap de roles: lo corre el superusuario con psql, fuera de goose
 migrations/           goose, SQL con timestamp, embebido en el binario, solo hacia adelante
 openapi/              contrato (vacío)
@@ -66,7 +67,7 @@ código 2 y un mensaje en stderr.
 wanka serve --plane=tenant      # API de la empresa
 wanka serve --plane=platform    # consola de administración
 wanka serve --plane=webhooks    # receptor de webhooks
-wanka worker                    # stub: abre su pool, arranca y espera la señal
+wanka worker                    # ejecuta los jobs (colas de River); sin la base sale con código 1
 wanka migrate up                # aplica las migraciones pendientes y termina
 ```
 
@@ -140,13 +141,21 @@ lo cablea con los limitadores de `conventions.md` §7 y una goroutine que llama 
 `webhooks` no montan nada de esto.
 
 - **Registro**: los módulos registran sus rutas `/v1` con
-  `routes.Handle(pattern, class, h, opts...)`, `class` de tipo `auth.RouteClass`
+  `routes.Handle(pattern, class, spec, h, opts...)`, `class` de tipo `auth.RouteClass`
   (`Public`, `NoTenant`, `Tenant`; sin valor cero válido). Nadie recibe el
   `httpx.Router`: `Router.Handle` rechaza `/v1` y solo `auth.Routes` llama a
   `Router.HandleV1`, así que ninguna ruta `/v1` queda sin clase. Una clase omitida o que no cumple `conventions.md` §2 entra en
   pánico al arrancar. `Public` solo bajo `/v1/auth/`; `NoTenant` es `/v1/auth/*`,
   `GET /v1/me` y `GET /v1/me/memberships`; el resto es `Tenant`. Una ruta tiene
-  una sola clase (el enrolamiento TOTP son dos rutas).
+  una sola clase (el enrolamiento TOTP son dos rutas). `spec` es un `auth.Spec`
+  con `Module` y `Permission` (el `x-module` y el `x-permission` del spec; para
+  «ninguno», las constantes `auth.NoModule` y `auth.NoPermission`, que valen `none`)
+  y, si la ruta consume un límite del plan, `Limit` (`entitlements.LimitUsers` o
+  `LimitCPEPerMonth`; `LimitSites` hace fallar el arranque hasta que alguien mida
+  las sedes en uso). Un string vacío, un módulo en una ruta
+  `Public` o `NoTenant`, `NoModule` en una ruta `Tenant` que no sea
+  `GET /v1/exports` ni `GET /v1/me/entitlements` (y un módulo en esas dos), o un
+  límite desconocido entran en pánico al arrancar.
 - **Token**: `Authorization: Bearer wk_at_<43 caracteres>`, una sola cabecera.
   `auth.ParseAuthorization` comprueba los 43 caracteres de `[A-Za-z0-9_-]` uno por
   uno antes de decodificar con `Strict()` (Go ignora `\r` y `\n`) y devuelve el
@@ -156,8 +165,8 @@ lo cablea con los limitadores de `conventions.md` §7 y una goroutine que llama 
   al handler), `MFASatisfied` y coherencia de la fila, desligue de la membresía
   perdida (ADR 0011, una llamada a `Detach` y el contador
   `auth_session_detach_total{outcome}`), `403 tenant_access_denied` en rutas
-  `Tenant` sin empresa, límite por sesión y, solo en `Tenant`, por tenant, y los
-  pasos de la ruta (`httpx.Use`). Sin fila o `MFASatisfied = false` es
+  `Tenant` sin empresa, límite por sesión y, solo en `Tenant`, por tenant,
+  entitlements (abajo) y los pasos de la ruta (`httpx.Use`; ahí va RBAC, #176). Sin fila o `MFASatisfied = false` es
   `401 session_expired`; un fallo de la base o el plazo vencido es `503`; un error
   no tipado o una fila incoherente es `500`. Todo `401` lleva
   `WWW-Authenticate: Bearer`. Una impersonada llega con `UserID` vacío y su
@@ -171,7 +180,21 @@ lo cablea con los limitadores de `conventions.md` §7 y una goroutine que llama 
   versión, la 2FA, el RBAC y el límite del tenant. En una ruta `NoTenant` el
   tenant de la sesión (si lo tiene) es informativo y no se entra a datos de la
   empresa. Los módulos registran rutas solo por `auth.Routes`; el `httpx.Router`
-  no sale de `cmd/wanka` (`mountPlane`). Los entitlements (fase `entitlements`) llegan con #175.
+  no sale de `cmd/wanka` (`mountPlane`).
+- **Entitlements** (solo rutas `Tenant`, después de los limitadores): `For(ctx, tenant)`
+  con la fase `entitlements` solo en el contexto de esa lectura (un error del handler
+  lleva `phase=handler`), y las reglas de `entitlements.Entitlements.Check` en el
+  orden de la secuencia 08: empresa cerrada y método distinto de `GET` y `HEAD` →
+  `403 tenant_read_only`; si no está cerrada, suscripción `morosa`, `suspendida` o
+  `cancelada` → `402 subscription_inactive`, salvo las rutas de la lista fija en el
+  código (`GET /v1/exports`, `GET /v1/me/entitlements`; `/v1/auth/*`, `GET /v1/me` y
+  `GET /v1/me/memberships` no pasan por aquí); módulo fuera de la lista →
+  `403 module_not_enabled` con `module`; `usage >= limit` →
+  `403 plan_limit_reached` con `limit` y `used`. Una empresa sin suscripción
+  (`sin_plan`) no es un `402`: no tiene módulos, así que cae en
+  `module_not_enabled`. Si no se pueden leer, `503 dependency_unavailable` (o
+  `overloaded`) con `Retry-After: 1` y la petición no pasa. Un job de una empresa
+  usa la misma comprobación con `Service.CheckJob`.
 - Sobrecarga: `go test -run '^$' -bench Session -benchmem -count 5 ./internal/platform/auth`.
 
 ## Transacciones de tenant (`InTenantTx`)
@@ -201,6 +224,141 @@ de sesión que otra petición dejó en la conexión no se hereda. Los errores so
 los de `InTenantTx`. En las dos puertas sigue prohibido `set_config(..., false)`
 dentro de `fn`. Las pruebas usan la tabla `rlstest.items`, que solo existe en
 `internal/platform/db/testdata/` y se aplica con `dbtest.MigrateWith`.
+
+## Jobs (`internal/platform/jobs`)
+
+Trabajo diferido sobre River (ADR 0006), con un solo backing service: PostgreSQL. Las
+tablas están en el esquema `ops` (no son de tenant: sin `tenant_id` ni RLS). Los
+módulos usan solo los tipos de este paquete (`Enqueuer`, `Args`, `Job`, `Registry`,
+`Cancel`, `Snooze`); ninguno es de River, y un test revisa que la API exportada no
+los nombre, para poder sustituirlo por el outbox propio del ADR 0006 sin tocarlos.
+
+```go
+// Encolar: en la misma transacción del cambio de datos. COMMIT los guarda a ambos; ROLLBACK, a ninguno.
+err := pool.InTenantTx(ctx, actor, func(tx pgx.Tx) error {
+    // ... el cambio de negocio ...
+    return enq.InsertTx(ctx, tx, SendReceipt{TenantID: actor.TenantID, SaleID: id},
+        jobs.WithQueue(jobs.QueueNotifications), jobs.WithUnique())
+})
+
+// Ejecutar: el módulo registra su handler en el Registry del worker.
+jobs.Register(reg, func(ctx context.Context, job jobs.Job[SendReceipt]) error {
+    // 1. lee en una transacción corta; 2. llama a la red SIN conexión tomada; 3. guarda en otra.
+    return job.InTenantTx(ctx, func(tx pgx.Tx) error { ... })
+})
+```
+
+- **Argumentos**: `Kind() string` estable (está en cada fila) y, si son de tenant, `Tenant()`
+  y el campo `json:"tenant_id"`. Sin secretos ni datos personales: la tabla de jobs se ve desde la consola.
+- **Colas**: `WithQueue` es obligatoria (`cpe`, `webhooks`, `notifications`, `reports`, `maintenance`).
+  `WithMaxAttempts` (por defecto 10), `WithScheduledAt` y `WithUnique` (uno solo en curso por clave:
+  los argumentos serializados, todos los campos; un duplicado no falla ni aborta la transacción).
+- **Resultados de un handler**: `nil` (completado, se limpia a los 7 días), un error cualquiera
+  (transitorio: backoff exponencial de 10 s duplicando hasta 1 h, con jitter; al agotar los intentos
+  queda `discarded` y se conserva 30 días), `jobs.Cancel(err)` (definitivo: sin reintentos; `cancelled`, 7 días)
+  o `jobs.Snooze(d)` (vuelve a correr pasado `d` sin gastar un intento).
+- **Entrega al menos una vez**: un job puede correr más de una vez, así que todo handler es idempotente
+  (transiciones condicionadas por estado, claves únicas, `idem_key` hacia terceros).
+- **Tenant**: `Job.InTenantTx` abre `InTenantTx(Actor{TenantID del job, Kind: system})` **sin `UserID`**
+  (ADR 0001, «Workers»): `app.session_kind` es `system`, `app.current_user_id()` es `NULL` y solo se ven las filas
+  del tenant del job. Un job sin `tenant_id` (o con argumentos que no son de tenant) recibe `db.ErrNoTenant` y se
+  cancela al primer intento. Ningún job mantiene una conexión durante una llamada de red.
+- **Periódicos**: `Registry.AddPeriodic(every, newArgs, opts...)`. Solo el líder de River los encola, así que corren
+  una vez por ciclo aunque haya N réplicas.
+- **Roles**: `wanka_app`, `wanka_webhooks` y `wanka_platform` solo hacen `INSERT` en `ops.river_job` (encolan con
+  `COPY`, sin leer la fila de vuelta); `wanka_worker` tiene todo el DML. Los casos están en `docs/architecture/data/rls-check/`.
+- **Conexiones**: River usa el pool del worker (`DB_POOL_MAX_CONNS`, 10) por su cuenta: una conexión para `LISTEN` y
+  consultas cortas para tomar y terminar jobs, además de las `InTenantTx` de los handlers.
+- **Comando `worker`**: sin handlers de módulo registra solo `kernel.noop` (River no arranca con un Workers vacío).
+  El reindexado automático de River está desactivado: exige ser dueño del índice, y el dueño es `wanka_migrator`.
+
+### Migraciones de River con goose
+
+River trae su propio migrador (`rivermigrate`), pero aquí **solo migra goose** (solo hacia adelante,
+embebido, `wanka migrate up`). `20261119143700_kernel_river_jobs.sql` es el esquema final de las migraciones
+1 a 7 de la línea `main` de River v0.44.1 con el esquema `ops`, más las siete filas en `ops.river_migration`
+para que las herramientas de River vean la base al día. Para subir de versión de River: leer su CHANGELOG, agregar
+**otra** migración goose con los cambios (no se edita la existente) y registrar sus versiones; el test
+`TestSchemaMatchesRiversOwnMigrations` falla mientras el esquema de `ops` no coincida con el que crea `rivermigrate`.
+River v0.44.1 es la última versión compatible con Go 1.25 (las siguientes piden Go 1.26).
+
+## Pruebas del catálogo RLS
+
+`internal/platform/db/catalog_test.go` revisa `pg_catalog` tras `migrate up` (ADR
+0001, «Migraciones y pruebas» y «Funciones `SECURITY DEFINER`»). Las reglas no
+listan tablas: corren sobre todo lo que haya migrado, así que una tabla nueva de
+cualquier módulo queda cubierta sin tocar el test.
+
+| Regla | Falla si |
+|---|---|
+| `tenant-tables-have-force-rls-and-policy` | una tabla con `tenant_id` (o `org.tenants`) no tiene RLS, `FORCE` y `tenant_isolation` (`FOR ALL`) cuyo `USING` y `WITH CHECK` son exactamente `(tenant_id = app.current_tenant())` (`id` en `org.tenants`) |
+| `partitions-of-tenant-tables` | una partición de una tabla de tenant tiene algún privilegio (de tabla o de columna) para un rol `wanka_*` de ejecución y no tiene su propia RLS, `FORCE` y `tenant_isolation`: una consulta directa a la partición no pasa por las políticas de la madre |
+| `extra-policies-are-whitelisted` | hay una política que no es `tenant_isolation` ni está en `policyAllow` (tabla, comando, `TO`, rama `app.current_tenant() IS NULL` y, donde el ADR escribe el `USING`, la expresión exacta con el filtro de estado `invitado`/`activo`) |
+| `unique-and-pk-start-with-tenant-id` | un `UNIQUE` o PK de una tabla con `tenant_id` no empieza por `tenant_id` (la PK sustituta `id uuid` o identidad no cuenta) |
+| `policies-wrap-current-setting-in-nullif` | una política usa `current_setting` sin `NULLIF` |
+| `foreign-keys-are-indexed` | una FK no tiene índice que empiece por sus columnas |
+| `tenant-foreign-keys-carry-tenant-id` | una FK entre dos tablas de tenant no lleva `tenant_id` en ambos lados |
+| `security-definer-functions` | una función `SECURITY DEFINER` no es de `wanka_definer`, no fija `search_path = pg_catalog, pg_temp` o `PUBLIC` ejecuta |
+| `application-roles` | un rol `wanka_*` tiene `BYPASSRLS` o es superusuario, o uno que no es `wanka_migrator` es dueño de tablas |
+
+`TestCatalogRulesCatchMutations` aplica, por cada regla, una migración de prueba
+(en memoria, nunca en `migrations/`) que la viola y exige que la regla nombre el
+objeto; los defectos de roles se inyectan como superusuario y se restauran. Al
+agregar una regla, agrega su mutación.
+
+**Cómo agregar una excepción.** Una excepción es un PR de arquitectura: cita el
+ADR (o su erratum) que la justifica y, si el ADR 0001 no la nombra, se agrega
+allí primero. En la parte alta de `catalog_test.go`, una entrada con su motivo,
+que tiene que contener «ADR NNNN» (`TestCatalogRules` lo comprueba, y que el
+objeto exista, para que no queden entradas viejas):
+
+- `noRLSTables`: tabla con `tenant_id` que por diseño no es de tenant (clave `esquema.tabla`). Hoy `iam.sessions` y las cuatro tablas `platform.*` de entitlements con `tenant_id` (`subscriptions`, `tenant_module_overrides`, `tenant_flag_overrides`, `tenant_usage`). Una tabla `platform.*` sin RLS por ADR entra aquí.
+- `uniqueAllow`: `UNIQUE` global marcado (clave `esquema.tabla(col1,col2)`).
+- `fkAllow`: FK entre tablas de tenant sin `tenant_id` (clave `esquema.tabla.restricción`).
+- `policyAllow`: política adicional (clave `esquema.tabla:política`), con comandos, roles, si exige la rama `IS NULL`, fragmentos obligatorios (`mustContain`) y, si el ADR escribe el `USING`, el texto exacto (`qual`, tal como lo deparsa PostgreSQL 16; los espacios se colapsan). El número de ADR del motivo tiene que existir en `docs/architecture/adr/`.
+- `tenantRoots`: tabla de tenant que se aísla por otra columna que `tenant_id` (hoy `org.tenants`, por `id`).
+
+**PR que toca políticas, roles, grants o funciones definer.** Además de estas
+pruebas, actualiza `docs/architecture/data/rls-check/` (el SQL y, si cambia lo
+que se debe detectar, sus mutaciones) y corre `sh apps/api/scripts/rls-check.sh`
+con salida 0. Lo exige el revisor del PR (`/pr-review`) y la sección «Verificación»
+del ADR 0001; el workflow `api.yml` corre ese script cuando cambia
+`apps/api/` o `rls-check/`.
+
+## Entitlements (`internal/platform/entitlements`)
+
+`entitlements.New(pool, Options{}).For(ctx, tenantID)` devuelve lo que una empresa
+tiene habilitado (ADR 0005): `Modules` y `Flags` (ordenados), `Limits` y `Usage`
+(`Limits`: `users`, `sites`, `cpe_per_month`; todo plan declara las tres y `Limit(key)` de una ausente es 0. `Usage` solo trae `users` y `cpe_per_month`: `sites` no se mide), `Status`, `ReadOnly` y `Version`. Es solo
+lectura; el middleware que responde `402`, `403 tenant_read_only`,
+`403 module_not_enabled` o `403 plan_limit_reached` está en `auth.Routes` (ver «Sesión»,
+#175), y `GET /v1/me/entitlements` lo cablea identidad
+(contrato en `docs/architecture/api/openapi.yaml`).
+
+- **Una consulta** agregada en `InTenantReadTx` (rol `wanka_app`, `Actor` de tipo
+  `KindSystem`): `org.tenants`, la suscripción, `plan_modules`, overrides, flags y
+  `tenant_usage`. Las tablas de `platform` no tienen RLS: cada una se filtra por
+  `app.current_tenant()`, nunca por un parámetro.
+- **Módulos** = los del plan, menos los overrides en `false`, más los overrides en
+  `true`. **Flags**: un override de la empresa gana; si no, `default_on` lo enciende para
+  todas; si no, entra la empresa cuyo `sha256(tenant_id, 0x00, flag)` (8 bytes, módulo
+  100) es menor que `rollout_pct`, igual en cualquier réplica.
+- **Falla cerrado**: sin suscripción `Status` es `sin_plan` (no el plan `semilla`); con
+  `morosa`, `suspendida` o `cancelada` (`Status.Inactive()`), `Modules` y `Flags` vienen
+  vacíos, salvo en la empresa cerrada, que conserva los de su último plan y tiene `ReadOnly`. Una empresa que no existe es
+  `ErrTenantNotFound`; un error de la base sale como `db.ErrOverloaded`,
+  `db.ErrUnavailable` o `db.ErrStatementTimeout` y nunca se guarda.
+- **Caché** por empresa, TTL 30 s, con tope de 10 000 entradas; las lecturas en frío de
+  la misma empresa comparten una sola consulta. `For` devuelve una copia.
+  `Service.Run(ctx)` escucha `entitlements_changed` (`db.Pool.Listen`, en una conexión
+  propia fuera del pool) e invalida la entrada del tenant del payload, o todo si va vacío o
+  al reconectar. Triggers de la migración notifican los cambios de suscripción,
+  overrides, catálogo, planes, flags y el cierre de una empresa; el uso no notifica. `serve`
+  (plano tenant) lanza `Run` en una goroutine suya, igual que el barrido de los
+  limitadores, y en el apagado cancela su contexto y espera a que salga.
+- El plan `semilla` (todos los módulos, límites holgados, `non_production`) existe para
+  desarrollo y pruebas; asignarlo a una empresa real lo decide el dueño (#31).
+- Medir: `go test -run '^$' -bench 'HotCache|ColdRead' -benchmem ./internal/platform/entitlements`.
 
 ## Catálogo de permisos (`internal/platform/permission`)
 
@@ -232,6 +390,9 @@ rol y no lee las de los demás.
 | `DATABASE_URL_WEBHOOKS` | `serve --plane=webhooks` | URL del rol `wanka_webhooks`. Secreto |
 | `DATABASE_URL_WORKER` | `worker` | URL del rol `wanka_worker`. Secreto |
 | `DATABASE_URL_MIGRATOR` | `migrate up` | URL del rol `wanka_migrator`. Secreto |
+| `JOBS_CONCURRENCY_<COLA>` | no | Jobs en ejecución a la vez por réplica del worker, 1 a 1000. Colas `CPE` (20), `WEBHOOKS` (10), `NOTIFICATIONS` (10), `REPORTS` (2), `MAINTENANCE` (2). Solo `worker` |
+| `JOBS_JOB_TIMEOUT` | no (`1m`) | Duración de Go, de `1s` a `1h`: plazo de cada ejecución de un job; `jobs.WithJobTimeout` lo cambia por tipo. Solo `worker` |
+| `JOBS_SHUTDOWN_TIMEOUT` | no (`30s`) | Duración de Go, de `1s` a `10m`: cuánto espera el worker a los jobs en curso tras `SIGTERM`; vencida, cancela su contexto y el job se reintenta. El plazo de drenaje de Railway debe ser mayor. Solo `worker` |
 | `DB_POOL_MAX_CONNS` | no | Tamaño máximo del pool, 1 a 200. Por defecto: api 20, worker 10, webhooks 5, platform 5 (`capacity.md`) |
 | `HTTP_ADDR` | no (`:8080`) | Dirección donde escucha `serve` (con `127.0.0.1:0` el sistema elige el puerto y se informa en el log `listening`) |
 | `LOG_LEVEL` | no (`info`) | `debug`, `info`, `warn` o `error` |

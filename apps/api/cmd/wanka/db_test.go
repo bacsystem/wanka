@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -117,3 +118,141 @@ func TestServeIsReadyAgainstARealDatabase(t *testing.T) {
 }
 
 func toJSON(m map[string]any) string { b, _ := json.Marshal(m); return string(b) }
+
+// El worker con una base real levanta las cinco colas y se detiene limpio con SIGTERM.
+func TestWorkerStartsTheFiveQueuesAndStopsOnSIGTERM(t *testing.T) {
+	d := dbtest.New(t)
+	d.Migrate(context.Background(), t)
+	p := start(t, []string{"DATABASE_URL_WORKER=" + d.URL(dbtest.Worker), "JOBS_CONCURRENCY_REPORTS=1"}, "worker")
+	p.waitMsg(t, "started")
+
+	ctx := context.Background()
+	conn := d.Admin(ctx, t)
+	deadline := time.Now().Add(10 * time.Second)
+	var queues []string
+	for {
+		queues = queues[:0]
+		rows, err := conn.Query(ctx, `SELECT name FROM ops.river_queue ORDER BY name`)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for rows.Next() {
+			var n string
+			if err := rows.Scan(&n); err != nil {
+				t.Fatal(err)
+			}
+			queues = append(queues, n)
+		}
+		rows.Close()
+		if len(queues) == 5 || time.Now().After(deadline) {
+			break
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	if strings.Join(queues, ",") != "cpe,maintenance,notifications,reports,webhooks" {
+		t.Fatalf("queues started by the worker: %v", queues)
+	}
+	p.terminate(t)
+}
+
+// El comando worker registra la limpieza de claves de idempotencia: un job de ese kind lo ejecuta y borra solo las vencidas.
+func TestWorkerRunsThePurgeOfIdempotencyKeys(t *testing.T) {
+	d := dbtest.New(t)
+	ctx := context.Background()
+	d.Migrate(ctx, t)
+	s := d.SeedSession(t, dbtest.SessionSpec{})
+	conn := d.Admin(ctx, t)
+	if _, err := conn.Exec(ctx, `INSERT INTO ops.idempotency_keys (tenant_id, principal_id, key, request_hash, status_code, created_at) VALUES
+		($1, gen_random_uuid(), 'old', sha256('a'), 200, now() - interval '25 hours'), ($1, gen_random_uuid(), 'new', sha256('b'), 200, now())`, s.TenantID); err != nil {
+		t.Fatal(err)
+	}
+	p := start(t, []string{"DATABASE_URL_WORKER=" + d.URL(dbtest.Worker)}, "worker")
+	p.waitMsg(t, "started")
+	if _, err := conn.Exec(ctx, `INSERT INTO ops.river_job (kind, args, queue) VALUES ('ops.purge_idempotency_keys', '{}', 'maintenance')`); err != nil {
+		t.Fatal(err)
+	}
+	deadline := time.Now().Add(15 * time.Second)
+	for {
+		var state string
+		err := conn.QueryRow(ctx, `SELECT state::text FROM ops.river_job WHERE kind = 'ops.purge_idempotency_keys'`).Scan(&state)
+		if err == nil && state == "completed" {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("the purge job did not complete (state %q, err %v)", state, err)
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	var keys []string
+	rows, err := conn.Query(ctx, `SELECT key FROM ops.idempotency_keys ORDER BY key`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for rows.Next() {
+		var k string
+		if err := rows.Scan(&k); err != nil {
+			t.Fatal(err)
+		}
+		keys = append(keys, k)
+	}
+	rows.Close()
+	if strings.Join(keys, ",") != "new" {
+		t.Fatalf("keys left: %v, want only the recent one", keys)
+	}
+	p.terminate(t)
+}
+
+// Criterio 8 (#173): el worker asegura las particiones de audit.events al arrancar y el job audit.ensure_partitions
+// de la cola maintenance las crea. Se borra la última partición (vacía) y se comprueba que vuelve las dos veces.
+func TestWorkerEnsuresAuditPartitions(t *testing.T) {
+	d := dbtest.New(t)
+	ctx := context.Background()
+	d.Migrate(ctx, t)
+	conn := d.Admin(ctx, t)
+	last := func() string {
+		var n string
+		if err := conn.QueryRow(ctx, `SELECT max(c.relname) FROM pg_inherits i JOIN pg_class c ON c.oid = i.inhrelid WHERE i.inhparent = 'audit.events'::regclass`).Scan(&n); err != nil {
+			t.Fatal(err)
+		}
+		return n
+	}
+	exists := func(name string) bool {
+		var ok bool
+		if err := conn.QueryRow(ctx, `SELECT to_regclass('audit.' || $1) IS NOT NULL`, name).Scan(&ok); err != nil {
+			t.Fatal(err)
+		}
+		return ok
+	}
+	wait := func(what string, cond func() bool) {
+		t.Helper()
+		deadline := time.Now().Add(15 * time.Second)
+		for !cond() {
+			if time.Now().After(deadline) {
+				t.Fatalf("timeout waiting for %s", what)
+			}
+			time.Sleep(100 * time.Millisecond)
+		}
+	}
+
+	name := last()
+	if _, err := conn.Exec(ctx, `DROP TABLE audit.`+name); err != nil {
+		t.Fatal(err)
+	}
+	p := start(t, []string{"DATABASE_URL_WORKER=" + d.URL(dbtest.Worker)}, "worker")
+	p.waitMsg(t, "started")
+	wait("the startup run to recreate "+name, func() bool { return exists(name) })
+
+	// Ahora por el job: se encola como lo haría el periódico.
+	if _, err := conn.Exec(ctx, `DROP TABLE audit.`+name); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := conn.Exec(ctx, `INSERT INTO ops.river_job (kind, args, queue) VALUES ('audit.ensure_partitions', '{}', 'maintenance')`); err != nil {
+		t.Fatal(err)
+	}
+	wait("the job to recreate "+name, func() bool { return exists(name) })
+	wait("the job to complete", func() bool {
+		var n int
+		return conn.QueryRow(ctx, `SELECT count(*) FROM ops.river_job WHERE kind = 'audit.ensure_partitions' AND state = 'completed'`).Scan(&n) == nil && n == 1
+	})
+	p.terminate(t)
+}

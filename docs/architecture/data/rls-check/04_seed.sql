@@ -20,4 +20,26 @@ BEGIN;
 SELECT set_config('app.tenant_id','aaaaaaaa-0000-0000-0000-000000000001', true);
 UPDATE iam.memberships SET authz_version = 2 WHERE id = '3e000000-0000-0000-0000-0000000000c1';
 COMMIT;
+-- ex miembro de B: su membresia esta suspendida (issue #187). Sin tenant fijado no debe ver nada de B.
+BEGIN;
+SELECT set_config('app.tenant_id','bbbbbbbb-0000-0000-0000-000000000002', true);
+INSERT INTO iam.users (id, email) VALUES ('eeeeeeee-0000-0000-0000-000000000003','ex@b.pe');
+INSERT INTO iam.memberships (id, tenant_id, user_id, role_id, status)
+  VALUES ('3e000000-0000-0000-0000-0000000000d1','bbbbbbbb-0000-0000-0000-000000000002','eeeeeeee-0000-0000-0000-000000000003','b0000000-0000-0000-0000-0000000000b1','suspendido');
+COMMIT;
 INSERT INTO ops.webhook_routes VALUES ('r-0123456789abcdef', 'aaaaaaaa-0000-0000-0000-000000000001', 'khipu', '\xdeadbeef', NULL);
+INSERT INTO ops.exchange_rates VALUES ('2026-11-19', 'USD', 3.7, 3.8, 'official');
+-- ops.idempotency_keys (issue #177): claves de A y B, vencidas (mas de 24 h) y vigentes. created_at explicito: lo puede fijar el
+-- duenio, no wanka_app. Cada insercion con su tenant fijado.
+BEGIN;
+SELECT set_config('app.tenant_id','aaaaaaaa-0000-0000-0000-000000000001', true);
+INSERT INTO ops.idempotency_keys (tenant_id, principal_id, key, request_hash, status_code, response, created_at) VALUES
+  ('aaaaaaaa-0000-0000-0000-000000000001', 'eeeeeeee-0000-0000-0000-000000000001', 'old-a', sha256('h-old-a'), 201, '\x7b7d', now() - interval '25 hours'),
+  ('aaaaaaaa-0000-0000-0000-000000000001', 'eeeeeeee-0000-0000-0000-000000000001', 'recent-a', sha256('h-recent-a'), 201, '\x7b7d', now() - interval '23 hours');
+COMMIT;
+BEGIN;
+SELECT set_config('app.tenant_id','bbbbbbbb-0000-0000-0000-000000000002', true);
+INSERT INTO ops.idempotency_keys (tenant_id, principal_id, key, request_hash, status_code, response, created_at) VALUES
+  ('bbbbbbbb-0000-0000-0000-000000000002', 'eeeeeeee-0000-0000-0000-0000000000b1', 'old-b', sha256('h-old-b'), 201, '\x7b7d', now() - interval '30 hours'),
+  ('bbbbbbbb-0000-0000-0000-000000000002', 'eeeeeeee-0000-0000-0000-0000000000b1', 'recent-b', sha256('h-recent-b'), 201, '\x7b7d', now() - interval '1 hour');
+COMMIT;

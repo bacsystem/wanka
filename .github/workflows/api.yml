@@ -146,6 +146,14 @@ jobs:
           WANKA_TEST_ADMIN_URL: postgres://postgres:ci-superuser-not-a-secret@localhost:5432/wanka
           WANKA_TEST_ROLE_PASSWORD: ci-roles-not-a-secret
         run: go test -race ./...
+      # Las cotas de tiempo se saltan con -race (el detector multiplica los tiempos):
+      # aquí corren sin él.
+      - name: go test (timing bounds, no -race)
+        if: steps.changes.outputs.run == 'true'
+        env:
+          WANKA_TEST_ADMIN_URL: postgres://postgres:ci-superuser-not-a-secret@localhost:5432/wanka
+          WANKA_TEST_ROLE_PASSWORD: ci-roles-not-a-secret
+        run: go test -count=1 -run 'Under[0-9]+ms' ./internal/platform/pricing/ ./internal/platform/jobs/
       # ADR 0001: los casos de referencia de RLS corren en un contenedor propio de
       # PostgreSQL 16 con los roles reales (Docker del runner). Deben pasar, y la
       # mutación naive_session_lookup debe hacerlos fallar en el paso wanka_app; el
