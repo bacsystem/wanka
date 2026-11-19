@@ -68,7 +68,7 @@ jobs:
             rls=true
           fi
           echo "rls=$rls" >> "$GITHUB_OUTPUT"
-          if git diff --name-only "$BASE_SHA"...HEAD | grep -qE '^(apps/api/|docs/architecture/data/rls-check/|docs/architecture/api/resources\.md$|docs/architecture/adr/0004-in-house-auth\.md$|\.github/workflows/api\.yml$)'; then
+          if git diff --name-only "$BASE_SHA"...HEAD | grep -qE '^(apps/api/|docs/architecture/data/rls-check/|docs/architecture/api/resources\.md$|docs/architecture/adr/0004-in-house-auth\.md$|\.nvmrc$|\.github/workflows/api\.yml$)'; then
             echo "run=true" >> "$GITHUB_OUTPUT"
           else
             echo "run=false" >> "$GITHUB_OUTPUT"
