@@ -47,10 +47,39 @@ func NewRegistry(pool *db.Pool) *Registry {
 	return r
 }
 
+// HandlerOption ajusta el handler de un tipo de job al registrarlo.
+type HandlerOption func(*handlerOptions)
+
+type handlerOptions struct{ timeout time.Duration }
+
+// WithJobTimeout fija el plazo de cada ejecución de este tipo de job, en lugar
+// de JOBS_JOB_TIMEOUT: vencido, se cancela el contexto del handler y el intento
+// cuenta como fallido. Un job largo (drenaje de una serie de CPE) lo sube.
+func WithJobTimeout(d time.Duration) HandlerOption { return func(o *handlerOptions) { o.timeout = d } }
+
+// handlerWorker es el Worker de River de un tipo de job; Timeout fija su plazo propio.
+type handlerWorker[A Args] struct {
+	river.WorkerDefaults[A]
+	fn      func(ctx context.Context, rj *river.Job[A]) error
+	timeout time.Duration
+}
+
+func (w *handlerWorker[A]) Work(ctx context.Context, rj *river.Job[A]) error { return w.fn(ctx, rj) }
+
+// Timeout devuelve 0 para usar el plazo del cliente (JOBS_JOB_TIMEOUT).
+func (w *handlerWorker[A]) Timeout(*river.Job[A]) time.Duration { return w.timeout }
+
 // Register agrega el handler de los jobs A. Falla si el Kind ya tiene handler.
 // El handler devuelve nil, un error transitorio, Cancel(err) o Snooze(d).
-func Register[A Args](r *Registry, handler func(ctx context.Context, job Job[A]) error) error {
-	work := river.WorkFunc(func(ctx context.Context, rj *river.Job[A]) error {
+func Register[A Args](r *Registry, handler func(ctx context.Context, job Job[A]) error, opts ...HandlerOption) error {
+	var o handlerOptions
+	for _, opt := range opts {
+		opt(&o)
+	}
+	if o.timeout < 0 {
+		return fmt.Errorf("%w: job timeout must not be negative", ErrInvalidOption)
+	}
+	work := &handlerWorker[A]{timeout: o.timeout, fn: func(ctx context.Context, rj *river.Job[A]) error {
 		err := handler(ctx, Job[A]{
 			ID:          rj.ID,
 			Attempt:     rj.Attempt,
@@ -59,8 +88,8 @@ func Register[A Args](r *Registry, handler func(ctx context.Context, job Job[A])
 			db:          r.db,
 		})
 		return toRiverError(err)
-	})
-	if err := river.AddWorkerSafely(r.workers, work); err != nil {
+	}}
+	if err := river.AddWorkerSafely[A](r.workers, work); err != nil {
 		return fmt.Errorf("registering job handler: %w", err)
 	}
 	r.kinds++
@@ -131,6 +160,7 @@ func NewWorker(pool *db.Pool, reg *Registry, cfg Config, log *slog.Logger) (*Wor
 		PeriodicJobs: reg.periodic,
 		Logger:       log.With("component", "river"),
 		MaxAttempts:  DefaultMaxAttempts,
+		JobTimeout:   orDefault(cfg.JobTimeout, DefaultJobTimeout),
 		RetryPolicy:  newRetryPolicy(orDefault(cfg.RetryBase, DefaultRetryBase), orDefault(cfg.RetryMax, DefaultRetryMax)),
 
 		CompletedJobRetentionPeriod: CompletedRetention,

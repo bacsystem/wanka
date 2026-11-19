@@ -27,6 +27,8 @@
 //   - No mantiene una conexión durante una llamada de red: abre una
 //     InTenantTx corta para leer, la cierra, hace la llamada y abre otra para
 //     guardar el resultado.
+//   - Corre con un plazo (JOBS_JOB_TIMEOUT, 1 min por defecto; WithJobTimeout al
+//     registrarlo): vencido, se cancela su contexto y el intento falla.
 //   - Devuelve nil (éxito), un error cualquiera (transitorio: se reintenta con
 //     backoff exponencial y jitter hasta el máximo de intentos y queda
 //     "discarded"), Cancel(err) (definitivo: no se reintenta) o Snooze(d) (volver

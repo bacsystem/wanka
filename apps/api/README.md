@@ -252,7 +252,7 @@ jobs.Register(reg, func(ctx context.Context, job jobs.Job[SendReceipt]) error {
   y el campo `json:"tenant_id"`. Sin secretos ni datos personales: la tabla de jobs se ve desde la consola.
 - **Colas**: `WithQueue` es obligatoria (`cpe`, `webhooks`, `notifications`, `reports`, `maintenance`).
   `WithMaxAttempts` (por defecto 10), `WithScheduledAt` y `WithUnique` (uno solo en curso por clave:
-  los argumentos serializados, o los campos con la etiqueta `river:"unique"`; un duplicado no falla ni aborta la transacción).
+  los argumentos serializados, todos los campos; un duplicado no falla ni aborta la transacción).
 - **Resultados de un handler**: `nil` (completado, se limpia a los 7 días), un error cualquiera
   (transitorio: backoff exponencial de 10 s duplicando hasta 1 h, con jitter; al agotar los intentos
   queda `discarded` y se conserva 30 días), `jobs.Cancel(err)` (definitivo: sin reintentos; `cancelled`, 7 días)
@@ -391,6 +391,7 @@ rol y no lee las de los demás.
 | `DATABASE_URL_WORKER` | `worker` | URL del rol `wanka_worker`. Secreto |
 | `DATABASE_URL_MIGRATOR` | `migrate up` | URL del rol `wanka_migrator`. Secreto |
 | `JOBS_CONCURRENCY_<COLA>` | no | Jobs en ejecución a la vez por réplica del worker, 1 a 1000. Colas `CPE` (20), `WEBHOOKS` (10), `NOTIFICATIONS` (10), `REPORTS` (2), `MAINTENANCE` (2). Solo `worker` |
+| `JOBS_JOB_TIMEOUT` | no (`1m`) | Duración de Go, de `1s` a `1h`: plazo de cada ejecución de un job; `jobs.WithJobTimeout` lo cambia por tipo. Solo `worker` |
 | `JOBS_SHUTDOWN_TIMEOUT` | no (`30s`) | Duración de Go, de `1s` a `10m`: cuánto espera el worker a los jobs en curso tras `SIGTERM`; vencida, cancela su contexto y el job se reintenta. El plazo de drenaje de Railway debe ser mayor. Solo `worker` |
 | `DB_POOL_MAX_CONNS` | no | Tamaño máximo del pool, 1 a 200. Por defecto: api 20, worker 10, webhooks 5, platform 5 (`capacity.md`) |
 | `HTTP_ADDR` | no (`:8080`) | Dirección donde escucha `serve` (con `127.0.0.1:0` el sistema elige el puerto y se informa en el log `listening`) |
