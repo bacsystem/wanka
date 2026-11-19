@@ -57,3 +57,6 @@ forbidden internal/platform/httpx github.com/jackc/pgx/v5/pgxpool
 forbidden cmd/wanka github.com/jackc/pgx/v5/pgxpool
 forbidden internal/platform/logging github.com/jackc/pgx/v5/stdlib
 forbidden cmd/wanka github.com/jackc/pgx/v5/stdlib
+echo "== apps/api: the mailer stub is wired only by cmd; platform and modules must not import it =="
+forbidden internal/platform/httpx github.com/bacsystem/wanka/apps/api/internal/platform/mailer/stub
+forbidden internal/platform/logging github.com/bacsystem/wanka/apps/api/internal/platform/mailer/stub

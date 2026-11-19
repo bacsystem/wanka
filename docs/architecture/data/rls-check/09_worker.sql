@@ -17,6 +17,14 @@ SELECT test.assert((SELECT count(*) FROM iam.memberships) = 1 AND (SELECT count(
                    'worker con tenant A: lee sus roles y su empresa (solo la membresia del propietario: la del cajero ya se borro)');
 COMMIT;
 DO $$ DECLARE n int; BEGIN DELETE FROM iam.sessions; GET DIAGNOSTICS n = ROW_COUNT; PERFORM test.assert(n > 0, 'wanka_worker borra sesiones'); RAISE EXCEPTION 'rollback' USING ERRCODE = 'P0001'; EXCEPTION WHEN SQLSTATE 'P0001' THEN NULL; END $$;
+\echo '== K1c. (wanka_worker) iam.mfa_enrollments: limpieza por expires_at sin leer hashes ni secretos (#25) =='
+SELECT test.expect_error('SELECT token_hash FROM iam.mfa_enrollments', '42501', 'wanka_worker no lee token_hash');
+SELECT test.expect_error('SELECT email_code_hmac FROM iam.mfa_enrollments', '42501', 'wanka_worker no lee el HMAC del emailCode');
+SELECT test.expect_error('SELECT totp_secret_enc FROM iam.mfa_enrollments', '42501', 'wanka_worker no lee el secreto pendiente');
+DO $$ DECLARE n int; BEGIN DELETE FROM iam.mfa_enrollments WHERE expires_at < now() + interval '1 day'; GET DIAGNOSTICS n = ROW_COUNT;
+  PERFORM test.assert(n > 0, 'wanka_worker borra tokens de enrolamiento por expires_at'); RAISE EXCEPTION 'rollback' USING ERRCODE = 'P0001';
+  EXCEPTION WHEN SQLSTATE 'P0001' THEN NULL; END $$;
+SELECT test.expect_error('INSERT INTO iam.mfa_enrollments DEFAULT VALUES', '42501', 'wanka_worker no inserta tokens de enrolamiento');
 \echo '== K2. catalogo: duenio y search_path de las funciones SECURITY DEFINER, roles y FORCE RLS =='
 SELECT test.assert((SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
                      WHERE p.prosecdef AND n.nspname IN ('iam','ops','platform_fn')
@@ -51,3 +59,8 @@ SELECT test.expect_error($$UPDATE platform.subscriptions SET status = 'activa'$$
 SELECT test.expect_error($$UPDATE platform.plans SET name = 'x'$$, '42501', 'wanka_worker no edita planes');
 SELECT test.expect_error($$INSERT INTO platform.tenant_module_overrides (tenant_id, module_code, enabled) VALUES ('aaaaaaaa-0000-0000-0000-000000000001', 'ventas', true)$$,
                          '42501', 'wanka_worker no escribe overrides');
+\echo '== K3. (wanka_worker) iam.permissions es de solo lectura (issue #172) =='
+SELECT test.assert((SELECT count(*) FROM iam.permissions) > 100, 'wanka_worker lee el catalogo de permisos');
+SELECT test.expect_error($$INSERT INTO iam.permissions (code, description) VALUES ('ventas.pos:void', 'Anular ventas')$$, '42501', 'wanka_worker no inserta permisos');
+SELECT test.expect_error($$UPDATE iam.permissions SET description = 'x'$$, '42501', 'wanka_worker no actualiza permisos');
+SELECT test.expect_error($$DELETE FROM iam.permissions$$, '42501', 'wanka_worker no borra permisos');

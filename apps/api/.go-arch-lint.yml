@@ -20,6 +20,12 @@ components:
   # reciben *db.Pool y no pueden construir ni usar un pgxpool.Pool propio.
   platform_db: { in: internal/platform/db/** }
   platform: { in: internal/platform/* }
+  # Adaptadores del kernel sobre PostgreSQL: implementan un puerto de platform con db.
+  # Solo cmd los cablea; platform no los importa.
+  platform_pg: { in: internal/platform/auth/pgsession }
+  # Adaptador de prueba del correo: lo cablea cmd y lo usan los tests (go-arch-lint no
+  # los analiza). Ni platform ni los módulos lo importan: dependen del puerto platform/mailer.
+  platform_mailer_stub: { in: internal/platform/mailer/stub }
   main: { in: cmd/** }
   migrations: { in: migrations }
   bootstrap: { in: bootstrap }
@@ -29,15 +35,22 @@ vendors:
   pgxpool: { in: github.com/jackc/pgx/v5/pgxpool }
   pgxstdlib: { in: github.com/jackc/pgx/v5/stdlib }
   goose: { in: [github.com/pressly/goose/v3, github.com/pressly/goose/v3/**] }
+  # decimal: dinero y cantidades (internal/platform/money y pricing, ADR 0008).
+  decimal: { in: github.com/shopspring/decimal }
 deps:
   platform_db:
     mayDependOn: [platform, platform_db, migrations, bootstrap]
     canUse: [pgx, pgxpool, pgxstdlib, goose]
   platform:
     mayDependOn: [platform, platform_db, migrations, bootstrap]
-    canUse: [pgx, goose]
+    canUse: [pgx, goose, decimal]
+  platform_pg:
+    mayDependOn: [platform, platform_pg, platform_db]
+    canUse: [pgx]
+  platform_mailer_stub:
+    mayDependOn: [platform, platform_mailer_stub]
   main:
-    mayDependOn: [platform, platform_db, migrations]
+    mayDependOn: [platform, platform_pg, platform_mailer_stub, platform_db, migrations]
     canUse: [pgx]
 exclude:
   - testdata

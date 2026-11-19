@@ -12,7 +12,7 @@ más adelante).
 
 ```
 cmd/wanka/            main: serve, worker, migrate up
-internal/platform/    kernel: config, logging, httpx, auth, metrics, clock, db (+ db/dbtest para tests), entitlements en uso;
+internal/platform/    kernel: config, logging, httpx, auth (+ auth/pgsession, el resolver de sesión), metrics, clock, db (+ db/dbtest para tests), entitlements, permission en uso;
                       jobs, money, idgen (paquetes vacíos por ahora)
 bootstrap/roles.sql   bootstrap de roles: lo corre el superusuario con psql, fuera de goose
 migrations/           goose, SQL con timestamp, embebido en el binario, solo hacia adelante
@@ -80,8 +80,10 @@ wanka migrate up                # aplica las migraciones pendientes y termina
 ## Base HTTP (`internal/platform/httpx`)
 
 `httpx.Chain` (request id, log de acceso, recuperación de `panic`, límite de
-cuerpo) envuelve a un `httpx.Router`; los módulos registran ahí sus rutas con
-`rt.Handle("GET /v1/items/{id}", h, opts...)`.
+cuerpo) envuelve a un `httpx.Router`. Las rutas que no son `/v1` (salud) se
+registran con `rt.Handle("GET /healthz", h, opts...)`; `Handle` entra en pánico
+con cualquier patrón que `/v1` pueda alcanzar (`/v1`, `/v1/...` o un comodín
+inicial como `/{version}/x`) y con cualquier `%` (ServeMux desescapa `/v%31/x` a `/v1/x`). Las rutas `/v1` van por `auth.Routes` (ver «Sesión»).
 
 - **Errores**: todo error es `application/problem+json` (RFC 9457) con `type`,
   `title`, `status`, `code` y `requestId`. El `code` sale de la lista cerrada de
@@ -129,13 +131,19 @@ caracteres de `[A-Za-z0-9_-]` y, si falta o no cumple, se reemplaza por uno nuev
 
 `auth` define el puerto `SessionResolver` (`Lookup` por `sha256` del token y
 `Detach`), la `SessionRecord` que devuelve `iam.session_lookup`, la `Session`
-del handler y el registrador `auth.Routes`. El adaptador de PostgreSQL llega con
-#196; el middleware se prueba con un doble.
+del handler y el registrador `auth.Routes`. El adaptador de PostgreSQL es
+`internal/platform/auth/pgsession`: `Lookup` corre `SELECT ... FROM
+iam.session_lookup($1)` en `db.InNoTenantReadTx` y `Detach` el `UPDATE` del ADR
+0011 en `db.InNoTenantTx`; ni otra consulta ni caché. `wanka serve --plane=tenant`
+lo cablea con los limitadores de `conventions.md` §7 y una goroutine que llama a
+`Routes.Sweep()` cada 10 s y termina en el apagado; los planos `platform` y
+`webhooks` no montan nada de esto.
 
 - **Registro**: los módulos registran sus rutas `/v1` con
   `routes.Handle(pattern, class, h, opts...)`, `class` de tipo `auth.RouteClass`
   (`Public`, `NoTenant`, `Tenant`; sin valor cero válido). Nadie recibe el
-  `httpx.Router` (`Router.Handle` sigue siendo público: el cableado de #196 no lo expone). Una clase omitida o que no cumple `conventions.md` §2 entra en
+  `httpx.Router`: `Router.Handle` rechaza `/v1` y solo `auth.Routes` llama a
+  `Router.HandleV1`, así que ninguna ruta `/v1` queda sin clase. Una clase omitida o que no cumple `conventions.md` §2 entra en
   pánico al arrancar. `Public` solo bajo `/v1/auth/`; `NoTenant` es `/v1/auth/*`,
   `GET /v1/me` y `GET /v1/me/memberships`; el resto es `Tenant`. Una ruta tiene
   una sola clase (el enrolamiento TOTP son dos rutas).
@@ -157,13 +165,13 @@ del handler y el registrador `auth.Routes`. El adaptador de PostgreSQL llega con
 - **Límites por defecto** (`auth.Options` los reemplaza en los tests): sesión 10/s
   con ráfaga de 20, tenant 100/s con ráfaga de 200, con topes de 50 000 y 10 000
   claves por réplica. Son supuestos que ajusta la prueba de carga de #196.
-  `Routes.Sweep()` elimina los buckets llenos; llamarlo cada 10 s es de `serve`.
+  `Routes.Sweep()` elimina los buckets llenos; `serve` lo llama cada 10 s.
 - El handler lee la sesión con `auth.FromContext(ctx)`. Solo un handler de ruta
   `Tenant` pasa su `Actor` a `db.InTenantTx`: ahí corren los entitlements, la
   versión, la 2FA, el RBAC y el límite del tenant. En una ruta `NoTenant` el
   tenant de la sesión (si lo tiene) es informativo y no se entra a datos de la
   empresa. Los módulos registran rutas solo por `auth.Routes`; el `httpx.Router`
-  no sale de `cmd/wanka`. Los entitlements (fase `entitlements`) llegan con #175.
+  no sale de `cmd/wanka` (`mountPlane`). Los entitlements (fase `entitlements`) llegan con #175.
 - Sobrecarga: `go test -run '^$' -bench Session -benchmem -count 5 ./internal/platform/auth`.
 
 ## Transacciones de tenant (`InTenantTx`)
@@ -228,6 +236,21 @@ lectura; el middleware que responde `402`, `403 tenant_read_only` o
   desarrollo y pruebas; asignarlo a una empresa real lo decide el dueño (#31).
 - Medir: `go test -run '^$' -bench 'HotCache|ColdRead' -benchmem ./internal/platform/entitlements`.
 
+## Catálogo de permisos (`internal/platform/permission`)
+
+Los permisos de tenant (`modulo.recurso:accion`) salen de un solo catálogo: la fuente de verdad es
+`docs/architecture/api/resources.md`, se siembra en `iam.permissions` (sin RLS; SELECT para `wanka_app`,
+`wanka_worker` y `wanka_platform`, nada de escritura para nadie en runtime) y el paquete `permission` es su copia
+en Go: un `permission.Code` por permiso (`permission.VentasPosCreate`). Un módulo declara los suyos con
+`Permissions() []permission.Code` y el arranque llama a `permission.Check(modulo, m)`: un código inventado no
+compila (constante) o aborta el arranque (`Code("...")`). El catálogo de plataforma (`plataforma.*`) es otro y no está aquí.
+
+Un permiso nuevo es un PR a `resources.md` más su migración hacia adelante (un `INSERT` en `iam.permissions`) más su
+constante en `catalog.go` y en `all`, a cargo de identidad. `go test ./internal/platform/permission` falla si
+`resources.md`, las migraciones y el código Go no tienen exactamente los mismos códigos, si una acción no está en
+la lista `read | read_all | create | update | void | export | import | approve | send | retry`, si una migración siembra un código
+que `resources.md` no lista o si la correspondencia de historias o el ADR 0004 nombran un permiso que no existe.
+
 ## Variables de entorno
 
 Solo nombres; los valores no se versionan (no hay `.env` en el repo).
@@ -246,6 +269,8 @@ rol y no lee las de los demás.
 | `DB_POOL_MAX_CONNS` | no | Tamaño máximo del pool, 1 a 200. Por defecto: api 20, worker 10, webhooks 5, platform 5 (`capacity.md`) |
 | `HTTP_ADDR` | no (`:8080`) | Dirección donde escucha `serve` (con `127.0.0.1:0` el sistema elige el puerto y se informa en el log `listening`) |
 | `LOG_LEVEL` | no (`info`) | `debug`, `info`, `warn` o `error` |
+| `MAILER` | no (`stub`) | Adaptador de correo: `stub` (no envía; guarda en memoria y registra destinatario enmascarado y asunto) o `none` (rechaza todo envío). Otro valor impide arrancar |
+| `APP_ENV` | no (`production`) | `production`, `staging` o `development`. Sin la variable se asume producción. En `production` y `staging`, `MAILER=stub` o `none` arrancan con un `WARN` hasta que exista un adaptador real. Otro valor impide arrancar |
 
 Solo para tests: `WANKA_TEST_ADMIN_URL` (URL del superusuario de una base de
 pruebas) y `WANKA_TEST_ROLE_PASSWORD` (clave común de los cinco roles LOGIN en

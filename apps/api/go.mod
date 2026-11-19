@@ -7,6 +7,7 @@ toolchain go1.25.14
 require (
 	github.com/jackc/pgx/v5 v5.13.0
 	github.com/pressly/goose/v3 v3.27.3
+	github.com/shopspring/decimal v1.4.0
 )
 
 require (
