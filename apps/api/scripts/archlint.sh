@@ -35,10 +35,11 @@ echo "OK: forbidden import was rejected"
 # Criterio de ADR 0001: ningún paquete fuera de internal/platform/db abre conexiones
 # por su cuenta. Se prueba sobre una copia del módulo real, con un archivo prohibido
 # en cada lugar donde podría colarse: otro paquete del kernel y un módulo.
-# Lo que go-arch-lint no ve: una llamada a pgx.Connect o pgconn.Connect usa paquetes
-# que los módulos sí necesitan importar (pgx.Tx, pgconn.PgError), así que no se puede
-# prohibir por importación. Lo cubren que el pool no entregue conexiones crudas
-# (Pool.acquire no es exportado) y la revisión de código.
+# Lo que go-arch-lint no ve: pgx.Connect y pgconn.Connect usan paquetes que los
+# módulos sí necesitan importar (pgx.Tx, pgconn.PgError), así que no se prohíben por
+# importación. Esas llamadas las detecta un test de AST
+# (internal/platform/db/rawconn_test.go); tx.Conn() guardado fuera de fn no se
+# detecta y queda para la revisión de código (ver el doc del paquete db).
 forbidden() { # forbidden <paquete> <importación>
   copy="$(mktemp -d)"
   cp -R "$root/." "$copy/"

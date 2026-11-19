@@ -6,11 +6,19 @@
 // cadena de conexión se limpian antes de salir de este paquete.
 //
 // Los datos de tenant se tocan solo dentro de InTenantTx o InTenantReadTx; el
-// pool no entrega conexiones crudas (acquire no es exportado). Dentro de fn
-// está prohibido fijar las variables app.* a nivel de sesión (set_config con
-// false o SET sin LOCAL): sobreviven al COMMIT en esa conexión. No filtran datos
-// de otro tenant porque la siguiente InTenantTx vuelve a fijar las cuatro
-// variables y nadie más usa la conexión, pero es un uso incorrecto igualmente.
+// pool no entrega conexiones crudas (acquire no es exportado). Esto no impide
+// todo desvío: go-arch-lint prohíbe importar pgxpool y pgx/stdlib fuera de este
+// paquete, y un test (rawconn_test.go) falla si el código de fuera llama a
+// pgx.Connect*, pgconn.Connect*, pgxpool.New* o stdlib.Open*, también con alias.
+// Siguen siendo posibles, y están prohibidos, guardar el tx.Conn() de fn para
+// usarlo después de la transacción y cualquier otra vía que el test no vea; los
+// atrapa la revisión de código.
+//
+// Dentro de fn está prohibido fijar las variables app.* a nivel de sesión
+// (set_config con false o SET sin LOCAL): sobreviven al COMMIT en esa conexión.
+// No filtran datos de otro tenant porque la siguiente InTenantTx vuelve a fijar
+// las cuatro variables y el pool no entrega la conexión a nadie más, pero es un
+// uso incorrecto igualmente.
 package db
 
 import (

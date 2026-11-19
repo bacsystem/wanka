@@ -516,7 +516,7 @@ func TestSessionLevelSetConfigInFnDoesNotReachTheNextTenantTx(t *testing.T) {
 	}
 }
 
-// Para Kind = system el ADR 0001 («Workers», webhooks) no pasa UserID: es válido.
+// Para Kind = system los ADR 0001 (webhooks) y 0003 (activación de facturación) no pasan UserID: es válido.
 func TestSystemActorWithoutUserIDIsValid(t *testing.T) {
 	_, p := tenantDB(t, 1)
 	ctx := context.Background()

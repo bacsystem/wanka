@@ -11,7 +11,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - `docs/architecture/capacity.md`: measured overhead of `BEGIN` + `set_config` (one round trip, 0.26 ms in the measurement) (#190, #163).
 
 ### Changed
-- `apps/api`: `db.Pool.Acquire` is no longer exported, so no package outside `db` can run SQL outside `InTenantTx` (#190, #163).
+- `apps/api`: `db.Pool.Acquire` is no longer exported: the pool no longer hands out raw connections, and a test fails if code outside `internal/platform/db` calls `pgx.Connect`, `pgconn.Connect*`, `pgxpool.New*` or `stdlib.Open*` (#190, #163).
 
 ## [0.3.1] - 2026-11-18
 

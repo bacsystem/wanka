@@ -1,5 +1,3 @@
-# Architecture rules for apps/api (ADR 0002). Check: scripts/archlint.sh
-#
 # Reglas de arquitectura de apps/api (ADR 0002). Se comprueban con scripts/archlint.sh.
 #
 # El kernel (internal/platform) es de todos y no importa ningún módulo. La regla
