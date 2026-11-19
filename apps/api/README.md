@@ -13,6 +13,7 @@ más adelante).
 ```
 cmd/wanka/            main: serve, worker, migrate up
 internal/platform/    kernel: config, logging, httpx, auth, metrics, clock, db (+ db/dbtest para tests) en uso;
+                      fx (tipo de cambio: ops.exchange_rates) en uso;
                       jobs, money, entitlements, idgen (paquetes vacíos por ahora)
 bootstrap/roles.sql   bootstrap de roles: lo corre el superusuario con psql, fuera de goose
 migrations/           goose, SQL con timestamp, embebido en el binario, solo hacia adelante

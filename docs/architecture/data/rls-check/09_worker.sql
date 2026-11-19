@@ -35,3 +35,12 @@ SELECT test.assert(NOT has_schema_privilege('wanka_definer', 'iam', 'CREATE')
                    AND NOT has_schema_privilege('wanka_definer', 'ops', 'CREATE')
                    AND NOT has_schema_privilege('wanka_definer', 'platform_fn', 'CREATE'),
                    'wanka_definer sin CREATE tras el cambio de duenio');
+\echo '== K3. ops.exchange_rates (issue #170): wanka_worker solo inserta, y la base valida moneda, fuente y valores =='
+SELECT test.expect_error('SELECT buy FROM ops.exchange_rates', '42501', 'wanka_worker no lee los tipos de cambio');
+SELECT test.expect_error($$UPDATE ops.exchange_rates SET buy = 1$$, '42501', 'wanka_worker no actualiza tipos de cambio');
+SELECT test.expect_error($$DELETE FROM ops.exchange_rates$$, '42501', 'wanka_worker no borra tipos de cambio');
+SELECT test.expect_error($$INSERT INTO ops.exchange_rates VALUES ('2026-11-20', 'EUR', 3.7, 3.8, 'official')$$, '23514', 'moneda distinta de USD');
+SELECT test.expect_error($$INSERT INTO ops.exchange_rates VALUES ('2026-11-20', 'USD', 0, 3.8, 'official')$$, '23514', 'compra en cero');
+SELECT test.expect_error($$INSERT INTO ops.exchange_rates VALUES ('2026-11-20', 'USD', 3.7, -3.8, 'official')$$, '23514', 'venta negativa');
+SELECT test.expect_error($$INSERT INTO ops.exchange_rates VALUES ('2026-11-20', 'USD', 3.7, 3.8, 'sbs')$$, '23514', 'fuente desconocida');
+INSERT INTO ops.exchange_rates VALUES ('2026-11-20', 'USD', 3.7, 3.8, 'manual');
