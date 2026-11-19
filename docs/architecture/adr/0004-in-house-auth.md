@@ -1,6 +1,6 @@
 # ADR 0004: Autenticación y autorización propias (sin Keycloak/Auth0)
 
-- Estado: aceptado "hacerlo en casa" (decisión del usuario); diseño propuesto
+- Estado: aceptado "hacerlo en casa" (decisión del usuario); diseño propuesto. Modificado por el [ADR 0011](0011-membership-loss-keeps-user-session.md) (2026-11-18) en la membresía borrada o no activa: la sesión se desliga de la empresa en vez de revocarse, y ante esa diferencia manda el ADR 0011.
 - Fecha: 2026-11-17
 
 ## Contexto

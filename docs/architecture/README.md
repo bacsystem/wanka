@@ -87,7 +87,7 @@ Modelo y reglas en [`data/data-model.md`](data/data-model.md): `tenant_id` y RLS
 | Cierre de caja (arqueo, Z) | [`sequences/05-cash-close.mmd`](sequences/05-cash-close.mmd) | bloqueo de ventas en arqueo, aprobación del supervisor, Z inmutable con hash |
 | Lubricentro: OT → venta | [`sequences/06-lubricentro-service-order.mmd`](sequences/06-lubricentro-service-order.mmd) | placa, km, diagnóstico de filtros, cobro al contado, recordatorio a +5 000 km o fecha por WhatsApp y correo |
 | Alta de tenant desde la consola | [`sequences/07-tenant-provisioning.mmd`](sequences/07-tenant-provisioning.mmd) | función `SECURITY DEFINER` acotada; conexión con Khipu hoy manual |
-| Plan, flags y permisos por petición | [`sequences/08-entitlement-enforcement.mmd`](sequences/08-entitlement-enforcement.mmd) | sesión (401, o 503 si la base falla; incluye la membresía borrada o inactiva) → 403 empresa cerrada → 402 suscripción inactiva → 403 módulo/límite/permiso, con caché invalidada por `NOTIFY` |
+| Plan, flags y permisos por petición | [`sequences/08-entitlement-enforcement.mmd`](sequences/08-entitlement-enforcement.mmd) | sesión (401, o 503 si la base falla; la membresía borrada o inactiva desliga la sesión y da 403 `tenant_access_denied`, ADR 0011) → 403 empresa cerrada → 402 suscripción inactiva → 403 módulo/límite/permiso, con caché invalidada por `NOTIFY` |
 
 ## 6. Despliegue
 
@@ -111,13 +111,14 @@ Modelo y reglas en [`data/data-model.md`](data/data-model.md): `tenant_id` y RLS
 | [0001](adr/0001-multitenancy-rls.md) | Multi-tenancy con base única, `tenant_id` y RLS; acceso cross-tenant de la consola | aceptado |
 | [0002](adr/0002-modular-monolith-go.md) | Monolito modular hexagonal en Go; librerías base | aceptado |
 | [0003](adr/0003-einvoicing-khipu-port.md) | Facturación vía Khipu tras `InvoicingProvider` (con hechos de la documentación) | propuesto |
-| [0004](adr/0004-in-house-auth.md) | Autenticación y RBAC propios; plano super-admin separado | aceptado |
+| [0004](adr/0004-in-house-auth.md) | Autenticación y RBAC propios; plano super-admin separado | aceptado; modificado por [0011](adr/0011-membership-loss-keeps-user-session.md) (2026-11-18) en la membresía perdida |
 | [0005](adr/0005-industry-modules-feature-flags.md) | Módulos de rubro, planes y feature flags; empresa cerrada en solo lectura | propuesto |
 | [0006](adr/0006-async-jobs-outbox.md) | Jobs y outbox en Postgres con River | propuesto |
 | [0007](adr/0007-deployment-railway.md) | Railway con Docker, portable | aceptado |
 | [0008](adr/0008-money-and-numbering.md) | Dinero `numeric` y correlativos sin huecos | propuesto |
 | [0009](adr/0009-api-contract-openapi.md) | Contrato spec-first OpenAPI 3.1 | propuesto |
 | [0010](adr/0010-frontend-khipu-migration.md) | Migración total del frontend al design system khipu | propuesto |
+| [0011](adr/0011-membership-loss-keeps-user-session.md) | Perder la membresía desliga la sesión de esa empresa (a `/seleccionar-empresa`), no la revoca; modifica 0004 | propuesto |
 
 **Proceso de los ADR, desde que este PR se mergea:**
 - Un ADR nuevo toma el siguiente número libre (`adr/NNNN-titulo-en-kebab.md`), con contexto, opciones, decisión, consecuencias (también las malas), estado y fecha. Se agrega a esta tabla en el mismo PR.
