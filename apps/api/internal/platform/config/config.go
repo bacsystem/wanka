@@ -17,6 +17,15 @@ const (
 	EnvHTTPAddr  = "HTTP_ADDR"
 	EnvLogLevel  = "LOG_LEVEL"
 	EnvDBPoolMax = "DB_POOL_MAX_CONNS"
+	EnvMailer    = "MAILER"
+	EnvAppEnv    = "APP_ENV"
+)
+
+// Valores de MAILER: el adaptador de correo. El proveedor real llega con
+// notificaciones (ola 4).
+const (
+	MailerStub = "stub" // no envía; guarda en memoria y registra destinatario enmascarado y asunto
+	MailerNone = "none" // rechaza todo envío
 )
 
 // maxPoolMax acota DB_POOL_MAX_CONNS: un error de tipeo no debe abrir cientos de conexiones.
@@ -50,6 +59,11 @@ type Config struct {
 	DBPoolMax int32
 	HTTPAddr  string
 	LogLevel  slog.Level
+	// Mailer es MailerStub (por defecto) o MailerNone.
+	Mailer string
+	// Production es true (también para staging) salvo APP_ENV=development: sin la variable se asume
+	// producción, para que un olvido avise de más y nunca de menos.
+	Production bool
 }
 
 // String hides the secret so a Config printed by mistake leaks nothing.
@@ -65,6 +79,7 @@ func Load(getenv func(string) string, svc Service) (Config, error) {
 		DatabaseURL: getenv(svc.URLVar),
 		DBPoolMax:   svc.DefaultPool,
 		HTTPAddr:    getenv(EnvHTTPAddr),
+		Production:  true,
 	}
 	if strings.TrimSpace(cfg.DatabaseURL) == "" {
 		errs = append(errs, fmt.Errorf("required environment variable %s is not set", svc.URLVar))
@@ -93,6 +108,21 @@ func Load(getenv func(string) string, svc Service) (Config, error) {
 	default:
 		// The value is not echoed: it could be anything.
 		errs = append(errs, fmt.Errorf("environment variable %s must be one of debug, info, warn, error", EnvLogLevel))
+	}
+	switch strings.ToLower(getenv(EnvMailer)) {
+	case "", MailerStub:
+		cfg.Mailer = MailerStub
+	case MailerNone:
+		cfg.Mailer = MailerNone
+	default:
+		errs = append(errs, fmt.Errorf("environment variable %s must be one of %s, %s", EnvMailer, MailerStub, MailerNone))
+	}
+	switch strings.ToLower(getenv(EnvAppEnv)) {
+	case "", "production", "staging": // staging se trata como producción (ADR 0007)
+	case "development":
+		cfg.Production = false
+	default:
+		errs = append(errs, fmt.Errorf("environment variable %s must be one of production, staging, development", EnvAppEnv))
 	}
 	if err := errors.Join(errs...); err != nil {
 		return Config{}, err

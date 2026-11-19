@@ -25,3 +25,8 @@ SELECT test.assert(NULLIF(current_setting('app.tenant_id', true), '') IS NULL, '
 \echo '== P5. ops.exchange_rates (issue #170): wanka_platform solo lee =='
 SELECT test.assert((SELECT count(*) FROM ops.exchange_rates) = 0, 'wanka_platform lee la tabla global (vacia en este paso)');
 SELECT test.expect_error($$INSERT INTO ops.exchange_rates VALUES ('2026-11-19', 'USD', 3.7, 3.8, 'official')$$, '42501', 'wanka_platform no inserta tipos de cambio');
+\echo '== P5. wanka_platform: iam.permissions es de solo lectura (issue #172) =='
+SELECT test.assert((SELECT count(*) FROM iam.permissions) > 100, 'wanka_platform lee el catalogo de permisos');
+SELECT test.expect_error($$INSERT INTO iam.permissions (code, description) VALUES ('ventas.pos:void', 'Anular ventas')$$, '42501', 'wanka_platform no inserta permisos');
+SELECT test.expect_error($$UPDATE iam.permissions SET description = 'x'$$, '42501', 'wanka_platform no actualiza permisos');
+SELECT test.expect_error($$DELETE FROM iam.permissions$$, '42501', 'wanka_platform no borra permisos');
