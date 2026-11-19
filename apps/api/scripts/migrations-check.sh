@@ -33,7 +33,7 @@ has_no_tx() {
     { line = tolower($0); gsub(/--/, "", line); sub(/\+goose/, "", line); gsub(/[ \t\r]/, "", line)
       if (line == "notransaction") nt = 1
       else if (line != "up" && line != "down" && line != "statementbegin" && line != "statementend" \
-               && line != "envsubston" && line != "envsubstoff") bad = 1 }
+               && line != "envsubon" && line != "envsuboff") bad = 1 }
     END { if (bad) exit 2; exit !nt }'
 }
 
@@ -77,16 +77,12 @@ lint() {
         # sin IF NOT EXISTS: si el build concurrente falla deja un índice INVALID, y con IF NOT EXISTS
         # la siguiente corrida lo saltaría y el índice inválido quedaría para siempre.
         # Los espacios y saltos de línea se colapsan antes de comparar (varias líneas, sangrías).
-        if ! sed 's/--.*$//' "$f" | tr '\n' ' ' | awk '
-            # Quita los comentarios /* ... */ (uno sin cerrar deja un marcador que no es una sentencia válida).
-            { s = $0; out = ""
-              while ((i = index(s, "/*")) > 0) {
-                out = out substr(s, 1, i - 1) " "; s = substr(s, i + 2)
-                j = index(s, "*/")
-                if (j == 0) { s = "unterminated_block_comment"; break }
-                s = substr(s, j + 2)
-              }
-              printf "%s", out s }' | awk '
+        # Un archivo NO TRANSACTION no lleva "/*" (ni en comentarios ni en cadenas): analizarlos bien
+        # exige un lexer de SQL, y aquí basta con rechazarlo. Los comentarios "--" sí se permiten.
+        if sed 's/--.*$//' "$f" | grep -q '/\*'; then
+          echo "FAIL: $name usa NO TRANSACTION y contiene \"/*\": solo se admiten comentarios --" >&2
+          bad=1
+        elif ! sed 's/--.*$//' "$f" | tr '\n' ' ' | awk '
             BEGIN { RS = ";"; n = 0; bad = 0 }
             { s = tolower($0); gsub(/[ \t\r]+/, " ", s); gsub(/^ | $/, "", s); if (s == "") next; n++
               if (s !~ /^create (unique )?index concurrently / || s ~ /^create (unique )?index concurrently if not exists /) bad = 1 }
@@ -164,8 +160,16 @@ new_repo; printf -- '-- +goose NO TRANSACTION\n-- +goose Up\nCREATE INDEX CONCUR
 expect fail "IF NOT EXISTS separado por un comentario /* */" "$tmp/r" main
 new_repo; printf -- '-- +goose NO TRANSACTION\n-- +goose Up\nCREATE INDEX /* a; b */ CONCURRENTLY i1 ON t (a); /* sin cerrar\n' > "$mdir/20260102000000_cm_open.sql"
 expect fail "comentario /* sin cerrar" "$tmp/r" main
-new_repo; printf -- '-- +goose NO TRANSACTION\n-- +goose Up\nCREATE INDEX /* nota */ CONCURRENTLY i1 ON t (a);\n' > "$mdir/20260102000000_cm_ok.sql"
-expect pass "comentario /* */ dentro de un CREATE INDEX CONCURRENTLY válido" "$tmp/r" main
+new_repo; printf -- '-- +goose NO TRANSACTION\n-- +goose Up\nCREATE INDEX /* nota */ CONCURRENTLY i1 ON t (a);\n' > "$mdir/20260102000000_cm_valid.sql"
+expect fail "comentario /* */ en un archivo NO TRANSACTION" "$tmp/r" main
+new_repo; printf -- "-- +goose NO TRANSACTION\n-- +goose Up\nCREATE INDEX CONCURRENTLY i1 ON t (a) WHERE b = '/*';\nALTER TABLE t ADD COLUMN c int;\nCREATE INDEX CONCURRENTLY i2 ON t (c) WHERE d = '*/';\n" > "$mdir/20260102000000_str.sql"
+expect fail "'/*' dentro de una cadena" "$tmp/r" main
+new_repo; printf -- '-- +goose NO TRANSACTION\n-- +goose Up\n/* -- */ ALTER TABLE t ADD COLUMN c int;\n/* */;\nCREATE INDEX CONCURRENTLY i ON t (a);\n' > "$mdir/20260102000000_hide.sql"
+expect fail "sentencia escondida tras /* -- */" "$tmp/r" main
+new_repo; printf -- '-- +goose NO TRANSACTION\n-- +goose Up\n-- nota con /* dentro de un comentario de línea\nCREATE INDEX CONCURRENTLY i ON t (a);\n' > "$mdir/20260102000000_linecm.sql"
+expect pass "/* dentro de un comentario -- (se ignora)" "$tmp/r" main
+new_repo; printf -- '-- +goose Up\n-- +goose ENVSUB ON\nSELECT 1;\n-- +goose ENVSUB OFF\nSELECT 2;\n' > "$mdir/20260102000000_envsub.sql"
+expect pass "ENVSUB ON/OFF son anotaciones de goose válidas" "$tmp/r" main
 new_repo; printf -- '-- +goose NO TRANSACTION\n-- +goose Up\nCREATE INDEX CONCURRENTLY IF NOT EXISTS i1 ON t (a);\n' > "$mdir/20260102000000_ifne.sql"
 expect fail "CONCURRENTLY IF NOT EXISTS (un índice INVALID quedaría para siempre)" "$tmp/r" main
 new_repo; printf -- '-- +goose NO TRANSACTION\n-- +goose Up\nSELECT 1;\n' > "$mdir/20260102000000_other.sql"

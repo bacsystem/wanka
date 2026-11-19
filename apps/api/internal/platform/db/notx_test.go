@@ -84,3 +84,28 @@ func TestMigrationsCheckDetectsEveryNoTransactionFormGooseAccepts(t *testing.T) 
 		})
 	}
 }
+
+// Las anotaciones ENVSUB ON/OFF son válidas en goose: aplica la migración y el
+// check no las toma por una anotación desconocida (sale con 1: no es NO TRANSACTION).
+func TestMigrationsCheckAcceptsEnvsubAnnotations(t *testing.T) {
+	script, err := filepath.Abs("../../../scripts/migrations-check.sh")
+	if err != nil {
+		t.Fatal(err)
+	}
+	d := dbtest.New(t)
+	body := "-- +goose Up\n-- +goose ENVSUB ON\nCREATE SCHEMA envsub_probe;\n-- +goose ENVSUB OFF\nSELECT 1;\n"
+
+	if _, err := db.Migrate(context.Background(), d.URL(dbtest.Migrator),
+		fstest.MapFS{"20000101000000_envsub.sql": {Data: []byte(body)}}, discardLog()); err != nil {
+		t.Fatalf("goose rejects ENVSUB annotations: %v", err)
+	}
+	f := filepath.Join(t.TempDir(), "m.sql")
+	if err := os.WriteFile(f, []byte(body), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	var ee *exec.ExitError
+	err = exec.Command("sh", script, "--detect", f).Run()
+	if !errors.As(err, &ee) || ee.ExitCode() != 1 {
+		t.Fatalf("--detect on an ENVSUB migration = %v, want exit 1 (valid, not NO TRANSACTION)", err)
+	}
+}
