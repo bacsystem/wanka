@@ -8,6 +8,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 ### Changed
 - Kernel story #174 split into #174 (session middleware with a test double), #194 (`InNoTenantTx`), #195 (`iam`/`org` tables and `iam.session_lookup`) and #196 (PostgreSQL resolver and wiring). API contract: access tokens are a prefix plus 43 base64url characters and are stored as the `sha256` of the full token; every route declares its class (`Public`, `NoTenant`, `Tenant`); every kernel `401` carries `WWW-Authenticate: Bearer`; default limiter values per session and per tenant (`api/conventions.md` §2, §3, §4 and §7, sequence 08, `data-model.md` §6).
 - ADR 0011 status set to accepted (owner decision on PR #185).
+- TOTP enrollment split into `mfa/totp/enroll` (`NoTenant`, from the profile) and the new `mfa/enrollment/totp` (`Public`, login, token in the body): one route, one class. Login step tokens fixed: `challengeToken` (`wk_ch_`, 5 min, consumed on the first good `verify`) and `enrollmentToken` (`wk_en_`, 10 min, valid until the first good `confirm`), 32 random bytes in base64url, stored as `sha256`.
+- Impersonated sessions locked to the database: no refresh and at most 60 min (CHECK), `user_id` is NULL with the staff in `impersonator_id`, a trigger reserves inserting or changing them to `wanka_definer` (only setting `revoked_at` is allowed), revocation goes through wave-6 definer functions. `wanka_app` gets column-level `UPDATE` on `iam.sessions` (no `created_at`, `user_id`, `impersonator_id`); `wanka_worker` column-level `SELECT` without the hashes (ADR 0001 matrix, `data-model.md` §6, er-01).
 
 ## [0.5.0] - 2026-11-18
 
