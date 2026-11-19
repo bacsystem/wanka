@@ -476,10 +476,16 @@ func TestConcurrentRecords(t *testing.T) {
 	ctx := testCtx(t)
 	var wg sync.WaitGroup
 	errs := make(chan error, 40)
+	// Concurrencia acotada al pool: el test prueba el aislamiento entre tenants con
+	// escrituras simultáneas, no la saturación del pool (en una CI lenta, 40 a la
+	// vez agotan el plazo de adquisición y dan 503 sin que haya defecto).
+	sem := make(chan struct{}, 8)
 	for i := 0; i < 40; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
+			sem <- struct{}{}
+			defer func() { <-sem }()
 			tenant, user := tenantA, userA
 			if i%2 == 1 {
 				tenant, user = tenantB, userB
