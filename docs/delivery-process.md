@@ -59,12 +59,12 @@ El Project «Wanka · Mapa de módulos», las issues, las épicas y los docs de 
 | se cierra la última sub-issue de una épica | se cierra la épica (o se dice qué falta y dónde quedó), las épicas que bloqueaba pasan de «Bloqueado» a «Por hacer», y en un PR se actualizan el roadmap (`docs/modules/README.md`) y las líneas de estado (`CLAUDE.md`, `docs/architecture/README.md`, `apps/api/README.md`) |
 | aparece un seguimiento (un hallazgo menor, un spike) | issue nueva en el Project, colgada de una épica, nunca suelta |
 
-Los workflows integrados del Project que el dueño enciende en la UI (`Settings → Workflows`) hacen solos algunos de estos pasos. Lo que no cubren se sigue haciendo a mano, como dice la tabla:
+Los workflows integrados del Project, que el dueño encendió el 2026-11-19 desde la UI (`⋯ → Workflows`; la API no permite encenderlos), hacen solos algunos de estos pasos. Lo que no cubren se sigue haciendo a mano, como dice la tabla:
 
 - «Item added to project» → «Por hacer»;
 - «Pull request linked to issue» → «En revisión»;
 - «Item closed» y «Pull request merged» → «Hecho»;
-- «Auto-add sub-issues to project», que ya está encendido.
+- «Auto-add sub-issues to project».
 
 ## Tags automáticos
 
