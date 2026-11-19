@@ -23,6 +23,9 @@ components:
   # Adaptadores del kernel sobre PostgreSQL: implementan un puerto de platform con db.
   # Solo cmd los cablea; platform no los importa.
   platform_pg: { in: internal/platform/auth/pgsession }
+  # Adaptador de prueba del correo: lo cablea cmd y lo usan los tests (go-arch-lint no
+  # los analiza). Ni platform ni los módulos lo importan: dependen del puerto platform/mailer.
+  platform_mailer_stub: { in: internal/platform/mailer/stub }
   main: { in: cmd/** }
   migrations: { in: migrations }
   bootstrap: { in: bootstrap }
@@ -42,8 +45,10 @@ deps:
   platform_pg:
     mayDependOn: [platform, platform_pg, platform_db]
     canUse: [pgx]
+  platform_mailer_stub:
+    mayDependOn: [platform, platform_mailer_stub]
   main:
-    mayDependOn: [platform, platform_pg, platform_db, migrations]
+    mayDependOn: [platform, platform_pg, platform_mailer_stub, platform_db, migrations]
     canUse: [pgx]
 exclude:
   - testdata
