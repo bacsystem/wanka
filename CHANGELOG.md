@@ -5,6 +5,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+## [0.19.0] - 2026-11-19
+
 ### Added
 - `apps/api`: the permission step of the `/v1` route chain (`auth.Routes.Handle`, story #176), mounted by the router after entitlements and before the route's own steps and idempotency, so no module can drop or move it. A `Tenant` route now needs a catalog permission (`Spec.Permission`, checked at startup against `internal/platform/permission`; `NoPermission` only on `Public`, `NoTenant` and `GET /v1/me/entitlements`; a `plataforma.*` code or an unknown one aborts the start). Per request, in order: if the session's `authz_version` differs from the membership's (or is NULL) the role is re-resolved and the session is updated with `UPDATE ... WHERE id AND membership_id AND revoked_at IS NULL` (`SessionResolver.BindVersion`; 0 rows is `403 tenant_access_denied`, nothing cached); a role with `requires_mfa` on a session with `mfa_method = none` revokes the session and answers `403 mfa_required`; a missing permission answers `403 forbidden` with `permission` and is recorded with `audit.RecordDenied` (`result = denegado`; if the audit write fails it is logged and counted, and the `403` is sent anyway). Permissions come from a per-replica cache keyed by `membership_id + authz_version` (TTL 60 s, at most 50 000 entries, then it stops caching and counts `authz_cache_full_total`). The role resolver is the port `auth.PermissionResolver`; until identity (#29) `serve` wires `auth.DenyAllPermissions`, which denies every route with a permission. An impersonated session never uses a tenant role: its permissions are the grant scope (neither scope ever reaches `identidad.support_access:*`, `identidad.users:*`, `identidad.roles:*`, `identidad.sessions:*` and `empresas.einvoicing:update`; on the rest, `read_only`: only `read`; `full`: every action), and with an unknown scope (the adapter returns none until wave 6) it is denied on every route with a permission. `auth.CheckSite` is the helper a handler calls to answer `403 site_out_of_scope`. `httpx.Extensions.Permission` carries `permission` on `forbidden`, `httpx.PhaseAuthz` is the new log phase, `auth.Routes.Registered()` lists the registered routes, and `NewRoutes` takes the permission resolver and the denial recorder.
 - `apps/api`: router/contract parity test (`cmd/wanka/parity_test.go`, #176): every route the real `serve` router registers (`auth.Routes.Registered()`) must match an operation of `apps/api/openapi` in method, path, `x-module` and `x-permission`, and every operation must be registered or listed in `pendingOperations`, which the test requires to be up to date (a pending operation that is already registered, or no longer in the contract, fails).
@@ -22,6 +24,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - Release tags are created by the new `release-tag.yml` workflow when a `chore(release): vX.Y.Z` PR is merged and CI and API are green on that commit.
 - ADR 0009 records the per-module layout and the CI tools; `docs/modules/README.md` marks the `openapi.yaml` split as done (#166).
 - `docs/architecture/review-checklist.md`: known defect classes from the kernel batches, read by developers before coding and used by reviews; `docs/delivery-process.md` adds the performance rules (one full suite run per PR, architect pre-review, shared test database, short reports).
+
+### Fixed
+- CI: the release PR (`chore/release*`) now runs the whole API job, rls-check included, even when it only changes docs and versions; before, the Go steps were skipped because no `apps/api` file changed.
 
 ## [0.18.0] - 2026-11-19
 

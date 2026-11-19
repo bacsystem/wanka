@@ -63,12 +63,13 @@ jobs:
           # rls-check (casos de referencia y todas sus mutaciones) corre en el PR de
           # release y en los PR que tocan SQL, roles, grants o políticas; el resto de los
           # PR del lote corre solo la parte liviana (docs/delivery-process.md).
-          case "$HEAD_REF" in chore/release*) rls=true ;; *) rls=false ;; esac
+          # El PR de release corre la CI completa aunque solo cambie docs y versión.
+          case "$HEAD_REF" in chore/release*) rls=true; release=true ;; *) rls=false; release=false ;; esac
           if git diff --name-only "$BASE_SHA"...HEAD | grep -qE '^(apps/api/migrations/|apps/api/bootstrap/|apps/api/scripts/rls-check\.sh$|docs/architecture/data/rls-check/|\.github/workflows/api\.yml$)'; then
             rls=true
           fi
           echo "rls=$rls" >> "$GITHUB_OUTPUT"
-          if git diff --name-only "$BASE_SHA"...HEAD | grep -qE '^(apps/api/|docs/architecture/data/rls-check/|docs/architecture/api/resources\.md$|docs/architecture/adr/0004-in-house-auth\.md$|\.nvmrc$|\.github/workflows/api\.yml$)'; then
+          if [ "$release" = true ] || git diff --name-only "$BASE_SHA"...HEAD | grep -qE '^(apps/api/|docs/architecture/data/rls-check/|docs/architecture/api/resources\.md$|docs/architecture/adr/0004-in-house-auth\.md$|\.nvmrc$|\.github/workflows/api\.yml$)'; then
             echo "run=true" >> "$GITHUB_OUTPUT"
           else
             echo "run=false" >> "$GITHUB_OUTPUT"
