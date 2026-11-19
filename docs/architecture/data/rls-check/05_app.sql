@@ -134,3 +134,5 @@ INSERT INTO iam.sessions (id, user_id, access_hash, access_expires_at, mfa_satis
   VALUES ('5e000000-0000-0000-0000-0000000000e2', 'eeeeeeee-0000-0000-0000-000000000002', sha256('old-created'), now(), true, 'none', now() - interval '400 days');
 SELECT test.assert((SELECT created_at = now() FROM iam.sessions WHERE id = '5e000000-0000-0000-0000-0000000000e2'), 'created_at del INSERT lo fija el servidor');
 ROLLBACK;
+\echo '== A10. (wanka_app) tablas de River: solo INSERT en ops.river_job =='
+SELECT test.river_enqueue_only();

@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -151,10 +152,31 @@ func TestServePlanesStartAndStopOnSIGTERM(t *testing.T) {
 	}
 }
 
-func TestWorkerStopsOnSIGTERM(t *testing.T) {
-	p := start(t, okEnv(), "worker")
-	p.waitMsg(t, "started")
-	p.terminate(t)
+// Sin base el worker no puede levantar sus colas: sale con código 1 y sin la contraseña.
+func TestWorkerExitsWithErrorWhenTheDatabaseIsDown(t *testing.T) {
+	cmd := exec.Command(binPath, "worker")
+	cmd.Env = append([]string{"PATH=" + os.Getenv("PATH")}, okEnv()...)
+	out, err := cmd.CombinedOutput()
+	var exit *exec.ExitError
+	if !errors.As(err, &exit) || exit.ExitCode() != 1 {
+		t.Fatalf("want exit code 1, got %v; output: %s", err, out)
+	}
+	if !strings.Contains(string(out), "starting the job queues") || strings.Contains(string(out), "TOP-SECRET") {
+		t.Fatalf("unexpected output: %s", out)
+	}
+}
+
+func TestWorkerRejectsABadQueueSetting(t *testing.T) {
+	cmd := exec.Command(binPath, "worker")
+	cmd.Env = append(append([]string{"PATH=" + os.Getenv("PATH")}, okEnv()...), "JOBS_CONCURRENCY_CPE=lots-123")
+	out, err := cmd.CombinedOutput()
+	var exit *exec.ExitError
+	if !errors.As(err, &exit) || exit.ExitCode() != 1 {
+		t.Fatalf("want exit code 1, got %v; output: %s", err, out)
+	}
+	if !strings.Contains(string(out), "JOBS_CONCURRENCY_CPE") || strings.Contains(string(out), "lots-123") {
+		t.Fatalf("the error must name the variable and not its value: %s", out)
+	}
 }
 
 func TestBadInvocationExitsNonZero(t *testing.T) {

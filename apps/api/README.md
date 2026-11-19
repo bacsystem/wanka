@@ -12,8 +12,8 @@ más adelante).
 
 ```
 cmd/wanka/            main: serve, worker, migrate up
-internal/platform/    kernel: config, logging, httpx, auth, metrics, clock, db (+ db/dbtest para tests) en uso;
-                      jobs, money, entitlements, idgen (paquetes vacíos por ahora)
+internal/platform/    kernel: config, logging, httpx, auth, metrics, clock, db (+ db/dbtest para tests), jobs en uso;
+                      money, entitlements, idgen (paquetes vacíos por ahora)
 bootstrap/roles.sql   bootstrap de roles: lo corre el superusuario con psql, fuera de goose
 migrations/           goose, SQL con timestamp, embebido en el binario, solo hacia adelante
 openapi/              contrato (vacío)
@@ -66,7 +66,7 @@ código 2 y un mensaje en stderr.
 wanka serve --plane=tenant      # API de la empresa
 wanka serve --plane=platform    # consola de administración
 wanka serve --plane=webhooks    # receptor de webhooks
-wanka worker                    # stub: abre su pool, arranca y espera la señal
+wanka worker                    # ejecuta los jobs (colas de River); sin la base sale con código 1
 wanka migrate up                # aplica las migraciones pendientes y termina
 ```
 
@@ -194,6 +194,63 @@ los de `InTenantTx`. En las dos puertas sigue prohibido `set_config(..., false)`
 dentro de `fn`. Las pruebas usan la tabla `rlstest.items`, que solo existe en
 `internal/platform/db/testdata/` y se aplica con `dbtest.MigrateWith`.
 
+## Jobs (`internal/platform/jobs`)
+
+Trabajo diferido sobre River (ADR 0006), con un solo backing service: PostgreSQL. Las
+tablas están en el esquema `ops` (no son de tenant: sin `tenant_id` ni RLS). Los
+módulos usan solo los tipos de este paquete (`Enqueuer`, `Args`, `Job`, `Registry`,
+`Cancel`, `Snooze`); ninguno es de River, y un test revisa que la API exportada no
+los nombre, para poder sustituirlo por el outbox propio del ADR 0006 sin tocarlos.
+
+```go
+// Encolar: en la misma transacción del cambio de datos. COMMIT los guarda a ambos; ROLLBACK, a ninguno.
+err := pool.InTenantTx(ctx, actor, func(tx pgx.Tx) error {
+    // ... el cambio de negocio ...
+    return enq.InsertTx(ctx, tx, SendReceipt{TenantID: actor.TenantID, SaleID: id},
+        jobs.WithQueue(jobs.QueueNotifications), jobs.WithUnique())
+})
+
+// Ejecutar: el módulo registra su handler en el Registry del worker.
+jobs.Register(reg, func(ctx context.Context, job jobs.Job[SendReceipt]) error {
+    // 1. lee en una transacción corta; 2. llama a la red SIN conexión tomada; 3. guarda en otra.
+    return job.InTenantTx(ctx, func(tx pgx.Tx) error { ... })
+})
+```
+
+- **Argumentos**: `Kind() string` estable (está en cada fila) y, si son de tenant, `Tenant()`
+  y el campo `json:"tenant_id"`. Sin secretos ni datos personales: la tabla de jobs se ve desde la consola.
+- **Colas**: `WithQueue` es obligatoria (`cpe`, `webhooks`, `notifications`, `reports`, `maintenance`).
+  `WithMaxAttempts` (por defecto 10), `WithScheduledAt` y `WithUnique` (uno solo en curso por clave:
+  los argumentos serializados, o los campos con la etiqueta `river:"unique"`; un duplicado no falla ni aborta la transacción).
+- **Resultados de un handler**: `nil` (completado, se limpia a los 7 días), un error cualquiera
+  (transitorio: backoff exponencial de 10 s duplicando hasta 1 h, con jitter; al agotar los intentos
+  queda `discarded` y se conserva 30 días), `jobs.Cancel(err)` (definitivo: sin reintentos; `cancelled`, 7 días)
+  o `jobs.Snooze(d)` (vuelve a correr pasado `d` sin gastar un intento).
+- **Entrega al menos una vez**: un job puede correr más de una vez, así que todo handler es idempotente
+  (transiciones condicionadas por estado, claves únicas, `idem_key` hacia terceros).
+- **Tenant**: `Job.InTenantTx` abre `InTenantTx(Actor{TenantID del job, Kind: system})` **sin `UserID`**
+  (ADR 0001, «Workers»): `app.session_kind` es `system`, `app.current_user_id()` es `NULL` y solo se ven las filas
+  del tenant del job. Un job sin `tenant_id` (o con argumentos que no son de tenant) recibe `db.ErrNoTenant` y se
+  cancela al primer intento. Ningún job mantiene una conexión durante una llamada de red.
+- **Periódicos**: `Registry.AddPeriodic(every, newArgs, opts...)`. Solo el líder de River los encola, así que corren
+  una vez por ciclo aunque haya N réplicas.
+- **Roles**: `wanka_app`, `wanka_webhooks` y `wanka_platform` solo hacen `INSERT` en `ops.river_job` (encolan con
+  `COPY`, sin leer la fila de vuelta); `wanka_worker` tiene todo el DML. Los casos están en `docs/architecture/data/rls-check/`.
+- **Conexiones**: River usa el pool del worker (`DB_POOL_MAX_CONNS`, 10) por su cuenta: una conexión para `LISTEN` y
+  consultas cortas para tomar y terminar jobs, además de las `InTenantTx` de los handlers.
+- **Comando `worker`**: sin handlers de módulo registra solo `kernel.noop` (River no arranca con un Workers vacío).
+  El reindexado automático de River está desactivado: exige ser dueño del índice, y el dueño es `wanka_migrator`.
+
+### Migraciones de River con goose
+
+River trae su propio migrador (`rivermigrate`), pero aquí **solo migra goose** (solo hacia adelante,
+embebido, `wanka migrate up`). `20261119143700_kernel_river_jobs.sql` es el esquema final de las migraciones
+1 a 7 de la línea `main` de River v0.44.1 con el esquema `ops`, más las siete filas en `ops.river_migration`
+para que las herramientas de River vean la base al día. Para subir de versión de River: leer su CHANGELOG, agregar
+**otra** migración goose con los cambios (no se edita la existente) y registrar sus versiones; el test
+`TestSchemaMatchesRiversOwnMigrations` falla mientras el esquema de `ops` no coincida con el que crea `rivermigrate`.
+River v0.44.1 es la última versión compatible con Go 1.25 (las siguientes piden Go 1.26).
+
 ## Variables de entorno
 
 Solo nombres; los valores no se versionan (no hay `.env` en el repo).
@@ -209,6 +266,8 @@ rol y no lee las de los demás.
 | `DATABASE_URL_WEBHOOKS` | `serve --plane=webhooks` | URL del rol `wanka_webhooks`. Secreto |
 | `DATABASE_URL_WORKER` | `worker` | URL del rol `wanka_worker`. Secreto |
 | `DATABASE_URL_MIGRATOR` | `migrate up` | URL del rol `wanka_migrator`. Secreto |
+| `JOBS_CONCURRENCY_<COLA>` | no | Jobs en ejecución a la vez por réplica del worker, 1 a 1000. Colas `CPE` (20), `WEBHOOKS` (10), `NOTIFICATIONS` (10), `REPORTS` (2), `MAINTENANCE` (2). Solo `worker` |
+| `JOBS_SHUTDOWN_TIMEOUT` | no (`30s`) | Duración de Go, de `1s` a `10m`: cuánto espera el worker a los jobs en curso tras `SIGTERM`; vencida, cancela su contexto y el job se reintenta. El plazo de drenaje de Railway debe ser mayor. Solo `worker` |
 | `DB_POOL_MAX_CONNS` | no | Tamaño máximo del pool, 1 a 200. Por defecto: api 20, worker 10, webhooks 5, platform 5 (`capacity.md`) |
 | `HTTP_ADDR` | no (`:8080`) | Dirección donde escucha `serve` (con `127.0.0.1:0` el sistema elige el puerto y se informa en el log `listening`) |
 | `LOG_LEVEL` | no (`info`) | `debug`, `info`, `warn` o `error` |

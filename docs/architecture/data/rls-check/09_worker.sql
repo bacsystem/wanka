@@ -17,6 +17,8 @@ SELECT test.assert((SELECT count(*) FROM iam.memberships) = 1 AND (SELECT count(
                    'worker con tenant A: lee sus roles y su empresa (solo la membresia del propietario: la del cajero ya se borro)');
 COMMIT;
 DO $$ DECLARE n int; BEGIN DELETE FROM iam.sessions; GET DIAGNOSTICS n = ROW_COUNT; PERFORM test.assert(n > 0, 'wanka_worker borra sesiones'); RAISE EXCEPTION 'rollback' USING ERRCODE = 'P0001'; EXCEPTION WHEN SQLSTATE 'P0001' THEN NULL; END $$;
+\echo '== K1c. (wanka_worker) tablas de River: todo el DML de la cola, sin river_migration =='
+SELECT test.river_worker_full();
 \echo '== K2. catalogo: duenio y search_path de las funciones SECURITY DEFINER, roles y FORCE RLS =='
 SELECT test.assert((SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
                      WHERE p.prosecdef AND n.nspname IN ('iam','ops','platform_fn')

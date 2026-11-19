@@ -57,3 +57,11 @@ forbidden internal/platform/httpx github.com/jackc/pgx/v5/pgxpool
 forbidden cmd/wanka github.com/jackc/pgx/v5/pgxpool
 forbidden internal/platform/logging github.com/jackc/pgx/v5/stdlib
 forbidden cmd/wanka github.com/jackc/pgx/v5/stdlib
+
+# ADR 0006: River solo vive en internal/platform/jobs (y su driver en db). Los módulos
+# encolan con jobs.Enqueuer, así que el outbox propio puede sustituirlo sin tocarlos.
+echo "== apps/api: River outside internal/platform/jobs must fail =="
+forbidden internal/platform/httpx github.com/riverqueue/river
+forbidden cmd/wanka github.com/riverqueue/river
+forbidden internal/platform/logging github.com/riverqueue/river/rivertype
+forbidden internal/platform/httpx github.com/riverqueue/river/riverdriver/riverpgxv5

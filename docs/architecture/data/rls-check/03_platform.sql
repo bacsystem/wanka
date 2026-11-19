@@ -22,3 +22,5 @@ SELECT test.assert(platform_fn.request_impersonation('99999999-0000-0000-0000-00
 SELECT test.assert(platform_fn.request_impersonation('99999999-0000-0000-0000-000000000002','5aff0000-0000-0000-0000-000000000001',
   'bbbbbbbb-0000-0000-0000-000000000002','7c000000-0000-0000-0000-000000000002','read_only','\x02'::bytea) IS NOT NULL, 'solicitud B');
 SELECT test.assert(NULLIF(current_setting('app.tenant_id', true), '') IS NULL, 'las funciones no filtran app.tenant_id al llamador');
+\echo '== P5. (wanka_platform) tablas de River: solo INSERT en ops.river_job =='
+SELECT test.river_enqueue_only();
