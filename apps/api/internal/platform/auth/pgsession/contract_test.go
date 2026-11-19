@@ -254,3 +254,55 @@ func TestDetachGuards(t *testing.T) {
 		}
 	})
 }
+
+// Lookup corre en una transacción READ ONLY (InNoTenantReadTx). Como el resultado
+// no cambia, se hace observable con un envoltorio de prueba, creado como
+// superusuario, que ocupa el nombre de iam.session_lookup y falla si la
+// transacción que lo llama admite escrituras.
+func TestLookupRunsInAReadOnlyTransaction(t *testing.T) {
+	d, p := migratedPool(t)
+	ctx := context.Background()
+	_, err := d.Admin(ctx, t).Exec(ctx, `
+		ALTER FUNCTION iam.session_lookup(bytea) RENAME TO session_lookup_real;
+		CREATE FUNCTION iam.session_lookup(p_access_hash bytea)
+		  RETURNS TABLE (session_id uuid, user_id uuid, tenant_id uuid, site_id uuid, cash_register_id uuid, membership_id uuid,
+		                 session_authz_version bigint, mfa_satisfied boolean, mfa_method text, impersonator_id uuid,
+		                 current_authz_version bigint, membership_status text)
+		  LANGUAGE plpgsql AS $$
+		BEGIN
+		  IF pg_catalog.current_setting('transaction_read_only') <> 'on' THEN
+		    RAISE EXCEPTION 'the session lookup ran in a read-write transaction' USING ERRCODE = 'XX999';
+		  END IF;
+		  RETURN QUERY SELECT * FROM iam.session_lookup_real(p_access_hash);
+		END $$;
+		GRANT EXECUTE ON FUNCTION iam.session_lookup(bytea) TO wanka_app`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := d.SeedSession(t, dbtest.SessionSpec{})
+	rec, found, err := New(p).Lookup(ctx, hashOf(s.Token))
+	if err != nil || !found || uuidText(rec.SessionID) != s.SessionID {
+		t.Fatalf("Lookup = %+v, found %v, err %v; want the session, read through a READ ONLY transaction", rec, found, err)
+	}
+}
+
+// Detach no toca una sesión impersonada aunque llegue con una membresía: la
+// guarda impersonator_id IS NULL del UPDATE. Sin ella, el trigger de la base
+// (42501) lo pararía con un error, no con 0 filas.
+func TestDetachLeavesAnImpersonatedSessionAlone(t *testing.T) {
+	d, p := migratedPool(t)
+	ctx := context.Background()
+	s := d.SeedSession(t, dbtest.SessionSpec{Kind: dbtest.SessionImpersonated})
+	const membership = "aaaaaaaa-0000-4000-8000-00000000000c"
+	// Como superusuario (el trigger no le aplica): una impersonada con membresía, que ni existe en producción.
+	if _, err := d.Admin(ctx, t).Exec(ctx, `UPDATE iam.sessions SET membership_id = $2 WHERE id = $1`, s.SessionID, membership); err != nil {
+		t.Fatal(err)
+	}
+	ok, err := New(p).Detach(ctx, mustUUID(t, s.SessionID), mustUUID(t, membership))
+	if err != nil || ok {
+		t.Fatalf("Detach of an impersonated session = %v, %v; want false, nil", ok, err)
+	}
+	if tenant, mem, _, _, _, _ := detachRow(t, d, s.SessionID); tenant == nil || mem == nil {
+		t.Fatalf("an impersonated session was detached: tenant %v, membership %v", tenant, mem)
+	}
+}
