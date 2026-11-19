@@ -143,10 +143,11 @@ func (e *env) replica() http.Handler {
 			next.ServeHTTP(w, r)
 		})
 	}))
-	rt.HandleFunc("POST /v1/items", e.handler(), itemsOpts...)
-	rt.HandleFunc("POST /v1/notes", e.handler(), httpx.Use(e.session), mw.Optional())
+	// HandleV1 es lo que auth.Routes llama tras validar la clase; aquí la sesión es el doble e.session.
+	rt.HandleV1("POST /v1/items", e.handler(), itemsOpts...)
+	rt.HandleV1("POST /v1/notes", e.handler(), httpx.Use(e.session), mw.Optional())
 	// Sin sesión: error de cableado.
-	rt.HandleFunc("POST /v1/nosession", e.handler(), mw.Required())
+	rt.HandleV1("POST /v1/nosession", e.handler(), mw.Required())
 	return httpx.Chain(rt, logging.New(e.log, slog.LevelDebug), nil)
 }
 

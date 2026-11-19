@@ -13,10 +13,11 @@ import (
 func TestRejectIdempotencyKey(t *testing.T) {
 	ran := 0
 	h, _, _ := chain(t, func(rt *httpx.Router) {
-		rt.HandleFunc("POST /v1/auth/login", func(w http.ResponseWriter, r *http.Request) {
+		// HandleV1 es lo que auth.Routes llama tras validar la clase (Router.Handle no admite /v1).
+		rt.HandleV1("POST /v1/auth/login", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ran++
 			w.WriteHeader(http.StatusNoContent)
-		}, httpx.Use(httpx.RejectIdempotencyKey))
+		}), httpx.Use(httpx.RejectIdempotencyKey))
 	})
 	cases := []struct {
 		name   string
