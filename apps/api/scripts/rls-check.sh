@@ -56,6 +56,8 @@ for m in "naive_session_lookup|wanka_app" \
          "drop_force_rls_audit|wanka_migrator: borra la membresia" \
          "drop_audit_user_check|wanka_app" \
          "drop_audit_system_check|wanka_app" \
+         "drop_audit_staff_check|wanka_app" \
+         "drop_audit_impersonator_check|wanka_app" \
          "ensure_partitions_to_public|wanka_app" \
          "ensure_partitions_no_search_path|wanka_worker" \
          "grant_app_partition_select|wanka_app"; do

@@ -1,7 +1,7 @@
 # ADR 0001: Multi-tenancy con base única, `tenant_id` y Row-Level Security
 
 - Estado: aceptado (decisión del usuario); los detalles de implementación son una propuesta
-- Fecha: 2026-11-17 (revisado tras la revisión del PR #124: caminos que RLS bloqueaba, `NULLIF`, matriz de permisos por rol; 2026-11-18: creación de los roles, épica #154; 2026-11-19: los workers van sin `UserID`, #169)
+- Fecha: 2026-11-17 (revisado tras la revisión del PR #124: caminos que RLS bloqueaba, `NULLIF`, matriz de permisos por rol; 2026-11-18: creación de los roles, épica #154; 2026-11-19: los workers van sin `UserID`, #169; 2026-11-19: excepción acotada al dueño de las `SECURITY DEFINER` para las particiones de `audit.events`, #173)
 
 ## Contexto
 
@@ -190,6 +190,31 @@ La revisión los reprodujo en PG16 (cero filas o `new row violates row-level sec
 - Las funciones que tocan tablas con RLS **para un tenant que el llamador no fijó** siguen siempre el mismo patrón: guardan `current_setting('app.tenant_id', true)`, fijan el tenant **que sale de sus propios datos** (la sesión, el grant, el argumento validado) con `set_config(..., true)`, operan a través de `tenant_isolation` y **restauran** el valor del llamador antes de salir. Si fallan, la transacción o el savepoint revierten el `set_config`. No se usa la cláusula `SET app.tenant_id = ''` de `CREATE FUNCTION`, porque un rol no superusuario recibe `permission denied to set parameter` en PostgreSQL 16.
 - La prueba de CI (a) agrega una comprobación: toda función con `prosecdef` tiene como dueño a `wanka_definer` y `proconfig` con `search_path`.
 
+**Excepción: DDL de particiones (architect, 2026-11-19, #173).** Crear o enganchar una partición exige ser dueño de la tabla padre, y el único dueño de tablas es `wanka_migrator`. Las funciones de esta lista, y solo ellas, son `SECURITY DEFINER` con dueño **`wanka_migrator`**:
+
+| Función | Quién la ejecuta | Qué hace |
+|---|---|---|
+| `audit.ensure_partitions(date, integer)` | `wanka_worker` (job diario `audit.ensure_partitions` y arranque del worker) | crea las particiones mensuales de `audit.events` que falten con `CREATE TABLE (LIKE … INCLUDING ALL)` + `ATTACH PARTITION` |
+
+Condiciones, todas verificables en el catálogo o en `data/rls-check/`; una función que no las cumpla no entra en la lista:
+- hace solo DDL de particiones sobre una tabla de `wanka_migrator`; nunca DML sobre tablas con RLS ni otro DDL;
+- ningún argumento de texto, `bytea`, `json` ni de tipo polimórfico: solo `date`/`integer` con rango validado al entrar, o ninguno. Los nombres que arma salen de esos valores y van con `format('%I')`/`%L`;
+- `SET search_path = pg_catalog, pg_temp` como única entrada de `proconfig`, nombres cualificados, `lock_timeout` fijado con `set_config(..., true)` y un lock de aviso que serializa a dos llamadores;
+- `REVOKE ALL ... FROM PUBLIC` y `EXECUTE` solo para `wanka_worker`;
+- la prueba de catálogo la lista por firma exacta (`regprocedure`) en una lista blanca propia que cita este ADR; una entrada que ya no existe hace fallar la prueba.
+
+Por qué así y no otra cosa:
+- *`wanka_definer` como dueño de `audit.events`*: descartado. Es el rol con el que corren todas las demás funciones, y varias reciben `bytea` o `text` del llamador; un error en cualquiera daría el dueño de la bitácora, que puede `ALTER TABLE ... NO FORCE ROW LEVEL SECURITY`, `DETACH` o `DROP`. Además rompe «`wanka_definer` no es dueño de tablas».
+- *Que las cree el `migrate` de cada despliegue*: descartado. Goose aplica cada migración una vez, así que haría falta un paso nuevo en `wanka migrate`; la cobertura quedaría atada a la frecuencia de despliegues (un periodo sin deploys más largo que el colchón deja sin partición y hace fallar toda escritura auditada), y el DDL correría igual como `wanka_migrator`, con sesión completa en vez de una función fija.
+- *Partición `DEFAULT`*: descartada, medido en PostgreSQL 16.16. Con una `DEFAULT`, cada `ATTACH` toma `AccessExclusiveLock` sobre ella y la recorre; si guarda una fila de ese mes, el `ATTACH` falla (`updated partition constraint for default partition ... would be violated by some row`), la función aborta y tampoco crea los meses siguientes, y arreglarlo exige mover filas a mano. Las filas de la `DEFAULT` no salen con la purga por partición (nadie tiene `DELETE`), y el fallo que debía alertar queda oculto.
+- *Un rol propio dueño de `audit`*: menos alcance, pero suma un rol al bootstrap de superusuario en cada entorno y una segunda excepción en las reglas de roles; con una función sin argumentos de texto, la ganancia es pequeña. Se reconsidera si la lista pasa de dos funciones o alguna necesita un argumento de texto.
+
+Qué gana un `wanka_worker` comprometido: crear particiones vacías hasta unos 25 meses hacia adelante y tomar `SHARE UPDATE EXCLUSIVE` sobre `audit.events` mientras mantenga abierta su transacción (no bloquea `INSERT` ni `SELECT`; sí frena un DDL del despliegue, algo que ese rol ya puede hacer con sus propias tablas). No puede elegir nombres, rangos fuera de los validados ni sentencias, y no tiene `CREATE` en el esquema `audit` para plantar una tabla con el nombre de una partición futura.
+
+Si falla: sin la partición del mes, el `INSERT` en `audit.events` falla (`no partition of relation ... found for row`, SQLSTATE `23514`) y con él la transacción del cambio de negocio: falla cerrada, nunca se pierde un evento. El colchón son los 3 meses siguientes que mantienen el job diario y el arranque del worker; los despliegues no influyen. La alerta sobre el job fallido (o sobre menos de 2 meses cubiertos) entra con la historia de observabilidad.
+
+**Purga a 5 años (plataforma, data-model §5).** `DETACH` y `DROP` de una partición también exigen ser dueño y toman `AccessExclusiveLock` sobre `audit.events` (medido), así que es el mismo caso. Si se hace como función, entra en esta lista en su propia historia y con revisión del architect, con estas condiciones además de las de arriba: **sin argumentos**, el corte `interval '5 years'` escrito en el cuerpo (un mes sale solo cuando su límite superior + 5 años ≤ `now()`), las particiones elegidas por su límite leído de `pg_catalog`, no por el nombre, el mismo lock de aviso y `lock_timeout`. Así, quien la ejecute de más solo borra lo que ya venció.
+
 **Auditoría de todas las funciones del diseño**:
 
 | Función | Dueño | Quién la ejecuta | Tablas con RLS que toca | Cómo obtiene el tenant |
@@ -204,6 +229,7 @@ La revisión los reprodujo en PG16 (cero filas o `new row violates row-level sec
 | `platform_fn.request_impersonation(...)` | `wanka_definer` | `wanka_platform` | escribe `audit.events` | `set_config` con el tenant del argumento; restaura |
 | `platform_fn.suspend_tenant(uuid)` | `wanka_definer` | `wanka_platform` | actualiza `org.tenants` (la política `platform_rw` es `TO wanka_platform` y no alcanza al dueño de la función) | `set_config` con el tenant del argumento; restaura |
 | `platform_fn.purge_closed_tenant(uuid)` | `wanka_definer` | `wanka_worker` | borra en todas las tablas del tenant | `set_config` con el tenant del argumento; restaura |
+| `audit.ensure_partitions(date, integer)` | `wanka_migrator` (excepción «DDL de particiones», #173) | `wanka_worker` sin tenant | ninguna: solo DDL de particiones de `audit.events` | no usa tenant |
 
 **Verificación.** `data/rls-check/` **falla sola**: cada caso compara contra su valor esperado (`test.assert`, `test.expect_error` con el SQLSTATE esperado), y el primer desvío aborta `psql` y deja `run.sh` con salida distinta de 0. `MUTATION=naive_session_lookup` reintroduce el defecto de la versión `LANGUAGE sql` para demostrar que la verificación lo detecta. La carpeta contiene el SQL de estas funciones (versión reducida del esquema, con las mismas políticas, `FORCE RLS` y roles) y un `run.sh` que lo ejecuta en un contenedor desechable de PostgreSQL 16 con los roles reales. La salida está en el PR #124. Cada función tiene además su prueba de integración, que también verifica que no hace nada fuera de su tenant.
 

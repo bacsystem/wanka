@@ -118,15 +118,19 @@ func TestActorChecks(t *testing.T) {
 		name, sql string
 		want      string // "" = debe aceptarse; si no, el nombre del CHECK
 	}{
-		{"user with user", `('user', '` + userA + `')`, ""},
-		{"user without user", `('user', NULL)`, "events_user_has_user"},
-		{"system without user", `('system', NULL)`, ""},
-		{"system with user", `('system', '` + userA + `')`, "events_system_has_no_user"},
-		{"platform_staff without user", `('platform_staff', NULL)`, ""},
-		{"unknown actor", `('robot', NULL)`, "events_actor_type_check"},
+		{"user with user", `('user', '` + userA + `', NULL)`, ""},
+		{"user without user", `('user', NULL, NULL)`, "events_user_has_user"},
+		{"system without user", `('system', NULL, NULL)`, ""},
+		{"system with user", `('system', '` + userA + `', NULL)`, "events_system_has_no_user"},
+		{"unknown actor", `('robot', NULL, NULL)`, "events_actor_type_check"},
+		{"platform_staff without impersonator", `('platform_staff', NULL, NULL)`, "events_staff_has_staff"},
+		{"platform_staff with user", `('platform_staff', '` + userA + `', '` + staff + `')`, "events_staff_has_staff"},
+		{"platform_staff with impersonator", `('platform_staff', NULL, '` + staff + `')`, ""},
+		{"user with impersonator", `('user', '` + userA + `', '` + staff + `')`, "events_impersonator_is_staff"},
+		{"system with impersonator", `('system', NULL, '` + staff + `')`, "events_impersonator_is_staff"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := c.Exec(ctx, `INSERT INTO audit.events (tenant_id, actor_type, actor_user_id, action) SELECT '`+tenantA+`', v.t, v.u::uuid, 'x.y:z' FROM (VALUES `+tc.sql+`) v(t, u)`)
+			_, err := c.Exec(ctx, `INSERT INTO audit.events (tenant_id, actor_type, actor_user_id, impersonator_id, action) SELECT '`+tenantA+`', v.t, v.u::uuid, v.i::uuid, 'x.y:z' FROM (VALUES `+tc.sql+`) v(t, u, i)`)
 			var pe *pgconn.PgError
 			switch {
 			case tc.want == "" && err != nil:

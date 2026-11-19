@@ -31,6 +31,9 @@ CREATE TABLE audit.events (
   CONSTRAINT events_user_has_user CHECK (actor_type <> 'user' OR actor_user_id IS NOT NULL),
   -- El sistema nunca lleva un usuario inventado.
   CONSTRAINT events_system_has_no_user CHECK (actor_type <> 'system' OR actor_user_id IS NULL),
+  -- El staff de plataforma va siempre como impersonador y nunca como usuario de la empresa, y solo él lleva impersonador.
+  CONSTRAINT events_staff_has_staff CHECK (actor_type <> 'platform_staff' OR (actor_user_id IS NULL AND impersonator_id IS NOT NULL)),
+  CONSTRAINT events_impersonator_is_staff CHECK (impersonator_id IS NULL OR actor_type = 'platform_staff'),
   CONSTRAINT events_action_check CHECK (char_length(action) BETWEEN 3 AND 120),
   CONSTRAINT events_request_id_check CHECK (char_length(request_id) <= 128)
 ) PARTITION BY RANGE (at);
@@ -48,7 +51,7 @@ GRANT SELECT, INSERT ON audit.events TO wanka_app, wanka_worker;
 -- Crea las particiones mensuales de p_from hasta p_ahead meses después (en UTC), las que falten. Es idempotente
 -- y el worker la llama a diario (job audit.ensure_partitions, cola maintenance).
 --
--- DESVIACIÓN DEL ADR 0001, a confirmar con el architect: es SECURITY DEFINER y su dueño es wanka_migrator, no
+-- Excepción acotada del ADR 0001, «Excepción: DDL de particiones» (architect, 2026-11-19): es SECURITY DEFINER y su dueño es wanka_migrator, no
 -- wanka_definer. Crear o enganchar una partición exige ser dueño de la tabla padre, y wanka_definer no es dueño
 -- de tablas (si lo fuera, el migrador dejaría de poder alterar audit.events). Por eso la función hace lo mínimo:
 -- ningún texto libre (una fecha y un entero), rango acotado, search_path fijo, y EXECUTE solo para wanka_worker.

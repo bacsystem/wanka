@@ -163,6 +163,14 @@ SELECT test.expect_error($$INSERT INTO audit.events (tenant_id, actor_type, acto
 SELECT test.expect_error($$INSERT INTO audit.events (tenant_id, actor_type, actor_user_id, action)
                            VALUES (app.current_tenant(), 'system', 'eeeeeeee-0000-0000-0000-000000000001', 'rls.check:x')$$,
                          '23514', 'una fila system no lleva usuario');
+SELECT test.expect_error($$INSERT INTO audit.events (tenant_id, actor_type, action) VALUES (app.current_tenant(), 'platform_staff', 'rls.check:x')$$,
+                         '23514', 'una fila platform_staff sin impersonador es imposible');
+SELECT test.expect_error($$INSERT INTO audit.events (tenant_id, actor_type, actor_user_id, impersonator_id, action)
+                           VALUES (app.current_tenant(), 'platform_staff', 'eeeeeeee-0000-0000-0000-000000000001', 'cccccccc-0000-0000-0000-000000000009', 'rls.check:x')$$,
+                         '23514', 'una fila platform_staff no lleva usuario de la empresa');
+SELECT test.expect_error($$INSERT INTO audit.events (tenant_id, actor_type, actor_user_id, impersonator_id, action)
+                           VALUES (app.current_tenant(), 'user', 'eeeeeeee-0000-0000-0000-000000000001', 'cccccccc-0000-0000-0000-000000000009', 'rls.check:x')$$,
+                         '23514', 'solo el staff lleva impersonador');
 SELECT test.expect_error($$UPDATE audit.events SET action = 'rls.check:z'$$, '42501', 'wanka_app no actualiza audit.events');
 SELECT test.expect_error('DELETE FROM audit.events', '42501', 'wanka_app no borra audit.events');
 SELECT test.expect_error('TRUNCATE audit.events', '42501', 'wanka_app no vacia audit.events');

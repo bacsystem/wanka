@@ -1,6 +1,8 @@
 -- Como wanka_platform: alta, suspension y solicitud de impersonacion solo por funciones acotadas.
 -- Cada caso compara contra lo esperado con test.assert / test.expect_error y aborta (exit != 0) si no coincide.
 \set ON_ERROR_STOP on
+-- El staff que actua (la funcion lo guarda como impersonator_id del evento de auditoria).
+SELECT set_config('app.user_id','cccccccc-0000-0000-0000-000000000009', false);
 \echo '== P1. provision_tenant (duenio wanka_definer) crea A y B =='
 SELECT test.assert(platform_fn.provision_tenant('aaaaaaaa-0000-0000-0000-000000000001','20100000001','Empresa A',
   'eeeeeeee-0000-0000-0000-000000000001','u@a.pe','a0000000-0000-0000-0000-0000000000a1','a5000000-0000-0000-0000-0000000000a1')
