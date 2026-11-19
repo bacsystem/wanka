@@ -18,6 +18,8 @@ tags:
     description: POS y proformas
   - name: facturacion-electronica
     description: CPE, notas, bajas y guías vía InvoicingProvider
+  - name: identidad
+    description: Sesión, usuario y entitlements de la empresa
 paths:
   /v1/auth/mfa/enrollment/totp:
     post:
@@ -191,6 +193,32 @@ paths:
                   page: { $ref: '#/components/schemas/PageInfo' }
         '401': { $ref: '#/components/responses/Problem' }
         '403': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
+  /v1/me/entitlements:
+    get:
+      tags: [identidad]
+      operationId: getMyEntitlements
+      x-module: none
+      x-permission: none
+      summary: Módulos, flags y límites habilitados para la empresa de la sesión
+      description: |
+        Lee `entitlements.For` (ADR 0005) para el tenant de la sesión, de la caché en memoria (TTL 30 s,
+        invalidada por NOTIFY): nunca incluye datos de otra empresa. Pasa también con la suscripción
+        inactiva (`status` morosa, suspendida o cancelada) o la empresa cerrada (`readOnly`), para que la UI
+        muestre el motivo del bloqueo (conventions.md §4). Sin suscripción: `status` es `sin_plan` y las listas
+        vienen vacías. La UI usa esto solo para ocultar menús; la API es la que aplica.
+        `x-module: none` y `x-permission: none` (ADR 0009, «Cómo se declara ninguno»): solo pide una sesión
+        ligada a una empresa, sin módulo ni permiso, porque quien no tiene plan o tiene la suscripción inactiva
+        no tiene ningún módulo y aun así tiene que poder leer el motivo.
+      responses:
+        '200':
+          description: Entitlements de la empresa de la sesión
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Entitlements' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/Problem' }
         '503': { $ref: '#/components/responses/Problem' }
 components:
   securitySchemes:
@@ -452,3 +480,27 @@ components:
             - type: 'null'
         sunatStatus: { $ref: '#/components/schemas/CpeStatus' }
         issuedAt: { type: string, format: date-time }
+    Entitlements:
+      type: object
+      description: |
+        Lo que la empresa tiene habilitado (paquete `internal/platform/entitlements`). `modules` y `flags`
+        van ordenados y vacíos si la suscripción no es activa ni trial (cierra en falla). `limits` trae los
+        topes del plan; todo plan declara todas las claves (CHECK en `platform.plans`) y viene vacío sin plan.
+        Una clave ausente es tope 0, nunca «sin tope»: la falta de dato cierra. No hay topes ilimitados; un
+        plan holgado declara un número alto. `usage` es el uso del mes de Lima.
+        `version` identifica el contenido sin el uso: sirve de ETag.
+      required: [modules, flags, limits, usage, status, readOnly, version]
+      properties:
+        modules: { type: array, items: { type: string, examples: ['ventas', 'rubro.lubricentro'] } }
+        flags: { type: array, items: { type: string } }
+        limits:
+          type: object
+          description: 'Claves actuales: users, sites, cpe_per_month.'
+          additionalProperties: { type: integer, format: int64, minimum: 0 }
+        usage:
+          type: object
+          description: 'Claves actuales: users, cpe_per_month.'
+          additionalProperties: { type: integer, format: int64, minimum: 0 }
+        status: { type: string, enum: [trial, activa, morosa, suspendida, cancelada, sin_plan] }
+        readOnly: { type: boolean, description: 'true si la empresa está cerrada: todo método distinto de GET da 403 tenant_read_only.' }
+        version: { type: string, pattern: '^[0-9a-f]{16}$' }

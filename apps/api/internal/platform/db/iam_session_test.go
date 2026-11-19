@@ -511,6 +511,7 @@ func TestCatalogRules(t *testing.T) {
 			       EXISTS (SELECT 1 FROM pg_policy p WHERE p.polrelid = c.oid AND p.polname = 'tenant_isolation' AND p.polcmd = '*')
 			  FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
 			 WHERE c.relkind = 'r' AND n.nspname NOT IN ('pg_catalog', 'information_schema', 'goose')
+			   AND n.nspname <> 'platform'  -- excepción documentada: platform.* es global y no tiene RLS (ADR 0001); lo prueba entitlements
 			   AND c.oid <> 'iam.sessions'::regclass  -- excepción documentada: tiene tenant_id y no RLS, se busca por hash antes de conocer el tenant (ADR 0004)
 			   AND (c.oid = 'org.tenants'::regclass OR EXISTS (SELECT 1 FROM pg_attribute a WHERE a.attrelid = c.oid AND a.attname = 'tenant_id' AND NOT a.attisdropped))`)
 		if err != nil {

@@ -46,6 +46,11 @@ for m in "naive_session_lookup|wanka_app" \
          "guard_allows_unrevoke|wanka_app" \
          "guard_no_server_created_at|wanka_app" \
          "guard_rerevoke_raises|wanka_app" \
+         "grant_app_write_subscriptions|wanka_app" \
+         "enable_rls_platform_subscriptions|wanka_app" \
+         "grant_worker_write_subscriptions|wanka_worker" \
+         "revoke_worker_usage_write|wanka_worker" \
+         "grant_webhooks_platform|wanka_webhooks" \
          "grant_app_write_permissions|wanka_app" \
          "grant_worker_write_permissions|wanka_worker" \
          "revoke_platform_permissions|wanka_platform" \

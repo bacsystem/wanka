@@ -134,6 +134,31 @@ INSERT INTO iam.sessions (id, user_id, access_hash, access_expires_at, mfa_satis
   VALUES ('5e000000-0000-0000-0000-0000000000e2', 'eeeeeeee-0000-0000-0000-000000000002', sha256('old-created'), now(), true, 'none', now() - interval '400 days');
 SELECT test.assert((SELECT created_at = now() FROM iam.sessions WHERE id = '5e000000-0000-0000-0000-0000000000e2'), 'created_at del INSERT lo fija el servidor');
 ROLLBACK;
+\echo '== E1. entitlements (#171): wanka_app solo LEE las tablas de platform de entitlements, que no tienen RLS =='
+SELECT test.assert((SELECT count(*) FROM platform.modules) >= 21 AND (SELECT count(*) FROM platform.plan_modules) >= 21,
+                   'wanka_app lee el catalogo de modulos y los modulos del plan');
+SELECT test.assert((SELECT count(*) FROM platform.plans WHERE code = 'semilla' AND non_production) = 1, 'wanka_app lee el plan semilla, marcado no productivo');
+SELECT test.assert((SELECT count(*) FROM platform.subscriptions) = 0 AND (SELECT count(*) FROM platform.tenant_module_overrides) = 0
+                   AND (SELECT count(*) FROM platform.feature_flags) = 0 AND (SELECT count(*) FROM platform.tenant_flag_overrides) = 0
+                   AND (SELECT count(*) FROM platform.tenant_usage) = 0, 'wanka_app lee el resto de las tablas de entitlements (vacias)');
+SELECT test.assert((SELECT count(*) = 8 AND NOT bool_or(c.relrowsecurity OR c.relforcerowsecurity) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+                     WHERE n.nspname = 'platform' AND c.relname IN ('modules','plans','plan_modules','subscriptions','tenant_module_overrides',
+                                                                   'feature_flags','tenant_flag_overrides','tenant_usage')),
+                   'las 8 tablas de entitlements existen y no tienen RLS');
+SELECT test.expect_error($$INSERT INTO platform.subscriptions (id, tenant_id, plan_id, status)
+  VALUES (gen_random_uuid(), 'aaaaaaaa-0000-0000-0000-000000000001', (SELECT id FROM platform.plans LIMIT 1), 'activa')$$, '42501', 'wanka_app no inserta suscripciones');
+SELECT test.expect_error($$UPDATE platform.subscriptions SET status = 'activa'$$, '42501', 'wanka_app no actualiza suscripciones');
+SELECT test.expect_error($$DELETE FROM platform.subscriptions$$, '42501', 'wanka_app no borra suscripciones');
+SELECT test.expect_error($$INSERT INTO platform.tenant_module_overrides (tenant_id, module_code, enabled) VALUES ('aaaaaaaa-0000-0000-0000-000000000001', 'ventas', true)$$,
+                         '42501', 'wanka_app no escribe overrides de modulos');
+SELECT test.expect_error($$INSERT INTO platform.tenant_flag_overrides (tenant_id, flag_key, enabled) VALUES ('aaaaaaaa-0000-0000-0000-000000000001', 'f', true)$$,
+                         '42501', 'wanka_app no escribe overrides de flags');
+SELECT test.expect_error($$INSERT INTO platform.tenant_usage (tenant_id, period) VALUES ('aaaaaaaa-0000-0000-0000-000000000001', '2026-11-01')$$,
+                         '42501', 'wanka_app no escribe el uso (lo escribe wanka_worker)');
+SELECT test.expect_error($$UPDATE platform.plans SET name = 'x'$$, '42501', 'wanka_app no edita planes');
+SELECT test.expect_error($$INSERT INTO platform.modules (code, kind, description) VALUES ('x', 'core', 'x')$$, '42501', 'wanka_app no edita modulos');
+SELECT test.expect_error($$INSERT INTO platform.plan_modules (plan_id, module_code) VALUES ((SELECT id FROM platform.plans LIMIT 1), 'x')$$, '42501', 'wanka_app no edita plan_modules');
+SELECT test.expect_error($$INSERT INTO platform.feature_flags (key) VALUES ('x')$$, '42501', 'wanka_app no edita flags');
 -- Catalogo de permisos (issue #172): wanka_app lo lee y no lo escribe, sin importar el tenant fijado.
 \echo '== C1. wanka_app: iam.permissions es de solo lectura =='
 SELECT test.assert((SELECT count(*) FROM iam.permissions) > 100
