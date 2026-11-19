@@ -7,6 +7,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ### Changed
 - Delivery process: stories ship as independent PRs from `main` that never touch the version; one release PR per batch bumps it and gets one tag. Risky PRs keep separate review and QA; the rest get both in one pass. Rules in `docs/delivery-process.md` and `CLAUDE.md` (owner decision, 2026-11-19).
+- Release tags are created by the new `release-tag.yml` workflow when a `chore(release): vX.Y.Z` PR is merged and CI and API are green on that commit.
+- `docs/architecture/review-checklist.md`: known defect classes from the kernel batches, read by developers before coding and used by reviews; `docs/delivery-process.md` adds the performance rules (one full suite run per PR, architect pre-review, shared test database, short reports).
 
 ## [0.12.0] - 2026-11-19
 

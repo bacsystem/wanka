@@ -1,0 +1,62 @@
+# Crea el tag vX.Y.Z cuando el dueño mergea en main un PR de release
+# (`chore(release): vX.Y.Z`) y los workflows CI y API pasan sobre ese commit.
+# El merge del release es la aprobación del dueño (docs/delivery-process.md).
+name: release-tag
+
+on:
+  workflow_run:
+    workflows: [CI, API]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: write
+  actions: read
+  pull-requests: read
+
+concurrency:
+  group: release-tag-${{ github.event.workflow_run.head_sha }}
+  cancel-in-progress: false
+
+jobs:
+  tag:
+    if: github.event.workflow_run.event == 'push' && github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+      - name: tag the release merge
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.event.workflow_run.head_sha }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          # Solo un merge de un PR de release.
+          title=$(gh api "repos/$REPO/commits/$SHA/pulls" --jq '.[0].title // ""')
+          case "$title" in
+            "chore(release): v"*) ;;
+            *) echo "not a release merge ($title); nothing to tag"; exit 0 ;;
+          esac
+          version=$(node -p "require('./package.json').version")
+          if ! printf '%s' "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then echo "invalid version $version"; exit 1; fi
+          tag="v$version"
+          if [ "${title#chore(release): }" != "$tag" ]; then
+            echo "PR title says ${title#chore(release): } but package.json is $version"; exit 1
+          fi
+          if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
+            echo "$tag already exists"; exit 0
+          fi
+          # Los dos workflows tienen que haber pasado sobre este commit.
+          for wf in CI API; do
+            ok=$(gh api "repos/$REPO/actions/runs?head_sha=$SHA&event=push" \
+              --jq "[.workflow_runs[] | select(.name == \"$wf\") | .conclusion] | any(. == \"success\")")
+            if [ "$ok" != "true" ]; then echo "$wf is not green on $SHA yet"; exit 0; fi
+          done
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$tag" -m "$tag" "$SHA"
+          git push origin "$tag"
+          echo "tagged $tag at $SHA"

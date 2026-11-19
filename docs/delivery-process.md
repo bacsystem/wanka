@@ -28,3 +28,27 @@ Decisión del dueño, 2026-11-19. Reemplaza la regla anterior de que cada PR sub
 - **Demás PR:** docs, tests, CI, o código sin esas superficies. Un solo agente hace la revisión (`/pr-review`) y QA (los criterios de la issue y los casos extra) en una pasada.
 - Una corrección chica después de una revisión (solo tests, docs o una o dos líneas) la puede re-revisar el coordinador sin lanzar otro agente, siempre que publique la re-revisión en el PR.
 - La verificación local completa (suite con PostgreSQL y `rls-check`) se corre una vez por PR. Cuando se integra `main` o una rama base en una rama ya verificada, alcanza con compilar y dejar que la CI lo verifique.
+
+## Tags automáticos
+
+`.github/workflows/release-tag.yml` crea el tag `vX.Y.Z` cuando el dueño mergea en `main` un PR de release (`chore(release): vX.Y.Z`), y solo después de que los workflows `CI` y `API` pasen sobre ese commit. Lee la versión del `package.json` del commit. Si el tag ya existe no hace nada, y en cualquier otro commit de `main` tampoco. El merge del release es la aprobación del dueño. Ninguna persona ni agente empuja tags a mano.
+
+## Rendimiento (lecciones del lote 2 del kernel, 2026-11-19)
+
+- **La suite completa se corre una vez por PR.** Mientras trabajan, el desarrollador, la revisión y QA corren solo los paquetes afectados y sus mutaciones. Después de integrar `main` o una base ya verificada, basta con compilar: la verificación la hace la CI. `rls-check` se corre solo si cambian SQL, grants, políticas o funciones definer.
+- **Revisión previa del architect.** Antes de implementar una historia, el architect la recorre con su lista de 8 puntos: dato ausente, «ninguno», tiempo y zona, principal, grants y particiones, representación, estados degradados y orden de la cadena. Deja las decisiones en la issue.
+- **Errores conocidos.** El desarrollador lee [`architecture/review-checklist.md`](architecture/review-checklist.md) antes de escribir. Cada revisión con hallazgos suma ahí el tipo de error.
+- **Como mucho 4 agentes con base de datos a la vez.**
+- **Informes de 15 líneas como máximo.** El detalle va a un archivo del scratchpad.
+- **Nombres únicos** en el scratchpad compartido (prefijo de la historia o del PR) y en los contenedores. Nadie borra lo que no creó.
+
+## Entorno local de agentes
+
+Para los tests de integración hay un PostgreSQL 16 compartido de larga vida: el contenedor `wanka-shared-pg` en `127.0.0.1:55400`, con el bootstrap de roles aplicado. Se usa con:
+
+```sh
+export WANKA_TEST_ADMIN_URL=postgres://postgres:<clave local del superusuario>@127.0.0.1:55400/wanka
+export WANKA_TEST_ROLE_PASSWORD=<clave local de los roles>
+```
+
+Las claves son solo locales y no se guardan en el repo: el coordinador las pasa en el archivo `shared-pg.env` del scratchpad. `dbtest` crea una base por test, y los tests que tocan roles (`NewExclusive`) se serializan con un lock de clúster, así que varios agentes pueden usarlo a la vez. `rls-check/run.sh` usa su propio contenedor, con un nombre único por corrida.
