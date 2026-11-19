@@ -9,7 +9,7 @@ flowchart TB
     direction TB
 
     subgraph edge["Borde HTTP (internal/platform/httpx)"]
-      mw["Middleware en orden:<br/>request-id y log, recover, timeout,<br/>rate limit, auth (sesion opaca),<br/>tenant + sede, plan y feature flag,<br/>RBAC por permiso, idempotency-key"]
+      mw["Middleware en orden:<br/>request-id y log, recover, plazo 10 s<br/>(salvo streaming), auth (sesion opaca),<br/>tenant + sede, rate limit por sesion y tenant,<br/>plan y feature flag, RBAC por permiso,<br/>idempotency-key"]
       router["Router net/http + handlers<br/>generados desde OpenAPI (oapi-codegen strict)"]
       hooks["--plane=webhooks: solo /webhooks/khipu/{routeId}<br/>resuelve tenant en ops.webhook_routes, verifica HMAC,<br/>dedupe por delivery, encola cpe.sync(serie, numero)"]
     end

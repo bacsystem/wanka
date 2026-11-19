@@ -95,7 +95,8 @@ components:
       name: X-Request-Id
       in: header
       required: false
-      schema: { type: string, maxLength: 64 }
+      description: Se conserva si cumple el patrón; si falta o no lo cumple, la API lo reemplaza por uno propio y nunca responde 400 por esta cabecera (conventions.md §3).
+      schema: { type: string, minLength: 1, maxLength: 128, pattern: '^[A-Za-z0-9_-]{1,128}$' }
     Limit:
       name: limit
       in: query
