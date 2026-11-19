@@ -55,7 +55,10 @@ for m in "naive_session_lookup|wanka_app" \
          "grant_worker_write_permissions|wanka_worker" \
          "revoke_platform_permissions|wanka_platform" \
          "grant_webhooks_permissions|wanka_webhooks" \
-         "drop_force_rls|wanka_migrator: borra la membresia"; do
+         "drop_force_rls|wanka_migrator: borra la membresia" \
+         "grant_app_write_exchange_rates|wanka_app" \
+         "grant_worker_read_exchange_rates|wanka_worker" \
+         "drop_exchange_rates_currency_check|wanka_worker"; do
   name="${m%%|*}" step="${m#*|}"
   echo "== MUTATION=${name}: debe fallar en «${step}» =="
   if ! detected "$name" "$step"; then
