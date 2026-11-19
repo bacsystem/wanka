@@ -19,6 +19,7 @@ import (
 
 	"github.com/bacsystem/wanka/apps/api/internal/platform/auth"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/clock"
+	"github.com/bacsystem/wanka/apps/api/internal/platform/entitlements"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/httpx"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/logging"
 )
@@ -207,8 +208,52 @@ func mustProblem(t *testing.T, rec *httptest.ResponseRecorder, status int, code 
 	return p
 }
 
+// fakeEnts es el doble de auth.EntitlementSource: devuelve lo que fija fn y
+// recuerda con qué tenant y fase se le pidió.
+type fakeEnts struct {
+	mu      sync.Mutex
+	fn      func(ctx context.Context, tenant pgtype.UUID) (entitlements.Entitlements, error)
+	tenants []pgtype.UUID
+	phases  []string
+}
+
+var _ auth.EntitlementSource = (*fakeEnts)(nil)
+
+func (f *fakeEnts) For(ctx context.Context, tenant pgtype.UUID) (entitlements.Entitlements, error) {
+	f.mu.Lock()
+	f.tenants = append(f.tenants, tenant)
+	f.mu.Unlock()
+	return f.fn(ctx, tenant)
+}
+
+func (f *fakeEnts) calls() int {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return len(f.tenants)
+}
+
+// grants devuelve un doble que siempre responde e.
+func grants(e entitlements.Entitlements) *fakeEnts {
+	return &fakeEnts{fn: func(context.Context, pgtype.UUID) (entitlements.Entitlements, error) { return e, nil }}
+}
+
+func entFails(err error) *fakeEnts {
+	return &fakeEnts{fn: func(context.Context, pgtype.UUID) (entitlements.Entitlements, error) {
+		return entitlements.Entitlements{}, err
+	}}
+}
+
+// plan es una empresa activa con los módulos ventas e inventario, tope de 5
+// usuarios y 1 en uso.
+func plan() entitlements.Entitlements {
+	return entitlements.Entitlements{Status: entitlements.StatusActive, Modules: []string{"inventario", "ventas"},
+		Limits: map[string]int64{"users": 5, "sites": 2, "cpe_per_month": 100},
+		Usage:  map[string]int64{"users": 1, "cpe_per_month": 10}}
+}
+
 type env struct {
 	h       http.Handler
+	ents    *fakeEnts
 	log     *logBuf
 	metrics *fakeMetrics
 	res     *fakeResolver
@@ -235,13 +280,18 @@ func (e *env) session(name string) auth.Session {
 // newEnv monta las rutas de prueba sobre Routes y Chain.
 func newEnv(t *testing.T, res *fakeResolver, mod func(*auth.Options)) *env {
 	t.Helper()
-	e := &env{res: res, clk: clock.NewFake(t0), log: &logBuf{}, metrics: &fakeMetrics{}, reached: map[string]int{}, seen: map[string]auth.Session{}}
+	return newEnvEnts(t, res, grants(plan()), mod)
+}
+
+func newEnvEnts(t *testing.T, res *fakeResolver, ents *fakeEnts, mod func(*auth.Options)) *env {
+	t.Helper()
+	e := &env{res: res, ents: ents, clk: clock.NewFake(t0), log: &logBuf{}, metrics: &fakeMetrics{}, reached: map[string]int{}, seen: map[string]auth.Session{}}
 	o := auth.Options{Clock: e.clk}
 	if mod != nil {
 		mod(&o)
 	}
 	rt := httpx.NewRouter(httpx.RouterOptions{})
-	routes, err := auth.NewRoutes(rt, res, o)
+	routes, err := auth.NewRoutes(rt, res, ents, o)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -257,24 +307,33 @@ func newEnv(t *testing.T, res *fakeResolver, mod func(*auth.Options)) *env {
 			_, _ = io.WriteString(w, "ok")
 		}
 	}
-	routes.HandleFunc("POST /v1/auth/login", auth.Public, record("public"))
-	routes.HandleFunc("POST /v1/auth/mfa/enrollment/totp", auth.Public, record("enroll-public"))
-	routes.HandleFunc("POST /v1/auth/mfa/totp/enroll", auth.NoTenant, record("enroll-session"))
-	routes.HandleFunc("GET /v1/me", auth.NoTenant, record("notenant"))
-	routes.HandleFunc("GET /v1/items", auth.Tenant, record("tenant"))
-	routes.HandleFunc("GET /v1/other", auth.Tenant, record("tenant2"))
-	routes.HandleFunc("GET /v1/teapot", auth.Tenant, func(w http.ResponseWriter, _ *http.Request) {
+	none := auth.Spec{Module: auth.NoModule, Permission: auth.NoPermission}
+	ventas := auth.Spec{Module: "ventas", Permission: "ventas.pos:read"}
+	routes.HandleFunc("POST /v1/auth/login", auth.Public, none, record("public"))
+	routes.HandleFunc("POST /v1/auth/mfa/enrollment/totp", auth.Public, none, record("enroll-public"))
+	routes.HandleFunc("POST /v1/auth/mfa/totp/enroll", auth.NoTenant, none, record("enroll-session"))
+	routes.HandleFunc("GET /v1/me", auth.NoTenant, none, record("notenant"))
+	routes.HandleFunc("GET /v1/items", auth.Tenant, ventas, record("tenant"))
+	for _, m := range []string{"POST", "PUT", "PATCH", "DELETE"} {
+		routes.HandleFunc(m+" /v1/items", auth.Tenant, ventas, record("tenant-write"))
+	}
+	routes.HandleFunc("GET /v1/other", auth.Tenant, auth.Spec{Module: "inventario", Permission: "inventario.items:read"}, record("tenant2"))
+	routes.HandleFunc("GET /v1/exports", auth.Tenant, none, record("exports"))
+	routes.HandleFunc("GET /v1/me/entitlements", auth.Tenant, none, record("me-entitlements"))
+	routes.HandleFunc("GET /v1/vet", auth.Tenant, auth.Spec{Module: "rubro.veterinaria", Permission: "vet.pets:read"}, record("vet"))
+	routes.HandleFunc("POST /v1/users", auth.Tenant, auth.Spec{Module: "ventas", Permission: "identidad.users:create", Limit: entitlements.LimitUsers}, record("users-create"))
+	routes.HandleFunc("GET /v1/teapot", auth.Tenant, ventas, func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusTeapot)
 	})
-	routes.HandleFunc("GET /v1/paid", auth.Tenant, record("paid"), httpx.Use(func(http.Handler) http.Handler {
+	routes.HandleFunc("GET /v1/paid", auth.Tenant, ventas, record("paid"), httpx.Use(func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			e.mu.Lock()
 			e.reached["entitlements"]++
 			e.mu.Unlock()
-			httpx.WriteProblem(w, r, "subscription_inactive", "")
+			httpx.WriteProblem(w, r, "forbidden", "")
 		})
 	}))
-	routes.HandleFunc("GET /v1/slow", auth.Tenant, func(w http.ResponseWriter, r *http.Request) {
+	routes.HandleFunc("GET /v1/slow", auth.Tenant, ventas, func(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, r, statementTimeout())
 	})
 	rt.HandleFunc("GET /healthz", record("health"))

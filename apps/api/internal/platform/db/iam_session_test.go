@@ -499,112 +499,18 @@ func TestCoreTablesConstraints(t *testing.T) {
 	}
 }
 
-// Reglas de catálogo de ADR 0001 («Migraciones y pruebas» a-c) y de data-model §6.
-func TestCatalogRules(t *testing.T) {
+// Lo propio de iam.sessions y de session_lookup. Las reglas generales de catálogo de ADR 0001 (RLS, políticas,
+// únicos, FK, funciones definer, roles) viven en catalog_test.go y corren sobre todas las tablas.
+func TestIAMSessionCatalog(t *testing.T) {
 	d := migrated(t)
 	ctx := context.Background()
 	admin := d.Admin(ctx, t)
-
-	t.Run("every table with tenant_id, and org.tenants, has FORCE RLS and tenant_isolation", func(t *testing.T) {
-		rows, err := admin.Query(ctx, `
-			SELECT c.oid::regclass::text, c.relrowsecurity, c.relforcerowsecurity,
-			       EXISTS (SELECT 1 FROM pg_policy p WHERE p.polrelid = c.oid AND p.polname = 'tenant_isolation' AND p.polcmd = '*')
-			  FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
-			 WHERE c.relkind = 'r' AND n.nspname NOT IN ('pg_catalog', 'information_schema', 'goose')
-			   AND c.oid <> 'iam.sessions'::regclass  -- excepción documentada: tiene tenant_id y no RLS, se busca por hash antes de conocer el tenant (ADR 0004)
-			   AND (c.oid = 'org.tenants'::regclass OR EXISTS (SELECT 1 FROM pg_attribute a WHERE a.attrelid = c.oid AND a.attname = 'tenant_id' AND NOT a.attisdropped))`)
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer rows.Close()
-		seen := map[string]bool{}
-		for rows.Next() {
-			var name string
-			var rls, force, policy bool
-			if err := rows.Scan(&name, &rls, &force, &policy); err != nil {
-				t.Fatal(err)
-			}
-			seen[name] = true
-			if !rls || !force || !policy {
-				t.Errorf("%s: relrowsecurity=%v relforcerowsecurity=%v tenant_isolation=%v", name, rls, force, policy)
-			}
-		}
-		if err := rows.Err(); err != nil {
-			t.Fatal(err)
-		}
-		for _, want := range []string{"org.tenants", "iam.roles", "iam.memberships"} {
-			if !seen[want] {
-				t.Errorf("%s was not checked", want)
-			}
-		}
-	})
-
-	t.Run("policies are exactly the standard ones", func(t *testing.T) {
-		rows, err := admin.Query(ctx, `SELECT schemaname || '.' || tablename, policyname, cmd, qual, with_check FROM pg_policies ORDER BY 1, 2`)
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer rows.Close()
-		got := map[string]string{}
-		for rows.Next() {
-			var tbl, name, cmd string
-			var qual, check *string
-			if err := rows.Scan(&tbl, &name, &cmd, &qual, &check); err != nil {
-				t.Fatal(err)
-			}
-			if name != "tenant_isolation" || cmd != "ALL" {
-				t.Errorf("%s: unexpected policy %s (%s)", tbl, name, cmd)
-			}
-			if !regexp.MustCompile(`app\.current_tenant\(\)`).MatchString(deref(qual)) || !regexp.MustCompile(`app\.current_tenant\(\)`).MatchString(deref(check)) {
-				t.Errorf("%s: tenant_isolation does not use app.current_tenant() in USING and WITH CHECK: %q / %q", tbl, deref(qual), deref(check))
-			}
-			if tbl == "org.tenants" && !regexp.MustCompile(`id = app\.current_tenant\(\)`).MatchString(deref(qual)) {
-				t.Errorf("org.tenants isolates by id, got %q", deref(qual))
-			}
-			if tbl != "org.tenants" && !regexp.MustCompile(`tenant_id = app\.current_tenant\(\)`).MatchString(deref(qual)) {
-				t.Errorf("%s isolates by tenant_id, got %q", tbl, deref(qual))
-			}
-			got[tbl] = name
-		}
-		if err := rows.Err(); err != nil {
-			t.Fatal(err)
-		}
-		if len(got) != 3 {
-			t.Errorf("policies on %v, want org.tenants, iam.roles and iam.memberships only", got)
-		}
-	})
 
 	t.Run("iam.sessions and iam.users have no RLS", func(t *testing.T) {
 		for _, tbl := range []string{"iam.sessions", "iam.users"} {
 			if queryOne[bool](t, admin, `SELECT relrowsecurity OR relforcerowsecurity FROM pg_class WHERE oid = $1::regclass`, tbl) {
 				t.Errorf("%s must not have RLS", tbl)
 			}
-		}
-	})
-
-	t.Run("every foreign key has an index that starts with its columns", func(t *testing.T) {
-		rows, err := admin.Query(ctx, `
-			SELECT con.conrelid::regclass::text, con.conname
-			  FROM pg_constraint con JOIN pg_namespace n ON n.oid = con.connamespace
-			 WHERE con.contype = 'f' AND n.nspname NOT IN ('pg_catalog', 'information_schema', 'goose')
-			   AND NOT EXISTS (SELECT 1 FROM pg_index i WHERE i.indrelid = con.conrelid AND i.indisvalid
-			         AND (i.indkey::int2[])[0:cardinality(con.conkey) - 1] = con.conkey)`)
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer rows.Close()
-		for rows.Next() {
-			var tbl, con string
-			if err := rows.Scan(&tbl, &con); err != nil {
-				t.Fatal(err)
-			}
-			t.Errorf("%s: foreign key %s has no index", tbl, con)
-		}
-		if err := rows.Err(); err != nil {
-			t.Fatal(err)
-		}
-		if n := queryOne[int](t, admin, `SELECT count(*) FROM pg_constraint WHERE contype = 'f' AND connamespace IN ('iam'::regnamespace, 'org'::regnamespace)`); n != 5 {
-			t.Errorf("foreign keys in iam and org = %d, want 5 (roles.tenant, memberships.tenant, memberships.user, memberships.role, sessions.user)", n)
 		}
 	})
 
@@ -640,19 +546,11 @@ func TestCatalogRules(t *testing.T) {
 		}
 	})
 
-	t.Run("session_lookup: owner, pinned search_path, no PUBLIC execute", func(t *testing.T) {
+	t.Run("session_lookup: plpgsql STABLE SECURITY DEFINER, EXECUTE only for wanka_app", func(t *testing.T) {
 		const fn = `'iam.session_lookup(bytea)'::regprocedure`
-		if got := queryOne[string](t, admin, `SELECT pg_get_userbyid(proowner) FROM pg_proc WHERE oid = `+fn); got != "wanka_definer" {
-			t.Errorf("owner = %s, want wanka_definer", got)
-		}
+		// Dueño, search_path y EXECUTE de PUBLIC los revisa la regla general de funciones definer (catalog_test.go).
 		if !queryOne[bool](t, admin, `SELECT prosecdef AND prolang = (SELECT oid FROM pg_language WHERE lanname = 'plpgsql') AND provolatile = 's' FROM pg_proc WHERE oid = `+fn) {
 			t.Error("session_lookup must be plpgsql STABLE SECURITY DEFINER")
-		}
-		if got := queryOne[string](t, admin, `SELECT proconfig::text FROM pg_proc WHERE oid = `+fn); got != `{"search_path=pg_catalog, pg_temp"}` {
-			t.Errorf("proconfig = %s", got)
-		}
-		if queryOne[bool](t, admin, `SELECT has_function_privilege('public', `+fn+`, 'EXECUTE')`) {
-			t.Error("PUBLIC can execute session_lookup")
 		}
 		// El dueño siempre ejecuta su función; del resto, solo wanka_app.
 		for role, want := range map[string]bool{dbtest.App: true, dbtest.Worker: false, dbtest.Webhooks: false, dbtest.Platform: false} {
@@ -709,6 +607,10 @@ func TestTableGrantsMatchTheADR0001Matrix(t *testing.T) {
 		"wanka_worker|org.tenants":      "SELECT",
 		"wanka_definer|iam.sessions":    "SELECT",
 		"wanka_definer|iam.memberships": "SELECT",
+		// Catálogo de permisos (#172): solo lectura para api, worker y plataforma.
+		"wanka_app|iam.permissions":      "SELECT",
+		"wanka_worker|iam.permissions":   "SELECT",
+		"wanka_platform|iam.permissions": "SELECT",
 	}
 	rows, err := admin.Query(ctx, `
 		SELECT grantee, table_schema || '.' || table_name, string_agg(privilege_type, ',' ORDER BY privilege_type)
@@ -765,8 +667,15 @@ func TestTableGrantsMatchTheADR0001Matrix(t *testing.T) {
 			}
 		}
 	}
+	// wanka_platform lee iam.permissions (#172): USAGE en iam, y nada en org. wanka_webhooks no tiene ninguno.
+	if !queryOne[bool](t, admin, `SELECT has_schema_privilege('wanka_platform', 'iam', 'USAGE')`) {
+		t.Error("wanka_platform lacks USAGE on iam (needed to read iam.permissions)")
+	}
 	for _, role := range []string{"wanka_webhooks", "wanka_platform"} {
 		for _, schema := range []string{"iam", "org"} {
+			if role == "wanka_platform" && schema == "iam" {
+				continue
+			}
 			if queryOne[bool](t, admin, `SELECT has_schema_privilege($1, $2, 'USAGE')`, role, schema) {
 				t.Errorf("%s must not have USAGE on %s", role, schema)
 			}
@@ -1056,5 +965,49 @@ func TestSessionLookupImpersonatedWithAMembershipSeesItAbsent(t *testing.T) {
 	}
 	if r := rows[0]; r.UserID != nil || r.Membership == nil || r.CurrentVersion != nil || r.MembershipStatus != nil {
 		t.Errorf("row = %+v, want user_id NULL, membership_id set and the membership absent", r)
+	}
+}
+
+// publicExecuteAllowed lista las funciones de iam que PUBLIC puede ejecutar a propósito (firma como la
+// imprime regprocedure). Está vacía: una función nueva de iam sale de CREATE FUNCTION con EXECUTE para PUBLIC y
+// wanka_platform, que desde #172 tiene USAGE en iam, podría llamarla. Cada función debe hacer REVOKE ... FROM PUBLIC
+// y GRANT al rol que la usa; agregar una excepción aquí es una decisión de arquitectura.
+var publicExecuteAllowed = map[string]bool{}
+
+// Ninguna función de iam (salvo triggers, que solo dispara el motor) conserva el EXECUTE por defecto de PUBLIC.
+func TestNoIAMFunctionIsExecutableByPublic(t *testing.T) {
+	d := migrated(t)
+	ctx := context.Background()
+	rows, err := d.Admin(ctx, t).Query(ctx, `
+		SELECT p.oid::regprocedure::text
+		  FROM pg_proc p
+		 WHERE p.pronamespace = 'iam'::regnamespace
+		   AND p.prorettype <> 'trigger'::regtype
+		   AND has_function_privilege('public', p.oid, 'EXECUTE')
+		 ORDER BY 1`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	n := 0
+	for rows.Next() {
+		var fn string
+		if err := rows.Scan(&fn); err != nil {
+			t.Fatal(err)
+		}
+		if !publicExecuteAllowed[fn] {
+			t.Errorf("PUBLIC can execute %s: REVOKE ALL ON FUNCTION ... FROM PUBLIC and grant it to the role that uses it", fn)
+		}
+		n++
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatal(err)
+	}
+	if n != len(publicExecuteAllowed) {
+		t.Errorf("%d functions of iam are executable by PUBLIC, the allowlist has %d", n, len(publicExecuteAllowed))
+	}
+	// La consulta no está vacía por error: iam tiene funciones que no son triggers (session_lookup).
+	if c := queryOne[int](t, d.Admin(ctx, t), `SELECT count(*) FROM pg_proc WHERE pronamespace = 'iam'::regnamespace AND prorettype <> 'trigger'::regtype`); c == 0 {
+		t.Error("no non-trigger function found in iam: the query checks nothing")
 	}
 }
