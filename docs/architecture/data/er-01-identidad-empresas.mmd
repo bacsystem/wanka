@@ -33,7 +33,10 @@ erDiagram
   TENANT_SETTINGS {
     uuid tenant_id PK, FK
     text tax_regime
-    text ubigeo
+    text ubigeo "domicilio fiscal: catalogo 13, se sincroniza con Khipu (ADR 0013)"
+    text fiscal_address "3 a 200 caracteres, regla 4094"
+    text fiscal_urbanization "nullable, hasta 25 caracteres"
+    bigint provider_synced_version "version enviada a Khipu; pendiente si es menor que version"
     text default_currency "PEN; USD tambien desde R1"
     boolean allow_negative_stock "default false"
     jsonb print_settings
@@ -44,8 +47,11 @@ erDiagram
     uuid tenant_id FK "RLS: tenant_isolation + member_read (sedes del alcance de app.user_id, solo SELECT y solo sin tenant fijado)"
     text code "UK tenant_id+code"
     text name
-    text sunat_annex "codigo de establecimiento anexo, 4 digitos"
+    text sunat_annex "nullable: 4 digitos, CHECK formato, UK parcial tenant_id+sunat_annex; 0000 es el domicilio fiscal; no cambia una vez sincronizado"
     text address
+    boolean active "baja solo en Wanka: Khipu no da de baja un anexo con series (ADR 0013)"
+    bigint version
+    bigint provider_synced_version "anexo enviado a Khipu; siempre null con 0000"
     timestamptz created_at
   }
   CASH_REGISTERS {
@@ -60,10 +66,12 @@ erDiagram
     uuid tenant_id FK "RLS"
     uuid site_id FK
     uuid cash_register_id FK "nullable"
-    text doc_type "01,03,07,08,09 o interno: PRO, OC, Z, OT"
-    text series "UK tenant_id+doc_type+series, CHECK formato"
-    bigint last_number "CHECK >= 0, fila caliente"
-    boolean active
+    text doc_type "01,03,07,08,09 o interno: PRO, OC, Z, OT; el 09 lo numera Khipu, NextNumber lo rechaza"
+    text series "UK tenant_id+doc_type+series, CHECK formato por tipo: 01 F, 03 B, 07 y 08 F o B, 09 T, mas 3 de A-Z0-9"
+    bigint last_number "CHECK >= 0, fila caliente; editable solo antes de sincronizar"
+    boolean active "inactiva solo en Wanka: Khipu no desactiva series"
+    timestamptz provider_synced_at "registrada en Khipu; una serie de CPE sin ella no numera; null siempre en las internas"
+    timestamptz provider_conflict_at "congelada: alguien emitio en ella fuera de Wanka; no numera mas"
   }
   USERS {
     uuid id PK

@@ -1,0 +1,116 @@
+# ADR 0013: Datos de la empresa, locales y series frente a Khipu (épica #4)
+
+- Estado: propuesto
+- Fecha: 2026-11-19
+- Complementa: [ADR 0003](0003-einvoicing-khipu-port.md) y [ADR 0008](0008-money-and-numbering.md). No reemplaza ninguna de sus decisiones: fija lo que esos ADR no decían sobre la razón social, el logo, los anexos y las series, y cómo Wanka sostiene la exclusividad de sus series. Las correcciones a esos dos ADR van como nota fechada al final de cada uno.
+
+## Contexto
+
+La épica #4 (#31, #32, #33, #47) se escribió antes de contrastarla con el código de Khipu ([código] de ADR 0003, bacsystem/khipu @53bd4bc). Hechos que la afectan (rutas abreviadas como en ADR 0003):
+
+| Hecho | Evidencia |
+|---|---|
+| El RUC es único en toda la plataforma Khipu. El alta asistida responde `409 DUPLICADO` si el RUC ya tiene empresa | `V1__*.sql:3` `ruc ... UNIQUE`; `AltaAsistidaService.java:71` |
+| El alta asistida crea una serie inicial (tipo 01, 03, 07 u 08) con `correlativo_inicial = 0` en el domicilio fiscal (`0000`), y manda una invitación al correo que recibe: quien controla ese correo entra al portal de la cuenta | `AltaAsistidaRequest.java:9,14-16`; `AltaAsistidaService.java:77,91` |
+| `GET /v1/empresa` (API key) devuelve `ruc`, `razonSocial` y `entorno` | `EmpresaResponse.java:2-5` |
+| La razón social solo se fija al crear: `PUT /v1/empresa/datos-fiscales` no la incluye | `DatosFiscalesRequest.java` (domicilio, cuentaDetracciones, nombreComercial, padronTasaEspecialIgv) |
+| `PUT /v1/empresa/datos-fiscales` reemplaza los cuatro campos: `null` borra | `DatosFiscalesRequest.java:1` |
+| Logo del PDF: PNG o JPEG reconocido por sus bytes, hasta 200 KB (204 800 bytes) | `LogoPdf.java:4-12`; `PersonalizacionPdfController.java:63` |
+| Establecimiento anexo: `POST /v1/empresa/establecimientos` (alta o edición por código), código de 4 dígitos; `0000` es el domicilio fiscal y no se registra ahí | `EstablecimientoRequest.java`; `AdministrarTenantService.java` `guardarEstablecimiento` |
+| Un anexo con series activas no se da de baja (`409 ESTABLECIMIENTO_EN_USO`) y no hay endpoint para desactivar ni reasignar series | `AdministrarTenantService.java:164-173`; solo `GET/POST /v1/series` |
+| Serie: `POST /v1/series {tipo, serie, correlativoInicial, establecimiento}`; tipos `01,03,04,07,08,09,20,31,40`; formato `[prefijo][A-Z0-9]{3}`; el anexo tiene que existir y estar activo (`422 ESTABLECIMIENTO_INVALIDO`); duplicada por `(tenant, tipo, codigo)`: `409 DUPLICADO` | `SerieRequest.java`; `TipoDocumento.java:31`; `V1__*.sql:32` |
+| `GET /v1/series` devuelve `tipo`, `serie`, `ultimoNumero`, `activa` y `establecimiento` | `SerieResponse.java` |
+| La serie no tiene dueño: una emisión sin `correlativo` (portal u otra integración) toma `ultimo_numero + 1`; con `correlativo`, Khipu acepta saltos (`GREATEST`) y solo rechaza el repetido | `JdbcSerieRepository.java:19-42` |
+| La GRE la numera Khipu (sin `correlativo`) | `EmitirGuiaRemisionService.java:64` |
+
+Lo que Wanka necesita y Khipu no modela: local operativo con cajas y almacenes, serie por caja, serie activa o inactiva, series internas (PRO, OC, Z, OT), rubro, régimen tributario.
+
+## Opciones
+
+**A. Razón social.** (a1) Editable en Wanka: el XML seguiría saliendo con la de Khipu, así que el comprobante diría una cosa y Wanka otra. (a2) **Solo lectura desde el alta, como el RUC; la corrección es un caso de soporte.** (a3) Editable con un paso manual del operador de Khipu: no hay endpoint ni siquiera para el operador; dependería de un cambio en Khipu.
+
+**B. Logo.** (b1) **Tope de 200 KB, el de Khipu; Wanka no lo guarda y lo envía al momento.** (b2) Wanka guarda el original de hasta 2 MB y manda una versión reducida: necesita el `BlobStore`, que en R1 no tiene adaptador ([data-model §5](../data/data-model.md)), y una librería de imágenes fuera de las aprobadas (ADR 0002).
+
+**C. Anexos y series en Khipu.** (c1) Los registra el dueño a mano en `/configuracion/sunat` (texto anterior de ADR 0003, paso 6). (c2) **Wanka los registra solo, con un job idempotente que se encola en la misma transacción que el cambio**. (c3) Llamada síncrona dentro del `POST` de Wanka: ata la respuesta a Khipu y, si falla a mitad, deja a Wanka y Khipu distintos sin nadie que lo repare.
+
+**D. Exclusividad de las series.** (d1) Convención de nombres: no sirve, el formato es `[prefijo][A-Z0-9]{3}` y no deja lugar para un espacio de nombres. (d2) Una marca en Khipu: no existe. (d3) **Prevención por construcción (nadie fuera de Wanka emite en la cuenta) y detección por conciliación con `GET /v1/series` y por el `409` al emitir.** (d4) No hacer nada: el primer `409` no adoptable aparece en una venta ya cobrada, sin aviso previo.
+
+**E. RUC con cuenta propia en Khipu.** (e1) **Wanka no lo detecta en el registro (no tiene cómo consultar Khipu por RUC); el operador lo detecta en el paso 2 del alta y la única salida es vincular la empresa existente.** (e2) Un estado nuevo «Activación observada» en Wanka: necesita una vía para que el operador lo escriba, que no existe hasta la consola (#86), para un caso raro.
+
+## Decisión
+
+### 1. Alta y el RUC que ya está en Khipu (#31; opción e1)
+
+- **El correo del alta asistida es un buzón de soporte de Wanka, uno por tenant** (alias), nunca el del cliente. Quien recibe la invitación al portal de Khipu es Wanka. Así el cliente no tiene acceso al portal y nadie más emite en sus series (opción d3, prevención). Es además el correo único que Khipu exige por cuenta (`AltaAsistidaService.java:70`).
+- **La serie inicial del alta** es la serie de boleta (`03`) del local principal que creó el onboarding de Wanka (anexo `0000`). Wanka la adopta en la primera sincronización (§3), porque coincide en tipo, código, anexo y último número (0).
+- **Antes del alta, el operador busca el RUC** (`GET /v1/admin/empresas?q=<RUC>`, `AdminEmpresaController.java:25`). Si ya existe, o si el alta responde `409 DUPLICADO`:
+  - En Wanka **no cambia nada**: `org.tenants.status` sigue como estaba (`trial`) y la empresa opera todo lo que no es emisión (#31). La facturación sigue en «Pendiente de activación de facturación», sin correlativo consumido. No hay estado nuevo ni columna nueva.
+  - El usuario ve el mismo aviso de pendiente con el medio de contacto. Soporte abre un caso y contacta al dueño. Si pasan 24 h, la alerta de #31 ya avisa a soporte.
+  - **La única salida es vincular la empresa existente**, porque el RUC no se libera en Khipu. Condiciones: el dueño confirma por escrito que la cuenta es suya, en PRODUCCION el plan es Emprende o superior (el `activate` lo exige igual) y se obtiene una API key de esa empresa sin que pase por terceros. Cómo genera el operador esa key sobre una cuenta ajena es la **pregunta 13 a Khipu** (ADR 0003); hasta que se responda, el caso queda bloqueado en «pendiente».
+  - En una cuenta vinculada el cliente conserva el portal: la exclusividad pasa a depender de su compromiso escrito y de la detección (§4). Wanka nunca adopta una serie de esa cuenta que ya tenga números (§3).
+- **`wanka einvoicing activate` compara además `ruc`, `razonSocial` y `entorno`** de `GET /v1/empresa` (la llamada que ya hace) con `org.tenants.ruc`, `org.tenants.legal_name` y `--environment`. Si difieren, rechaza («El RUC de Khipu no coincide», «La razón social de Khipu no coincide», «El entorno de Khipu no coincide») con `einvoicing:activate_rejected`. La razón social se compara normalizada: NFC, sin espacios al borde, espacios internos colapsados y sin distinguir mayúsculas. Sin esto, un `--company-ref` equivocado ligaría el tenant a otro contribuyente y emitiría con su RUC.
+
+### 2. Datos fiscales y logo (#32; opciones a2 y b1)
+
+- **Razón social de solo lectura**, igual que el RUC: se escribe en el registro (#31), que avisa «Debe coincidir con tu ficha RUC; no podrás cambiarla después», y `PATCH /v1/company` no la acepta. Corregirla es un caso de soporte con dos pasos: Khipu la corrige de su lado (hoy sin endpoint: **pregunta 14 a Khipu**) y Wanka la cambia por el plano plataforma (`PATCH /platform/v1/tenants/{id}`, #86, R4). Hasta R4 no hay vía; el caso es raro (un cambio de razón social en SUNAT).
+- **Domicilio fiscal y nombre comercial**: Wanka es la fuente (`org.tenant_settings`: `ubigeo`, `fiscal_address`, `fiscal_urbanization`; `org.tenants.trade_name`). Al guardar, la misma transacción sube `tenant_settings.version` y encola `einv.company_sync` (§3). El job hace lectura y escritura: `GET /v1/empresa` y `PUT /v1/empresa/datos-fiscales` con el domicilio y el nombre comercial de Wanka, copiando `cuentaDetracciones` y `padronTasaEspecialIgv` de lo leído, para no borrarlos (`null` borra). Un comprobante emitido antes de que termine el job sale con los datos anteriores; la pantalla muestra «Pendiente de sincronizar con Khipu» mientras `provider_synced_version < version`.
+- **Logo**: PNG o JPEG reconocido por sus bytes (no por la extensión), **hasta 204 800 bytes**, el mismo tope y la misma regla de `LogoPdf.java`. Wanka **no lo guarda**: `PUT /v1/company/logo` valida y lo reenvía al momento a `PUT /v1/empresa/logo`, fuera de toda transacción, con 3 s para conectar y 8 s en total (dentro de los 10 s del handler, conventions §7), sin reintentos. Si Khipu falla: `503 dependency_unavailable` con `Retry-After: 5`; si Khipu lo rechaza: `422 validation_failed`. Antes de la activación, `409 invalid_state_transition` («disponible al activar la facturación»). El logo aparece en el PDF de Khipu; el ticket del POS de Wanka no lo lleva en R1.
+
+### 3. Locales, anexos y series (#33; opción c2)
+
+**Modelo** ([er-01](../data/er-01-identidad-empresas.mmd)):
+- `org.sites`: `sunat_annex` pasa a nullable (un local sin emisión, por ejemplo solo almacén, no tiene anexo), con `CHECK (sunat_annex ~ '^[0-9]{4}$')` y `UNIQUE (tenant_id, sunat_annex)` parcial donde no es nulo, como `UNIQUE (tenant_id, codigo)` de Khipu. Columnas nuevas: `active boolean NOT NULL DEFAULT true`, `version bigint NOT NULL DEFAULT 1` y `provider_synced_version bigint` (nula hasta la primera sincronización; siempre nula con anexo `0000`, que es el domicilio fiscal y se envía en los datos fiscales). `sunat_annex` no cambia una vez sincronizado.
+- `org.tenant_settings`: `fiscal_address text`, `fiscal_urbanization text` y `provider_synced_version bigint`.
+- `org.document_series`: `provider_synced_at timestamptz` (nula = no registrada en Khipu) y `provider_conflict_at timestamptz` (serie congelada por conflicto). `CHECK (doc_type IN ('01','03','07','08','09') OR (provider_synced_at IS NULL AND provider_conflict_at IS NULL))`: las internas nunca van a Khipu. `CHECK` de formato por tipo, el mismo de Khipu: `01` `^F[A-Z0-9]{3}$`, `03` `^B[A-Z0-9]{3}$`, `07` y `08` `^[FB][A-Z0-9]{3}$`, `09` `^T[A-Z0-9]{3}$`. Una serie de CPE exige un local con `sunat_annex` (se valida en el servicio). `site_id` no cambia una vez sincronizada (Khipu no reasigna); `cash_register_id` sí puede cambiar dentro del mismo local, porque la caja es solo de Wanka. `last_number` se fija al crear la serie (por defecto 0; un valor mayor sirve para continuar una serie de otro proveedor) y solo se edita mientras `provider_synced_at` sea nulo.
+- Ninguna serie se borra: se desactiva.
+
+**Sincronización** (`einv.company_sync {tenant_id}`):
+- La encola **empresas**, con `InsertTx` en la misma transacción que el cambio, al crear o editar un local con anexo, una serie de CPE o los datos fiscales; y `wanka einvoicing activate`, al activar. Antes de la activación no corre (no hay API key): termina sin hacer nada. El tipo de argumentos vive en el paquete de jobs del kernel, para que empresas lo encole sin importar facturación (las dos fachadas se importarían entre sí). El job es de facturación, que tiene el adaptador de Khipu (`InvoicingProvider` suma `GetCompany`, `PutFiscalData`, `PutLogo`, `UpsertEstablishment`, `CreateSeries` y `ListSeries`), y lee y marca el estado con fachadas de empresas (`empresas.ProviderSyncState`, `MarkSynced`, `FreezeSeries`), que es la única que escribe `org` ([modules/README](../../modules/README.md), «Recursos compartidos»).
+- Único por tenant (River `UniqueOpts` por `tenant_id`, sin `running`, para que un cambio que llega durante una corrida encole la siguiente). Cola propia `einv_config` con concurrencia 2 por réplica (bulkhead: no quita trabajadores a `cpe`).
+- Orden en cada corrida, todo idempotente:
+  1. datos fiscales, si `provider_synced_version < version`;
+  2. anexos distintos de `0000` con `provider_synced_version < version`: `POST /v1/empresa/establecimientos` (alta o edición por código);
+  3. series de CPE con `provider_synced_at IS NULL` y `provider_conflict_at IS NULL`: `POST /v1/series` con `correlativoInicial = last_number` y `establecimiento = sunat_annex`. Si responde `409 DUPLICADO`, se lee `GET /v1/series` y **se adopta** solo si coinciden tipo, código, establecimiento, `activa = true` y `ultimoNumero = last_number`. Si no, la serie queda con `provider_conflict_at` y el mensaje «La serie ya existe en Khipu con otra numeración o en otro local: usa otro código».
+- Cada marca se escribe con versión: `UPDATE ... SET provider_synced_version = $v WHERE id = $id AND coalesce(provider_synced_version, 0) < $v`, con el `$v` leído antes de la llamada. Un cambio que llegó durante la llamada deja la versión atrás y su propio job lo reenvía.
+- Ninguna llamada de red dentro de una transacción. La marca de una serie es un `UPDATE` de una sola fila, y esa serie todavía no numera, así que no compite con la fila caliente.
+- Llamadas a Khipu: 3 s para conectar y 10 s en total. Reintentos solo en River (una sola capa: el adaptador no reintenta), con backoff exponencial y jitter, máximo 10 intentos. Errores permanentes, sin reintento: `401`/`403` (incluido `CUENTA_SUSPENDIDA`), `422` (`SERIE_INVALIDA`, `ESTABLECIMIENTO_INVALIDO`, `AGENTE_NO_DESIGNADO`); se registran y avisan a soporte. Con los intentos agotados, lo pendiente queda pendiente y lo retoma la conciliación diaria (§4) o el próximo cambio.
+- **Una serie de CPE solo numera si está sincronizada y sin conflicto.** La sentencia de [data-model §3](../data/data-model.md) pasa a `... WHERE tenant_id = $1 AND id = $2 AND active AND provider_conflict_at IS NULL AND (doc_type NOT IN ('01','03','07','08','09') OR provider_synced_at IS NOT NULL)`. Es la misma fila y el mismo lock: no cambia el costo. Si devuelve 0 filas, una lectura posterior, fuera del lock, da el motivo (`series_inactive`, `series_not_synced`, `series_conflict`). Así un número nunca se asigna en una serie que Khipu no conoce.
+- `emission_ready_at` (#55) exige además al menos una serie de factura o boleta sincronizada.
+
+**Baja de un local**: es solo de Wanka. `sites.active = false`, y sus cajas y sus series quedan inactivas en Wanka en la misma transacción. No se llama a `DELETE /v1/empresa/establecimientos/{codigo}`, que con series activas responde `409 ESTABLECIMIENTO_EN_USO` y no hay forma de desactivarlas. En Khipu el anexo y sus series siguen activos: solo Wanka deja de usarlos, y la conciliación los sigue vigilando. Los CPE ya numerados de esas series se siguen emitiendo, porque el emisor no mira `active`. Se rechaza con `409 invalid_state_transition` si alguna caja del local tiene turno abierto. Esa comprobación llega con la historia de turnos de caja (ola 2), que la agrega en su PR; mientras tanto no hay turnos.
+
+**Serie inactiva**: `active = false` en Wanka. La pantalla dice «Inactiva en Wanka (Khipu no permite desactivarla)». **Reactivarla** consulta antes `GET /v1/series`, fuera de la transacción: si `ultimoNumero > last_number`, alguien emitió en ella fuera de Wanka; la serie queda congelada y no se reactiva.
+
+### 4. Exclusividad y conflicto (#47; opción d3)
+
+- **Prevención**: el cliente no tiene acceso al portal (§1), Wanka crea todas las series de CPE por API (§3) y nunca adopta una serie de Khipu que ya tenga números.
+- **Detección diaria**: un job por tenant, `einv.series_reconcile`, que crea `activate` y que se vuelve a programar (`JobSnooze` de 24 h, único por tenant). No necesita recorrer tenants (ADR 0012, «Contexto»). Por cada serie de CPE sincronizada, lee **primero** `GET /v1/series` y **después** `last_number` de Wanka: como Wanka numera antes de enviar, el `ultimoNumero` de Khipu nunca supera el `last_number` de Wanka, salvo que alguien haya emitido fuera de Wanka. Si lo supera, la serie se congela. En el mismo recorrido reencola `einv.company_sync` si hay algo pendiente.
+- **Detección al emitir**: un `409 DUPLICADO` en `POST /v1/facturas` o `POST /v1/notas` sigue la regla de ADR 0003 (`FindByNumber` y adopción si coinciden el total y el receptor). Si no coinciden, ese número lo tiene otro comprobante: facturación llama a `empresas.FreezeSeries` y deja el documento con `blocked_reason = series_conflict`.
+- **Serie congelada** (`provider_conflict_at`): no numera más, hay alerta crítica a soporte y un aviso al dueño en `/configuracion/sunat`, «La serie B001 se usó fuera de Wanka; crea otra serie para esta caja». Los documentos ya numerados por debajo del `ultimoNumero` de Khipu que no se hayan enviado darán `409` uno por uno. Cómo se vuelven a emitir en otra serie es de la historia de emisión (#56), no de #47.
+- **Huecos**: Khipu acepta saltos, así que la ausencia de huecos depende **solo** de Wanka (ADR 0008). Lo garantiza `NextNumber` en la transacción del documento. El hueco documentado que admite ADR 0003 es el del rechazo de SUNAT.
+
+### 5. GRE (tipo 09)
+
+La serie `T###` vive en `org.document_series` (local, anexo, sincronización, conflicto), pero **`empresas.NextNumber` nunca numera el tipo 09**: lo rechaza con un error de programación. El número llega en la respuesta de `POST /v1/guias-remision` y se guarda en el documento ([data-model §3](../data/data-model.md)). En el 09, `last_number` no se usa y queda en 0. Que no haya huecos en el 09 depende de Khipu, que numera en su propia transacción con `FOR UPDATE` (`JdbcSerieRepository.java:19-31`). La conciliación del 09 compara el `ultimoNumero` de Khipu con el número más alto que Wanka recibió. Es una **excepción documentada** al «un solo mecanismo» de ADR 0008 (nota del 2026-11-19 en ese ADR). La GRE es R2 (#61).
+
+## Consecuencias
+
+- Buenas: Wanka y Khipu no pueden divergir sin que alguien lo vea (versiones, conciliación diaria, `409`). Un número de CPE nunca se asigna en una serie que Khipu no conoce. El dueño no carga nada a mano en Khipu. La baja de un local no choca con Khipu.
+- Malas:
+  - la razón social no se puede corregir hasta R4 y depende de Khipu (pregunta 14);
+  - una empresa con cuenta propia en Khipu queda bloqueada hasta resolver la pregunta 13, y si se vincula, su exclusividad depende de un compromiso escrito;
+  - Wanka opera un buzón por tenant para las cuentas de Khipu;
+  - el logo tiene un tope de 200 KB y Wanka no lo guarda (no se puede mostrar en el ticket del POS ni volver a enviar sin pedirlo de nuevo);
+  - los anexos y las series que se dan de baja en Wanka siguen activos en Khipu para siempre;
+  - entre un cambio de domicilio y su sincronización, los CPE salen con el domicilio anterior;
+  - un conflicto de serie se descubre como mucho en 24 h o en el `409`; los documentos ya numerados en ese rango se tienen que volver a emitir en otra serie (#56).
+- **Riesgo abierto (al PO, para #56 y #224):** `padronTasaEspecialIgv` hace que Khipu calcule el IGV con la tasa reducida (10,5 %) y `pricing.Compute` no lo modela. Wanka lo preserva sin exponerlo. Un restaurante inscrito en el padrón tendría totales distintos de Khipu.
+- Qué haría cambiar la decisión: un endpoint de Khipu para editar la razón social (se vuelve editable con sincronización), para desactivar series o anexos (la baja de un local se propaga), o una marca de dueño en la serie (sobra la conciliación diaria); que el `BlobStore` tenga adaptador y una historia pida el logo en el ticket (se guarda en Wanka); una API de integrador (el alta y el buzón por tenant cambian).
+
+## Cómo se verifica
+
+- `rls-check`: sin cambios. Las columnas nuevas son de tablas de tenant con la política estándar. No hay política, rol, grant ni función definer nuevos.
+- Tests de empresas: `CHECK` de formato por tipo con su borde (`F001` pasa en 01, `B001` falla en 01, `T001` solo en 09) y la mutación que lo quita; `NextNumber` rechaza una serie de CPE sin sincronizar, congelada, inactiva y de tipo 09 (una mutación por condición); la baja de un local inactiva sus cajas y series y no llama a Khipu (doble de `InvoicingProvider` sin llamadas).
+- Tests de facturación con un doble de Khipu: adopción en el `409` (coincide) y conflicto (otro anexo, otro `ultimoNumero`); versión que avanza durante la llamada (no marca); `PUT datos-fiscales` que conserva `cuentaDetracciones` y `padronTasaEspecialIgv`; conciliación con `ultimoNumero > last_number`, que congela; `activate` con `ruc`, `razonSocial` o `entorno` distintos, que rechaza.
+- Logo: 204 800 bytes pasa y 204 801 falla; una extensión `.png` con bytes de GIF falla; Khipu a 9 s responde `503` sin reintento.
+- Observabilidad: `einv_company_sync_total{result}`, la antigüedad de lo pendiente más viejo por tenant (alerta si supera 1 h tras la activación), `einv_series_conflicts_total` (alerta crítica en cada uno).
