@@ -29,6 +29,13 @@ Decisión del dueño, 2026-11-19. Reemplaza la regla anterior de que cada PR sub
 - Una corrección chica después de una revisión (solo tests, docs o una o dos líneas) la puede re-revisar el coordinador sin lanzar otro agente, siempre que publique la re-revisión en el PR.
 - La verificación local completa (suite con PostgreSQL y `rls-check`) se corre una vez por PR. Cuando se integra `main` o una rama base en una rama ya verificada, alcanza con compilar y dejar que la CI lo verifique.
 
+## CI por PR y por release (decisión del dueño, 2026-11-19)
+
+- **Cada PR** corre la parte liviana: `gofmt`, `vet`, migraciones solo hacia adelante, `migrate up`, `go test -race` con PostgreSQL, el paso de cotas de tiempo sin `-race`, `build` y `arch-lint` (unos 3 min, en GitHub y en paralelo). Además corre `checks` web.
+- **`rls-check`**, con sus casos de referencia y todas sus mutaciones, corre solo en los PR que tocan `apps/api/migrations/`, `apps/api/bootstrap/`, `apps/api/scripts/rls-check.sh`, `docs/architecture/data/rls-check/` o `api.yml`, y siempre en el PR de release (rama `chore/release…`) y en cada push a `main`.
+- **El e2e (Playwright)** corre en los PR que tocan `apps/web` o sus dependencias. El PR de release siempre lo corre, porque sube la versión de `apps/web/package.json`.
+- Así cada historia llega a la revisión con su CI en verde, los errores aparecen en el PR que los causa y la validación completa queda en el release.
+
 ## Tags automáticos
 
 `.github/workflows/release-tag.yml` crea el tag `vX.Y.Z` cuando el dueño mergea en `main` un PR de release (`chore(release): vX.Y.Z`), y solo después de que los workflows `CI` y `API` pasen sobre ese commit. Lee la versión del `package.json` del commit. Si el tag ya existe no hace nada, y en cualquier otro commit de `main` tampoco. El merge del release es la aprobación del dueño. Ninguna persona ni agente empuja tags a mano. Si la CI de ese commit falla y el arreglo llega en otro commit, el dueño lanza el workflow a mano (`workflow_dispatch`) con el SHA del **primer** commit en verde después del release. Si elige uno posterior, el tag arrastraría historias que siguen en `[Unreleased]`. El workflow comprueba que la versión de ese commit sea la del release y que su CI esté en verde. Si el tag ya existe sobre otro commit, falla y no lo mueve.
