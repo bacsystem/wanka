@@ -66,8 +66,10 @@ type Entitlements struct {
 	// Limits son los topes del plan por clave; todo plan declara las tres (CHECK
 	// de la base). Usar Limit, que cierra ante una clave ausente.
 	Limits map[string]int64 `json:"limits"`
-	// Usage es el uso del mes en curso (hora de Lima), con las mismas claves que
-	// Limits. Sin fila del mes, todo está en 0.
+	// Usage es el uso del mes en curso (hora de Lima), con las claves users y
+	// cpe_per_month. sites no se mide (no hay dónde contarlo todavía) y no está en
+	// Usage; quien aplique LimitSites debe tratarlo como error al arrancar (#175).
+	// Sin fila del mes, todo está en 0.
 	Usage  map[string]int64 `json:"usage"`
 	Status Status           `json:"status"`
 	// ReadOnly: la empresa está cerrada (org.tenants.status = cerrada); el
