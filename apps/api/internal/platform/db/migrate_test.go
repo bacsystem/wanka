@@ -181,13 +181,15 @@ func TestMigratedObjectsBelongToMigratorAndRolesGotTheirGrants(t *testing.T) {
 	admin := d.Admin(ctx, t)
 
 	// Invariante: wanka_app y wanka_worker (y cualquier otro rol de servicio) no son dueños de nada.
+	// Única excepción: wanka_definer es dueño de las funciones SECURITY DEFINER (ADR 0001), y de nada más.
 	owned := queryOne[int](t, admin, `
 		SELECT (SELECT count(*) FROM pg_namespace n JOIN pg_roles r ON r.oid = n.nspowner
 		         WHERE r.rolname LIKE 'wanka\_%' AND r.rolname <> 'wanka_migrator' AND n.nspname !~ '^pg_')
 		     + (SELECT count(*) FROM pg_class c JOIN pg_roles r ON r.oid = c.relowner
 		         WHERE r.rolname LIKE 'wanka\_%' AND r.rolname <> 'wanka_migrator')
 		     + (SELECT count(*) FROM pg_proc p JOIN pg_roles r ON r.oid = p.proowner
-		         WHERE r.rolname LIKE 'wanka\_%' AND r.rolname <> 'wanka_migrator')`)
+		         WHERE r.rolname LIKE 'wanka\_%' AND r.rolname <> 'wanka_migrator'
+		           AND NOT (r.rolname = 'wanka_definer' AND p.prosecdef))`)
 	if owned != 0 {
 		t.Fatalf("%d objects owned by a role other than wanka_migrator", owned)
 	}

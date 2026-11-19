@@ -3,6 +3,15 @@
 All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.6.0] - 2026-11-18
+
+### Added
+- `apps/api`: migration `20261118140000_kernel_iam_org_core.sql` creates the minimum core of `iam` and `org` that the session lookup needs: `org.tenants` (`id`, `status`, `closed_at`), `iam.users` (`id`, `status`), `iam.roles`, `iam.memberships` (with `FORCE ROW LEVEL SECURITY` and `tenant_isolation`) and `iam.sessions` (no RLS, no foreign key to memberships, tenants, sites or cash registers; five named `CHECK`s, among them two new ones: a session without a membership has no `authz_version`, and an impersonated one has no refresh and lives at most 60 minutes), plus `iam.session_lookup(bytea)` owned by `wanka_definer` and the ADR 0001 grants for these tables (`wanka_worker` may `DELETE` sessions and read only `id`, `created_at`, `revoked_at`, `access_expires_at` and `refresh_expires_at`, never the hashes). Identity (#24) and companies (#31) extend them forward-only (#200, #195).
+- `apps/api`: `dbtest.DB.SeedSession` seeds a tenant, user, role, membership and a bound, tenant-less, half-login, expired, revoked or impersonated session, and returns the `wk_at_` token and the ids; only the `sha256` is stored. Tests with the real `wanka_app` role cover the lookup (A1, A8), RLS (A2), unbinding (A9), the session `CHECK`s (A7), the grant matrix, the catalog rules and the index use with 100 000 sessions (#200, #195).
+
+### Changed
+- `docs/architecture/data/rls-check`: `run.sh` now applies the real kernel migrations from `apps/api/migrations` instead of a copy of their tables and `iam.session_lookup`, so the check cannot drift from what is deployed; `02_migrate.sql` keeps only what identity, companies and platform still add. New cases and six new mutations (`drop_authz_check`, `drop_impersonated_check`, `revoke_worker_session_columns`, `drop_force_rls`, `revoke_app_sessions_insert`, `grant_app_update_tenants`); `scripts/rls-check.sh` checks every mutation against the step that must catch it (#200, #195).
+
 ## [0.5.0] - 2026-11-18
 
 ### Added

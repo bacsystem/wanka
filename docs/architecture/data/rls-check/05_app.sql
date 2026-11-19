@@ -12,6 +12,8 @@ SELECT test.assert(NULLIF(current_setting('app.tenant_id', true),'') IS NULL, 's
 SELECT test.assert((SELECT count(*) FROM iam.session_lookup(sha256('tok-a-medio-login'))) = 0, 'session_lookup ignora sesiones con mfa_satisfied = false');
 \echo '== A2. lectura directa de iam.memberships sin tenant =='
 SELECT test.assert((SELECT count(*) FROM iam.memberships) = 0, 'RLS: 0 membresias sin tenant');
+SELECT test.assert((SELECT count(*) FROM iam.roles) = 0, 'RLS: 0 roles sin tenant');
+SELECT test.assert((SELECT count(*) FROM org.tenants) = 0, 'RLS: 0 empresas sin tenant');
 \echo '== A3. list_my_memberships (security_invoker) con solo app.user_id del cajero =='
 BEGIN;
 SELECT set_config('app.user_id','eeeeeeee-0000-0000-0000-000000000002', true);
@@ -43,6 +45,22 @@ SELECT test.assert(iam.redeem_impersonation('\x01'::bytea, '5e000000-0000-0000-0
 SELECT test.assert((SELECT mfa_method = 'platform' AND impersonator_id IS NOT NULL AND membership_id IS NULL
                       FROM iam.session_lookup(sha256('tok-imp-a'))), 'sesion impersonada: platform, sin membresia');
 SELECT test.assert(NULLIF(current_setting('app.tenant_id', true),'') IS NULL, 'redeem no filtra app.tenant_id');
+-- Vigencia de la sesion impersonada (data-model §6): sin refresh, 60 min como maximo (CHECK sessions_impersonated_short_no_refresh).
+SELECT test.expect_error($$INSERT INTO iam.sessions (id, user_id, tenant_id, access_hash, access_expires_at, refresh_hash, mfa_satisfied, mfa_method, impersonator_id)
+  VALUES (gen_random_uuid(), '5aff0000-0000-0000-0000-000000000001', 'aaaaaaaa-0000-0000-0000-000000000001', sha256('i1'), now() + interval '60 minutes', sha256('i1r'), true, 'platform', '5aff0000-0000-0000-0000-000000000001')$$,
+  '23514', 'impersonada con refresh_hash');
+SELECT test.expect_error($$INSERT INTO iam.sessions (id, user_id, tenant_id, access_hash, access_expires_at, mfa_satisfied, mfa_method, impersonator_id)
+  VALUES (gen_random_uuid(), '5aff0000-0000-0000-0000-000000000001', 'aaaaaaaa-0000-0000-0000-000000000001', sha256('i2'), now() + interval '61 minutes', true, 'platform', '5aff0000-0000-0000-0000-000000000001')$$,
+  '23514', 'impersonada que vive 61 minutos');
+-- Revocada o vencida, la sesion impersonada ya no se encuentra (dentro de una transaccion que se deshace).
+BEGIN;
+UPDATE iam.sessions SET revoked_at = now() WHERE access_hash = sha256('tok-imp-a');
+SELECT test.assert((SELECT count(*) FROM iam.session_lookup(sha256('tok-imp-a'))) = 0, 'impersonada revocada: 0 filas');
+ROLLBACK;
+BEGIN;
+UPDATE iam.sessions SET access_expires_at = now() - interval '1 second' WHERE access_hash = sha256('tok-imp-a');
+SELECT test.assert((SELECT count(*) FROM iam.session_lookup(sha256('tok-imp-a'))) = 0, 'impersonada vencida: 0 filas');
+ROLLBACK;
 \echo '== A7. CHECK y NOT NULL de iam.sessions =='
 SELECT test.expect_error($$INSERT INTO iam.sessions (id, user_id, access_hash, access_expires_at, mfa_satisfied, mfa_method)
   VALUES (gen_random_uuid(), 'eeeeeeee-0000-0000-0000-000000000002', sha256('x'), now(), true, 'platform')$$, '23514', 'platform sin impersonator_id');
@@ -50,3 +68,15 @@ SELECT test.expect_error($$INSERT INTO iam.sessions (id, user_id, access_hash, a
   VALUES (gen_random_uuid(), 'eeeeeeee-0000-0000-0000-000000000002', sha256('y'), now(), true, NULL)$$, '23502', 'mfa_method NULL');
 SELECT test.expect_error($$INSERT INTO iam.sessions (id, user_id, access_hash, access_expires_at, mfa_satisfied, mfa_method)
   VALUES (gen_random_uuid(), 'eeeeeeee-0000-0000-0000-000000000002', sha256('z'), now(), true, 'sms')$$, '23514', 'mfa_method fuera de la lista');
+-- Una sesion desligada o impersonada nunca tiene version (ADR 0011, CHECK sessions_version_needs_membership).
+SELECT test.expect_error($$INSERT INTO iam.sessions (id, user_id, access_hash, access_expires_at, authz_version, mfa_satisfied, mfa_method)
+  VALUES (gen_random_uuid(), 'eeeeeeee-0000-0000-0000-000000000002', sha256('v1'), now(), 1, true, 'none')$$, '23514', 'authz_version sin membresia');
+SELECT test.expect_error($$INSERT INTO iam.sessions (id, user_id, tenant_id, access_hash, access_expires_at, authz_version, mfa_satisfied, mfa_method, impersonator_id)
+  VALUES (gen_random_uuid(), 'eeeeeeee-0000-0000-0000-000000000002', 'aaaaaaaa-0000-0000-0000-000000000001', sha256('v2'), now(), 1, true, 'platform', '5aff0000-0000-0000-0000-000000000001')$$,
+  '23514', 'authz_version en una sesion impersonada');
+SELECT test.expect_error($$INSERT INTO iam.sessions (id, user_id, access_hash, access_expires_at, mfa_satisfied, mfa_method)
+  VALUES (gen_random_uuid(), 'eeeeeeee-0000-0000-0000-000000000002', '\x01', now(), true, 'none')$$, '23514', 'access_hash de 1 byte');
+SELECT test.expect_error($$INSERT INTO iam.sessions (id, user_id, access_hash, access_expires_at, mfa_satisfied, mfa_method)
+  VALUES (gen_random_uuid(), gen_random_uuid(), sha256('v3'), now(), true, 'none')$$, '23503', 'sesion de un usuario inexistente');
+-- GRANT del ADR 0001: wanka_app escribe sesiones pero no empresas.
+SELECT test.expect_error($$UPDATE org.tenants SET status = 'activa'$$, '42501', 'wanka_app no escribe org.tenants');

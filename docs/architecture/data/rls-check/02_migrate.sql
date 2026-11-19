@@ -1,26 +1,16 @@
 -- Verificacion de ADR 0001 y ADR 0004: esquema reducido con las mismas politicas, FORCE RLS, roles y funciones SECURITY DEFINER.
--- Ejecutado como wanka_migrator (NOBYPASSRLS): la migración real.
+-- Ejecutado como wanka_migrator (NOBYPASSRLS), DESPUES de las migraciones reales del kernel (run.sh las aplica antes:
+-- esquemas, app.current_tenant(), org.tenants, iam.users, iam.roles, iam.memberships, iam.sessions, iam.session_lookup
+-- y sus GRANT; issue #195). Aqui queda solo lo que esas migraciones no crean todavia: lo que agregan identidad (#24, #27),
+-- empresas (#31) y plataforma (ola 6), y las ayudas de prueba. Asi la verificacion no puede diferir de la migracion real.
 \set ON_ERROR_STOP on
-CREATE SCHEMA app; CREATE SCHEMA iam; CREATE SCHEMA org; CREATE SCHEMA audit; CREATE SCHEMA ops; CREATE SCHEMA platform; CREATE SCHEMA platform_fn;
+CREATE SCHEMA platform_fn;
 
-CREATE FUNCTION app.current_tenant() RETURNS uuid LANGUAGE sql STABLE AS
-  $$ SELECT NULLIF(current_setting('app.tenant_id', true), '')::uuid $$;
-CREATE FUNCTION app.current_user_id() RETURNS uuid LANGUAGE sql STABLE AS
-  $$ SELECT NULLIF(current_setting('app.user_id', true), '')::uuid $$;
+-- Columnas que la migracion del kernel deja a identidad y a empresas (expandir, data-model §6); las usan las funciones de abajo.
+ALTER TABLE org.tenants ADD COLUMN ruc text UNIQUE NOT NULL, ADD COLUMN name text NOT NULL;
+ALTER TABLE iam.users ADD COLUMN email text UNIQUE NOT NULL;
 
-CREATE TABLE org.tenants (id uuid PRIMARY KEY, ruc text UNIQUE NOT NULL, name text NOT NULL, status text NOT NULL DEFAULT 'trial');
 CREATE TABLE org.sites (id uuid PRIMARY KEY, tenant_id uuid NOT NULL REFERENCES org.tenants, name text NOT NULL, UNIQUE (tenant_id, id));
-CREATE TABLE iam.users (id uuid PRIMARY KEY, email text UNIQUE NOT NULL);
-CREATE TABLE iam.roles (id uuid PRIMARY KEY, tenant_id uuid NOT NULL REFERENCES org.tenants, name text NOT NULL, requires_mfa boolean NOT NULL DEFAULT false);
-CREATE TABLE iam.memberships (id uuid PRIMARY KEY, tenant_id uuid NOT NULL REFERENCES org.tenants, user_id uuid NOT NULL REFERENCES iam.users,
-  role_id uuid NOT NULL REFERENCES iam.roles, all_sites boolean NOT NULL DEFAULT true, status text NOT NULL, authz_version bigint NOT NULL DEFAULT 1,
-  UNIQUE (tenant_id, user_id));
-CREATE TABLE iam.sessions (id uuid PRIMARY KEY, user_id uuid NOT NULL, tenant_id uuid, site_id uuid, cash_register_id uuid, membership_id uuid, access_hash bytea UNIQUE NOT NULL,
-  access_expires_at timestamptz NOT NULL, authz_version bigint, mfa_satisfied boolean NOT NULL, mfa_method text NOT NULL
-  CHECK (mfa_method IN ('totp','recovery_code','none','platform')), impersonator_id uuid, revoked_at timestamptz,
-  CHECK ((mfa_method = 'platform') = (impersonator_id IS NOT NULL)),
-  CHECK (membership_id IS NULL OR tenant_id IS NOT NULL),
-  CHECK (tenant_id IS NULL OR membership_id IS NOT NULL OR impersonator_id IS NOT NULL));
 CREATE TABLE audit.events (id bigserial PRIMARY KEY, tenant_id uuid NOT NULL, actor_type text NOT NULL, action text NOT NULL, at timestamptz NOT NULL DEFAULT now());
 CREATE TABLE ops.webhook_routes (route_id text PRIMARY KEY, tenant_id uuid NOT NULL, provider text NOT NULL, webhook_secret_enc bytea NOT NULL, revoked_at timestamptz);
 CREATE TABLE platform.impersonation_grants (id uuid PRIMARY KEY, platform_user_id uuid NOT NULL, tenant_id uuid NOT NULL, ticket_id uuid NOT NULL,
@@ -28,15 +18,14 @@ CREATE TABLE platform.impersonation_grants (id uuid PRIMARY KEY, platform_user_i
   consent_expires_at timestamptz, exchange_token_hash bytea UNIQUE, redeemed_at timestamptz, revoked_at timestamptz);
 CREATE TABLE platform.audit_events (id bigserial PRIMARY KEY, platform_user_id uuid, target_tenant_id uuid, action text NOT NULL);
 
--- RLS habilitado y FORZADO en las tablas de tenant (ADR 0001)
+-- RLS habilitado y FORZADO en las demas tablas de tenant (ADR 0001); iam.roles, iam.memberships y org.tenants
+-- ya lo traen de la migracion del kernel, con su tenant_isolation.
 DO $$ DECLARE t text; BEGIN
-  FOREACH t IN ARRAY ARRAY['org.sites','iam.roles','iam.memberships','audit.events'] LOOP
+  FOREACH t IN ARRAY ARRAY['org.sites','audit.events'] LOOP
     EXECUTE format('ALTER TABLE %s ENABLE ROW LEVEL SECURITY', t);
     EXECUTE format('ALTER TABLE %s FORCE ROW LEVEL SECURITY', t);
     EXECUTE format('CREATE POLICY tenant_isolation ON %s USING (tenant_id = app.current_tenant()) WITH CHECK (tenant_id = app.current_tenant())', t);
   END LOOP; END $$;
-ALTER TABLE org.tenants ENABLE ROW LEVEL SECURITY; ALTER TABLE org.tenants FORCE ROW LEVEL SECURITY;
-CREATE POLICY tenant_isolation ON org.tenants USING (id = app.current_tenant()) WITH CHECK (id = app.current_tenant());
 CREATE POLICY member_read ON org.tenants FOR SELECT USING (app.current_tenant() IS NULL AND id IN
   (SELECT tenant_id FROM iam.memberships WHERE user_id = app.current_user_id()));
 CREATE POLICY platform_rw ON org.tenants TO wanka_platform USING (true) WITH CHECK (true);
@@ -59,26 +48,7 @@ CREATE VIEW iam.list_my_memberships WITH (security_invoker = true) AS
 -- (La cláusula SET app.tenant_id = '' en CREATE FUNCTION no sirve: un rol no superusuario recibe
 --  'permission denied to set parameter app.tenant_id' en PG 16.)
 
-CREATE FUNCTION iam.session_lookup(p_access_hash bytea)
-  RETURNS TABLE (session_id uuid, user_id uuid, tenant_id uuid, site_id uuid, cash_register_id uuid, membership_id uuid,
-                 session_authz_version bigint, mfa_satisfied boolean, mfa_method text, impersonator_id uuid,
-                 current_authz_version bigint, membership_status text)
-  LANGUAGE plpgsql STABLE SECURITY DEFINER
-  SET search_path = pg_catalog, pg_temp
-AS $$
-DECLARE s iam.sessions%ROWTYPE; v bigint; st text; prev text := current_setting('app.tenant_id', true);
-BEGIN
-  SELECT * INTO s FROM iam.sessions x
-   WHERE x.access_hash = p_access_hash AND x.revoked_at IS NULL AND x.access_expires_at > now() AND x.mfa_satisfied;
-  IF NOT FOUND THEN RETURN; END IF;
-  IF s.membership_id IS NOT NULL THEN
-    PERFORM set_config('app.tenant_id', s.tenant_id::text, true);
-    SELECT m.authz_version, m.status INTO v, st FROM iam.memberships m WHERE m.id = s.membership_id;  -- via tenant_isolation
-    PERFORM set_config('app.tenant_id', coalesce(prev, ''), true);   -- restaura el valor del llamador
-  END IF;
-  RETURN QUERY SELECT s.id, s.user_id, s.tenant_id, s.site_id, s.cash_register_id, s.membership_id, s.authz_version,
-                      s.mfa_satisfied, s.mfa_method, s.impersonator_id, v, st;
-END $$;
+-- iam.session_lookup(bytea) la crea la migracion del kernel (ADR 0004); las mutaciones de ./mutations la reemplazan.
 
 CREATE FUNCTION ops.resolve_webhook_route(p_route_id text)
   RETURNS TABLE (tenant_id uuid, webhook_secret_enc bytea)
@@ -192,9 +162,9 @@ END $$;
 -- se concede solo para el cambio de dueño y se revoca enseguida, en UNA transacción (si algo falla, el
 -- GRANT CREATE no queda aplicado). Por eso esta migración nunca usa `-- +goose NO TRANSACTION`.
 BEGIN;
-GRANT CREATE ON SCHEMA iam, ops, platform_fn TO wanka_definer;
+GRANT CREATE ON SCHEMA iam, ops, platform_fn TO wanka_definer;  -- como en la migracion del kernel: solo para el cambio de dueño
 DO $$ DECLARE f text; BEGIN
-  FOREACH f IN ARRAY ARRAY['iam.session_lookup(bytea)','ops.resolve_webhook_route(text)','iam.list_support_requests()',
+  FOREACH f IN ARRAY ARRAY['ops.resolve_webhook_route(text)','iam.list_support_requests()',
      'iam.decide_impersonation(uuid,boolean)','iam.redeem_impersonation(bytea,uuid,bytea)',
      'platform_fn.provision_tenant(uuid,text,text,uuid,text,uuid,uuid)','platform_fn.request_impersonation(uuid,uuid,uuid,uuid,text,bytea)',
      'platform_fn.suspend_tenant(uuid)','platform_fn.purge_closed_tenant(uuid)'] LOOP
@@ -203,10 +173,13 @@ DO $$ DECLARE f text; BEGIN
   END LOOP; END $$;
 REVOKE CREATE ON SCHEMA iam, ops, platform_fn FROM wanka_definer;
 COMMIT;
-GRANT USAGE ON SCHEMA app, iam, org, audit, ops, platform TO wanka_definer;
+GRANT USAGE ON SCHEMA app, audit, ops, platform TO wanka_definer;   -- iam y org: migracion del kernel. app: las funciones de plataforma llaman a app.current_tenant() en su cuerpo (session_lookup no: solo la usa la politica)
 GRANT EXECUTE ON FUNCTION app.current_tenant(), app.current_user_id() TO wanka_definer, wanka_app, wanka_platform, wanka_worker, wanka_webhooks;
-GRANT SELECT, INSERT ON iam.sessions TO wanka_definer;
-GRANT SELECT, INSERT ON iam.memberships, iam.users, iam.roles TO wanka_definer;
+-- Privilegios de escritura de wanka_definer que necesitan las funciones de plataforma (ola 6); la migracion del kernel
+-- le da solo SELECT en iam.sessions e iam.memberships, lo que necesita iam.session_lookup.
+GRANT INSERT ON iam.sessions TO wanka_definer;
+GRANT INSERT ON iam.memberships, iam.users, iam.roles TO wanka_definer;
+GRANT SELECT ON iam.users, iam.roles TO wanka_definer;
 GRANT SELECT, INSERT, UPDATE ON org.tenants TO wanka_definer;
 GRANT SELECT, INSERT, DELETE ON org.sites TO wanka_definer;
 GRANT INSERT ON audit.events TO wanka_definer;
@@ -215,10 +188,10 @@ GRANT SELECT ON ops.webhook_routes TO wanka_definer;
 GRANT SELECT, INSERT, UPDATE ON platform.impersonation_grants TO wanka_definer;
 
 -- Permisos de los roles de aplicación (extracto de la matriz del ADR 0001)
-GRANT USAGE ON SCHEMA app, iam, org, audit TO wanka_app;
-GRANT SELECT, INSERT, UPDATE ON iam.memberships, iam.roles, org.sites, org.tenants, iam.sessions TO wanka_app;
+GRANT USAGE ON SCHEMA audit TO wanka_app;   -- app, iam y org, y los GRANT de iam.* y org.tenants: migracion del kernel
+GRANT SELECT, INSERT, UPDATE ON org.sites TO wanka_app;
 GRANT SELECT ON iam.list_my_memberships TO wanka_app;
-GRANT EXECUTE ON FUNCTION iam.session_lookup(bytea), iam.list_support_requests(), iam.decide_impersonation(uuid,boolean),
+GRANT EXECUTE ON FUNCTION iam.list_support_requests(), iam.decide_impersonation(uuid,boolean),
   iam.redeem_impersonation(bytea,uuid,bytea) TO wanka_app;
 GRANT USAGE ON SCHEMA ops TO wanka_webhooks;
 GRANT EXECUTE ON FUNCTION ops.resolve_webhook_route(text) TO wanka_webhooks;
