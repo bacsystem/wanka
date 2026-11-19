@@ -5,7 +5,7 @@ Decisión del dueño, 2026-11-19. Reemplaza la regla anterior de que cada PR sub
 ## Lotes
 
 - Cada historia sale en su propio PR **desde `main`**, en paralelo y sin depender de los demás PR del lote. Un PR se apila sobre otro (`gh stack`) solo si su código depende de él.
-- Un PR **no toca la versión**: agrega su entrada en `CHANGELOG.md`, bajo `## [Unreleased]`, en la sección que corresponda (`Added`, `Changed`, `Fixed`…), en inglés y con el número de la issue. `.gitattributes` integra `CHANGELOG.md` con `merge=union`, así que dos PR que agregan entradas no chocan; quien integra revisa igual que no se haya duplicado ningún encabezado.
+- Un PR **no toca la versión**: agrega su entrada en `CHANGELOG.md`, bajo `## [Unreleased]`, en la sección que corresponda (`Added`, `Changed`, `Fixed`…), en inglés y con el número de la issue. `.gitattributes` integra `CHANGELOG.md` con `merge=union`, así que dos PR que agregan entradas no chocan; todo merge del CHANGELOG se verifica igual, con `union` o sin él: que no se duplique ningún encabezado y, si la base trajo un release (un `## [X.Y.Z]` nuevo debajo de `[Unreleased]`), que las entradas del PR sigan bajo `[Unreleased]`. Un merge limpio puede meterlas en la sección ya publicada.
 - El dueño mergea el lote cuando todos sus PR cumplen la definición de terminado. Mergea en el orden que le pasa el coordinador, que pone primero los PR que otros necesitan.
 - Al cerrar el lote, un **PR de release** (`chore(release): vX.Y.Z`) sube la versión una sola vez:
   - `version` en `package.json` (raíz) y `apps/web/package.json`;

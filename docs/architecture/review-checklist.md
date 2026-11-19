@@ -62,5 +62,6 @@ Lista viva: cada revisión que encuentra un tipo de error nuevo lo agrega aquí.
 - Corregir un ADR aceptado lleva la nota fechada del §9 del README de arquitectura y la decide el architect; nunca se reescribe la decisión en su lugar sin nota (#218).
 
 ## Higiene de la pila
+- Después de integrar una base que trae un release, las entradas del PR en `CHANGELOG.md` siguen bajo `[Unreleased]`: un merge limpio, con `union` o sin él, puede meterlas en la sección ya publicada (skills #33).
 - Los IDs de caso de `rls-check` (`A11`, `K4`…) no se repiten: antes de numerar uno nuevo, busca el siguiente libre (#208).
 - Después de integrar la base, se lee el diff del merge en los archivos compartidos (`rls-check`, listas blancas del catálogo): un merge perdió un `ROLLBACK` (#213). Un PR en conflicto (`DIRTY`) no tiene CI sobre su SHA: no se revisa ni se aprueba así (#212).

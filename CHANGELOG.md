@@ -5,6 +5,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Changed
+- `docs/delivery-process.md` and `review-checklist.md`: every `CHANGELOG.md` merge is checked for the PR's entries landing inside a just-released section, not only for duplicated headings.
+
 ## [0.19.0] - 2026-11-19
 
 ### Added
