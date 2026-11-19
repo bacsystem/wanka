@@ -6,6 +6,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 ## [Unreleased]
 
 ### Changed
+- `docs/ai-collaboration.md`: how to keep the shared skills and agents current (pull, then reinstall the Gemini agents), a new section «Tomar una épica» (claim, contract before code, stories in dependency order, frontend waiting for the owner's rule, `docs-sync`), and status questions answered from GitHub.
+
+### Changed
 - `docs/delivery-process.md` and `review-checklist.md`: every `CHANGELOG.md` merge is checked for the PR's entries landing inside a just-released section, not only for duplicated headings.
 - `docs/delivery-process.md`: GitHub ignores `merge=union` when it computes mergeability; a PR that conflicts only in `CHANGELOG.md` is fixed with a local `git merge origin/main`, which merges cleanly.
 - Status docs (`apps/api/README.md`, `docs/architecture/README.md`, `docs/modules/README.md`, `CLAUDE.md`): the wave 0 kernel is done (epic #154, v0.19.0); the Khipu BETA checks moved to #224 and the kernel follow-ups to #225.
