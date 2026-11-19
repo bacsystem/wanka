@@ -387,7 +387,12 @@ SELECT test.assert((SELECT last_number FROM org.document_series WHERE id = 'd500
 UPDATE org.tenant_settings SET fiscal_address = 'Av. Nueva 456', version = version + 1, provider_sync_seq = provider_sync_seq + 1;
 SELECT test.assert((SELECT provider_sync_seq FROM org.tenant_settings) = 1, 'wanka_app pide la sincronizacion (provider_sync_seq)');
 SELECT test.expect_error($$UPDATE org.document_series SET provider_synced_at = now()$$, '42501', 'wanka_app no marca una serie como sincronizada');
-SELECT test.expect_error($$UPDATE org.document_series SET provider_conflict_at = NULL$$, '42501', 'wanka_app no levanta un congelado');
+UPDATE org.document_series SET provider_conflict_at = '2000-01-01' WHERE id = 'd5000000-0000-0000-0000-0000000000a1';
+SELECT test.assert((SELECT provider_conflict_at = now() FROM org.document_series WHERE id = 'd5000000-0000-0000-0000-0000000000a1'),
+                   'wanka_app congela al rechazar una reactivacion, y el instante lo fija el servidor');
+SELECT test.expect_error($$UPDATE org.document_series SET provider_conflict_at = NULL WHERE id = 'd5000000-0000-0000-0000-0000000000a1'$$,
+                         '42501', 'wanka_app no levanta un congelado');
+SELECT test.expect_error($$SELECT * FROM einv.company_sync_state$$, '42501', 'wanka_app no ve el arrendamiento de company_sync');
 SELECT test.expect_error($$INSERT INTO org.document_series (id, tenant_id, site_id, doc_type, series, provider_synced_at)
                            VALUES (gen_random_uuid(), app.current_tenant(), 'a5000000-0000-0000-0000-0000000000a1', '01', 'F001', now())$$,
                          '42501', 'wanka_app no crea una serie ya sincronizada');

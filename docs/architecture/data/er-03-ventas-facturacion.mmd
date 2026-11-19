@@ -92,6 +92,12 @@ erDiagram
     timestamptz lease_until "now() + 60 s; renovacion solo WHERE holder = job, 0 filas = abortar"
     timestamptz wakeup_at "un solo job dormido por serie hasta el next_attempt_at de la cabeza"
   }
+  COMPANY_SYNC_STATE {
+    uuid tenant_id PK "einv.company_sync_state, RLS; solo la escribe wanka_worker (ADR 0013)"
+    text holder "id del job River einv.company_sync que tiene el arrendamiento"
+    timestamptz lease_until "now() + 60 s; renovacion solo WHERE holder = job, 0 filas = abortar"
+    bigint synced_seq "ultimo provider_sync_seq enviado a Khipu; un job con seq menor o igual termina sin llamar"
+  }
   ELECTRONIC_DOCUMENTS {
     uuid id PK "tambien Idempotency-Key hacia Khipu"
     uuid tenant_id "RLS"

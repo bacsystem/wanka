@@ -37,7 +37,7 @@ erDiagram
     text fiscal_address "3 a 200 caracteres, regla 4094"
     text fiscal_urbanization "nullable, hasta 25 caracteres"
     bigint provider_synced_version "version enviada a Khipu; pendiente si es menor que version; solo la escribe wanka_worker"
-    bigint provider_sync_seq "marca sucio: empresas la sube en cada cambio para Khipu; el job la relee al terminar"
+    bigint provider_sync_seq "marca sucio: empresas la sube en cada cambio para Khipu y encola einv.company_sync con ese seq"
     text default_currency "PEN; USD tambien desde R1"
     boolean allow_negative_stock "default false"
     jsonb print_settings
@@ -72,7 +72,7 @@ erDiagram
     bigint last_number "CHECK >= 0, fila caliente; editable solo antes de sincronizar"
     boolean active "inactiva solo en Wanka: Khipu no desactiva series"
     timestamptz provider_synced_at "registrada en Khipu; una serie de CPE sin ella no numera; null siempre en las internas"
-    timestamptz provider_conflict_at "congelada: alguien emitio en ella fuera de Wanka; no numera mas"
+    timestamptz provider_conflict_at "congelada: alguien emitio en ella fuera de Wanka; no numera mas; irreversible (trigger org.guard_series_conflict)"
   }
   USERS {
     uuid id PK

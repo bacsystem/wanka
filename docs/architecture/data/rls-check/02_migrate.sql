@@ -95,6 +95,22 @@ CREATE TABLE org.document_series (id uuid PRIMARY KEY, tenant_id uuid NOT NULL R
   provider_synced_at timestamptz, provider_conflict_at timestamptz,
   UNIQUE (tenant_id, doc_type, series), FOREIGN KEY (tenant_id, site_id) REFERENCES org.sites (tenant_id, id),
   CHECK (doc_type IN ('01','03','07','08','09') OR (provider_synced_at IS NULL AND provider_conflict_at IS NULL)));
+-- El congelado es irreversible para todo rol y lo fija el servidor (ADR 0013): wanka_app puede ponerlo al rechazar una reactivacion.
+CREATE FUNCTION org.guard_series_conflict() RETURNS trigger LANGUAGE plpgsql SET search_path = pg_catalog, pg_temp AS $$
+BEGIN
+  IF OLD.provider_conflict_at IS NOT NULL AND NEW.provider_conflict_at IS DISTINCT FROM OLD.provider_conflict_at THEN
+    RAISE EXCEPTION 'a frozen series stays frozen' USING ERRCODE = '42501';
+  END IF;
+  IF OLD.provider_conflict_at IS NULL AND NEW.provider_conflict_at IS NOT NULL THEN
+    NEW.provider_conflict_at := now();
+  END IF;
+  RETURN NEW;
+END $$;
+CREATE TRIGGER document_series_guard_conflict BEFORE UPDATE ON org.document_series
+  FOR EACH ROW EXECUTE FUNCTION org.guard_series_conflict();
+-- Arrendamiento por tenant de einv.company_sync (ADR 0013): solo lo escribe wanka_worker.
+CREATE TABLE einv.company_sync_state (tenant_id uuid PRIMARY KEY REFERENCES org.tenants, holder text, lease_until timestamptz,
+  synced_seq bigint NOT NULL DEFAULT 0);
 CREATE TABLE ops.webhook_routes (route_id text PRIMARY KEY, tenant_id uuid NOT NULL, provider text NOT NULL, webhook_secret_enc bytea NOT NULL, revoked_at timestamptz);
 CREATE TABLE platform.impersonation_grants (id uuid PRIMARY KEY, platform_user_id uuid NOT NULL, tenant_id uuid NOT NULL, ticket_id uuid NOT NULL,
   scope text NOT NULL, reason text, status text NOT NULL, created_at timestamptz NOT NULL DEFAULT now(), approved_by uuid, approved_at timestamptz,
@@ -104,7 +120,7 @@ CREATE TABLE platform.audit_events (id bigserial PRIMARY KEY, platform_user_id u
 -- RLS habilitado y FORZADO en las demas tablas de tenant (ADR 0001); iam.roles, iam.memberships, org.tenants y audit.events
 -- ya lo traen de la migracion del kernel, con su tenant_isolation.
 DO $$ DECLARE t text; BEGIN
-  FOREACH t IN ARRAY ARRAY['org.sites','org.tenant_settings','org.document_series'] LOOP
+  FOREACH t IN ARRAY ARRAY['org.sites','org.tenant_settings','org.document_series','einv.company_sync_state'] LOOP
     EXECUTE format('ALTER TABLE %s ENABLE ROW LEVEL SECURITY', t);
     EXECUTE format('ALTER TABLE %s FORCE ROW LEVEL SECURITY', t);
     EXECUTE format('CREATE POLICY tenant_isolation ON %s USING (tenant_id = app.current_tenant()) WITH CHECK (tenant_id = app.current_tenant())', t);
@@ -276,16 +292,19 @@ GRANT SELECT, INSERT, UPDATE ON platform.impersonation_grants TO wanka_definer;
 
 -- Permisos de los roles de aplicación (extracto de la matriz del ADR 0001)
 -- app, audit, iam y org, y los GRANT de iam.*, org.tenants y audit.events: migracion del kernel
--- org.sites, org.tenant_settings y org.document_series (ADR 0013): wanka_app no escribe las columnas de sincronizacion con Khipu
--- (provider_synced_version, provider_synced_at, provider_conflict_at); las marca solo wanka_worker, que no toca nada mas.
+-- org.sites, org.tenant_settings y org.document_series (ADR 0013): wanka_app no marca la sincronizacion con Khipu
+-- (provider_synced_version, provider_synced_at); solo puede poner el congelado (provider_conflict_at, irreversible por trigger).
+-- wanka_worker marca y no toca nada mas de org.
 GRANT SELECT ON org.sites, org.tenant_settings, org.document_series TO wanka_app;
 GRANT INSERT (id, tenant_id, name, sunat_annex, active, version), UPDATE (name, sunat_annex, active, version) ON org.sites TO wanka_app;
 GRANT UPDATE (ubigeo, fiscal_address, version, provider_sync_seq) ON org.tenant_settings TO wanka_app;
 GRANT INSERT (id, tenant_id, site_id, doc_type, series, last_number, active),
-      UPDATE (last_number, active) ON org.document_series TO wanka_app;
+      UPDATE (last_number, active, provider_conflict_at) ON org.document_series TO wanka_app;
 GRANT SELECT ON org.sites, org.tenant_settings, org.document_series TO wanka_worker;
 GRANT UPDATE (provider_synced_version) ON org.sites, org.tenant_settings TO wanka_worker;
 GRANT UPDATE (provider_synced_at, provider_conflict_at) ON org.document_series TO wanka_worker;
+GRANT USAGE ON SCHEMA einv TO wanka_app, wanka_worker;
+GRANT SELECT, INSERT, UPDATE ON einv.company_sync_state TO wanka_worker;
 GRANT SELECT ON iam.list_my_memberships TO wanka_app;
 -- iam.mfa_enrollments (#25): la app no mueve user_id, token_hash, expires_at ni created_at, ni borra; el worker solo limpia.
 GRANT SELECT, INSERT ON iam.mfa_enrollments TO wanka_app;
