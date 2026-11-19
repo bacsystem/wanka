@@ -12,7 +12,7 @@ más adelante).
 
 ```
 cmd/wanka/            main: serve, worker, migrate up
-internal/platform/    kernel: config, logging, httpx, metrics, clock, db (+ db/dbtest para tests) en uso;
+internal/platform/    kernel: config, logging, httpx, auth, metrics, clock, db (+ db/dbtest para tests) en uso;
                       jobs, money, entitlements, idgen (paquetes vacíos por ahora)
 bootstrap/roles.sql   bootstrap de roles: lo corre el superusuario con psql, fuera de goose
 migrations/           goose, SQL con timestamp, embebido en el binario, solo hacia adelante
@@ -116,7 +116,7 @@ cuerpo) envuelve a un `httpx.Router`; los módulos registran ahí sus rutas con
   encadenados no consumen ficha si uno rechaza. `429 rate_limited` con
   `Retry-After`, y `RateLimit-Limit`, `-Remaining` y `-Reset` en toda respuesta de
   la ruta. Con `MaxKeys` buckets no llenos, una clave nueva recibe `503 overloaded`.
-  Las claves de sesión y tenant y los valores por defecto los fija #174.
+  Las claves de sesión y tenant y los valores por defecto están en la sección «Sesión».
 - La sobrecarga de la cadena se repite con `go test -run '^$' -bench Overhead -benchmem ./internal/platform/httpx` y, con carga real, con `testdata/loadtest` (servidor + script k6).
 - Una conexión perdida del pool (reinicio o failover de la base) es `503 dependency_unavailable`, no `500`. El log de acceso marca con `aborted` una conexión cortada con `http.ErrAbortHandler` (status 0 si no se envió nada). Las peticiones que `net/http` rechaza antes de la cadena (`/%zz`, línea de petición inválida) las responde Go en `text/plain` (conventions.md §4).
 - Todo `429` y `503` del kernel lleva `Retry-After` en segundos enteros >= 1.
@@ -124,6 +124,33 @@ cuerpo) envuelve a un `httpx.Router`; los módulos registran ahí sus rutas con
 Cada respuesta lleva `X-Request-Id`: se conserva el entrante si son de 1 a 128
 caracteres de `[A-Za-z0-9_-]` y, si falta o no cumple, se reemplaza por uno nuevo
 (nunca `400`).
+
+## Sesión (`internal/platform/auth` y `httpx`)
+
+`auth` define el puerto `SessionResolver` (`Lookup` por el hash del token y
+`Unbind`), la `Session` que devuelve `iam.session_lookup` y el formato del token.
+El adaptador de PostgreSQL llega con #196; el middleware se prueba con un doble.
+`httpx.RouterOptions.Session` activa el paso de sesión.
+
+- **Clase de ruta obligatoria** en toda ruta `/v1`: `httpx.Public()` (solo bajo
+  `/v1/auth/`), `httpx.NoTenant()` (`/v1/auth/*`, `GET /v1/me`,
+  `GET /v1/me/memberships`) o `httpx.Tenant()` (las demás). `Router.Handle` entra
+  en pánico al arrancar si falta o no cumple las reglas; fuera de `/v1` no se
+  declara clase.
+- **Token**: `Authorization: Bearer wk_at_<43 caracteres base64url>`, una sola
+  cabecera. `auth.ParseAuthorization` devuelve `sha256` del token completo; lo
+  demás es `401 unauthenticated` sin consultar la base. El token y su hash no
+  salen de ahí y no se registran.
+- **Orden**: token, búsqueda (plazo de 1 s, fase `session_lookup`), desligue de la
+  membresía perdida (ADR 0011), `403 tenant_access_denied` en rutas `Tenant` sin
+  empresa, límite por sesión y, solo en `Tenant`, por tenant. Sin fila es
+  `401 session_expired`; un fallo de la base o el plazo vencido es `503`, nunca
+  `401` ni `500`. Todo `401` lleva `WWW-Authenticate: Bearer`.
+- **Límites por defecto** (`httpx.NewSessionLimiter`, `NewTenantLimiter`): sesión
+  10/s con ráfaga de 20, tenant 100/s con ráfaga de 200, con topes de 50 000 y
+  10 000 claves por réplica. Son supuestos que ajusta la prueba de carga de #196.
+- El handler lee la sesión con `auth.SessionFrom(ctx)` y arma el actor con
+  `Session.Actor()`. Los entitlements (fase `entitlements`) llegan con #175.
 
 ## Transacciones de tenant (`InTenantTx`)
 

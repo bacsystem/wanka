@@ -24,6 +24,9 @@ type Middleware = func(http.Handler) http.Handler
 type RouterOptions struct {
 	HandlerTimeout time.Duration
 	StreamTimeout  time.Duration
+	// Session activa el paso de sesión de las rutas NoTenant y Tenant. Sin él,
+	// registrar una ruta con clase es un error de programación.
+	Session *SessionOptions
 }
 
 // Router es el enrutador de la API sobre http.ServeMux. Una ruta es método +
@@ -32,8 +35,10 @@ type RouterOptions struct {
 // en texto de ServeMux, y no hay CORS, conventions.md §2 y §4). Cada ruta corre
 // con el plazo del handler o, si es Streaming, con el presupuesto de streaming.
 type Router struct {
-	mux  *http.ServeMux
-	opts RouterOptions
+	mux     *http.ServeMux
+	opts    RouterOptions
+	session SessionOptions // válido solo si hasSession
+	hasSess bool
 }
 
 // NewRouter devuelve un Router vacío.
@@ -44,12 +49,17 @@ func NewRouter(o RouterOptions) *Router {
 	if o.StreamTimeout <= 0 {
 		o.StreamTimeout = DefaultStreamTimeout
 	}
-	return &Router{mux: http.NewServeMux(), opts: o}
+	rt := &Router{mux: http.NewServeMux(), opts: o}
+	if o.Session != nil {
+		rt.session, rt.hasSess = o.Session.withDefaults(), true
+	}
+	return rt
 }
 
 type route struct {
 	streaming bool
 	mw        []Middleware
+	classes   []Class
 }
 
 // RouteOption ajusta una ruta en Handle.
@@ -67,6 +77,9 @@ func Use(mw ...Middleware) RouteOption { return func(r *route) { r.mw = append(r
 
 // Handle registra h para pattern, que debe ser "MÉTODO /camino". Un patrón sin
 // método o de subárbol (termina en "/" o en "...}") es un error de programación y entra en pánico.
+// Toda ruta /v1 declara su clase (Public, NoTenant o Tenant) y las reglas de
+// conventions.md §2 se comprueban aquí: una ruta que no las cumple también entra en pánico.
+// Las de clase NoTenant y Tenant corren el paso de sesión y los limitadores antes de ro.mw.
 func (rt *Router) Handle(pattern string, h http.Handler, opts ...RouteOption) {
 	method, p, ok := strings.Cut(pattern, " ")
 	if !ok || method == "" || strings.ToUpper(method) != method || !strings.HasPrefix(p, "/") || strings.HasSuffix(p, "/") || strings.HasSuffix(p, "...}") {
@@ -78,6 +91,8 @@ func (rt *Router) Handle(pattern string, h http.Handler, opts ...RouteOption) {
 	for _, o := range opts {
 		o(&ro)
 	}
+	class := checkClass(pattern, method, p, ro.classes, rt.hasSess)
+	ro.mw = append(rt.sessionMiddlewares(class), ro.mw...)
 	for i := len(ro.mw) - 1; i >= 0; i-- {
 		h = ro.mw[i](h)
 	}

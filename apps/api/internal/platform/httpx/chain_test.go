@@ -246,7 +246,7 @@ func TestNoCORSHeaders(t *testing.T) {
 }
 
 func TestRouterRejectsBadPatterns(t *testing.T) {
-	for _, pattern := range []string{"/no-method", "GET /subtree/", "GET", "GET /v1/files/{p...}", "GET /{rest...}"} {
+	for _, pattern := range []string{"/no-method", "GET /subtree/", "GET", "GET /x/files/{p...}", "GET /{rest...}"} {
 		t.Run(pattern, func(t *testing.T) {
 			defer func() {
 				if recover() == nil {
@@ -487,12 +487,12 @@ func TestAccessLogOmitsQueryAndHeadersThroughRouter(t *testing.T) {
 // o del handler: ServeMux redirige (301 HTML) cuando un patrón termina en "/" o "...}".
 func TestNoRequestGetsAServeMuxResponse(t *testing.T) {
 	h, _, _ := chain(t, func(rt *httpx.Router) {
-		rt.HandleFunc("GET /v1/files", func(w http.ResponseWriter, _ *http.Request) { _, _ = io.WriteString(w, "list") })
-		rt.HandleFunc("GET /v1/files/{id}", func(w http.ResponseWriter, _ *http.Request) { _, _ = io.WriteString(w, "one") })
+		rt.HandleFunc("GET /x/files", func(w http.ResponseWriter, _ *http.Request) { _, _ = io.WriteString(w, "list") })
+		rt.HandleFunc("GET /x/files/{id}", func(w http.ResponseWriter, _ *http.Request) { _, _ = io.WriteString(w, "one") })
 		rt.HandleFunc("GET /{$}", func(w http.ResponseWriter, _ *http.Request) { _, _ = io.WriteString(w, "root") })
 	})
-	paths := []string{"/", "/v1", "/v1/", "/v1/files", "/v1/files/", "/v1/files/a/b", "/v1/files/a/", "//v1/files", "/v1//files",
-		"/v1/./files", "/v1/files/..", "/v1/files/%2e%2e", "/*", "/v1/files?x=1", "/V1/FILES"}
+	paths := []string{"/", "/v1", "/v1/", "/x/files", "/x/files/", "/x/files/a/b", "/x/files/a/", "//x/files", "/v1//files",
+		"/v1/./files", "/x/files/..", "/x/files/%2e%2e", "/*", "/x/files?x=1", "/V1/FILES"}
 	for _, method := range []string{http.MethodGet, http.MethodHead, http.MethodPost, http.MethodOptions, http.MethodDelete} {
 		for _, p := range paths {
 			req := httptest.NewRequest(method, "http://example.com/", nil)

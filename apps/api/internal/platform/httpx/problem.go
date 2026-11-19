@@ -63,6 +63,9 @@ var retryAfterCodes = map[string]bool{
 	"rate_limited": true, "overloaded": true, "dependency_unavailable": true, "request_in_progress": true,
 }
 
+// wwwAuthenticateCodes son los 401 del kernel, que llevan WWW-Authenticate: Bearer.
+var wwwAuthenticateCodes = map[string]bool{"unauthenticated": true, "session_expired": true}
+
 // FieldError es un elemento de errors[] del problema (openapi.yaml Problem).
 type FieldError struct {
 	Field string         `json:"field"`
@@ -110,6 +113,9 @@ func WriteProblem(w http.ResponseWriter, r *http.Request, code, detail string, f
 	h := w.Header()
 	if retryAfterCodes[code] && h.Get("Retry-After") == "" {
 		h.Set("Retry-After", "1")
+	}
+	if wwwAuthenticateCodes[code] {
+		h.Set("WWW-Authenticate", "Bearer") // sin error ni error_description: el motivo va en el code (conventions.md §3)
 	}
 	h.Set("Content-Type", "application/problem+json")
 	w.WriteHeader(status)
