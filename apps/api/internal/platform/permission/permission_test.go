@@ -127,3 +127,39 @@ func TestReferencedCodesExist(t *testing.T) {
 		}
 	}
 }
+
+// Hueco de referencedCodes: un código sin comillas inversas en las tablas de
+// correspondencia (la de tenant y la de plataforma) no se lee. Se exige que
+// todo código de esas tablas vaya entre comillas.
+func TestCorrespondenceCodesAreAllInBackticks(t *testing.T) {
+	doc := readRepoFile(t, "docs/architecture/api/resources.md")
+	tenant := section(t, doc, "## Correspondencia: código de historia", "## Catálogo de permisos de plataforma")
+	i := strings.Index(doc, "### Correspondencia: historias de plataforma")
+	if i < 0 {
+		t.Fatal("heading of the platform correspondence not found")
+	}
+	for name, sec := range map[string]string{"tenant": tenant, "platform": doc[i:]} {
+		if bare := bareCodes(sec); len(bare) != 0 {
+			t.Errorf("resources.md %s correspondence writes codes without backticks: %v", name, bare)
+		}
+	}
+}
+
+func TestBareCodesFindsOnlyCodesOutsideBackticks(t *testing.T) {
+	for _, tc := range []struct {
+		name, text string
+		want       int
+	}{
+		{"in backticks", "| US-1 | `ventas.pos:read` y `:update` |", 0},
+		{"bare in a cell", "| US-1 | ventas.pos:read |", 1},
+		{"bare next to a quoted one", "| US-1 | `ventas.pos:read` ventas.pos:create |", 1},
+		{"a platform code", "| P-1 | plataforma.tenants:read |", 1},
+		{"outside a table row", "ventas.pos:read en prosa", 0},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := len(bareCodes(tc.text)); got != tc.want {
+				t.Fatalf("bareCodes(%q) = %d, want %d", tc.text, got, tc.want)
+			}
+		})
+	}
+}

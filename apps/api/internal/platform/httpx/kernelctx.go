@@ -14,6 +14,7 @@ const (
 	PhaseHandler       = "handler"
 	PhaseSessionLookup = "session_lookup"
 	PhaseEntitlements  = "entitlements"
+	PhaseAuthz         = "authz"
 	PhaseExport        = "export"
 	// PhaseCommit la fija WriteDBError al perderse la conexión durante el COMMIT.
 	PhaseCommit = "commit"

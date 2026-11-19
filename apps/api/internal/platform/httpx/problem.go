@@ -98,15 +98,18 @@ type problemBody struct {
 	Module string `json:"module,omitempty"`
 	Limit  *int64 `json:"limit,omitempty"`
 	Used   *int64 `json:"used,omitempty"`
+	// Permission es el código del catálogo que le falta a quien recibe forbidden.
+	Permission string `json:"permission,omitempty"`
 }
 
 // Extensions son los miembros extra del problema que llevan module_not_enabled
-// (Module) y plan_limit_reached (Limit y Used, conventions.md §4). Limit y Used
-// son punteros para que un 0 se envíe.
+// (Module), plan_limit_reached (Limit y Used) y forbidden (Permission,
+// conventions.md §4). Limit y Used son punteros para que un 0 se envíe.
 type Extensions struct {
-	Module string
-	Limit  *int64
-	Used   *int64
+	Module     string
+	Permission string
+	Limit      *int64
+	Used       *int64
 }
 
 // WriteProblem escribe un problema RFC 9457 con los campos que exige el
@@ -141,7 +144,7 @@ func writeProblem(w http.ResponseWriter, r *http.Request, code, detail string, e
 	_ = json.NewEncoder(w).Encode(problemBody{
 		Type: "about:blank", Title: http.StatusText(status), Status: status, Code: code,
 		Detail: detail, RequestID: logging.RequestID(r.Context()), Errors: fields,
-		Module: ext.Module, Limit: ext.Limit, Used: ext.Used,
+		Module: ext.Module, Limit: ext.Limit, Used: ext.Used, Permission: ext.Permission,
 	})
 }
 

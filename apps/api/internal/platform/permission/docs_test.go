@@ -46,6 +46,21 @@ var (
 	bareCodeRe  = regexp.MustCompile(`[a-z]+\.[a-z_]+:[a-z_]+`)
 )
 
+// bareCodes devuelve los códigos modulo.recurso:accion que una fila de tabla de
+// text escribe sin comillas inversas. referencedCodes los ignora (solo lee lo
+// que va entre comillas), así que sin esta comprobación un código suelto en la
+// correspondencia no se compara con el catálogo.
+func bareCodes(text string) []string {
+	var out []string
+	for _, line := range strings.Split(text, "\n") {
+		if !strings.HasPrefix(line, "|") {
+			continue
+		}
+		out = append(out, bareCodeRe.FindAllString(tokenRe.ReplaceAllString(line, ""), -1)...)
+	}
+	return out
+}
+
 // parseCatalogTable lee la tabla del catálogo de resources.md: cada código entre comillas inversas
 // de una fila debe ser modulo.recurso:accion[/accion...] con acciones permitidas y sin repetirse.
 func parseCatalogTable(section string) ([]string, error) {

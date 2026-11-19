@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"sort"
 	"testing"
 	"time"
 
@@ -30,7 +31,7 @@ func benchSession(b *testing.B, withSession bool) {
 	res := &fakeResolver{lookup: func(context.Context, [32]byte) (auth.SessionRecord, bool, error) { return bound(), true, nil }}
 	rt := httpx.NewRouter(httpx.RouterOptions{})
 	huge := httpx.LimiterConfig{Capacity: 1 << 30, Refill: time.Nanosecond, MaxKeys: 10}
-	routes, err := auth.NewRoutes(rt, res, grants(plan()), auth.Options{SessionLimiter: huge, TenantLimiter: huge})
+	routes, err := auth.NewRoutes(rt, res, grants(plan()), &fakePerms{}, &fakeDenials{}, auth.Options{SessionLimiter: huge, TenantLimiter: huge})
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -41,7 +42,7 @@ func benchSession(b *testing.B, withSession bool) {
 	if withSession {
 		routes.Handle("GET /v1/x", auth.Tenant, auth.Spec{Module: "ventas", Permission: "ventas.pos:read"}, ok)
 	} else {
-		rt.Handle("GET /v1/x", ok)
+		rt.HandleV1("GET /v1/x", ok)
 	}
 	h := httpx.Chain(rt, logging.New(io.Discard, slog.LevelInfo), nil)
 	req := httptest.NewRequest(http.MethodGet, "/v1/x", nil)
@@ -50,4 +51,36 @@ func benchSession(b *testing.B, withSession bool) {
 	for b.Loop() {
 		h.ServeHTTP(httptest.NewRecorder(), req)
 	}
+}
+
+// BenchmarkAuthzStepHotCache mide lo que añade el paso de permisos con la caché
+// caliente (criterio no funcional de #176: < 1 ms p95). Mide la cadena completa
+// con y sin el paso de permisos y publica el p95 de cada iteración:
+//
+//	go test -run '^$' -bench AuthzStep -benchmem -count 5 ./internal/platform/auth
+func BenchmarkAuthzStepHotCache(b *testing.B) {
+	res := &fakeResolver{lookup: func(context.Context, [32]byte) (auth.SessionRecord, bool, error) { return bound(), true, nil }}
+	rt := httpx.NewRouter(httpx.RouterOptions{})
+	huge := httpx.LimiterConfig{Capacity: 1 << 30, Refill: time.Nanosecond, MaxKeys: 10}
+	routes, err := auth.NewRoutes(rt, res, grants(plan()), &fakePerms{}, &fakeDenials{}, auth.Options{SessionLimiter: huge, TenantLimiter: huge})
+	if err != nil {
+		b.Fatal(err)
+	}
+	routes.Handle("GET /v1/x", auth.Tenant, auth.Spec{Module: "ventas", Permission: "ventas.pos:read"}, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = io.WriteString(w, "ok")
+	}))
+	h := httpx.Chain(rt, logging.New(io.Discard, slog.LevelInfo), nil)
+	req := httptest.NewRequest(http.MethodGet, "/v1/x", nil)
+	req.Header.Set("Authorization", bearer(token(1)))
+	h.ServeHTTP(httptest.NewRecorder(), req) // calienta la caché
+	durs := make([]time.Duration, 0, 1<<16)
+	b.ReportAllocs()
+	for b.Loop() {
+		t0 := time.Now()
+		h.ServeHTTP(httptest.NewRecorder(), req)
+		durs = append(durs, time.Since(t0))
+	}
+	b.StopTimer()
+	sort.Slice(durs, func(i, j int) bool { return durs[i] < durs[j] })
+	b.ReportMetric(float64(durs[len(durs)*95/100].Nanoseconds()), "p95-ns")
 }

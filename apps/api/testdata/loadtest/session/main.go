@@ -39,6 +39,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/bacsystem/wanka/apps/api/bootstrap"
+	"github.com/bacsystem/wanka/apps/api/internal/platform/audit"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/auth"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/auth/pgsession"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/db"
@@ -46,6 +47,7 @@ import (
 	"github.com/bacsystem/wanka/apps/api/internal/platform/httpx"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/logging"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/metrics"
+	"github.com/bacsystem/wanka/apps/api/internal/platform/permission"
 	"github.com/bacsystem/wanka/apps/api/migrations"
 )
 
@@ -219,6 +221,12 @@ type timed struct {
 	durs  []time.Duration
 }
 
+func (t *timed) BindVersion(ctx context.Context, sid, mid pgtype.UUID, v int64) (bool, error) {
+	return t.inner.BindVersion(ctx, sid, mid, v)
+}
+
+func (t *timed) Revoke(ctx context.Context, sid pgtype.UUID) error { return t.inner.Revoke(ctx, sid) }
+
 func (t *timed) Lookup(ctx context.Context, h [32]byte) (auth.SessionRecord, bool, error) {
 	s := time.Now()
 	r, ok, err := t.inner.Lookup(ctx, h)
@@ -273,7 +281,7 @@ func serve() error {
 
 	rt := httpx.NewMux(func(ctx context.Context) error { return p.Ping(ctx) })
 	res := &timed{inner: pgsession.New(p)}
-	routes, err := auth.NewRoutes(rt, res, openSource{}, auth.Options{}) // límites por defecto: lo que se despliega
+	routes, err := auth.NewRoutes(rt, res, openSource{}, allowAll{}, audit.NewWriter(p), auth.Options{}) // límites por defecto: lo que se despliega
 	if err != nil {
 		return err
 	}
@@ -282,7 +290,7 @@ func serve() error {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write(body)
 	}
-	routes.HandleFunc("GET /v1/loadtest/ping", auth.Tenant, auth.Spec{Module: "ventas", Permission: auth.NoPermission}, h) // ruta Tenant que no hace otra consulta
+	routes.HandleFunc("GET /v1/loadtest/ping", auth.Tenant, auth.Spec{Module: "ventas", Permission: "ventas.pos:read"}, h) // ruta Tenant que no hace otra consulta
 	rt.HandleFunc("GET /ctl", h)                                                                                           // control: misma cadena, sin sesión ni base
 
 	var peak, sum, n atomic.Int64
@@ -364,6 +372,14 @@ func (s *syncWriter) flush() { s.mu.Lock(); _ = s.w.Flush(); s.mu.Unlock() }
 // openSource da a toda empresa el módulo ventas: la prueba mide el paso de
 // sesión, no la lectura de entitlements.
 type openSource struct{}
+
+// allowAll concede toda ruta con la versión que ya tiene la membresía: la
+// prueba mide la cadena de sesión, no un rol (el resolver real llega con #29).
+type allowAll struct{}
+
+func (allowAll) Resolve(_ context.Context, s auth.Session) (auth.Authz, error) {
+	return auth.Authz{Version: s.CurrentAuthzVersion.Int64, Permissions: map[permission.Code]struct{}{permission.VentasPosRead: {}}}, nil
+}
 
 func (openSource) For(context.Context, pgtype.UUID) (entitlements.Entitlements, error) {
 	return entitlements.Entitlements{Status: entitlements.StatusActive, Modules: []string{"ventas"}}, nil

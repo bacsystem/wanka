@@ -11,6 +11,17 @@ import (
 // MembershipActive es el estado de una membresía que da acceso a su empresa.
 const MembershipActive = "activo"
 
+// ImpersonationScope es el alcance del grant de una sesión impersonada (ADR 0001).
+// El valor cero es «desconocido» y no es un alcance: el paso de permisos le niega
+// toda ruta con permiso, nunca lo trata como read_only.
+type ImpersonationScope uint8
+
+// Alcances del grant.
+const (
+	ScopeReadOnly ImpersonationScope = iota + 1
+	ScopeFull
+)
+
 // SessionRecord es la fila que devuelve iam.session_lookup (ADR 0004), tal cual.
 type SessionRecord struct {
 	SessionID, UserID, TenantID, SiteID, CashRegisterID, MembershipID, ImpersonatorID pgtype.UUID
@@ -20,6 +31,9 @@ type SessionRecord struct {
 	MembershipStatus                         pgtype.Text
 	MFASatisfied                             bool
 	MFAMethod                                string
+	// ImpersonationScope es el del grant; cero (desconocido) hasta que la ola 6
+	// haga que iam.session_lookup lo devuelva (data-model §6).
+	ImpersonationScope ImpersonationScope
 }
 
 // SessionResolver es el puerto de la sesión. El adaptador de PostgreSQL lo
@@ -40,6 +54,13 @@ type SessionResolver interface {
 	// condicionado a id y membership_id, idempotente. detached=false con err=nil
 	// es que no actualizó filas.
 	Detach(ctx context.Context, sessionID, membershipID pgtype.UUID) (detached bool, err error)
+	// BindVersion guarda en la sesión la versión de permisos que se acaba de
+	// resolver: UPDATE condicionado a id, membership_id y revoked_at IS NULL.
+	// bound=false con err=nil es que no actualizó filas: la sesión ya no está
+	// ligada a esa membresía (la desligó otra petición) o está revocada.
+	BindVersion(ctx context.Context, sessionID, membershipID pgtype.UUID, version int64) (bound bool, err error)
+	// Revoke revoca la sesión (2FA exigida por el rol, #176). Idempotente.
+	Revoke(ctx context.Context, sessionID pgtype.UUID) error
 }
 
 // Session es la sesión autenticada que el handler lee con FromContext. Sus
@@ -55,6 +76,7 @@ type Session struct {
 	SiteID, CashRegisterID, MembershipID     pgtype.UUID
 	SessionAuthzVersion, CurrentAuthzVersion pgtype.Int8
 	MFAMethod                                string
+	ImpersonationScope                       ImpersonationScope
 }
 
 // HasTenant dice si la sesión está ligada a una empresa.
@@ -95,7 +117,7 @@ func (r SessionRecord) lostMembership() bool {
 // mismo estado al que el UPDATE de desligar deja la fila.
 func (r SessionRecord) session(detached bool) Session {
 	s := Session{ID: r.SessionID, SiteID: r.SiteID, CashRegisterID: r.CashRegisterID, MembershipID: r.MembershipID,
-		SessionAuthzVersion: r.SessionAuthzVersion, CurrentAuthzVersion: r.CurrentAuthzVersion, MFAMethod: r.MFAMethod,
+		SessionAuthzVersion: r.SessionAuthzVersion, CurrentAuthzVersion: r.CurrentAuthzVersion, MFAMethod: r.MFAMethod, ImpersonationScope: r.ImpersonationScope,
 		Actor: db.Actor{TenantID: r.TenantID, UserID: r.UserID, Kind: db.KindUser}}
 	if r.impersonated() {
 		// El user_id del actor es el del staff, como el app.user_id que fija el canje.

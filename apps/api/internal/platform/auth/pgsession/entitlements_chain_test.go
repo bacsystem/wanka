@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 
+	"github.com/bacsystem/wanka/apps/api/internal/platform/audit"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/auth"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/auth/pgsession"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/db"
@@ -307,6 +308,12 @@ type frozen struct {
 	err   error
 }
 
+func (f *frozen) BindVersion(ctx context.Context, sid, mid pgtype.UUID, v int64) (bool, error) {
+	return f.inner.BindVersion(ctx, sid, mid, v)
+}
+
+func (f *frozen) Revoke(ctx context.Context, sid pgtype.UUID) error { return f.inner.Revoke(ctx, sid) }
+
 func (f *frozen) Lookup(ctx context.Context, h [32]byte) (auth.SessionRecord, bool, error) {
 	f.once.Do(func() { f.rec, f.found, f.err = f.inner.Lookup(ctx, h) })
 	return f.rec, f.found, f.err
@@ -327,7 +334,7 @@ func TestHotCacheStepP95UnderOneMillisecond(t *testing.T) {
 	rt := httpx.NewRouter(httpx.RouterOptions{})
 	huge := httpx.LimiterConfig{Capacity: 1 << 30, Refill: time.Nanosecond, MaxKeys: 10}
 	counted := &countingDB{Pool: e.pool}
-	routes, err := auth.NewRoutes(rt, &frozen{inner: pgsession.New(e.pool)}, entitlements.New(counted, entitlements.Options{}), auth.Options{SessionLimiter: huge, TenantLimiter: huge})
+	routes, err := auth.NewRoutes(rt, &frozen{inner: pgsession.New(e.pool)}, entitlements.New(counted, entitlements.Options{}), allowAll{}, audit.NewWriter(e.pool), auth.Options{SessionLimiter: huge, TenantLimiter: huge})
 	if err != nil {
 		t.Fatal(err)
 	}

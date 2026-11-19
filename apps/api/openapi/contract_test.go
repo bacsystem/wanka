@@ -13,9 +13,7 @@ import (
 	"strings"
 	"testing"
 
-	facturacionelectronica "github.com/bacsystem/wanka/apps/api/internal/apigen/facturacion-electronica"
-	"github.com/bacsystem/wanka/apps/api/internal/apigen/identidad"
-	"github.com/bacsystem/wanka/apps/api/internal/apigen/ventas"
+	"github.com/bacsystem/wanka/apps/api/internal/apigen"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/db/dbtest"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/permission"
 )
@@ -25,16 +23,20 @@ import (
 // raíz y los archivos de texto los recorre por líneas. Redocly (scripts/openapi-check.sh)
 // valida la sintaxis y los $ref; esto valida las reglas del proyecto.
 
-// opsByModule es el registro de los paquetes generados. Un archivo de paths con operaciones
-// que no esté aquí falla la prueba: hay que generar su paquete (internal/apigen/<módulo>).
-var opsByModule = map[string][]opMeta{
-	"identidad":               convert(identidad.Operations),
-	"ventas":                  convert(ventas.Operations),
-	"facturacion-electronica": convert(facturacionelectronica.Operations),
-}
+// opsByModule son las operaciones de los paquetes generados (apigen.Modules, el registro
+// compartido con la prueba de paridad de cmd/wanka). Un archivo de paths con operaciones
+// que no esté en el registro falla la prueba: hay que generar su paquete y registrarlo.
+var opsByModule = func() map[string][]opMeta {
+	out := map[string][]opMeta{}
+	for m, ops := range apigen.Modules() {
+		for _, o := range ops {
+			out[m] = append(out[m], opMeta(o))
+		}
+	}
+	return out
+}()
 
-// opMeta es el OperationMeta que la plantilla internal/apigen/operations.tmpl genera en cada paquete
-// (cada uno tiene el suyo, con la misma forma).
+// opMeta es la forma de apigen.Operation que usa esta prueba (los tests la mutan).
 type opMeta struct {
 	Method           string
 	Path             string
@@ -45,31 +47,12 @@ type opMeta struct {
 	Security         []string
 }
 
-func convert[T ~struct {
-	Method           string
-	Path             string
-	ID               string
-	Tags             []string
-	Ext              map[string]any
-	SecurityDeclared bool
-	Security         []string
-}](in []T) []opMeta {
-	out := make([]opMeta, len(in))
-	for i, o := range in {
-		out[i] = opMeta(o)
-	}
-	return out
-}
-
 // none es el literal reservado de ADR 0009 para «ningún módulo» o «ningún permiso».
 const none = "none"
 
 // moduleNoneTenantRoutes son las únicas rutas Tenant con x-module none (ADR 0009, la lista fija
 // que pasa con la suscripción inactiva; la misma de auth.inactivePass).
 var moduleNoneTenantRoutes = []string{"GET /v1/me/entitlements", "GET /v1/exports"}
-
-// noTenantRoutes son las rutas NoTenant fuera de /v1/auth/* (auth.noTenantRoutes).
-var noTenantRoutes = []string{"GET /v1/me", "GET /v1/me/memberships"}
 
 type spec struct {
 	rootTags []string          // tags de openapi.yaml
@@ -309,16 +292,7 @@ func extension(op opMeta, name string) (string, string) {
 }
 
 // classOf deduce la clase de la ruta como auth.Routes (conventions.md §2).
-func classOf(op opMeta) string {
-	switch pat := op.Method + " " + op.Path; {
-	case op.SecurityDeclared && len(op.Security) == 0:
-		return "Public"
-	case strings.HasPrefix(op.Path, "/v1/auth/") || slices.Contains(noTenantRoutes, pat):
-		return "NoTenant"
-	default:
-		return "Tenant"
-	}
-}
+func classOf(op opMeta) string { return apigen.Operation(op).Class() }
 
 func TestContractHolds(t *testing.T) {
 	s := load(t)

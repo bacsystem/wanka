@@ -1,9 +1,10 @@
 // Package pgsession implementa auth.SessionResolver sobre PostgreSQL (ADR 0004,
 // ADR 0011): la búsqueda de sesión con iam.session_lookup y el desligue de la
-// membresía perdida.
+// membresía perdida, más las dos escrituras del paso de permisos (#176): guardar
+// la versión resuelta (BindVersion) y revocar por 2FA (Revoke).
 //
-// Son las dos únicas puertas a la base de la sesión: Lookup corre en
-// db.InNoTenantReadTx y Detach en db.InNoTenantTx. No hay otra consulta ni caché:
+// Son las únicas puertas a la base de la sesión: Lookup corre en
+// db.InNoTenantReadTx y Detach, BindVersion y Revoke en db.InNoTenantTx. No hay otra consulta ni caché:
 // la búsqueda se hace en cada petición, para que revocar o suspender surta efecto
 // en la siguiente.
 package pgsession
@@ -87,4 +88,41 @@ func (r *Resolver) Detach(ctx context.Context, sessionID, membershipID pgtype.UU
 		return false, fmt.Errorf("detaching session: %w", err)
 	}
 	return detached, nil
+}
+
+// bindSQL guarda la versión resuelta solo si la sesión sigue ligada a esa
+// membresía y viva: 0 filas significa únicamente «desligada» o revocada, por eso
+// no lleva condición sobre la versión.
+const bindSQL = `UPDATE iam.sessions SET authz_version = $3
+	WHERE id = $1 AND membership_id = $2 AND revoked_at IS NULL`
+
+// revokeSQL revoca la sesión; el instante lo pone la base. Revocar otra vez es
+// un no-op (el trigger conserva el instante viejo).
+const revokeSQL = `UPDATE iam.sessions SET revoked_at = now() WHERE id = $1 AND revoked_at IS NULL`
+
+// BindVersion guarda en la sesión la versión de permisos resuelta. bound=false
+// con err=nil es que otra petición la desligó (ADR 0011) o está revocada.
+func (r *Resolver) BindVersion(ctx context.Context, sessionID, membershipID pgtype.UUID, version int64) (bool, error) {
+	var bound bool
+	err := r.pool.InNoTenantTx(ctx, db.NoTenantScope{}, func(tx pgx.Tx) error {
+		tag, err := tx.Exec(ctx, bindSQL, sessionID, membershipID, version)
+		bound = err == nil && tag.RowsAffected() == 1
+		return err
+	})
+	if err != nil {
+		return false, fmt.Errorf("binding session authz version: %w", err)
+	}
+	return bound, nil
+}
+
+// Revoke revoca la sesión. Es idempotente.
+func (r *Resolver) Revoke(ctx context.Context, sessionID pgtype.UUID) error {
+	err := r.pool.InNoTenantTx(ctx, db.NoTenantScope{}, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, revokeSQL, sessionID)
+		return err
+	})
+	if err != nil {
+		return fmt.Errorf("revoking session: %w", err)
+	}
+	return nil
 }
