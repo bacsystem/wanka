@@ -1,10 +1,10 @@
-// Package mailerstub es el adaptador de prueba del puerto mailer: no envía nada.
+// Package stub es el adaptador de prueba del puerto mailer: no envía nada.
 // Guarda los mensajes en una bandeja en memoria (Sent) para que los tests de
 // identidad comprueben «se envió la invitación», y registra solo el destinatario
 // enmascarado y el asunto: nunca el cuerpo, los enlaces, las etiquetas ni la
 // llave de idempotencia. Los módulos importan mailer, no este paquete; solo
 // el arranque del proceso y los tests lo construyen.
-package mailerstub
+package stub
 
 import (
 	"context"
@@ -38,6 +38,10 @@ func New(log *slog.Logger, max int) *Stub {
 	return &Stub{log: log, max: max, keys: make(map[string]struct{})}
 }
 
+// La deduplicación por IdempotencyKey solo vale mientras el mensaje siga en la
+// bandeja: al salir de ella (más de max envíos después) su llave se olvida y un
+// reenvío con esa llave se registra otra vez. Es un stub, no un registro durable.
+//
 // Send valida el mensaje, lo guarda y lo registra. Con una IdempotencyKey ya
 // vista no guarda ni registra otro envío y devuelve nil.
 func (s *Stub) Send(ctx context.Context, m mailer.Message) error {

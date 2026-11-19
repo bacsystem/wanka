@@ -83,7 +83,7 @@ wanka migrate up                # aplica las migraciones pendientes y termina
 cuerpo) envuelve a un `httpx.Router`. Las rutas que no son `/v1` (salud) se
 registran con `rt.Handle("GET /healthz", h, opts...)`; `Handle` entra en pánico
 con cualquier patrón que `/v1` pueda alcanzar (`/v1`, `/v1/...` o un comodín
-inicial como `/{version}/x`). Las rutas `/v1` van por `auth.Routes` (ver «Sesión»).
+inicial como `/{version}/x`) y con cualquier `%` (ServeMux desescapa `/v%31/x` a `/v1/x`). Las rutas `/v1` van por `auth.Routes` (ver «Sesión»).
 
 - **Errores**: todo error es `application/problem+json` (RFC 9457) con `type`,
   `title`, `status`, `code` y `requestId`. El `code` sale de la lista cerrada de
@@ -220,6 +220,8 @@ rol y no lee las de los demás.
 | `DB_POOL_MAX_CONNS` | no | Tamaño máximo del pool, 1 a 200. Por defecto: api 20, worker 10, webhooks 5, platform 5 (`capacity.md`) |
 | `HTTP_ADDR` | no (`:8080`) | Dirección donde escucha `serve` (con `127.0.0.1:0` el sistema elige el puerto y se informa en el log `listening`) |
 | `LOG_LEVEL` | no (`info`) | `debug`, `info`, `warn` o `error` |
+| `MAILER` | no (`stub`) | Adaptador de correo: `stub` (no envía; guarda en memoria y registra destinatario enmascarado y asunto) o `none` (rechaza todo envío). Otro valor impide arrancar |
+| `APP_ENV` | no (`production`) | `production`, `staging` o `development`. Sin la variable se asume producción. En `production` y `staging`, `MAILER=stub` o `none` arrancan con un `WARN` hasta que exista un adaptador real. Otro valor impide arrancar |
 
 Solo para tests: `WANKA_TEST_ADMIN_URL` (URL del superusuario de una base de
 pruebas) y `WANKA_TEST_ROLE_PASSWORD` (clave común de los cinco roles LOGIN en

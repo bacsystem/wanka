@@ -1,4 +1,4 @@
-package mailerstub_test
+package stub_test
 
 import (
 	"bytes"
@@ -13,15 +13,15 @@ import (
 
 	"github.com/bacsystem/wanka/apps/api/internal/platform/logging"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/mailer"
-	"github.com/bacsystem/wanka/apps/api/internal/platform/mailerstub"
+	"github.com/bacsystem/wanka/apps/api/internal/platform/mailer/stub"
 )
 
 // El módulo que consume el puerto solo ve la interfaz.
-var _ mailer.Mailer = (*mailerstub.Stub)(nil)
+var _ mailer.Mailer = (*stub.Stub)(nil)
 
-func newStub(max int) (*mailerstub.Stub, *bytes.Buffer) {
+func newStub(max int) (*stub.Stub, *bytes.Buffer) {
 	var buf bytes.Buffer
-	return mailerstub.New(logging.New(&buf, slog.LevelDebug), max), &buf
+	return stub.New(logging.New(&buf, slog.LevelDebug), max), &buf
 }
 
 func msg() mailer.Message {

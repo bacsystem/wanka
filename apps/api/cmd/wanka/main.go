@@ -23,7 +23,7 @@ import (
 	"github.com/bacsystem/wanka/apps/api/internal/platform/httpx"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/logging"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/mailer"
-	"github.com/bacsystem/wanka/apps/api/internal/platform/mailerstub"
+	"github.com/bacsystem/wanka/apps/api/internal/platform/mailer/stub"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/metrics"
 	"github.com/bacsystem/wanka/apps/api/migrations"
 )
@@ -34,10 +34,21 @@ const (
 	exitUsage = 2
 
 	shutdownTimeout = 10 * time.Second
-
-	// sweepInterval cada cuánto se barren los buckets llenos de los limitadores (#196).
-	sweepInterval = 10 * time.Second
 )
+
+// wiring es lo que serve toma de afuera para armar el plano: lo fija el
+// contrato y los tests lo reemplazan.
+type wiring struct {
+	// sweepInterval es cada cuánto se barren los buckets llenos de los limitadores (#196).
+	sweepInterval time.Duration
+	// auth son las opciones de auth.NewRoutes; vacías toman los valores de conventions.md §7.
+	auth auth.Options
+	// wrapSweeper, si no es nil, envuelve o reemplaza el barredor (solo los tests).
+	wrapSweeper func(sweeper) sweeper
+}
+
+// defaultWiring es el cableado de producción.
+var defaultWiring = wiring{sweepInterval: 10 * time.Second}
 
 // planes asocia cada plano con el servicio (rol de base de datos) que lo atiende.
 var planes = map[string]config.Service{
@@ -125,7 +136,7 @@ func run(ctx context.Context, args []string, getenv func(string) string, stdout,
 
 	switch sub {
 	case "serve":
-		err = serve(ctx, log, cfg, svc, plane)
+		err = serve(ctx, log, cfg, svc, plane, defaultWiring)
 	case "migrate":
 		err = migrate(ctx, log, cfg)
 	default:
@@ -139,20 +150,24 @@ func run(ctx context.Context, args []string, getenv func(string) string, stdout,
 }
 
 // newMailer elige el adaptador de correo según MAILER. El stub no entrega nada:
-// en producción avisa con WARN hasta que exista un adaptador real.
+// En producción (y staging), tanto el stub como none avisan con WARN hasta que exista
+// un adaptador real.
 func newMailer(log *slog.Logger, cfg config.Config) mailer.Mailer {
 	if cfg.Mailer == config.MailerNone {
+		if cfg.Production {
+			log.Warn("mailer is disabled: every send fails until a real mailer adapter exists", "mailer", cfg.Mailer)
+		}
 		return mailer.Disabled{}
 	}
 	if cfg.Production {
 		log.Warn("mailer is the stub: no email is delivered until a real mailer adapter exists", "mailer", cfg.Mailer)
 	}
-	return mailerstub.New(log, mailerstub.DefaultMaxSent)
+	return stub.New(log, stub.DefaultMaxSent)
 }
 
 // serve runs the HTTP server of one plane until ctx is cancelled, then shuts
 // it down gracefully.
-func serve(ctx context.Context, log *slog.Logger, cfg config.Config, svc config.Service, plane string) error {
+func serve(ctx context.Context, log *slog.Logger, cfg config.Config, svc config.Service, plane string, w wiring) error {
 	log = log.With("plane", plane)
 	// El pool no conecta al abrirse: con la base caída el proceso arranca
 	// igual y /readyz responde 503 hasta que la base conteste.
@@ -172,9 +187,12 @@ func serve(ctx context.Context, log *slog.Logger, cfg config.Config, svc config.
 	// session chain. The module routes arrive with their stories (tenant never
 	// mounts plataforma, ADR 0002).
 	rt := httpx.NewMux(ready)
-	sweeper, err := mountPlane(plane, rt, pool)
+	sw, err := mountPlane(plane, rt, pool, w.auth)
 	if err != nil {
 		return err
+	}
+	if sw != nil && w.wrapSweeper != nil {
+		sw = w.wrapSweeper(sw)
 	}
 	handler := httpx.Chain(rt, log, metrics.Nop{})
 	srv := httpx.NewServer(cfg.HTTPAddr, handler)
@@ -188,10 +206,10 @@ func serve(ctx context.Context, log *slog.Logger, cfg config.Config, svc config.
 	errc := make(chan error, 1)
 	go func() { errc <- srv.Serve(ln) }()
 
-	if sweeper != nil {
+	if sw != nil {
 		// El bucle termina con el apagado: se espera a que salga antes de volver.
 		sweepCtx, stopSweep := context.WithCancel(ctx)
-		sweepDone := startSweepLoop(sweepCtx, sweeper, sweepInterval)
+		sweepDone := startSweepLoop(sweepCtx, sw, w.sweepInterval)
 		defer func() { stopSweep(); <-sweepDone }()
 	}
 
@@ -222,11 +240,11 @@ type sweeper interface{ Sweep() int }
 // los demás no monta nada y devuelve nil. El *auth.Routes no sale de aquí hacia
 // los módulos todavía: cuando haya rutas /v1 de módulo, se les pasará solo
 // ese registrador y nunca rt, para que ninguna ruta /v1 quede sin clase.
-func mountPlane(plane string, rt *httpx.Router, pool *db.Pool) (sweeper, error) {
+func mountPlane(plane string, rt *httpx.Router, pool *db.Pool, opts auth.Options) (sweeper, error) {
 	if plane != "tenant" {
 		return nil, nil
 	}
-	routes, err := auth.NewRoutes(rt, pgsession.New(pool), auth.Options{})
+	routes, err := auth.NewRoutes(rt, pgsession.New(pool), opts)
 	if err != nil {
 		return nil, fmt.Errorf("mounting the session chain: %w", err)
 	}
