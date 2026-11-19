@@ -76,6 +76,7 @@ erDiagram
     timestamptz locked_until
     smallint mfa_failed_attempts "segundo paso: TOTP o emailCode malos, compartido con mfa/verify; CHECK 0 a 4, el 5o bloquea 15 min"
     timestamptz mfa_locked_until
+    smallint mfa_lockouts "bloqueos desde el ultimo segundo paso correcto; CHECK 0 a 3, con 3 cerrado hasta restablecer la contrasena"
     timestamptz created_at
   }
   USER_TOTP {
@@ -109,15 +110,15 @@ erDiagram
   }
   MFA_ENROLLMENTS {
     uuid id PK "iam.mfa_enrollments SIN RLS: identidad global; una fila por enrollmentToken del login (issue 25)"
-    uuid user_id FK "indice user_id+created_at: FK y tope de 10 correos por hora"
+    uuid user_id FK "indice user_id+created_at: FK y topes de 10 correos por hora y 20 en 24 h"
     bytea token_hash UK "sha256 del wk_en_ completo"
     bytea email_code_hmac "HMAC-SHA256 con el token como clave; el codigo en claro no se guarda"
     smallint email_sends "CHECK 1 a 3: login mas 2 reenvios"
-    timestamptz email_sent_at "ultimo envio: 60 s entre envios"
+    timestamptz email_sent_at "ultimo envio: 60 s entre envios, lo fija el servidor (trigger)"
     bytea totp_secret_enc "secreto pendiente AES-GCM; null hasta enrollment/totp"
     timestamptz expires_at "created_at + 10 min como maximo; indice para limpieza"
-    timestamptz consumed_at "confirm correcto o 5o fallo"
-    timestamptz created_at
+    timestamptz consumed_at "confirm correcto, bloqueo o restablecimiento; irreversible (trigger guard_mfa_enrollment_writes)"
+    timestamptz created_at "lo fija el servidor en el INSERT (trigger)"
   }
   PASSWORD_RESETS {
     uuid id PK

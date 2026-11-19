@@ -18,7 +18,7 @@ Ajustes de forma respecto a los mocks, comunes a todos los recursos:
 | `POST /v1/auth/mfa/verify` | `/login` paso 2FA | — | `challengeToken` en el cuerpo (clase `Public`, `conventions.md` §2) |
 | `POST /v1/auth/mfa/totp/enroll`, `.../confirm` | `/perfil` (activar 2FA con la sesión ya iniciada) | — | sesión (clase `NoTenant`); sin `emailCode` (`conventions.md` §2) |
 | `POST /v1/auth/mfa/enrollment/totp`, `.../confirm` | `/login`, enrolamiento obligatorio antes de tener sesión | — | `enrollmentToken` en el cuerpo, solo para enrolar y válido hasta el `confirm` correcto (clase `Public`, `conventions.md` §2); `confirm` crea la sesión y exige `{enrollmentToken, code, emailCode}`: el `emailCode` es el código de 6 dígitos que el login manda al correo al responder `mfa_enrollment_required` (decisión del dueño del 2026-11-19, [#25](https://github.com/bacsystem/wanka/issues/25); forma, intentos y topes en `conventions.md` §2) |
-| `POST /v1/auth/mfa/enrollment/email-code/resend` | `/login`, «Reenviar código» del enrolamiento obligatorio | — | `enrollmentToken` en el cuerpo (clase `Public`); 3 envíos por token, 60 s entre envíos y 10 por usuario por hora (`conventions.md` §2) |
+| `POST /v1/auth/mfa/enrollment/email-code/resend` | `/login`, «Reenviar código» del enrolamiento obligatorio | — | `enrollmentToken` en el cuerpo (clase `Public`); 3 envíos por token, 60 s entre envíos, y por usuario 10 por hora y 20 en 24 h (`conventions.md` §2) |
 | `POST /v1/auth/refresh` | BFF | — | refresh token |
 | `POST /v1/auth/logout` | topbar | — | sesión |
 | `POST /v1/auth/password/forgot`, `.../reset` | `/login` recuperar | — | público, rate limit |
