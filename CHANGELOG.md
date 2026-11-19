@@ -3,6 +3,19 @@
 All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.3.0] - 2026-11-18
+
+### Added
+- `apps/api`: one `pgxpool` per process with its own database role (`DATABASE_URL_APP`, `DATABASE_URL_WORKER`, `DATABASE_URL_WEBHOOKS`, `DATABASE_URL_PLATFORM`, `DATABASE_URL_MIGRATOR`; size from `DB_POOL_MAX_CONNS`), `wanka migrate up` with goose migrations embedded in the binary (version table in its own `goose` schema), the idempotent role bootstrap `apps/api/bootstrap/roles.sql`, `/readyz` backed by the database (`503 dependency_unavailable` / `503 overloaded`), and a CI check that keeps merged migrations forward-only (#184, #162).
+
+### Changed
+- `DATABASE_URL` is no longer read: each command needs the URL of its own role (#184).
+
+## [0.2.2] - 2026-11-18
+
+### Changed
+- Losing a company membership no longer ends the session: the session is unbound from that company, tenant routes answer `403 tenant_access_denied` and the user goes to `/seleccionar-empresa` (to `/login` only with no active membership left). ADR 0011, `api/conventions.md` §0 and §4, sequences 01 and 08 (#185).
+
 ## [0.2.1] - 2026-11-18
 
 ### Changed
