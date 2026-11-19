@@ -220,6 +220,8 @@ rol y no lee las de los demás.
 | `DB_POOL_MAX_CONNS` | no | Tamaño máximo del pool, 1 a 200. Por defecto: api 20, worker 10, webhooks 5, platform 5 (`capacity.md`) |
 | `HTTP_ADDR` | no (`:8080`) | Dirección donde escucha `serve` (con `127.0.0.1:0` el sistema elige el puerto y se informa en el log `listening`) |
 | `LOG_LEVEL` | no (`info`) | `debug`, `info`, `warn` o `error` |
+| `MAILER` | no (`stub`) | Adaptador de correo: `stub` (no envía; guarda en memoria y registra destinatario enmascarado y asunto) o `none` (rechaza todo envío). Otro valor impide arrancar |
+| `APP_ENV` | no (`production`) | `production`, `staging` o `development`. Sin la variable se asume producción. En `production` y `staging`, `MAILER=stub` o `none` arrancan con un `WARN` hasta que exista un adaptador real. Otro valor impide arrancar |
 
 Solo para tests: `WANKA_TEST_ADMIN_URL` (URL del superusuario de una base de
 pruebas) y `WANKA_TEST_ROLE_PASSWORD` (clave común de los cinco roles LOGIN en

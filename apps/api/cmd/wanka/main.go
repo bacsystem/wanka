@@ -23,7 +23,7 @@ import (
 	"github.com/bacsystem/wanka/apps/api/internal/platform/httpx"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/logging"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/mailer"
-	"github.com/bacsystem/wanka/apps/api/internal/platform/mailerstub"
+	"github.com/bacsystem/wanka/apps/api/internal/platform/mailer/stub"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/metrics"
 	"github.com/bacsystem/wanka/apps/api/migrations"
 )
@@ -139,15 +139,19 @@ func run(ctx context.Context, args []string, getenv func(string) string, stdout,
 }
 
 // newMailer elige el adaptador de correo según MAILER. El stub no entrega nada:
-// en producción avisa con WARN hasta que exista un adaptador real.
+// En producción (y staging), tanto el stub como none avisan con WARN hasta que exista
+// un adaptador real.
 func newMailer(log *slog.Logger, cfg config.Config) mailer.Mailer {
 	if cfg.Mailer == config.MailerNone {
+		if cfg.Production {
+			log.Warn("mailer is disabled: every send fails until a real mailer adapter exists", "mailer", cfg.Mailer)
+		}
 		return mailer.Disabled{}
 	}
 	if cfg.Production {
 		log.Warn("mailer is the stub: no email is delivered until a real mailer adapter exists", "mailer", cfg.Mailer)
 	}
-	return mailerstub.New(log, mailerstub.DefaultMaxSent)
+	return stub.New(log, stub.DefaultMaxSent)
 }
 
 // serve runs the HTTP server of one plane until ctx is cancelled, then shuts
