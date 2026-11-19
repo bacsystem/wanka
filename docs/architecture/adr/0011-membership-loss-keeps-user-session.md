@@ -1,6 +1,6 @@
 # ADR 0011: Perder la membresía termina la sesión en esa empresa, no la sesión del usuario
 
-- Estado: propuesto
+- Estado: aceptado (2026-11-18: el dueño eligió la opción (a) y aprobó el merge del PR #185)
 - Fecha: 2026-11-18
 - Modifica: [ADR 0004](0004-in-house-auth.md), solo en lo que lista «Qué reemplaza del ADR 0004». El resto del ADR 0004 sigue vigente. Su texto no se reescribe ([README §9](../README.md)): ante una diferencia, manda este ADR.
 
@@ -31,7 +31,7 @@ Opción 4.
 **Qué reemplaza del ADR 0004** (el texto del 0004 queda como estaba; estas frases dejan de valer):
 - «Revocación: … suspensión de usuario **o de membresía** ⇒ `revoked_at`». Ahora solo revoca la suspensión del usuario, definida abajo. Quitar o suspender una membresía desliga la sesión.
 - «Si una sesión de tenant no impersonada … no tiene versión actual … o la membresía no está activa, **se revoca y se responde 401**». Ahora se desliga, y la ruta de tenant responde `403 tenant_access_denied`. La frase «nunca se escribe NULL en la sesión» se refiere a `authz_version` cuando la versión actual falta y la sesión sigue ligada. Desligar sí escribe `NULL`, en todas las columnas del tenant a la vez.
-- «Prueba de integración: borrar o suspender la membresía hace que la siguiente petición responda 401 y revoque la sesión». La reemplaza la prueba de #174: `403 tenant_access_denied` en una ruta de tenant, sesión sin tenant y sin revocar, y `200` en `GET /v1/me/memberships`.
+- «Prueba de integración: borrar o suspender la membresía hace que la siguiente petición responda 401 y revoque la sesión». La reemplaza la prueba de #174 (con un doble del resolver) y #196 (contra PostgreSQL): `403 tenant_access_denied` en una ruta de tenant, sesión sin tenant y sin revocar, y `200` en `GET /v1/me/memberships`.
 - En «Dónde se decide», «recibiera `402` en vez de `401` … y no lo lleva a `/login`». El lugar y el orden de la decisión no cambian; cambia el código, que ahora es `403 tenant_access_denied`, y el destino, que ahora es `/seleccionar-empresa`.
 
 **En la API (paso de sesión del middleware, issue #174)**

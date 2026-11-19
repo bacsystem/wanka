@@ -24,12 +24,19 @@ sequenceDiagram
     MW->>DB: desliga la sesion SIN revocarla (ADR 0011): UPDATE iam.sessions SET tenant_id, membership_id, site_id, cash_register_id, authz_version = NULL WHERE id y membership_id coinciden, impersonator_id NULL y revoked_at NULL. Conserva tokens, familia de refresh y 2FA. Si el UPDATE falla, la peticion sigue sin tenant igual
     MW->>MW: contexto sin tenant (nunca se trata como sin cambios). Se decide aqui, en el paso de sesion: usa las columnas que ya devolvio session_lookup, sin otra consulta ni cache, y antes de los entitlements para no revelar a un ex miembro el estado de la empresa (402, 403)
   end
+  alt ruta de tenant y sesion sin tenant (recien desligada o nunca eligio empresa)
+    MW-->>W: 403 tenant_access_denied, sin refresh ni cabeceras RateLimit, y la peticion TERMINA aqui. El BFF lleva a /seleccionar-empresa, y a /login si no queda ninguna membresia activa
+  end
+  MW->>MW: rate limit (conventions 7): bucket por sesion en toda ruta autenticada, y por tenant solo en las rutas de tenant. Una peticion rechazada no consume fichas de ningun bucket
+  alt algun bucket sin fichas
+    MW-->>W: 429 rate_limited, Retry-After y RateLimit-* del bucket de menos fichas
+  else tope de claves del limitador
+    MW-->>W: 503 overloaded, Retry-After 1, sin RateLimit-*
+  end
   alt ruta sin tenant (/v1/auth/*, GET /v1/me, GET /v1/me/memberships)
     MW->>H: ctx sin tenant: el handler responde y la peticion TERMINA aqui (la sesion desligada sigue sirviendo para elegir otra empresa)
     H-->>W: 200
     Note over MW,H: Las rutas sin tenant no pasan por entitlements, 2FA del rol ni RBAC. Todo lo que sigue es solo para rutas de tenant con sesion ligada a una empresa
-  else ruta de tenant y sesion sin tenant (recien desligada o nunca eligio empresa)
-    MW-->>W: 403 tenant_access_denied, sin refresh, y la peticion TERMINA aqui. El BFF lleva a /seleccionar-empresa, y a /login si no queda ninguna membresia activa
   else ruta de tenant y sesion ligada a una empresa con membresia activa, o impersonada
     MW->>MW: sigue con los entitlements
   end

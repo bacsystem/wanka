@@ -3,6 +3,12 @@
 All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.5.1] - 2026-11-18
+
+### Changed
+- Kernel story #174 split into #174 (session middleware with a test double), #194 (`InNoTenantTx`), #195 (`iam`/`org` tables and `iam.session_lookup`) and #196 (PostgreSQL resolver and wiring). API contract: access tokens are a prefix plus 43 base64url characters and are stored as the `sha256` of the full token; every route declares its class (`Public`, `NoTenant`, `Tenant`); every kernel `401` carries `WWW-Authenticate: Bearer`; default limiter values per session and per tenant (`api/conventions.md` §2, §3, §4 and §7, sequence 08, `data-model.md` §6).
+- ADR 0011 status set to accepted (owner decision on PR #185).
+
 ## [0.5.0] - 2026-11-18
 
 ### Added
