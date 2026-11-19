@@ -11,17 +11,16 @@ ALTER TABLE org.tenants ADD COLUMN ruc text UNIQUE NOT NULL, ADD COLUMN name tex
 ALTER TABLE iam.users ADD COLUMN email text UNIQUE NOT NULL;
 
 CREATE TABLE org.sites (id uuid PRIMARY KEY, tenant_id uuid NOT NULL REFERENCES org.tenants, name text NOT NULL, UNIQUE (tenant_id, id));
-CREATE TABLE audit.events (id bigserial PRIMARY KEY, tenant_id uuid NOT NULL, actor_type text NOT NULL, action text NOT NULL, at timestamptz NOT NULL DEFAULT now());
 CREATE TABLE ops.webhook_routes (route_id text PRIMARY KEY, tenant_id uuid NOT NULL, provider text NOT NULL, webhook_secret_enc bytea NOT NULL, revoked_at timestamptz);
 CREATE TABLE platform.impersonation_grants (id uuid PRIMARY KEY, platform_user_id uuid NOT NULL, tenant_id uuid NOT NULL, ticket_id uuid NOT NULL,
   scope text NOT NULL, reason text, status text NOT NULL, created_at timestamptz NOT NULL DEFAULT now(), approved_by uuid, approved_at timestamptz,
   consent_expires_at timestamptz, exchange_token_hash bytea UNIQUE, redeemed_at timestamptz, revoked_at timestamptz);
 CREATE TABLE platform.audit_events (id bigserial PRIMARY KEY, platform_user_id uuid, target_tenant_id uuid, action text NOT NULL);
 
--- RLS habilitado y FORZADO en las demas tablas de tenant (ADR 0001); iam.roles, iam.memberships y org.tenants
+-- RLS habilitado y FORZADO en las demas tablas de tenant (ADR 0001); iam.roles, iam.memberships, org.tenants y audit.events
 -- ya lo traen de la migracion del kernel, con su tenant_isolation.
 DO $$ DECLARE t text; BEGIN
-  FOREACH t IN ARRAY ARRAY['org.sites','audit.events'] LOOP
+  FOREACH t IN ARRAY ARRAY['org.sites'] LOOP
     EXECUTE format('ALTER TABLE %s ENABLE ROW LEVEL SECURITY', t);
     EXECUTE format('ALTER TABLE %s FORCE ROW LEVEL SECURITY', t);
     EXECUTE format('CREATE POLICY tenant_isolation ON %s USING (tenant_id = app.current_tenant()) WITH CHECK (tenant_id = app.current_tenant())', t);
@@ -77,7 +76,7 @@ BEGIN
    WHERE g.id = p_grant_id AND g.status = 'solicitado' AND g.tenant_id = app.current_tenant();
   GET DIAGNOSTICS n = ROW_COUNT;
   IF n = 0 THEN RAISE EXCEPTION 'grant not found for this tenant' USING ERRCODE = 'no_data_found'; END IF;
-  INSERT INTO audit.events (tenant_id, actor_type, action) VALUES (app.current_tenant(), 'user', 'support_access:' || CASE WHEN p_approve THEN 'approve' ELSE 'reject' END);
+  INSERT INTO audit.events (tenant_id, actor_type, actor_user_id, action) VALUES (app.current_tenant(), 'user', app.current_user_id(), 'support_access:' || CASE WHEN p_approve THEN 'approve' ELSE 'reject' END);
   RETURN CASE WHEN p_approve THEN 'aprobado' ELSE 'rechazado' END;
 END $$;
 
@@ -185,13 +184,12 @@ GRANT INSERT ON iam.memberships, iam.users, iam.roles TO wanka_definer;
 GRANT SELECT ON iam.users, iam.roles TO wanka_definer;
 GRANT SELECT, INSERT, UPDATE ON org.tenants TO wanka_definer;
 GRANT SELECT, INSERT, DELETE ON org.sites TO wanka_definer;
-GRANT INSERT ON audit.events TO wanka_definer;
-GRANT USAGE ON SEQUENCE audit.events_id_seq TO wanka_definer;
+GRANT INSERT ON audit.events TO wanka_definer;   -- el esquema audit y sus GRANT para app y worker: migracion del kernel (#173)
 GRANT SELECT ON ops.webhook_routes TO wanka_definer;
 GRANT SELECT, INSERT, UPDATE ON platform.impersonation_grants TO wanka_definer;
 
 -- Permisos de los roles de aplicación (extracto de la matriz del ADR 0001)
-GRANT USAGE ON SCHEMA audit TO wanka_app;   -- app, iam y org, y los GRANT de iam.* y org.tenants: migracion del kernel
+-- app, audit, iam y org, y los GRANT de iam.*, org.tenants y audit.events: migracion del kernel
 GRANT SELECT, INSERT, UPDATE ON org.sites TO wanka_app;
 GRANT SELECT ON iam.list_my_memberships TO wanka_app;
 GRANT EXECUTE ON FUNCTION iam.list_support_requests(), iam.decide_impersonation(uuid,boolean),

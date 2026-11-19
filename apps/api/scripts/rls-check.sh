@@ -47,7 +47,18 @@ for m in "naive_session_lookup|wanka_app" \
          "revoke_platform_river_insert|wanka_platform" \
          "grant_webhooks_update_river_job|wanka_webhooks" \
          "revoke_worker_river_delete|wanka_worker" \
-         "grant_worker_river_migration|wanka_worker"; do
+         "grant_worker_river_migration|wanka_worker" \
+         "grant_app_update_audit|wanka_app" \
+         "grant_app_delete_audit|wanka_app" \
+         "grant_worker_delete_audit|wanka_worker" \
+         "grant_webhooks_insert_audit|wanka_webhooks" \
+         "audit_policy_allows_all|wanka_app" \
+         "drop_force_rls_audit|wanka_migrator: borra la membresia" \
+         "drop_audit_user_check|wanka_app" \
+         "drop_audit_system_check|wanka_app" \
+         "ensure_partitions_to_public|wanka_app" \
+         "ensure_partitions_no_search_path|wanka_worker" \
+         "grant_app_partition_select|wanka_app"; do
   name="${m%%|*}" step="${m#*|}"
   echo "== MUTATION=${name}: debe fallar en «${step}» =="
   if ! detected "$name" "$step"; then

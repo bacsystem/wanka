@@ -16,6 +16,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/bacsystem/wanka/apps/api/internal/platform/audit"
+	"github.com/bacsystem/wanka/apps/api/internal/platform/clock"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/config"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/db"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/httpx"
@@ -202,7 +204,17 @@ func worker(ctx context.Context, log *slog.Logger, cfg config.Config, svc config
 		return fmt.Errorf("opening database pool: %w", err)
 	}
 	defer pool.Close()
-	w, err := jobs.NewWorker(pool, jobs.NewRegistry(pool), jcfg, log)
+	reg := jobs.NewRegistry(pool)
+	clk := clock.System{}
+	if err := registerKernelJobs(reg, pool, clk, log); err != nil {
+		return err
+	}
+	// Al arrancar se aseguran las particiones sin esperar al ciclo del periódico (River lo reinicia con
+	// cada despliegue). Si falla, el job lo reintenta; las que creó la migración cubren unos meses.
+	if _, err := audit.EnsurePartitions(ctx, pool, clk.Now(), audit.PartitionsAhead); err != nil {
+		log.Warn("could not ensure the audit partitions at startup", "err", err.Error())
+	}
+	w, err := jobs.NewWorker(pool, reg, jcfg, log)
 	if err != nil {
 		return err
 	}

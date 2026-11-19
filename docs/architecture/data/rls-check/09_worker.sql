@@ -19,6 +19,33 @@ COMMIT;
 DO $$ DECLARE n int; BEGIN DELETE FROM iam.sessions; GET DIAGNOSTICS n = ROW_COUNT; PERFORM test.assert(n > 0, 'wanka_worker borra sesiones'); RAISE EXCEPTION 'rollback' USING ERRCODE = 'P0001'; EXCEPTION WHEN SQLSTATE 'P0001' THEN NULL; END $$;
 \echo '== K1c. (wanka_worker) tablas de River: todo el DML de la cola, sin river_migration =='
 SELECT test.river_worker_full();
+\echo '== K1d. (wanka_worker) audit.events: escribe como system sin usuario, solo insercion; crea particiones (#173) =='
+BEGIN;
+SELECT set_config('app.tenant_id','aaaaaaaa-0000-0000-0000-000000000001', true), set_config('app.session_kind','system', true);
+INSERT INTO audit.events (tenant_id, actor_type, action) VALUES (app.current_tenant(), 'system', 'rls.check:job');
+SELECT test.assert((SELECT count(*) FROM audit.events WHERE action = 'rls.check:job') = 1, 'wanka_worker escribe y lee sus eventos system con tenant fijado');
+SELECT test.expect_error($$INSERT INTO audit.events (tenant_id, actor_type, actor_user_id, action)
+                           VALUES (app.current_tenant(), 'system', 'eeeeeeee-0000-0000-0000-000000000001', 'rls.check:x')$$,
+                         '23514', 'un job no inventa un usuario');
+SELECT test.expect_error($$INSERT INTO audit.events (tenant_id, actor_type, action) VALUES (app.current_tenant(), 'user', 'rls.check:x')$$,
+                         '23514', 'una fila user sin usuario es imposible tampoco desde el worker');
+SELECT test.expect_error($$UPDATE audit.events SET action = 'rls.check:z'$$, '42501', 'wanka_worker no actualiza audit.events');
+SELECT test.expect_error('DELETE FROM audit.events', '42501', 'wanka_worker no borra audit.events');
+SELECT test.expect_error('TRUNCATE audit.events', '42501', 'wanka_worker no vacia audit.events');
+ROLLBACK;
+SELECT test.assert(audit.ensure_partitions((now() AT TIME ZONE 'UTC')::date, 3) = 0, 'ensure_partitions es idempotente: la migracion ya dejo el mes actual y los 3 siguientes');
+SELECT test.assert(audit.ensure_partitions((now() AT TIME ZONE 'UTC')::date + 130, 0) >= 0, 'ensure_partitions acepta una fecha futura cercana');
+SELECT test.expect_error($$SELECT audit.ensure_partitions(current_date, 13)$$, '22023', 'ensure_partitions rechaza mas de 12 meses por delante');
+SELECT test.expect_error($$SELECT audit.ensure_partitions(date '2025-01-01', 0)$$, '22023', 'ensure_partitions rechaza fechas anteriores a 2026');
+SELECT test.assert((SELECT p.prosecdef AND pg_get_userbyid(p.proowner) = 'wanka_migrator' AND p.proconfig @> ARRAY['search_path=pg_catalog, pg_temp']
+                      FROM pg_proc p WHERE p.oid = 'audit.ensure_partitions(date,integer)'::regprocedure),
+                   'audit.ensure_partitions: SECURITY DEFINER, dueno wanka_migrator (el de la tabla) y search_path fijo');
+SELECT test.assert(NOT has_function_privilege('public', 'audit.ensure_partitions(date,integer)', 'EXECUTE')
+                   AND NOT has_function_privilege('wanka_app', 'audit.ensure_partitions(date,integer)', 'EXECUTE')
+                   AND NOT has_function_privilege('wanka_webhooks', 'audit.ensure_partitions(date,integer)', 'EXECUTE')
+                   AND NOT has_function_privilege('wanka_platform', 'audit.ensure_partitions(date,integer)', 'EXECUTE')
+                   AND has_function_privilege('wanka_worker', 'audit.ensure_partitions(date,integer)', 'EXECUTE'),
+                   'solo wanka_worker ejecuta audit.ensure_partitions');
 \echo '== K2. catalogo: duenio y search_path de las funciones SECURITY DEFINER, roles y FORCE RLS =='
 SELECT test.assert((SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
                      WHERE p.prosecdef AND n.nspname IN ('iam','ops','platform_fn')

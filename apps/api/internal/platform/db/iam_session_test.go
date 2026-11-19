@@ -510,7 +510,8 @@ func TestCatalogRules(t *testing.T) {
 			SELECT c.oid::regclass::text, c.relrowsecurity, c.relforcerowsecurity,
 			       EXISTS (SELECT 1 FROM pg_policy p WHERE p.polrelid = c.oid AND p.polname = 'tenant_isolation' AND p.polcmd = '*')
 			  FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
-			 WHERE c.relkind = 'r' AND n.nspname NOT IN ('pg_catalog', 'information_schema', 'goose')
+			 WHERE c.relkind IN ('r', 'p') AND NOT c.relispartition  -- una partición hereda el acceso del padre; no concede nada a los roles (audit_test.go)
+			   AND n.nspname NOT IN ('pg_catalog', 'information_schema', 'goose')
 			   AND c.oid <> 'iam.sessions'::regclass  -- excepción documentada: tiene tenant_id y no RLS, se busca por hash antes de conocer el tenant (ADR 0004)
 			   AND (c.oid = 'org.tenants'::regclass OR EXISTS (SELECT 1 FROM pg_attribute a WHERE a.attrelid = c.oid AND a.attname = 'tenant_id' AND NOT a.attisdropped))`)
 		if err != nil {
@@ -532,7 +533,7 @@ func TestCatalogRules(t *testing.T) {
 		if err := rows.Err(); err != nil {
 			t.Fatal(err)
 		}
-		for _, want := range []string{"org.tenants", "iam.roles", "iam.memberships"} {
+		for _, want := range []string{"org.tenants", "iam.roles", "iam.memberships", "audit.events"} {
 			if !seen[want] {
 				t.Errorf("%s was not checked", want)
 			}
@@ -569,8 +570,8 @@ func TestCatalogRules(t *testing.T) {
 		if err := rows.Err(); err != nil {
 			t.Fatal(err)
 		}
-		if len(got) != 3 {
-			t.Errorf("policies on %v, want org.tenants, iam.roles and iam.memberships only", got)
+		if len(got) != 4 {
+			t.Errorf("policies on %v, want org.tenants, iam.roles, iam.memberships and audit.events only", got)
 		}
 	})
 
