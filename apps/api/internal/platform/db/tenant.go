@@ -4,11 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // Errores de InTenantTx.
@@ -134,7 +136,7 @@ func (p *Pool) inTenantTx(ctx context.Context, a Actor, mode pgx.TxAccessMode, f
 
 	tx, err := conn.BeginTx(ctx, pgx.TxOptions{AccessMode: mode})
 	if err != nil {
-		return p.txError(ctx, "beginning transaction", err)
+		return p.txError(ctx, conn, "beginning transaction", err)
 	}
 	committed := false
 	// También corre si fn entra en pánico: deshace y deja que el pánico siga.
@@ -155,20 +157,25 @@ func (p *Pool) inTenantTx(ctx context.Context, a Actor, mode pgx.TxAccessMode, f
 		set_config('app.session_kind', $3, true), set_config('app.impersonator_id', $4, true)`,
 		uuidText(a.TenantID), uuidText(a.UserID), a.Kind.String(), uuidText(a.ImpersonatorID))
 	if err != nil {
-		return p.txError(ctx, "setting session variables", err)
+		return p.txError(ctx, conn, "setting session variables", err)
 	}
 	if err := fn(tx); err != nil {
-		return typedErr(ctx, err)
+		return typedErr(ctx, conn.Conn().PgConn().IsClosed(), err)
 	}
 	if err := tx.Commit(ctx); err != nil {
-		return p.txError(ctx, "committing transaction", err)
+		err = p.txError(ctx, conn, "committing transaction", err)
+		if errors.Is(err, ErrUnavailable) {
+			// La conexión se perdió con el COMMIT en vuelo: pudo confirmarse.
+			err = fmt.Errorf("%w: %w", ErrCommitUncertain, err)
+		}
+		return err
 	}
 	committed = true
 	return nil
 }
 
-func (p *Pool) txError(ctx context.Context, what string, err error) error {
-	return typedErr(ctx, fmt.Errorf("%s: %w", what, scrubbed(p.scrub, err)))
+func (p *Pool) txError(ctx context.Context, conn *pgxpool.Conn, what string, err error) error {
+	return typedErr(ctx, conn.Conn().PgConn().IsClosed(), fmt.Errorf("%s: %w", what, scrubbed(p.scrub, err)))
 }
 
 // typedErr marca con ErrStatementTimeout el error de una sentencia cancelada por
@@ -178,10 +185,45 @@ func (p *Pool) txError(ctx context.Context, what string, err error) error {
 // mensaje, que PostgreSQL traduce según lc_messages. Un pg_cancel_backend() de
 // un administrador también cae aquí; para la petición es el mismo "la base
 // canceló tu sentencia, reintenta". La causa original se conserva.
-func typedErr(ctx context.Context, err error) error {
+func typedErr(ctx context.Context, connClosed bool, err error) error {
+	if ctx.Err() != nil {
+		return err
+	}
 	var pgErr *pgconn.PgError
-	if ctx.Err() == nil && errors.As(err, &pgErr) && pgErr.Code == "57014" {
+	if errors.As(err, &pgErr) && pgErr.Code == "57014" {
 		return fmt.Errorf("%w: %w", ErrStatementTimeout, err)
 	}
+	if connectionLost(connClosed, err) {
+		return fmt.Errorf("%w: %w", ErrUnavailable, err)
+	}
 	return err
+}
+
+// connectionLost dice si err es la base que se fue (reinicio, failover,
+// pg_terminate_backend, red caída) y no un error de la sentencia o del código
+// que la rodea. Decide por el estado de la conexión (connClosed: pgx la da por
+// cerrada) o por el SQLSTATE (clase 08 y 57P01 a 57P03), nunca por la forma del
+// error ni por su texto: un io.EOF de un CSV, un error de otra API o un
+// "conn busy" (un bug de la aplicación) dejan la conexión viva y siguen siendo
+// un 500 con su causa en el log.
+//
+// Si la conexión se pierde durante el COMMIT el resultado es incierto (la
+// transacción pudo confirmarse), y reintentar solo es seguro con la misma
+// Idempotency-Key o con If-Match. El BFF no reintenta un 503 por su cuenta
+// (conventions.md §3 y §4).
+func connectionLost(connClosed bool, err error) bool {
+	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+		return false // el plazo propio del llamador no es una base caída
+	}
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) {
+		switch pgErr.Code {
+		case "57P01", "57P02", "57P03":
+			return true
+		}
+		if strings.HasPrefix(pgErr.Code, "08") {
+			return true
+		}
+	}
+	return connClosed
 }

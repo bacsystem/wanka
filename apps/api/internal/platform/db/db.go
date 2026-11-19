@@ -39,6 +39,10 @@ var (
 	ErrOverloaded = errors.New("db: no free connection")
 	// ErrUnavailable: la base no respondió: 503 dependency_unavailable.
 	ErrUnavailable = errors.New("db: database unavailable")
+	// ErrCommitUncertain acompaña a ErrUnavailable cuando la conexión se perdió
+	// durante el COMMIT: la transacción pudo confirmarse (reintentar solo es
+	// seguro con la misma Idempotency-Key o con If-Match).
+	ErrCommitUncertain = errors.New("db: commit outcome unknown")
 )
 
 const (
@@ -134,6 +138,10 @@ func (p *Pool) full() bool {
 	s := p.pool.Stat()
 	return s.AcquiredConns() >= s.MaxConns()
 }
+
+// AcquiredConns es el número de conexiones en uso ahora mismo; sirve para
+// comprobar que una petición cancelada devolvió la suya.
+func (p *Pool) AcquiredConns() int32 { return p.pool.Stat().AcquiredConns() }
 
 // Ping comprueba que la base responde; es el chequeo de readiness. Con todas
 // las conexiones en uso responde ErrOverloaded al instante: /readyz da 503

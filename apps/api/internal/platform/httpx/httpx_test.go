@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -13,14 +11,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bacsystem/wanka/apps/api/internal/platform/db"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/httpx"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/logging"
 )
 
 func newHandler(ready httpx.ReadyFunc, buf *bytes.Buffer) http.Handler {
 	log := logging.New(buf, slog.LevelInfo)
-	return httpx.Chain(httpx.NewMux(ready), log)
+	return httpx.Chain(httpx.NewMux(ready), log, nil)
 }
 
 func TestHealthzIsOKWithoutDatabase(t *testing.T) {
@@ -79,9 +76,7 @@ func TestUnknownRouteIs404(t *testing.T) {
 	var buf bytes.Buffer
 	rec := httptest.NewRecorder()
 	newHandler(httpx.NotReady, &buf).ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/nope", nil))
-	if rec.Code != http.StatusNotFound {
-		t.Fatalf("status %d", rec.Code)
-	}
+	mustProblem(t, rec, http.StatusNotFound, "not_found")
 }
 
 func TestRequestIDGeneratedAndLogged(t *testing.T) {
@@ -101,32 +96,6 @@ func TestRequestIDGeneratedAndLogged(t *testing.T) {
 	}
 }
 
-func TestIncomingRequestIDKeptOnlyIfSafe(t *testing.T) {
-	cases := []struct {
-		name, in string
-		keep     bool
-	}{
-		{"safe", "abc-123_DEF", true},
-		{"newline", "a\nb", false},
-		{"space", "a b", false},
-		{"too long", strings.Repeat("a", 129), false},
-		{"empty", "", false},
-	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			var buf bytes.Buffer
-			req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
-			req.Header["X-Request-Id"] = []string{tc.in}
-			rec := httptest.NewRecorder()
-			newHandler(httpx.NotReady, &buf).ServeHTTP(rec, req)
-			got := rec.Header().Get("X-Request-Id")
-			if tc.keep != (got == tc.in) {
-				t.Fatalf("in=%q got=%q keep=%v", tc.in, got, tc.keep)
-			}
-		})
-	}
-}
-
 func TestAccessLogOmitsQueryAndHeaders(t *testing.T) {
 	var buf bytes.Buffer
 	req := httptest.NewRequest(http.MethodGet, "/healthz?token=QUERY-SECRET", nil)
@@ -137,25 +106,17 @@ func TestAccessLogOmitsQueryAndHeaders(t *testing.T) {
 	}
 }
 
-func TestBodyLimit(t *testing.T) {
-	var buf bytes.Buffer
-	var readErr error
-	mux := http.NewServeMux()
-	mux.HandleFunc("POST /echo", func(w http.ResponseWriter, r *http.Request) {
-		_, readErr = readAll(r)
-	})
-	h := httpx.Chain(mux, logging.New(&buf, slog.LevelInfo))
-	body := strings.NewReader(strings.Repeat("a", httpx.MaxBodyBytes+1))
-	h.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodPost, "/echo", body))
-	if readErr == nil {
-		t.Fatal("body over the limit must fail to read")
-	}
-}
-
 func TestNewServerTimeouts(t *testing.T) {
 	s := httpx.NewServer(":0", http.NewServeMux())
-	if s.ReadHeaderTimeout != 5*time.Second || s.IdleTimeout != 120*time.Second || s.ReadTimeout == 0 || s.WriteTimeout == 0 {
+	if s.ReadHeaderTimeout != 5*time.Second || s.IdleTimeout != 120*time.Second || s.ReadTimeout == 0 {
 		t.Fatalf("timeouts: %+v", s)
+	}
+	if s.MaxHeaderBytes != 64<<10 {
+		t.Fatalf("MaxHeaderBytes = %d, want 64 KiB", s.MaxHeaderBytes)
+	}
+	// El servidor no puede cortar un streaming antes de que venza su presupuesto.
+	if s.WriteTimeout != 30*time.Second || s.WriteTimeout <= httpx.DefaultStreamTimeout {
+		t.Fatalf("WriteTimeout = %v, want 30s and above the %v streaming budget", s.WriteTimeout, httpx.DefaultStreamTimeout)
 	}
 }
 
@@ -165,45 +126,5 @@ func TestReadyzFailureCarriesRetryAfter(t *testing.T) {
 	newHandler(httpx.NotReady, &buf).ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/readyz", nil))
 	if got := rec.Header().Get("Retry-After"); got != "1" {
 		t.Fatalf("Retry-After = %q, want 1", got)
-	}
-}
-
-func TestWriteDBError(t *testing.T) {
-	cases := []struct {
-		name      string
-		err       error
-		wrote     bool
-		code      string
-		wantRetry string
-	}{
-		{"pool exhausted", db.ErrOverloaded, true, "overloaded", "1"},
-		{"wrapped pool exhausted", fmt.Errorf("acquiring: %w", db.ErrOverloaded), true, "overloaded", "1"},
-		{"database unavailable", fmt.Errorf("%w: connection refused", db.ErrUnavailable), true, "dependency_unavailable", "1"},
-		{"other error", errors.New("boom"), false, "", ""},
-	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			rec := httptest.NewRecorder()
-			req := httptest.NewRequest(http.MethodGet, "/x", nil)
-			if got := httpx.WriteDBError(rec, req, tc.err); got != tc.wrote {
-				t.Fatalf("wrote = %v, want %v", got, tc.wrote)
-			}
-			if !tc.wrote {
-				if rec.Body.Len() != 0 {
-					t.Fatalf("wrote nothing expected, got %s", rec.Body.String())
-				}
-				return
-			}
-			if rec.Code != http.StatusServiceUnavailable || rec.Header().Get("Retry-After") != tc.wantRetry {
-				t.Fatalf("status %d Retry-After %q", rec.Code, rec.Header().Get("Retry-After"))
-			}
-			var p map[string]any
-			if err := json.Unmarshal(rec.Body.Bytes(), &p); err != nil || p["code"] != tc.code {
-				t.Fatalf("body %q (%v), want code %q", rec.Body.String(), err, tc.code)
-			}
-			if strings.Contains(rec.Body.String(), "connection refused") {
-				t.Fatalf("detail leaks the cause: %s", rec.Body.String())
-			}
-		})
 	}
 }

@@ -3,10 +3,26 @@
 All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.5.0] - 2026-11-18
+
+### Added
+- `apps/api`: HTTP base of the kernel in `internal/platform/httpx`. Every error is RFC 9457 `application/problem+json` with `type`, `title`, `status`, `code` and `requestId`; the HTTP of each `code` comes from one table that a test compares with the 31 codes of `api/conventions.md` §4. `httpx.Router` answers `404 not_found` for undeclared routes and methods (including `OPTIONS`; no `405`, no CORS); a handler that exceeds its 10 s budget answers `503 overloaded` with `Retry-After: 1` after cancelling its context (the transaction rolls back and the connection returns to the pool) and discarding its buffered output; `httpx.Streaming()` routes skip that budget and get a 25 s context from arrival. `httpx.NewServer` disables net/http's own `OPTIONS *` answer and `Router.Handle` rejects subtree patterns (`/x/`, `{p...}`) so no response comes from `ServeMux`. `Content-Length` over 1 MB is `413 payload_too_large` without reading the body, `httpx.DecodeJSON` answers `400 malformed_request`, and a `panic` is `500 internal` without details (#193, #165).
+- `apps/api`: in-memory token-bucket rate limiter (implemented as GCRA, exact integer arithmetic) with an injectable key and clock (`httpx.NewLimiter`), `RateLimit-Limit`/`-Remaining`/`-Reset` headers, no token spent by a rejected request across chained limiters, a cap on keys (`503 overloaded`) and `Sweep` of full buckets. Wiring it to session and tenant keys stays in #174 (#193, #165).
+- `apps/api`: `internal/platform/clock` (system and fake clocks) and `internal/platform/metrics` (metrics port; the OpenTelemetry adapter comes later); `db.Pool.AcquiredConns` (#193, #165).
+
+### Fixed
+- `apps/api`: a lost database connection (SQLSTATE `57P01`-`57P03` or class `08`, or a connection pgx reports closed; never the shape of the error, so a foreign `io.EOF`, a `url.Error` or `conn busy` stay `500`) with the caller's context alive is now `db.ErrUnavailable` and answers `503 dependency_unavailable` instead of `500` when a pool connection dies after a restart or failover; a streaming handler that writes its own RFC 9457 problem after the budget expired now delivers it; the access log marks a connection cut with `http.ErrAbortHandler` as `aborted` (status 0 if nothing was sent) instead of `200`; `httpx.NewServer` sets `MaxHeaderBytes` to 64 KiB; a connection lost during `COMMIT` also carries `db.ErrCommitUncertain` (log `phase=commit`) and every database outage logs one `warn` line and counts `db_unavailable_total` (#193, #165).
+
+### Changed
+- `docs/architecture/api/conventions.md` §4: requests that `net/http` rejects before the API chain (invalid escape in the path, garbage request line, bare LF in a header or missing `Host`: `400`; oversized headers: `431`; unsupported `Expect`: `417`; unsupported `Transfer-Encoding`: `501`; unsupported HTTP version: `505`) are answered by Go's server as `text/plain`, a documented exception to the RFC 9457 rule (#193, #165).
+- `docs/architecture/api/conventions.md` §3: `RateLimit-*` are not sent on the kernel's `503` for an expired handler deadline nor on the `503` for the limiter's key cap (no bucket to report), nor on the `500` for a `panic`; the deadline and panic responses drop the handler's headers. Clarification only; no behaviour change (#193, #165).
+- `apps/api`: `httpx.WriteDBError` answers `db.ErrStatementTimeout` as `503 dependency_unavailable` with `Retry-After: 1` and the generic body, logs one `warn` line (route, phase, module, `sqlstate=57014`, elapsed; no SQL) and counts it by phase and route; with the request context already finished it writes nothing. `httpx.Chain` takes a metrics recorder, `httpx.WriteProblem` takes the `code` and derives the HTTP from the table, and `httpx.NewMux` returns an `httpx.Router` (#193, #165).
+- `apps/api/README.md`: `WriteDBError` no longer described as translating everything to `overloaded`; the three database cases and the HTTP base are documented (#193, #165).
 ## [0.4.1] - 2026-11-18
 
 ### Changed
 - API contract, ahead of #165: a handler that exceeds its 10 s budget answers `503 overloaded` with `Retry-After: 1` and an RFC 9457 body (streaming routes excluded); `RateLimit-Limit`, `RateLimit-Remaining` and `RateLimit-Reset` keep three separate fields with integer values, reporting the bucket with fewer tokens; an invalid `X-Request-Id` (empty, over 128 characters or outside `[A-Za-z0-9_-]`) is replaced, never answered with `400`; an undeclared method is `404` and a non-JSON `Content-Type` is `400 malformed_request` (`api/conventions.md` §3, §4 and §7, `openapi.yaml`, C4 components).
+
 
 ## [0.4.0] - 2026-11-18
 
