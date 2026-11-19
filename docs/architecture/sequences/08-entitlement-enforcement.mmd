@@ -10,8 +10,12 @@ sequenceDiagram
   participant H as handler del modulo
 
   W->>MW: POST /v1/lubricentro/service-orders Bearer wk_at_...
-  alt falta Authorization, formato invalido o prefijo de otro plano (wka_at_)
-    MW-->>W: 401 unauthenticated, sin consultar la base
+  alt ruta Public (solo bajo /v1/auth/: login, refresh, mfa/verify, mfa/enrollment, password)
+    MW->>H: sin busqueda de sesion ni limitador de sesion: se autentica con su propio token en el cuerpo, con sus cuotas propias (conventions 7)
+    H-->>W: respuesta del handler publico
+  end
+  alt falta Authorization, hay dos, otro esquema, formato invalido (no es wk_at_ mas 43 caracteres base64url canonicos), un refresh wk_rt_ o un prefijo de otro plano (wka_at_)
+    MW-->>W: 401 unauthenticated con WWW-Authenticate Bearer, sin consultar la base
   end
   MW->>DB: rol wanka_app, SIN app.tenant_id ni app.user_id (aun no se conocen): SELECT * FROM iam.session_lookup(sha256(token)), SECURITY DEFINER con search_path fijo, devuelve la sesion (no revocada, no expirada, filtra mfa_satisfied = true) con site_id, cash_register_id y mfa_method + current_version y membership_status de iam.memberships. Siempre de la base, nunca de cache
   alt sin conexion libre del pool en 200 ms
@@ -19,17 +23,24 @@ sequenceDiagram
   else la base falla en session_lookup (error de conexion, statement_timeout o deadline de 1 s del contexto)
     MW-->>W: 503 dependency_unavailable, Retry-After 1. Nunca 401 ni 500: no se sabe si la sesion es valida, y un 401 haria que el BFF refresque (otra consulta a la base caida) y mande al usuario a /login
   else session_lookup sin fila (inexistente, expirada o revocada: la funcion no las distingue, tambien la impersonada cuyo grant se revoco o vencio)
-    MW-->>W: 401 session_expired (401 unauthenticated queda solo para lo que se rechaza sin consultar la base)
+    MW-->>W: 401 session_expired con WWW-Authenticate Bearer (401 unauthenticated queda solo para lo que se rechaza sin consultar la base)
   else sesion de tenant NO impersonada con current_version NULL o membresia no activa (borrada, suspendida)
     MW->>DB: desliga la sesion SIN revocarla (ADR 0011): UPDATE iam.sessions SET tenant_id, membership_id, site_id, cash_register_id, authz_version = NULL WHERE id y membership_id coinciden, impersonator_id NULL y revoked_at NULL. Conserva tokens, familia de refresh y 2FA. Si el UPDATE falla, la peticion sigue sin tenant igual
     MW->>MW: contexto sin tenant (nunca se trata como sin cambios). Se decide aqui, en el paso de sesion: usa las columnas que ya devolvio session_lookup, sin otra consulta ni cache, y antes de los entitlements para no revelar a un ex miembro el estado de la empresa (402, 403)
   end
-  alt ruta sin tenant (/v1/auth/*, GET /v1/me, GET /v1/me/memberships)
+  alt ruta de tenant y sesion sin tenant (recien desligada o nunca eligio empresa)
+    MW-->>W: 403 tenant_access_denied, sin refresh ni cabeceras RateLimit, y la peticion TERMINA aqui. El BFF lleva a /seleccionar-empresa, y a /login si no queda ninguna membresia activa
+  end
+  MW->>MW: rate limit (conventions 7): bucket por sesion en toda ruta autenticada, y por tenant solo en las rutas de tenant. Una peticion rechazada no consume fichas de ningun bucket
+  alt algun bucket sin fichas
+    MW-->>W: 429 rate_limited, Retry-After y RateLimit-* del bucket de menos fichas
+  else tope de claves del limitador
+    MW-->>W: 503 overloaded, Retry-After 1, sin RateLimit-*
+  end
+  alt ruta NoTenant (las de /v1/auth/* que van con sesion, como session/tenant, logout y mfa/totp/enroll, mas GET /v1/me y GET /v1/me/memberships)
     MW->>H: ctx sin tenant: el handler responde y la peticion TERMINA aqui (la sesion desligada sigue sirviendo para elegir otra empresa)
     H-->>W: 200
     Note over MW,H: Las rutas sin tenant no pasan por entitlements, 2FA del rol ni RBAC. Todo lo que sigue es solo para rutas de tenant con sesion ligada a una empresa
-  else ruta de tenant y sesion sin tenant (recien desligada o nunca eligio empresa)
-    MW-->>W: 403 tenant_access_denied, sin refresh, y la peticion TERMINA aqui. El BFF lleva a /seleccionar-empresa, y a /login si no queda ninguna membresia activa
   else ruta de tenant y sesion ligada a una empresa con membresia activa, o impersonada
     MW->>MW: sigue con los entitlements
   end

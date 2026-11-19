@@ -15,8 +15,9 @@ Ajustes de forma respecto a los mocks, comunes a todos los recursos:
 | Método y ruta | Pantalla / uso | Forma (mock) | Permiso |
 |---|---|---|---|
 | `POST /v1/auth/login` | `/login` | — | público, rate limit |
-| `POST /v1/auth/mfa/verify` | `/login` paso 2FA | — | challenge token |
-| `POST /v1/auth/mfa/totp/enroll`, `.../confirm` | `/perfil` | — | sesión |
+| `POST /v1/auth/mfa/verify` | `/login` paso 2FA | — | `challengeToken` en el cuerpo (clase `Public`, `conventions.md` §2) |
+| `POST /v1/auth/mfa/totp/enroll`, `.../confirm` | `/perfil` (activar 2FA con la sesión ya iniciada) | — | sesión (clase `NoTenant`) |
+| `POST /v1/auth/mfa/enrollment/totp`, `.../confirm` | `/login`, enrolamiento obligatorio antes de tener sesión | — | `enrollmentToken` en el cuerpo, solo para enrolar y válido hasta el `confirm` correcto (clase `Public`, `conventions.md` §2); `confirm` crea la sesión. **Pendiente de decisión del dueño** ([#25](https://github.com/bacsystem/wanka/issues/25)): que `confirm` exija además un `emailCode` enviado al correo; hasta que se decida, no es parte del contrato |
 | `POST /v1/auth/refresh` | BFF | — | refresh token |
 | `POST /v1/auth/logout` | topbar | — | sesión |
 | `POST /v1/auth/password/forgot`, `.../reset` | `/login` recuperar | — | público, rate limit |
