@@ -167,31 +167,17 @@ type takenToken struct {
 	key string
 }
 
-// refundAll devuelve todas las fichas tomadas y dice cuáles eran.
-func (s *rateState) refundAll() []takenToken {
-	prev := s.taken
-	for _, t := range prev {
+// refundAll devuelve todas las fichas tomadas.
+func (s *rateState) refundAll() {
+	for _, t := range s.taken {
 		t.l.refund(t.key)
 	}
 	s.taken, s.shown = nil, nil
-	return prev
 }
 
 // lessTokens dice si a es una cuota con menos fichas que b (a igual número, la que tarda más en llenarse).
 func lessTokens(a, b quotaInfo) bool {
 	return a.remaining < b.remaining || a.remaining == b.remaining && a.reset > b.reset
-}
-
-// peek calcula la cuota de key sin tomar una ficha.
-func (l *Limiter) peek(key string) quotaInfo {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	now := l.cfg.Clock.Now()
-	full := l.fullAt[key]
-	if full.Before(now) {
-		full = now
-	}
-	return l.info(full.Sub(now))
 }
 
 // setQuota escribe RateLimit-*. Header.Set canonicaliza los nombres
@@ -225,15 +211,11 @@ func (l *Limiter) Middleware() Middleware {
 			q, res := l.take(key, l.cfg.Clock.Now())
 			switch res {
 			case keysExhausted:
-				// La cuota informada es la de los buckets ya con la ficha devuelta.
-				var best *quotaInfo
-				for _, t := range st.refundAll() {
-					if p := t.l.peek(t.key); best == nil || lessTokens(p, *best) {
-						best = &p
-					}
-				}
-				if best != nil {
-					setQuota(w.Header(), *best)
+				// Devuelve las fichas y no informa cuota: no hay un bucket que informar
+				// (conventions.md §3), así que se quitan las que escribió un limitador anterior.
+				st.refundAll()
+				for _, k := range []string{"RateLimit-Limit", "RateLimit-Remaining", "RateLimit-Reset"} {
+					w.Header().Del(k)
 				}
 				depsFrom(r.Context()).log.WarnContext(r.Context(), "rate limiter key limit reached",
 					"limiter", l.cfg.Name, "max_keys", l.cfg.MaxKeys, "route", routeOf(r))

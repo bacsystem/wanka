@@ -11,7 +11,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - `apps/api`: `internal/platform/clock` (system and fake clocks) and `internal/platform/metrics` (metrics port; the OpenTelemetry adapter comes later); `db.Pool.AcquiredConns` (#193, #165).
 
 ### Changed
-- `docs/architecture/api/conventions.md` §3: `RateLimit-*` are not sent on the kernel's `503` for an expired handler deadline nor on the `500` for a `panic`, because those responses drop the handler's headers. Clarification only; no behaviour change (#193, #165).
+- `docs/architecture/api/conventions.md` §3: `RateLimit-*` are not sent on the kernel's `503` for an expired handler deadline nor on the `503` for the limiter's key cap (no bucket to report), nor on the `500` for a `panic`; the deadline and panic responses drop the handler's headers. Clarification only; no behaviour change (#193, #165).
 - `apps/api`: `httpx.WriteDBError` answers `db.ErrStatementTimeout` as `503 dependency_unavailable` with `Retry-After: 1` and the generic body, logs one `warn` line (route, phase, module, `sqlstate=57014`, elapsed; no SQL) and counts it by phase and route; with the request context already finished it writes nothing. `httpx.Chain` takes a metrics recorder, `httpx.WriteProblem` takes the `code` and derives the HTTP from the table, and `httpx.NewMux` returns an `httpx.Router` (#193, #165).
 - `apps/api/README.md`: `WriteDBError` no longer described as translating everything to `overloaded`; the three database cases and the HTTP base are documented (#193, #165).
 ## [0.4.1] - 2026-11-18
