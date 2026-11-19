@@ -487,8 +487,8 @@ func TestAccessLogOmitsQueryAndHeadersThroughRouter(t *testing.T) {
 // o del handler: ServeMux redirige (301 HTML) cuando un patrón termina en "/" o "...}".
 func TestNoRequestGetsAServeMuxResponse(t *testing.T) {
 	h, _, _ := chain(t, func(rt *httpx.Router) {
-		rt.HandleFunc("GET /v1/files", func(w http.ResponseWriter, _ *http.Request) { _, _ = io.WriteString(w, "list") })
-		rt.HandleFunc("GET /v1/files/{id}", func(w http.ResponseWriter, _ *http.Request) { _, _ = io.WriteString(w, "one") })
+		rt.HandleV1("GET /v1/files", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { _, _ = io.WriteString(w, "list") }))
+		rt.HandleV1("GET /v1/files/{id}", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { _, _ = io.WriteString(w, "one") }))
 		rt.HandleFunc("GET /{$}", func(w http.ResponseWriter, _ *http.Request) { _, _ = io.WriteString(w, "root") })
 	})
 	paths := []string{"/", "/v1", "/v1/", "/v1/files", "/v1/files/", "/v1/files/a/b", "/v1/files/a/", "//v1/files", "/v1//files",
@@ -589,5 +589,50 @@ func TestAccessLogMarksAbortedRequests(t *testing.T) {
 	}
 	if l := byPath["/ok"]; l["aborted"] != nil || l["status"] != float64(200) {
 		t.Fatalf("a normal request has no aborted field: %v", l)
+	}
+}
+
+// Ningún módulo registra /v1 sin clase: Handle rechaza todo patrón que /v1
+// pueda alcanzar, incluidos los que empiezan con un comodín, y solo HandleV1
+// (que llama auth.Routes tras validar la clase) lo acepta.
+func TestRouterHandleRejectsV1Patterns(t *testing.T) {
+	noop := func(http.ResponseWriter, *http.Request) {}
+	for _, pattern := range []string{"GET /v1/x", "POST /v1/items/{id}", "GET /v1", "GET /{version}/x", "GET /{v}"} {
+		t.Run(pattern, func(t *testing.T) {
+			rt := httpx.NewRouter(httpx.RouterOptions{})
+			func() {
+				defer func() {
+					if recover() == nil {
+						t.Fatalf("Handle(%q) must panic: /v1 routes go through auth.Routes", pattern)
+					}
+				}()
+				rt.HandleFunc(pattern, noop)
+			}()
+		})
+	}
+	t.Run("not v1 still works", func(t *testing.T) {
+		rt := httpx.NewRouter(httpx.RouterOptions{})
+		rt.HandleFunc("GET /v10/x", noop)
+		rt.HandleFunc("GET /healthz", noop)
+	})
+}
+
+func TestRouterHandleV1OnlyAcceptsV1(t *testing.T) {
+	noop := func(http.ResponseWriter, *http.Request) {}
+	for _, pattern := range []string{"GET /healthz", "GET /v10/x", "GET /v1", "GET /{v}/x"} {
+		t.Run(pattern, func(t *testing.T) {
+			defer func() {
+				if recover() == nil {
+					t.Fatalf("HandleV1(%q) must panic", pattern)
+				}
+			}()
+			httpx.NewRouter(httpx.RouterOptions{}).HandleV1(pattern, http.HandlerFunc(noop))
+		})
+	}
+	h, _, _ := chain(t, func(rt *httpx.Router) {
+		rt.HandleV1("GET /v1/x", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNoContent) }))
+	})
+	if rec := do(h, httptest.NewRequest(http.MethodGet, "/v1/x", nil)); rec.Code != http.StatusNoContent {
+		t.Fatalf("GET /v1/x = %d", rec.Code)
 	}
 }

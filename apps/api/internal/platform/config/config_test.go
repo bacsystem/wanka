@@ -132,3 +132,45 @@ func TestPoolMaxVariableNameMatchesTheDeploymentDocs(t *testing.T) {
 		t.Fatalf("DB_POOL_MAX_CONNS=7 gave %+v, %v", cfg, err)
 	}
 }
+
+func TestMailerAndEnvironmentDefaultsAreFailSafe(t *testing.T) {
+	cfg, err := config.Load(env(map[string]string{"DATABASE_URL_APP": "x"}), config.API)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Sin APP_ENV se asume producción: un olvido avisa de más, nunca de menos.
+	if cfg.Mailer != config.MailerStub || !cfg.Production {
+		t.Fatalf("defaults: mailer=%q production=%v", cfg.Mailer, cfg.Production)
+	}
+}
+
+func TestMailerAndEnvironmentOverrides(t *testing.T) {
+	cases := []struct {
+		mailer, appEnv string
+		wantMailer     string
+		wantProd       bool
+	}{
+		{"stub", "production", "stub", true},
+		{"none", "development", "none", false},
+		{"NONE", "Development", "none", false},
+		{"", "development", "stub", false},
+	}
+	for _, tc := range cases {
+		cfg, err := config.Load(env(map[string]string{"DATABASE_URL_APP": "x", "MAILER": tc.mailer, "APP_ENV": tc.appEnv}), config.API)
+		if err != nil {
+			t.Fatalf("%+v: %v", tc, err)
+		}
+		if cfg.Mailer != tc.wantMailer || cfg.Production != tc.wantProd {
+			t.Errorf("%+v: got mailer=%q production=%v", tc, cfg.Mailer, cfg.Production)
+		}
+	}
+}
+
+func TestInvalidMailerOrEnvironmentNamesVariableNotValue(t *testing.T) {
+	for _, v := range []struct{ name, value string }{{"MAILER", "smtp-S3CRET"}, {"APP_ENV", "staging-S3CRET"}} {
+		_, err := config.Load(env(map[string]string{"DATABASE_URL_APP": "x", v.name: v.value}), config.API)
+		if err == nil || !strings.Contains(err.Error(), v.name) || strings.Contains(err.Error(), "S3CRET") {
+			t.Errorf("%s: error = %v", v.name, err)
+		}
+	}
+}
