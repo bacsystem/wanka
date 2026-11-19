@@ -149,6 +149,71 @@ func TestRequestAfterAnInvalidationDoesNotJoinTheStaleInflightLoad(t *testing.T)
 	<-done
 }
 
+// Lo mismo con InvalidateAll (cambio de catálogo o reconexión del listener).
+func TestRequestAfterInvalidateAllDoesNotJoinTheStaleInflightLoad(t *testing.T) {
+	e := newEnv(t)
+	tenant := e.seeded("ventas")
+	counter := &countingDB{DB: e.pool(4)}
+	release := make(chan struct{})
+	started := make(chan struct{})
+	counter.before = func() {
+		if counter.reads.Load() == 1 {
+			close(started)
+			<-release
+		}
+	}
+	s := entitlements.New(counter, entitlements.Options{})
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() { defer wg.Done(); _, _ = s.For(ctx(t), tenant) }()
+	<-started
+	s.InvalidateAll()
+	done := make(chan struct{})
+	go func() { defer close(done); _, _ = s.For(ctx(t), tenant) }()
+	waitFor(t, "a fresh read instead of joining the stale one", func() bool { return counter.reads.Load() == 2 })
+	close(release)
+	wg.Wait()
+	<-done
+}
+
+// Cuando termina la lectura vieja, su defer no borra la entrada de la lectura nueva: una tercera petición se une a la nueva.
+func TestFinishingTheStaleLoadDoesNotEvictTheNewerInflightLoad(t *testing.T) {
+	e := newEnv(t)
+	tenant := e.seeded("ventas")
+	counter := &countingDB{DB: e.pool(4)}
+	release1, release2 := make(chan struct{}), make(chan struct{})
+	started1, started2 := make(chan struct{}), make(chan struct{})
+	counter.before = func() {
+		switch counter.reads.Load() {
+		case 1:
+			close(started1)
+			<-release1
+		case 2:
+			close(started2)
+			<-release2
+		}
+	}
+	s := entitlements.New(counter, entitlements.Options{})
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() { defer wg.Done(); _, _ = s.For(ctx(t), tenant) }() // A: lectura vieja
+	<-started1
+	s.Invalidate(tenant)
+	wg.Add(1)
+	go func() { defer wg.Done(); _, _ = s.For(ctx(t), tenant) }() // B: lectura nueva
+	<-started2
+	close(release1) // A termina; su defer no debe sacar a B
+	time.Sleep(200 * time.Millisecond)
+	wg.Add(1)
+	go func() { defer wg.Done(); _, _ = s.For(ctx(t), tenant) }() // C: debe unirse a B
+	time.Sleep(300 * time.Millisecond)
+	if n := counter.reads.Load(); n != 2 {
+		t.Errorf("reads = %d, want 2: the third request must join the newer load", n)
+	}
+	close(release2)
+	wg.Wait()
+}
+
 // Al reconectar, Listen avisa y la caché se vacía: lo que se notificó mientras no había conexión se perdió.
 func TestRunDropsTheCacheWhenTheListenerReconnects(t *testing.T) {
 	e := newEnv(t)
