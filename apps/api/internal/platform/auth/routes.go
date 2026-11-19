@@ -78,15 +78,16 @@ type Options struct {
 type Routes struct {
 	rt       *httpx.Router
 	resolver SessionResolver
+	ent      EntitlementSource
 	session  *httpx.Limiter
 	tenant   *httpx.Limiter
 	timeout  time.Duration
 }
 
 // NewRoutes valida las opciones y devuelve el registrador sobre rt.
-func NewRoutes(rt *httpx.Router, resolver SessionResolver, o Options) (*Routes, error) {
-	if rt == nil || resolver == nil {
-		return nil, errors.New("auth: NewRoutes needs a router and a resolver")
+func NewRoutes(rt *httpx.Router, resolver SessionResolver, ent EntitlementSource, o Options) (*Routes, error) {
+	if rt == nil || resolver == nil || ent == nil {
+		return nil, errors.New("auth: NewRoutes needs a router, a resolver and an entitlements source")
 	}
 	if o.Clock == nil {
 		o.Clock = clock.System{}
@@ -104,7 +105,7 @@ func NewRoutes(rt *httpx.Router, resolver SessionResolver, o Options) (*Routes, 
 	if err != nil {
 		return nil, fmt.Errorf("tenant limiter: %w", err)
 	}
-	return &Routes{rt: rt, resolver: resolver, session: sl, tenant: tl, timeout: o.LookupTimeout}, nil
+	return &Routes{rt: rt, resolver: resolver, ent: ent, session: sl, tenant: tl, timeout: o.LookupTimeout}, nil
 }
 
 func withDefaults(c httpx.LimiterConfig, name string, burst int, refill time.Duration, maxKeys int, key httpx.KeyFunc, clk clock.Clock) httpx.LimiterConfig {
@@ -172,25 +173,28 @@ func checkRoute(pattern string, class RouteClass) {
 	}
 }
 
-// Handle registra h para pattern ("MÉTODO /v1/camino") con su clase. Los
-// pasos de ruta de opts (httpx.Use) corren después de la sesión y los
-// limitadores. Entra en pánico si la clase no cumple las reglas.
-func (r *Routes) Handle(pattern string, class RouteClass, h http.Handler, opts ...httpx.RouteOption) {
+// Handle registra h para pattern ("MÉTODO /v1/camino") con su clase y lo que
+// declara en el spec (Spec). En una ruta Tenant la cadena es sesión ->
+// limitadores -> entitlements (empresa cerrada, suscripción, módulo, límite) ->
+// pasos de opts (httpx.Use; ahí van los de RBAC) -> handler. Entra en pánico si
+// la clase o el spec no cumplen las reglas.
+func (r *Routes) Handle(pattern string, class RouteClass, spec Spec, h http.Handler, opts ...httpx.RouteOption) {
 	checkRoute(pattern, class)
+	checkSpec(pattern, class, spec)
 	if class == Public {
 		r.rt.HandleV1(pattern, h, opts...)
 		return
 	}
 	mws := []httpx.Middleware{r.sessionStep(class == Tenant), r.session.Middleware()}
 	if class == Tenant {
-		mws = append(mws, r.tenant.Middleware())
+		mws = append(mws, r.tenant.Middleware(), r.entitlementsStep(pattern, spec))
 	}
 	r.rt.HandleV1(pattern, h, append([]httpx.RouteOption{httpx.Use(mws...)}, opts...)...)
 }
 
 // HandleFunc es Handle con una función.
-func (r *Routes) HandleFunc(pattern string, class RouteClass, f http.HandlerFunc, opts ...httpx.RouteOption) {
-	r.Handle(pattern, class, f, opts...)
+func (r *Routes) HandleFunc(pattern string, class RouteClass, spec Spec, f http.HandlerFunc, opts ...httpx.RouteOption) {
+	r.Handle(pattern, class, spec, f, opts...)
 }
 
 // sessionStep autentica la petición: valida el token sin consultar la base,

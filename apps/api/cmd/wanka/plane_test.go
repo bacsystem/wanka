@@ -11,6 +11,7 @@ import (
 
 	"github.com/bacsystem/wanka/apps/api/internal/platform/auth"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/config"
+	"github.com/bacsystem/wanka/apps/api/internal/platform/entitlements"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/httpx"
 )
 
@@ -64,12 +65,15 @@ func TestOnlyTheTenantPlaneMountsTheSessionChain(t *testing.T) {
 	for plane, want := range map[string]bool{"tenant": true, "platform": false, "webhooks": false} {
 		t.Run(plane, func(t *testing.T) {
 			rt := httpx.NewRouter(httpx.RouterOptions{})
-			sw, err := mountPlane(plane, rt, nil, auth.Options{})
+			sw, ls, err := mountPlane(plane, rt, nil, wiring{})
 			if err != nil {
 				t.Fatal(err)
 			}
 			if got := sw != nil; got != want {
 				t.Fatalf("mountPlane(%s) returned a sweeper = %v, want %v", plane, got, want)
+			}
+			if got := ls != nil; got != want {
+				t.Fatalf("mountPlane(%s) returned a NOTIFY listener = %v, want %v", plane, got, want)
 			}
 		})
 	}
@@ -84,8 +88,11 @@ func TestDefaultWiringIsTheContract(t *testing.T) {
 	if !reflect.DeepEqual(defaultWiring.auth, auth.Options{}) {
 		t.Fatalf("auth options = %+v, want the defaults of conventions.md §7 (empty Options)", defaultWiring.auth)
 	}
-	if defaultWiring.wrapSweeper != nil {
-		t.Fatal("production wiring must not wrap the sweeper")
+	if defaultWiring.wrapSweeper != nil || defaultWiring.wrapListener != nil {
+		t.Fatal("production wiring must not wrap the sweeper or the listener")
+	}
+	if !reflect.DeepEqual(defaultWiring.entitlements, entitlements.Options{}) {
+		t.Fatalf("entitlements options = %+v, want the defaults (TTL 30 s)", defaultWiring.entitlements)
 	}
 }
 
@@ -126,11 +133,66 @@ func TestServeRunsTheSweepLoopAndWaitsForItOnShutdown(t *testing.T) {
 	}
 }
 
+// fakeListener es el escucha de NOTIFY: bloquea hasta que se cancela su contexto y
+// tarda un poco en salir, como un LISTEN que cierra su conexión.
+type fakeListener struct {
+	started  atomic.Bool
+	running  atomic.Bool
+	ctxAlive atomic.Bool
+}
+
+func (f *fakeListener) Run(ctx context.Context) error {
+	f.running.Store(true)
+	f.ctxAlive.Store(ctx.Err() == nil)
+	f.started.Store(true)
+	<-ctx.Done()
+	time.Sleep(40 * time.Millisecond)
+	f.running.Store(false)
+	return nil
+}
+
+// serve arranca el escucha de entitlements_changed en el plano tenant con un
+// contexto vivo, lo para al cancelar el servidor y espera a que salga antes de volver.
+func TestServeRunsTheEntitlementsListenerAndWaitsForItOnShutdown(t *testing.T) {
+	ls := &fakeListener{}
+	w := wiring{sweepInterval: time.Hour, wrapListener: func(listener) listener { return ls }}
+	cfg := config.Config{DatabaseURL: "postgres://wanka_app:x@127.0.0.1:1/none", DBPoolMax: 1, HTTPAddr: "127.0.0.1:0"}
+	log := slog.New(slog.NewTextHandler(io.Discard, nil))
+
+	ctx, cancel := context.WithCancel(context.Background())
+	errc := make(chan error, 1)
+	go func() { errc <- serve(ctx, log, cfg, config.API, "tenant", w) }()
+
+	deadline := time.Now().Add(3 * time.Second)
+	for !ls.started.Load() {
+		if time.Now().After(deadline) {
+			t.Fatal("serve never started the entitlements listener")
+		}
+		time.Sleep(time.Millisecond)
+	}
+	if !ls.ctxAlive.Load() {
+		t.Fatal("the listener started with a cancelled context")
+	}
+	cancel()
+	select {
+	case err := <-errc:
+		if err != nil {
+			t.Fatalf("serve = %v", err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("serve did not return after cancel")
+	}
+	if ls.running.Load() {
+		t.Fatal("serve returned while the entitlements listener was still running")
+	}
+}
+
 func TestServeDoesNotSweepOtherPlanes(t *testing.T) {
 	for plane, svc := range map[string]config.Service{"platform": config.Platform, "webhooks": config.Webhooks} {
 		t.Run(plane, func(t *testing.T) {
 			var wrapped atomic.Bool
-			w := wiring{sweepInterval: 10 * time.Millisecond, wrapSweeper: func(s sweeper) sweeper { wrapped.Store(true); return s }}
+			w := wiring{sweepInterval: 10 * time.Millisecond, wrapSweeper: func(s sweeper) sweeper { wrapped.Store(true); return s },
+				wrapListener: func(l listener) listener { wrapped.Store(true); return l }}
 			cfg := config.Config{DatabaseURL: "postgres://x:x@127.0.0.1:1/none", DBPoolMax: 1, HTTPAddr: "127.0.0.1:0"}
 			ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 			defer cancel()
@@ -138,7 +200,7 @@ func TestServeDoesNotSweepOtherPlanes(t *testing.T) {
 				t.Fatal(err)
 			}
 			if wrapped.Load() {
-				t.Fatal("a sweeper exists on a plane that must not mount the session chain")
+				t.Fatal("a sweeper or an entitlements listener exists on a plane that must not mount the session chain")
 			}
 		})
 	}
