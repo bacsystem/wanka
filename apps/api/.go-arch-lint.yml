@@ -41,3 +41,5 @@ deps:
     canUse: [pgx]
 exclude:
   - testdata
+  # fixture de rawconn_test.go: código que no se compila (usa los nombres prohibidos a propósito)
+  - internal/platform/db/testdata
