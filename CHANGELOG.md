@@ -13,6 +13,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 ### Changed
 - `apps/api`: `httpx.WriteDBError` answers `db.ErrStatementTimeout` as `503 dependency_unavailable` with `Retry-After: 1` and the generic body, logs one `warn` line (route, phase, module, `sqlstate=57014`, elapsed; no SQL) and counts it by phase and route; with the request context already finished it writes nothing. `httpx.Chain` takes a metrics recorder, `httpx.WriteProblem` takes the `code` and derives the HTTP from the table, and `httpx.NewMux` returns an `httpx.Router` (#165).
 - `apps/api/README.md`: `WriteDBError` no longer described as translating everything to `overloaded`; the three database cases and the HTTP base are documented (#165).
+## [0.4.1] - 2026-11-18
+
+### Changed
+- API contract, ahead of #165: a handler that exceeds its 10 s budget answers `503 overloaded` with `Retry-After: 1` and an RFC 9457 body (streaming routes excluded); `RateLimit-Limit`, `RateLimit-Remaining` and `RateLimit-Reset` keep three separate fields with integer values, reporting the bucket with fewer tokens; an invalid `X-Request-Id` (empty, over 128 characters or outside `[A-Za-z0-9_-]`) is replaced, never answered with `400`; an undeclared method is `404` and a non-JSON `Content-Type` is `400 malformed_request` (`api/conventions.md` §3, §4 and §7, `openapi.yaml`, C4 components).
+
 
 ## [0.4.0] - 2026-11-18
 
