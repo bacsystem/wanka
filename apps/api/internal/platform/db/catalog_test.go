@@ -1104,3 +1104,90 @@ func TestCatalogAcceptsPartitionsThatAreSafe(t *testing.T) {
 		})
 	}
 }
+
+// El SQL del ADR 0001 («Caminos que no tienen un tenant fijado», 1; #187), tal cual, sobre tablas que cumplen el resto de reglas.
+const adrPoliciesSQL = `
+CREATE TABLE org.sites (id uuid PRIMARY KEY, tenant_id uuid NOT NULL REFERENCES org.tenants, UNIQUE (tenant_id, id));
+CREATE TABLE org.cash_registers (id uuid PRIMARY KEY, tenant_id uuid NOT NULL REFERENCES org.tenants, site_id uuid NOT NULL,
+  FOREIGN KEY (tenant_id, site_id) REFERENCES org.sites (tenant_id, id));
+CREATE TABLE iam.membership_sites (id uuid PRIMARY KEY, tenant_id uuid NOT NULL REFERENCES org.tenants, membership_id uuid NOT NULL,
+  site_id uuid NOT NULL, user_id uuid NOT NULL, UNIQUE (tenant_id, id),
+  FOREIGN KEY (tenant_id, membership_id) REFERENCES iam.memberships (tenant_id, id),
+  FOREIGN KEY (tenant_id, site_id) REFERENCES org.sites (tenant_id, id));
+ALTER TABLE iam.memberships ADD COLUMN IF NOT EXISTS all_sites boolean NOT NULL DEFAULT false;
+CREATE INDEX cash_registers_site_idx ON org.cash_registers (tenant_id, site_id);
+CREATE INDEX membership_sites_membership_idx ON iam.membership_sites (tenant_id, membership_id);
+CREATE INDEX membership_sites_site_idx ON iam.membership_sites (tenant_id, site_id);
+ALTER TABLE org.sites ENABLE ROW LEVEL SECURITY; ALTER TABLE org.sites FORCE ROW LEVEL SECURITY;
+ALTER TABLE org.cash_registers ENABLE ROW LEVEL SECURITY; ALTER TABLE org.cash_registers FORCE ROW LEVEL SECURITY;
+ALTER TABLE iam.membership_sites ENABLE ROW LEVEL SECURITY; ALTER TABLE iam.membership_sites FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation ON org.sites USING (tenant_id = app.current_tenant()) WITH CHECK (tenant_id = app.current_tenant());
+CREATE POLICY tenant_isolation ON org.cash_registers USING (tenant_id = app.current_tenant()) WITH CHECK (tenant_id = app.current_tenant());
+CREATE POLICY tenant_isolation ON iam.membership_sites USING (tenant_id = app.current_tenant()) WITH CHECK (tenant_id = app.current_tenant());
+
+DROP POLICY IF EXISTS own_memberships ON iam.memberships;
+CREATE POLICY own_memberships ON iam.memberships FOR SELECT USING (app.current_tenant() IS NULL AND user_id = app.current_user_id() AND status IN ('invitado','activo'));
+CREATE POLICY own_memberships ON iam.membership_sites FOR SELECT USING (app.current_tenant() IS NULL AND user_id = app.current_user_id()
+  AND membership_id IN (SELECT id FROM iam.memberships WHERE status IN ('invitado','activo')));
+DROP POLICY IF EXISTS member_read ON org.tenants;
+CREATE POLICY member_read ON org.tenants FOR SELECT USING (id = app.current_tenant() OR (app.current_tenant() IS NULL AND id IN (SELECT tenant_id FROM iam.memberships WHERE user_id = app.current_user_id() AND status IN ('invitado','activo'))));
+DROP POLICY IF EXISTS platform_rw ON org.tenants;
+CREATE POLICY platform_rw ON org.tenants TO wanka_platform USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS member_read ON iam.roles;
+CREATE POLICY member_read ON iam.roles FOR SELECT USING (
+  tenant_id = app.current_tenant()
+  OR (app.current_tenant() IS NULL AND id IN (SELECT role_id FROM iam.memberships
+            WHERE user_id = app.current_user_id() AND status IN ('invitado','activo'))));
+CREATE POLICY member_read ON org.sites FOR SELECT USING (
+  tenant_id = app.current_tenant()
+  OR (app.current_tenant() IS NULL AND EXISTS (SELECT 1 FROM iam.memberships m
+             WHERE m.user_id = app.current_user_id() AND m.status = 'activo' AND m.tenant_id = sites.tenant_id
+               AND (m.all_sites OR EXISTS (SELECT 1 FROM iam.membership_sites ms
+                                           WHERE ms.membership_id = m.id AND ms.site_id = sites.id)))));
+CREATE POLICY member_read ON org.cash_registers FOR SELECT USING (
+  tenant_id = app.current_tenant()
+  OR (app.current_tenant() IS NULL AND site_id IN (SELECT id FROM org.sites)));
+`
+
+func adrPoliciesViolations(t *testing.T) []string {
+	t.Helper()
+	ctx := context.Background()
+	d := dbtest.New(t)
+	d.MigrateWith(ctx, t, fstest.MapFS{"99990101000098_adr_policies.sql": {Data: []byte("-- +goose Up\n" + adrPoliciesSQL)}})
+	admin := d.Admin(ctx, t)
+	var out []string
+	for _, r := range catalogRules {
+		got, err := r.check(ctx, admin)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, v := range got {
+			out = append(out, r.name+": "+v)
+		}
+	}
+	return out
+}
+
+// Caso positivo: las constantes de texto exacto son lo que PostgreSQL deparsa del SQL del ADR.
+func TestCatalogAcceptsTheADRPoliciesVerbatim(t *testing.T) {
+	for _, v := range adrPoliciesViolations(t) {
+		t.Error(v)
+	}
+}
+
+// Si una constante se desvía (aquí, un paréntesis menos), el caso positivo se pone en rojo y nombra la política.
+func TestCatalogADRPoliciesFailWhenAConstantDrifts(t *testing.T) {
+	for _, key := range []string{"iam.memberships:own_memberships", "org.sites:member_read"} {
+		t.Run(key, func(t *testing.T) {
+			orig := policyAllow[key]
+			drifted := orig
+			drifted.qual = strings.Replace(orig.qual, "(", "", 1)
+			policyAllow[key] = drifted
+			t.Cleanup(func() { policyAllow[key] = orig })
+			got := strings.Join(adrPoliciesViolations(t), "\n")
+			if !strings.Contains(got, "policy "+strings.SplitN(key, ":", 2)[1]+" does not match the canonical expression") {
+				t.Errorf("a drifted constant for %s was not reported:\n%s", key, got)
+			}
+		})
+	}
+}
