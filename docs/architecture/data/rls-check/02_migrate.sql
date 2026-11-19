@@ -106,7 +106,8 @@ BEGIN
   END IF;
   RETURN NEW;
 END $$;
-CREATE TRIGGER document_series_guard_conflict BEFORE UPDATE ON org.document_series
+-- OF: solo corre si el UPDATE nombra la columna; NextNumber no la toca y no paga el trigger.
+CREATE TRIGGER document_series_guard_conflict BEFORE UPDATE OF provider_conflict_at ON org.document_series
   FOR EACH ROW EXECUTE FUNCTION org.guard_series_conflict();
 -- Arrendamiento por tenant de einv.company_sync (ADR 0013): solo lo escribe wanka_worker.
 CREATE TABLE einv.company_sync_state (tenant_id uuid PRIMARY KEY REFERENCES org.tenants, holder text, lease_until timestamptz,

@@ -142,7 +142,13 @@ SELECT test.assert((SELECT provider_conflict_at IS NOT NULL FROM org.document_se
 SELECT test.expect_error($$UPDATE org.document_series SET provider_conflict_at = NULL WHERE id = 'd5000000-0000-0000-0000-0000000000a1'$$,
                          '42501', 'el congelado es irreversible tambien para wanka_worker');
 INSERT INTO einv.company_sync_state (tenant_id, holder, lease_until) VALUES (app.current_tenant(), 'job-1', now() + interval '60 seconds')
-  ON CONFLICT (tenant_id) DO UPDATE SET holder = EXCLUDED.holder, lease_until = EXCLUDED.lease_until;
+  ON CONFLICT (tenant_id) DO UPDATE SET holder = EXCLUDED.holder, lease_until = EXCLUDED.lease_until
+  WHERE einv.company_sync_state.holder IS NULL OR einv.company_sync_state.lease_until < now();
+-- Un segundo job no pisa el arrendamiento vigente (ADR 0013, H14 del PR #228).
+INSERT INTO einv.company_sync_state (tenant_id, holder, lease_until) VALUES (app.current_tenant(), 'job-2', now() + interval '60 seconds')
+  ON CONFLICT (tenant_id) DO UPDATE SET holder = EXCLUDED.holder, lease_until = EXCLUDED.lease_until
+  WHERE einv.company_sync_state.holder IS NULL OR einv.company_sync_state.lease_until < now();
+SELECT test.assert((SELECT holder FROM einv.company_sync_state) = 'job-1', 'un arrendamiento vigente no se pisa');
 UPDATE einv.company_sync_state SET synced_seq = greatest(synced_seq, 3), holder = NULL WHERE holder = 'job-1';
 SELECT test.assert((SELECT synced_seq FROM einv.company_sync_state) = 3, 'wanka_worker toma, usa y suelta el arrendamiento de company_sync');
 SELECT test.expect_error($$UPDATE org.document_series SET last_number = 99$$, '42501', 'wanka_worker no numera');
