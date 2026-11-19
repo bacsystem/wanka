@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"errors"
 	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -660,6 +661,26 @@ func TestCatalogRules(t *testing.T) {
 		}
 	})
 
+	t.Run("guard trigger: invoker's rights, pinned search_path, qualified names", func(t *testing.T) {
+		const fn = `'iam.guard_impersonated_session()'::regprocedure`
+		if queryOne[bool](t, admin, `SELECT prosecdef FROM pg_proc WHERE oid = `+fn) {
+			t.Error("the guard trigger must not be SECURITY DEFINER")
+		}
+		if got := queryOne[string](t, admin, `SELECT proconfig::text FROM pg_proc WHERE oid = `+fn); got != `{"search_path=pg_catalog, pg_temp"}` {
+			t.Errorf("guard proconfig = %s", got)
+		}
+		// Con el search_path fijo, todo objeto va cualificado: el cuerpo no usa to_jsonb, pg_roles ni now() sueltos.
+		src := queryOne[string](t, admin, `SELECT prosrc FROM pg_proc WHERE oid = `+fn)
+		for _, bare := range []string{" to_jsonb(", "(to_jsonb(", " pg_roles ", " now()"} {
+			if strings.Contains(src, bare) {
+				t.Errorf("guard body has the unqualified %q", bare)
+			}
+		}
+		if n := queryOne[int](t, admin, `SELECT count(*) FROM pg_trigger WHERE tgrelid = 'iam.sessions'::regclass AND tgname = 'sessions_guard_impersonated' AND tgenabled = 'O'`); n != 1 {
+			t.Error("trigger sessions_guard_impersonated is missing or disabled")
+		}
+	})
+
 	t.Run("the creation grant on the schema is revoked again", func(t *testing.T) {
 		if queryOne[bool](t, admin, `SELECT has_schema_privilege('wanka_definer', 'iam', 'CREATE')`) {
 			t.Error("wanka_definer still has CREATE on schema iam")
@@ -721,6 +742,11 @@ func TestTableGrantsMatchTheADR0001Matrix(t *testing.T) {
 	// wanka_app: UPDATE de iam.sessions solo por columna, sin id, user_id, impersonator_id, refresh_family ni created_at.
 	appUpd := queryOne[string](t, admin, `SELECT string_agg(column_name, ',' ORDER BY column_name) FROM information_schema.column_privileges
 		WHERE grantee = 'wanka_app' AND table_schema = 'iam' AND table_name = 'sessions' AND privilege_type = 'UPDATE'`)
+	for _, col := range []string{"created_at", "id", "user_id", "impersonator_id", "refresh_family"} {
+		if queryOne[bool](t, admin, `SELECT has_column_privilege('wanka_app', 'iam.sessions', $1, 'UPDATE')`, col) {
+			t.Errorf("wanka_app can UPDATE iam.sessions.%s", col)
+		}
+	}
 	wantUpd := "access_expires_at,access_hash,authz_version,cash_register_id,ip,membership_id,mfa_method,mfa_satisfied,prev_refresh_hash,refresh_expires_at,refresh_hash,revoked_at,rotated_at,site_id,tenant_id,user_agent"
 	if appUpd != wantUpd {
 		t.Errorf("wanka_app column UPDATE on iam.sessions = %q, want %q", appUpd, wantUpd)
@@ -892,4 +918,30 @@ func TestAppCannotStretchOrRewriteImpersonatedSessions(t *testing.T) {
 	if err != nil {
 		t.Errorf("refresh rotation: %v", err)
 	}
+}
+
+// H19: refresh_family se fija en el INSERT y la app no la cambia; el flujo de login (insert a medio login, verify) funciona.
+func TestRefreshFamilyIsSetOnInsertAndNeverChanged(t *testing.T) {
+	d := migrated(t)
+	ctx := context.Background()
+	b := d.SeedSession(t, dbtest.SessionSpec{Kind: dbtest.SessionBound})
+	app := connectAs(t, d, dbtest.App)
+	if fam := queryOne[*string](t, d.Admin(ctx, t), `SELECT refresh_family::text FROM iam.sessions WHERE id = $1`, b.SessionID); fam == nil {
+		t.Error("SeedSession did not set refresh_family")
+	}
+	// Login a medio camino: con refresh_family y sin refresh_hash todavía.
+	var id string
+	err := app.QueryRow(ctx, `INSERT INTO iam.sessions (id, user_id, access_hash, access_expires_at, refresh_family, mfa_satisfied, mfa_method)
+		VALUES (gen_random_uuid(), $1, sha256('half'), now() + interval '10 minutes', gen_random_uuid(), false, 'totp') RETURNING id::text`, b.UserID).Scan(&id)
+	if err != nil {
+		t.Fatalf("half-login INSERT: %v", err)
+	}
+	// verify: completa la sesión con la 2FA y emite los tokens.
+	_, err = app.Exec(ctx, `UPDATE iam.sessions SET mfa_satisfied = true, mfa_method = 'totp', access_hash = sha256('v-a'), refresh_hash = sha256('v-r'),
+		access_expires_at = now() + interval '15 minutes', refresh_expires_at = now() + interval '30 days' WHERE id = $1`, id)
+	if err != nil {
+		t.Errorf("verify UPDATE: %v", err)
+	}
+	_, err = app.Exec(ctx, `UPDATE iam.sessions SET refresh_family = gen_random_uuid() WHERE id = $1`, id)
+	wantState(t, err, "42501", "changing refresh_family")
 }

@@ -95,10 +95,11 @@ func (d *DB) SeedSession(t testing.TB, spec SessionSpec) Seeded {
 		userID                                       any = s.UserID
 		tenant, membership, site, cash, impersonator any // nil → NULL
 		version                                      any
-		mfaSatisfied                                 = true
-		mfaMethod                                    = "none"
-		expires                                      = "1 hour"
-		revoked                                      = false
+		refreshFamily                                any = newUUID(t) // se fija siempre en el INSERT; la app no puede cambiarla
+		mfaSatisfied                                     = true
+		mfaMethod                                        = "none"
+		expires                                          = "1 hour"
+		revoked                                          = false
 	)
 	switch spec.Kind {
 	case SessionBound, SessionExpired, SessionRevoked:
@@ -113,7 +114,7 @@ func (d *DB) SeedSession(t testing.TB, spec SessionSpec) Seeded {
 		mfaSatisfied = false
 	case SessionImpersonated:
 		// El staff vive en platform.platform_users (ola 6): la sesión no tiene user_id y el staff va en impersonator_id.
-		s.ImpersonatorID, s.UserID = newUUID(t), ""
+		s.ImpersonatorID, s.UserID, refreshFamily = newUUID(t), "", nil // la impersonada no tiene refresh
 		userID, impersonator, tenant, mfaMethod = nil, s.ImpersonatorID, s.TenantID, "platform"
 		expires = "60 minutes" // sin refresh y con vigencia máxima de 60 min (CHECK de iam.sessions)
 	default:
@@ -121,10 +122,10 @@ func (d *DB) SeedSession(t testing.TB, spec SessionSpec) Seeded {
 	}
 	err = conn.QueryRow(ctx, `
 		INSERT INTO iam.sessions (id, user_id, tenant_id, site_id, cash_register_id, membership_id, access_hash, access_expires_at,
-		       authz_version, mfa_satisfied, mfa_method, impersonator_id, revoked_at)
-		VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, now() + $7::interval, $8, $9, $10, $11, CASE WHEN $12 THEN now() END)
+		       authz_version, mfa_satisfied, mfa_method, impersonator_id, revoked_at, refresh_family)
+		VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, now() + $7::interval, $8, $9, $10, $11, CASE WHEN $12 THEN now() END, $13)
 		RETURNING id::text`,
-		userID, tenant, site, cash, membership, hash[:], expires, version, mfaSatisfied, mfaMethod, impersonator, revoked).Scan(&s.SessionID)
+		userID, tenant, site, cash, membership, hash[:], expires, version, mfaSatisfied, mfaMethod, impersonator, revoked, refreshFamily).Scan(&s.SessionID)
 	if err != nil {
 		t.Fatalf("seeding the session: %v", err)
 	}

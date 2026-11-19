@@ -91,3 +91,15 @@ ROLLBACK;
 -- user_id solo es NULL en la impersonada
 SELECT test.expect_error($$INSERT INTO iam.sessions (id, access_hash, access_expires_at, mfa_satisfied, mfa_method) VALUES (gen_random_uuid(), sha256('nu'), now(), true, 'none')$$,
   '23514', 'sesion normal sin user_id');
+-- H18: ningun privilegio de UPDATE sobre estas columnas (el sondeo (a) de arriba corre sobre una sesion normal, tok-cajero).
+SELECT test.assert(NOT has_column_privilege('wanka_app', 'iam.sessions', c, 'UPDATE'), 'wanka_app sin UPDATE en iam.sessions.' || c)
+  FROM unnest(ARRAY['created_at','id','user_id','impersonator_id','refresh_family']) AS c;
+-- H19: refresh_family se fija en el INSERT; login a medio camino, verify y cambio de familia.
+BEGIN;
+INSERT INTO iam.sessions (id, user_id, access_hash, access_expires_at, refresh_family, mfa_satisfied, mfa_method)
+  VALUES ('5e000000-0000-0000-0000-0000000000e1', 'eeeeeeee-0000-0000-0000-000000000002', sha256('half'), now() + interval '10 minutes', gen_random_uuid(), false, 'totp');
+UPDATE iam.sessions SET mfa_satisfied = true, mfa_method = 'totp', access_hash = sha256('v-a'), refresh_hash = sha256('v-r'),
+  access_expires_at = now() + interval '15 minutes', refresh_expires_at = now() + interval '30 days' WHERE id = '5e000000-0000-0000-0000-0000000000e1';
+SELECT test.assert((SELECT mfa_satisfied AND refresh_family IS NOT NULL FROM iam.sessions WHERE id = '5e000000-0000-0000-0000-0000000000e1'), 'insert a medio login y verify funcionan');
+COMMIT;
+SELECT test.expect_error($$UPDATE iam.sessions SET refresh_family = gen_random_uuid() WHERE id = '5e000000-0000-0000-0000-0000000000e1'$$, '42501', 'wanka_app no cambia refresh_family');
