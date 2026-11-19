@@ -170,7 +170,7 @@ SELECT test.assert((SELECT created_at = now() FROM iam.sessions WHERE id = '5e00
 ROLLBACK;
 \echo '== A10. (wanka_app) tablas de River: solo INSERT en ops.river_job =='
 SELECT test.river_enqueue_only();
-\echo '== A10. ops.exchange_rates (global, sin RLS; issue #170): wanka_app solo lee =='
+\echo '== A11. ops.exchange_rates (global, sin RLS; issue #170): wanka_app solo lee =='
 SELECT test.expect_error($$INSERT INTO ops.exchange_rates VALUES ('2026-11-19', 'USD', 3.7, 3.8, 'official')$$, '42501', 'wanka_app no inserta tipos de cambio');
 SELECT test.expect_error($$UPDATE ops.exchange_rates SET buy = 1$$, '42501', 'wanka_app no actualiza tipos de cambio');
 SELECT test.expect_error($$DELETE FROM ops.exchange_rates$$, '42501', 'wanka_app no borra tipos de cambio');

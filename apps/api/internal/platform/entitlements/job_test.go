@@ -41,7 +41,7 @@ func TestJobsUseTheSameCheckAsTheMiddleware(t *testing.T) {
 	t.Run("closed company does not run, not even a job that finishes issued documents", func(t *testing.T) {
 		tenant := e.tenant("cerrada")
 		e.subscribe(tenant, e.plan("p-closed", `{}`, "ventas"), "activa")
-		for _, j := range []entitlements.Job{{Module: "ventas"}, {Module: "ventas", FinishesIssued: true}} {
+		for _, j := range []entitlements.Job{{Module: "ventas"}, {Module: entitlements.NoModule, FinishesIssued: true}} {
 			if d := denial(t, s.CheckJob(ctx(t), tenant, j)); d.Code != entitlements.CodeReadOnly {
 				t.Fatalf("job %+v: code = %s", j, d.Code)
 			}
@@ -57,6 +57,18 @@ func TestJobsUseTheSameCheckAsTheMiddleware(t *testing.T) {
 		// que el envío de un CPE ya emitido se declara sin módulo: el job de Khipu es del kernel.
 		if err := s.CheckJob(ctx(t), tenant, entitlements.Job{Module: entitlements.NoModule, FinishesIssued: true}); err != nil {
 			t.Fatalf("a job that finishes issued documents was stopped: %v", err)
+		}
+	})
+	t.Run("finishing issued documents with a module is a programming error, and the module would be rejected anyway", func(t *testing.T) {
+		tenant := e.tenant("activa")
+		e.subscribe(tenant, e.plan("p-idle2", `{}`, "facturacion-electronica"), "suspendida")
+		err := s.CheckJob(ctx(t), tenant, entitlements.Job{Module: "facturacion-electronica", FinishesIssued: true})
+		if !errors.Is(err, entitlements.ErrFinishesNeedsNoModule) {
+			t.Fatalf("err = %v, want ErrFinishesNeedsNoModule", err)
+		}
+		// Con una suscripción activa tampoco se acepta: el error no depende del estado.
+		if err := s.CheckJob(ctx(t), e.seeded("ventas"), entitlements.Job{Module: "ventas", FinishesIssued: true}); !errors.Is(err, entitlements.ErrFinishesNeedsNoModule) {
+			t.Fatalf("active: err = %v", err)
 		}
 	})
 	t.Run("a job must declare its module", func(t *testing.T) {

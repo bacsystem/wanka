@@ -4,12 +4,18 @@
 // El único redondeo del tipo de cambio ocurre en Save, half-up a 3 decimales.
 // Rate devuelve lo guardado sin tocarlo, y el documento y el envío a Khipu usan
 // ese mismo valor: ningún consumidor debe volver a redondearlo.
+//
+// La fecha es un día civil de Lima (Day), no un instante: ningún método recibe un
+// time.Time, así que la zona del llamador no puede correr el día. Today(now)
+// convierte un instante a ese día.
 package fx
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -43,11 +49,107 @@ var (
 	ErrAlreadyExists = errors.New("fx: exchange rate already stored")
 )
 
-// Rate es una fila de ops.exchange_rates. Buy y Sell tienen exactamente 3 decimales.
+// limaZone es la hora de Lima (UTC-5, sin horario de verano): los días de las fechas fiscales se cuentan ahí.
+var limaZone = time.FixedZone("America/Lima", -5*60*60)
+
+// Day es un día de calendario (año, mes y día), sin hora ni zona. El valor cero no es un día válido.
+type Day struct {
+	Year  int
+	Month time.Month
+	Dom   int // día del mes
+}
+
+// Today devuelve el día de Lima en el instante now.
+func Today(now time.Time) Day {
+	n := now.In(limaZone)
+	return Day{Year: n.Year(), Month: n.Month(), Dom: n.Day()}
+}
+
+// String devuelve el día como yyyy-mm-dd.
+func (d Day) String() string { return fmt.Sprintf("%04d-%02d-%02d", d.Year, int(d.Month), d.Dom) }
+
+// valid dice si d existe en el calendario (rechaza el valor cero y el 30 de febrero).
+func (d Day) valid() bool {
+	t := time.Date(d.Year, d.Month, d.Dom, 0, 0, 0, 0, time.UTC)
+	return d.Year >= 1 && t.Year() == d.Year && t.Month() == d.Month && t.Day() == d.Dom
+}
+
+// MarshalText escribe el día como yyyy-mm-dd; un día inexistente es un error.
+func (d Day) MarshalText() ([]byte, error) {
+	if !d.valid() {
+		return nil, fmt.Errorf("%w: day %v", ErrInvalidRate, d)
+	}
+	return []byte(d.String()), nil
+}
+
+// UnmarshalText lee yyyy-mm-dd y rechaza lo que no sea un día existente (por ejemplo 2026-02-30).
+func (d *Day) UnmarshalText(b []byte) error {
+	t, err := time.Parse(time.DateOnly, string(b))
+	if err != nil {
+		return fmt.Errorf("%w: day %q", ErrInvalidRate, b)
+	}
+	got := Day{Year: t.Year(), Month: t.Month(), Dom: t.Day()}
+	if !got.valid() {
+		return fmt.Errorf("%w: day %q", ErrInvalidRate, b)
+	}
+	*d = got
+	return nil
+}
+
+// Value es un tipo de cambio con exactamente 3 decimales: String y JSON lo escriben con ellos
+// ("3.750", no "3.75"), como pide api/conventions.md §6.
+type Value struct{ d decimal.Decimal }
+
+// Decimal devuelve el valor para operar con él.
+func (v Value) Decimal() decimal.Decimal { return v.d }
+
+// String devuelve el valor con 3 decimales.
+func (v Value) String() string { return v.d.StringFixed(scale) }
+
+// MarshalJSON escribe el valor como cadena JSON con 3 decimales.
+func (v Value) MarshalJSON() ([]byte, error) { return json.Marshal(v.String()) }
+
+// UnmarshalJSON lee una cadena decimal (solo dígitos y un punto) con a lo sumo 3 decimales,
+// mayor que 0 y de hasta 999.999. Un número JSON se rechaza: nunca pasa por float64.
+func (v *Value) UnmarshalJSON(b []byte) error {
+	var text string
+	if err := json.Unmarshal(b, &text); err != nil {
+		return fmt.Errorf("%w: value must be a JSON string", ErrInvalidRate)
+	}
+	whole, frac, dot := strings.Cut(text, ".")
+	if whole == "" || (dot && frac == "") || len(frac) > scale || !onlyDigits(whole) || !onlyDigits(frac) {
+		return fmt.Errorf("%w: value %q", ErrInvalidRate, text)
+	}
+	d, err := decimal.NewFromString(text)
+	if err != nil || d.Sign() <= 0 || d.GreaterThan(maxRate) {
+		return fmt.Errorf("%w: value %q", ErrInvalidRate, text)
+	}
+	v.d = d
+	return nil
+}
+
+func onlyDigits(s string) bool {
+	for i := 0; i < len(s); i++ {
+		if s[i] < '0' || s[i] > '9' {
+			return false
+		}
+	}
+	return true
+}
+
+// Rate es una fila de ops.exchange_rates.
 type Rate struct {
-	// Date es el día de la tasa (UTC, sin hora). En una lectura con retroceso es el de la fila
-	// encontrada, no el pedido.
-	Date     time.Time
+	// Date es el día de la fila encontrada; en una lectura con retroceso no es el pedido.
+	Date     Day
+	Currency string
+	Buy      Value
+	Sell     Value
+	Source   string
+}
+
+// Quote es un tipo de cambio por ingerir: Buy y Sell pueden traer más de 3 decimales, Save los redondea.
+type Quote struct {
+	Date     Day
 	Currency string
 	Buy      decimal.Decimal
 	Sell     decimal.Decimal
@@ -59,10 +161,6 @@ type Querier interface {
 	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
 }
 
-// civil devuelve el día de t en su propia zona horaria como texto yyyy-mm-dd.
-// La fecha es un día de calendario, no un instante: no se convierte de zona.
-func civil(t time.Time) string { return t.Format(time.DateOnly) }
-
 // Reader lee tipos de cambio con su propia transacción de solo lectura.
 type Reader struct{ pool *db.Pool }
 
@@ -71,7 +169,7 @@ func NewReader(pool *db.Pool) *Reader { return &Reader{pool: pool} }
 
 // Rate devuelve el tipo de cambio de date y currency. Si no hay fila de ese día devuelve la última
 // anterior con Source = "fallback" (nunca una posterior); si no hay ninguna, ErrExchangeRateRequired.
-func (r *Reader) Rate(ctx context.Context, date time.Time, currency string) (Rate, error) {
+func (r *Reader) Rate(ctx context.Context, date Day, currency string) (Rate, error) {
 	var out Rate
 	err := r.pool.InNoTenantReadTx(ctx, db.NoTenantScope{}, func(tx pgx.Tx) error {
 		var err error
@@ -83,17 +181,21 @@ func (r *Reader) Rate(ctx context.Context, date time.Time, currency string) (Rat
 
 // RateIn es Rate dentro de una transacción ya abierta, para quien ya está en InTenantTx
 // (la tabla no tiene RLS, así que se lee igual con un tenant fijado).
-func RateIn(ctx context.Context, q Querier, date time.Time, currency string) (Rate, error) {
+func RateIn(ctx context.Context, q Querier, date Day, currency string) (Rate, error) {
+	if !date.valid() {
+		return Rate{}, fmt.Errorf("%w: day %v", ErrInvalidRate, date)
+	}
 	if currency != USD {
 		return Rate{}, fmt.Errorf("%w: currency %q", ErrInvalidRate, currency)
 	}
 	var (
 		r         Rate
 		buy, sell string
+		found     time.Time
 	)
 	err := q.QueryRow(ctx, `SELECT rate_date, buy::text, sell::text, source FROM ops.exchange_rates
 		WHERE currency = $1 AND rate_date <= $2::date ORDER BY rate_date DESC LIMIT 1`,
-		currency, civil(date)).Scan(&r.Date, &buy, &sell, &r.Source)
+		currency, date.String()).Scan(&found, &buy, &sell, &r.Source)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Rate{}, ErrExchangeRateRequired
 	}
@@ -101,13 +203,15 @@ func RateIn(ctx context.Context, q Querier, date time.Time, currency string) (Ra
 		return Rate{}, fmt.Errorf("reading exchange rate: %w", err)
 	}
 	r.Currency = currency
-	if r.Buy, err = decimal.NewFromString(buy); err != nil {
+	// pgx entrega la columna date como medianoche UTC: se lee su día de calendario tal cual.
+	r.Date = Day{Year: found.Year(), Month: found.Month(), Dom: found.Day()}
+	if r.Buy.d, err = decimal.NewFromString(buy); err != nil {
 		return Rate{}, fmt.Errorf("parsing buy %q: %w", buy, err)
 	}
-	if r.Sell, err = decimal.NewFromString(sell); err != nil {
+	if r.Sell.d, err = decimal.NewFromString(sell); err != nil {
 		return Rate{}, fmt.Errorf("parsing sell %q: %w", sell, err)
 	}
-	if civil(r.Date) != civil(date) {
+	if r.Date != date {
 		r.Source = SourceFallback
 	}
 	return r, nil
@@ -122,14 +226,14 @@ func NewWriter(pool *db.Pool) *Writer { return &Writer{pool: pool} }
 // Save redondea Buy y Sell half-up a 3 decimales (el único redondeo del tipo de cambio) y los inserta.
 // Rechaza con ErrInvalidRate una moneda o fuente no admitida, un valor que redondeado no es > 0 o que no
 // cabe en numeric(6,3); con ErrAlreadyExists, una fecha y moneda ya guardadas.
-func (w *Writer) Save(ctx context.Context, r Rate) error {
+func (w *Writer) Save(ctx context.Context, r Quote) error {
 	buy, sell, err := r.rounded()
 	if err != nil {
 		return err
 	}
 	return w.pool.InNoTenantTx(ctx, db.NoTenantScope{}, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `INSERT INTO ops.exchange_rates (rate_date, currency, buy, sell, source)
-			VALUES ($1::date, $2, $3::numeric, $4::numeric, $5)`, civil(r.Date), r.Currency, buy, sell, r.Source)
+			VALUES ($1::date, $2, $3::numeric, $4::numeric, $5)`, r.Date.String(), r.Currency, buy, sell, r.Source)
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
 			return ErrAlreadyExists
@@ -145,7 +249,10 @@ func (w *Writer) Save(ctx context.Context, r Rate) error {
 var maxRate = decimal.New(999999, -scale)
 
 // rounded valida r y devuelve buy y sell con 3 decimales, ya como texto para la base.
-func (r Rate) rounded() (buy, sell string, err error) {
+func (r Quote) rounded() (buy, sell string, err error) {
+	if !r.Date.valid() {
+		return "", "", fmt.Errorf("%w: day %v", ErrInvalidRate, r.Date)
+	}
 	if r.Currency != USD {
 		return "", "", fmt.Errorf("%w: currency %q", ErrInvalidRate, r.Currency)
 	}
