@@ -12,8 +12,8 @@ más adelante).
 
 ```
 cmd/wanka/            main: serve, worker, migrate up
-internal/platform/    kernel: config, logging, httpx, db (+ db/dbtest para tests) en uso;
-                      jobs, money, entitlements, clock, idgen (paquetes vacíos por ahora)
+internal/platform/    kernel: config, logging, httpx, metrics, clock, db (+ db/dbtest para tests) en uso;
+                      jobs, money, entitlements, idgen (paquetes vacíos por ahora)
 bootstrap/roles.sql   bootstrap de roles: lo corre el superusuario con psql, fuera de goose
 migrations/           goose, SQL con timestamp, embebido en el binario, solo hacia adelante
 openapi/              contrato (vacío)
@@ -77,11 +77,51 @@ wanka migrate up                # aplica las migraciones pendientes y termina
 | `GET /healthz` (alias `GET /livez`) | 200 siempre; no consulta dependencias |
 | `GET /readyz` | 200 si la base responde; si no, 503 `dependency_unavailable` (`application/problem+json`, `Retry-After: 1`) y el proceso sigue vivo |
 
-Sin conexión libre en 200 ms el pool devuelve `db.ErrOverloaded`, que
-`httpx.WriteDBError` traduce a `503 overloaded` con `Retry-After: 1`.
+## Base HTTP (`internal/platform/httpx`)
 
-Cada respuesta lleva `X-Request-Id` (se conserva el entrante si es un token
-corto de `[A-Za-z0-9_-]`, si no se genera uno). Cuerpo máximo de petición: 1 MB.
+`httpx.Chain` (request id, log de acceso, recuperación de `panic`, límite de
+cuerpo) envuelve a un `httpx.Router`; los módulos registran ahí sus rutas con
+`rt.Handle("GET /v1/items/{id}", h, opts...)`.
+
+- **Errores**: todo error es `application/problem+json` (RFC 9457) con `type`,
+  `title`, `status`, `code` y `requestId`. El `code` sale de la lista cerrada de
+  `conventions.md` §4 y su HTTP de una sola tabla (`httpx.Codes()`); el handler
+  devuelve `httpx.NewError(code, detail, fields...)` y llama a `httpx.WriteError`.
+  Un `code` fuera del catálogo, un error sin tipar o un `panic` dan `500 internal`
+  sin detalle (la causa va al log).
+- **Rutas**: método + camino. Lo no declarado, otro método y `OPTIONS` son
+  `404 not_found` (no hay `405` ni CORS).
+- **Cuerpo**: máximo 1 MB. Con `Content-Length` mayor, `413 payload_too_large` sin
+  leer el cuerpo; sin él, la lectura se corta en 1 MB + 1 byte. `httpx.DecodeJSON`
+  da `400 malformed_request` (con `errors[].field` si un campo tiene el tipo
+  incorrecto) ante JSON inválido, datos sobrantes o `Content-Type` distinto de JSON.
+- **Plazos**: cada ruta corre con 10 s; si vence, `503 overloaded` con
+  `Retry-After: 1`, el contexto del handler se cancela (la sentencia en curso se
+  cancela y `InTenantTx` hace `ROLLBACK`) y se descarta lo que el handler hubiera
+  escrito: la respuesta se guarda en un buffer y `Flush` no envía nada hasta
+  terminar. Las descargas y los exportes se registran con `httpx.Streaming()`:
+  sin buffer ni plazo de 10 s, con `Flush` y un contexto de 25 s desde la llegada
+  (si vence a mitad del envío, la conexión se corta).
+- **Errores de base** (`httpx.WriteDBError`): `db.ErrOverloaded` (pool sin
+  conexión libre en 200 ms) es `503 overloaded`; `db.ErrUnavailable` (la base no
+  responde) y `db.ErrStatementTimeout` (SQLSTATE 57014) son `503
+  dependency_unavailable`, los tres con `Retry-After: 1` y sin la causa. El
+  `statement_timeout` deja una línea `warn` (ruta, fase, módulo, sin SQL) y suma
+  al contador `db_statement_timeouts_total` por fase y ruta del puerto
+  `internal/platform/metrics`. Con el contexto de la petición ya terminado no
+  escribe nada.
+- **Rate limit**: `httpx.NewLimiter` es un token bucket en memoria con clave
+  inyectable (`httpx.KeyFunc`) y reloj inyectable (`internal/platform/clock`). Se
+  engancha en la ruta con `httpx.Use(limiter.Middleware())`; varios limitadores
+  encadenados no consumen ficha si uno rechaza. `429 rate_limited` con
+  `Retry-After`, y `RateLimit-Limit`, `-Remaining` y `-Reset` en toda respuesta de
+  la ruta. Con `MaxKeys` buckets no llenos, una clave nueva recibe `503 overloaded`.
+  Las claves de sesión y tenant y los valores por defecto los fija #174.
+- Todo `429` y `503` del kernel lleva `Retry-After` en segundos enteros >= 1.
+
+Cada respuesta lleva `X-Request-Id`: se conserva el entrante si son de 1 a 128
+caracteres de `[A-Za-z0-9_-]` y, si falta o no cumple, se reemplaza por uno nuevo
+(nunca `400`).
 
 ## Transacciones de tenant (`InTenantTx`)
 

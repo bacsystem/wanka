@@ -124,7 +124,7 @@ func TestExhaustedPoolIsOverloaded503(t *testing.T) {
 		}
 		defer conn.Release()
 		w.WriteHeader(http.StatusNoContent)
-	}), discardLog())
+	}), discardLog(), nil)
 
 	start := time.Now()
 	rec := httptest.NewRecorder()
@@ -178,7 +178,7 @@ func TestReadyzIsHealthyAndFast(t *testing.T) {
 
 func TestReadyzReportsDependencyUnavailableWhenDatabaseDown(t *testing.T) {
 	p := open(t, closedPortURL(t), db.Options{MaxConns: 2})
-	h := httpx.Chain(httpx.NewMux(p.Ping), discardLog())
+	h := httpx.Chain(httpx.NewMux(p.Ping), discardLog(), nil)
 
 	for range 3 { // el proceso sigue respondiendo, siempre
 		rec := httptest.NewRecorder()
@@ -259,7 +259,7 @@ func TestReadyzWithAFullPoolIsOverloadedAndFast(t *testing.T) {
 	}
 	defer held.Release()
 
-	h := httpx.Chain(httpx.NewMux(p.Ping), discardLog())
+	h := httpx.Chain(httpx.NewMux(p.Ping), discardLog(), nil)
 	start := time.Now()
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/readyz", nil))
@@ -318,7 +318,7 @@ func TestReadyzWithASlowNewConnectionIsStillReady(t *testing.T) {
 	u.Host = slowConnectProxy(t, u.Host, 3*db.DefaultAcquireTimeout)
 	p := open(t, u.String(), db.Options{MaxConns: 3})
 
-	h := httpx.Chain(httpx.NewMux(p.Ping), discardLog())
+	h := httpx.Chain(httpx.NewMux(p.Ping), discardLog(), nil)
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/readyz", nil))
 	if rec.Code != http.StatusOK {

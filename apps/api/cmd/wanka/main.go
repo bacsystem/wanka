@@ -20,6 +20,7 @@ import (
 	"github.com/bacsystem/wanka/apps/api/internal/platform/db"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/httpx"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/logging"
+	"github.com/bacsystem/wanka/apps/api/internal/platform/metrics"
 	"github.com/bacsystem/wanka/apps/api/migrations"
 )
 
@@ -145,7 +146,7 @@ func serve(ctx context.Context, log *slog.Logger, cfg config.Config, svc config.
 	}
 	// Every plane mounts only the health routes for now; the module routes
 	// arrive with their stories (tenant never mounts plataforma, ADR 0002).
-	handler := httpx.Chain(httpx.NewMux(ready), log)
+	handler := httpx.Chain(httpx.NewMux(ready), log, metrics.Nop{})
 	srv := httpx.NewServer(cfg.HTTPAddr, handler)
 
 	ln, err := net.Listen("tcp", cfg.HTTPAddr)

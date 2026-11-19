@@ -135,6 +135,10 @@ func (p *Pool) full() bool {
 	return s.AcquiredConns() >= s.MaxConns()
 }
 
+// AcquiredConns es el número de conexiones en uso ahora mismo; sirve para
+// comprobar que una petición cancelada devolvió la suya.
+func (p *Pool) AcquiredConns() int32 { return p.pool.Stat().AcquiredConns() }
+
 // Ping comprueba que la base responde; es el chequeo de readiness. Con todas
 // las conexiones en uso responde ErrOverloaded al instante: /readyz da 503
 // overloaded, igual que una petición sin conexión libre (conventions.md §4), y
