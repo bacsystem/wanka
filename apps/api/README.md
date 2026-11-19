@@ -225,6 +225,49 @@ los de `InTenantTx`. En las dos puertas sigue prohibido `set_config(..., false)`
 dentro de `fn`. Las pruebas usan la tabla `rlstest.items`, que solo existe en
 `internal/platform/db/testdata/` y se aplica con `dbtest.MigrateWith`.
 
+## Pruebas del catálogo RLS
+
+`internal/platform/db/catalog_test.go` revisa `pg_catalog` tras `migrate up` (ADR
+0001, «Migraciones y pruebas» y «Funciones `SECURITY DEFINER`»). Las reglas no
+listan tablas: corren sobre todo lo que haya migrado, así que una tabla nueva de
+cualquier módulo queda cubierta sin tocar el test.
+
+| Regla | Falla si |
+|---|---|
+| `tenant-tables-have-force-rls-and-policy` | una tabla con `tenant_id` (o `org.tenants`) no tiene RLS, `FORCE` y `tenant_isolation` (`FOR ALL`) cuyo `USING` y `WITH CHECK` son exactamente `(tenant_id = app.current_tenant())` (`id` en `org.tenants`) |
+| `partitions-of-tenant-tables` | una partición de una tabla de tenant tiene algún privilegio (de tabla o de columna) para un rol `wanka_*` de ejecución y no tiene su propia RLS, `FORCE` y `tenant_isolation`: una consulta directa a la partición no pasa por las políticas de la madre |
+| `extra-policies-are-whitelisted` | hay una política que no es `tenant_isolation` ni está en `policyAllow` (tabla, comando, `TO`, rama `app.current_tenant() IS NULL` y, donde el ADR escribe el `USING`, la expresión exacta con el filtro de estado `invitado`/`activo`) |
+| `unique-and-pk-start-with-tenant-id` | un `UNIQUE` o PK de una tabla con `tenant_id` no empieza por `tenant_id` (la PK sustituta `id uuid` o identidad no cuenta) |
+| `policies-wrap-current-setting-in-nullif` | una política usa `current_setting` sin `NULLIF` |
+| `foreign-keys-are-indexed` | una FK no tiene índice que empiece por sus columnas |
+| `tenant-foreign-keys-carry-tenant-id` | una FK entre dos tablas de tenant no lleva `tenant_id` en ambos lados |
+| `security-definer-functions` | una función `SECURITY DEFINER` no es de `wanka_definer`, no fija `search_path = pg_catalog, pg_temp` o `PUBLIC` ejecuta |
+| `application-roles` | un rol `wanka_*` tiene `BYPASSRLS` o es superusuario, o uno que no es `wanka_migrator` es dueño de tablas |
+
+`TestCatalogRulesCatchMutations` aplica, por cada regla, una migración de prueba
+(en memoria, nunca en `migrations/`) que la viola y exige que la regla nombre el
+objeto; los defectos de roles se inyectan como superusuario y se restauran. Al
+agregar una regla, agrega su mutación.
+
+**Cómo agregar una excepción.** Una excepción es un PR de arquitectura: cita el
+ADR (o su erratum) que la justifica y, si el ADR 0001 no la nombra, se agrega
+allí primero. En la parte alta de `catalog_test.go`, una entrada con su motivo,
+que tiene que contener «ADR NNNN» (`TestCatalogRules` lo comprueba, y que el
+objeto exista, para que no queden entradas viejas):
+
+- `noRLSTables`: tabla con `tenant_id` que por diseño no es de tenant (clave `esquema.tabla`). Hoy `iam.sessions` y las cuatro tablas `platform.*` de entitlements con `tenant_id` (`subscriptions`, `tenant_module_overrides`, `tenant_flag_overrides`, `tenant_usage`). Una tabla `platform.*` sin RLS por ADR entra aquí.
+- `uniqueAllow`: `UNIQUE` global marcado (clave `esquema.tabla(col1,col2)`).
+- `fkAllow`: FK entre tablas de tenant sin `tenant_id` (clave `esquema.tabla.restricción`).
+- `policyAllow`: política adicional (clave `esquema.tabla:política`), con comandos, roles, si exige la rama `IS NULL`, fragmentos obligatorios (`mustContain`) y, si el ADR escribe el `USING`, el texto exacto (`qual`, tal como lo deparsa PostgreSQL 16; los espacios se colapsan). El número de ADR del motivo tiene que existir en `docs/architecture/adr/`.
+- `tenantRoots`: tabla de tenant que se aísla por otra columna que `tenant_id` (hoy `org.tenants`, por `id`).
+
+**PR que toca políticas, roles, grants o funciones definer.** Además de estas
+pruebas, actualiza `docs/architecture/data/rls-check/` (el SQL y, si cambia lo
+que se debe detectar, sus mutaciones) y corre `sh apps/api/scripts/rls-check.sh`
+con salida 0. Lo exige el revisor del PR (`/pr-review`) y la sección «Verificación»
+del ADR 0001; el workflow `api.yml` corre ese script cuando cambia
+`apps/api/` o `rls-check/`.
+
 ## Entitlements (`internal/platform/entitlements`)
 
 `entitlements.New(pool, Options{}).For(ctx, tenantID)` devuelve lo que una empresa

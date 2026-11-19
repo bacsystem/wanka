@@ -3,6 +3,14 @@
 All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.15.2] - 2026-11-19
+
+### Added
+- `apps/api`: RLS catalog tests (`internal/platform/db/catalog_test.go`) that run on whatever is migrated, with no table listed by hand: tenant tables have `FORCE ROW LEVEL SECURITY` and a `tenant_isolation` whose `USING` and `WITH CHECK` are exactly `tenant_id = app.current_tenant()`; a partition of a tenant table either has no privilege for a runtime role or has its own full RLS; extra policies are in the ADR 0001 whitelist (`FOR SELECT`, or `platform_rw TO wanka_platform`), carry `app.current_tenant() IS NULL` in their user branch and match the ADR text exactly, member state filter included; no `UNIQUE` or primary key of a tenant table skips `tenant_id`; no policy uses `current_setting` without `NULLIF`; every foreign key is indexed and carries `tenant_id` between tenant tables; every `SECURITY DEFINER` function is owned by `wanka_definer`, pins `search_path = pg_catalog, pg_temp` and is closed to `PUBLIC`; no `wanka_*` role has `BYPASSRLS` and only the migrator owns tables. Exceptions live in explicit whitelists (today `iam.sessions` and the four entitlements tables of `platform.*` that carry `tenant_id`: `subscriptions`, `tenant_module_overrides`, `tenant_flag_overrides`, `tenant_usage`, global and without RLS by ADR 0001), each entry citing an ADR that exists in `docs/architecture/adr/`, and a test fails on a stale one. A mutation test applies a throwaway migration that breaks each rule and requires the rule to name the object. `apps/api/README.md` explains how to add an exception (#164).
+
+### Changed
+- `apps/api`: the generic checks of `TestCatalogRules` in `iam_session_test.go` moved to the catalog tests (the session-specific ones stay as `TestIAMSessionCatalog`) (#164).
+
 ## [0.15.1] - 2026-11-19
 
 ### Changed
