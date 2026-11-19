@@ -3,6 +3,11 @@
 All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.4.1] - 2026-11-18
+
+### Changed
+- API contract, ahead of #165: a handler that exceeds its 10 s budget answers `503 overloaded` with `Retry-After: 1` and an RFC 9457 body (streaming routes excluded); `RateLimit-Limit`, `RateLimit-Remaining` and `RateLimit-Reset` keep three separate fields with integer values, reporting the bucket with fewer tokens; an invalid `X-Request-Id` (empty, over 128 characters or outside `[A-Za-z0-9_-]`) is replaced, never answered with `400`; an undeclared method is `404` and a non-JSON `Content-Type` is `400 malformed_request` (`api/conventions.md` §3, §4 and §7, `openapi.yaml`, C4 components).
+
 ## [0.4.0] - 2026-11-18
 
 ### Added
