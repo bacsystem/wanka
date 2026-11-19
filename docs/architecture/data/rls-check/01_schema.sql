@@ -20,6 +20,13 @@ BEGIN
 END $$;
 GRANT wanka_definer TO wanka_migrator;                    -- para poder hacer ALTER FUNCTION ... OWNER TO wanka_definer
 GRANT CREATE ON DATABASE wanka TO wanka_migrator;
+-- Nadie crea en "public" (una sentencia sin esquema falla con 42501); el REVOKE cubre bases restauradas o
+-- actualizadas desde PostgreSQL < 15. Idempotente.
+REVOKE CREATE ON SCHEMA public FROM PUBLIC;
+-- goose guarda sus versiones en goose.goose_db_version: esquema propio del migrador, creado aqui porque goose
+-- crea su tabla antes de la primera migracion.
+CREATE SCHEMA IF NOT EXISTS goose AUTHORIZATION wanka_migrator;
+ALTER SCHEMA goose OWNER TO wanka_migrator;
 ALTER ROLE wanka_app SET statement_timeout = '5s';        -- api/conventions.md §7; ALTER ROLE ... SET exige superusuario o CREATEROLE
 
 -- El bootstrap se verifica a sí mismo: un atributo fuera de lo esperado aborta.
@@ -30,5 +37,9 @@ BEGIN
     RAISE EXCEPTION 'un rol wanka_* tiene SUPERUSER, BYPASSRLS, CREATEROLE, CREATEDB o REPLICATION'; END IF;
   IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname LIKE 'wanka\_%' AND rolcanlogin <> (rolname <> 'wanka_definer')) THEN
     RAISE EXCEPTION 'LOGIN: solo wanka_definer es NOLOGIN'; END IF;
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname LIKE 'wanka\_%' AND has_schema_privilege(rolname, 'public', 'CREATE')) THEN
+    RAISE EXCEPTION 'a wanka_* role can create in schema public'; END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_namespace WHERE nspname = 'goose' AND pg_get_userbyid(nspowner) = 'wanka_migrator') THEN
+    RAISE EXCEPTION 'schema goose is missing or not owned by wanka_migrator'; END IF;
   RAISE NOTICE 'bootstrap OK: 5 roles LOGIN + wanka_definer NOLOGIN, ninguno con BYPASSRLS ni CREATEROLE';
 END $$;

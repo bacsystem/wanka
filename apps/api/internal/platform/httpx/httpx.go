@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/bacsystem/wanka/apps/api/internal/platform/db"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/logging"
 )
 
@@ -24,7 +25,7 @@ type ReadyFunc func(ctx context.Context) error
 // ErrNotReady is returned by NotReady.
 var ErrNotReady = errors.New("database not connected")
 
-// NotReady is the readiness stub until the database connection story lands.
+// NotReady es una ReadyFunc que siempre falla.
 func NotReady(context.Context) error { return ErrNotReady }
 
 // NewServer returns an http.Server with the timeouts of api/conventions.md §7.
@@ -52,8 +53,14 @@ func NewMux(ready ReadyFunc) *http.ServeMux {
 	mux.HandleFunc("GET /healthz", live)
 	mux.HandleFunc("GET /livez", live)
 	mux.HandleFunc("GET /readyz", func(w http.ResponseWriter, r *http.Request) {
-		if ready(r.Context()) != nil {
+		if err := ready(r.Context()); err != nil {
+			// Un pool sin conexión libre es 503 overloaded y una base que no
+			// responde es 503 dependency_unavailable (conventions.md §4).
+			if WriteDBError(w, r, err) {
+				return
+			}
 			// The cause is not returned to the caller: it may name internals.
+			w.Header().Set("Retry-After", "1")
 			WriteProblem(w, r, http.StatusServiceUnavailable, "dependency_unavailable", "Service Unavailable", "dependency not ready")
 			return
 		}
@@ -73,6 +80,25 @@ func WriteProblem(w http.ResponseWriter, r *http.Request, status int, code, titl
 		"type": "about:blank", "title": title, "status": status, "code": code,
 		"detail": detail, "requestId": logging.RequestID(r.Context()),
 	})
+}
+
+// WriteDBError responde el error de base de datos que es contrapresión o base
+// caída: 503 overloaded si el pool no tiene conexión libre, 503
+// dependency_unavailable si la base no responde, ambos con Retry-After: 1
+// (api/conventions.md §4). Informa si escribió la respuesta; cualquier otro
+// error lo resuelve quien llama. La causa nunca se devuelve.
+func WriteDBError(w http.ResponseWriter, r *http.Request, err error) bool {
+	switch {
+	case errors.Is(err, db.ErrOverloaded):
+		w.Header().Set("Retry-After", "1")
+		WriteProblem(w, r, http.StatusServiceUnavailable, "overloaded", "Service Unavailable", "the server is busy, retry shortly")
+	case errors.Is(err, db.ErrUnavailable):
+		w.Header().Set("Retry-After", "1")
+		WriteProblem(w, r, http.StatusServiceUnavailable, "dependency_unavailable", "Service Unavailable", "a dependency is not responding")
+	default:
+		return false
+	}
+	return true
 }
 
 // Chain wraps h with request id, body limit and access log, in that order.

@@ -20,7 +20,23 @@ jobs:
   api:
     name: api (gofmt, vet, test, build, arch-lint)
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 15
+    # PostgreSQL 16 real para los tests de integración (sin mocks de base). Las
+    # contraseñas de abajo son solo de la CI, de una base desechable: no son
+    # secretos y nunca van en el SQL versionado.
+    services:
+      postgres:
+        image: postgres:16-alpine@sha256:1758b87430847848ff5a71cbdd898c7a21e469166c3e25244940f05ea97800ad
+        env:
+          POSTGRES_DB: wanka
+          POSTGRES_PASSWORD: ci-superuser-not-a-secret
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d wanka"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
     defaults:
       run:
         working-directory: apps/api
@@ -63,8 +79,54 @@ jobs:
       - name: go vet
         if: steps.changes.outputs.run == 'true'
         run: go vet ./...
+      # Migraciones solo hacia adelante; el script también prueba sus casos malos.
+      - name: migrations are forward-only
+        if: steps.changes.outputs.run == 'true'
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          base="$BASE_SHA"
+          if [ "$EVENT" != "pull_request" ]; then base="$BEFORE_SHA"; fi
+          case "$base" in ""|0000000000000000000000000000000000000000) base=origin/main ;; esac
+          sh scripts/migrations-check.sh "$base"
+      # Bootstrap de roles como superusuario del contenedor (fuera de goose) y
+      # contraseñas de prueba; luego migrate up desde cero como wanka_migrator.
+      - name: bootstrap roles
+        if: steps.changes.outputs.run == 'true'
+        env:
+          PGHOST: localhost
+          PGPORT: "5432"
+          PGDATABASE: wanka
+          PGUSER: postgres
+          PGPASSWORD: ci-superuser-not-a-secret
+          WANKA_CI_ROLE_PASSWORD: ci-roles-not-a-secret
+        run: |
+          psql -X -v ON_ERROR_STOP=1 -f bootstrap/roles.sql
+          psql -X -v ON_ERROR_STOP=1 -v pw="$WANKA_CI_ROLE_PASSWORD" <<'SQL'
+          ALTER ROLE wanka_migrator PASSWORD :'pw';
+          ALTER ROLE wanka_app PASSWORD :'pw';
+          ALTER ROLE wanka_worker PASSWORD :'pw';
+          ALTER ROLE wanka_webhooks PASSWORD :'pw';
+          ALTER ROLE wanka_platform PASSWORD :'pw';
+          SQL
+      - name: migrate up from scratch (twice)
+        if: steps.changes.outputs.run == 'true'
+        env:
+          DATABASE_URL_MIGRATOR: postgres://wanka_migrator:ci-roles-not-a-secret@localhost:5432/wanka
+        run: |
+          go build -o bin/wanka ./cmd/wanka
+          ./bin/wanka migrate up | tee first.log
+          grep -q '"msg":"migration applied"' first.log
+          ./bin/wanka migrate up | tee second.log
+          grep -q '"applied":0' second.log
+          if grep -q '"msg":"migration applied"' second.log; then echo "second run changed something"; exit 1; fi
       - name: go test
         if: steps.changes.outputs.run == 'true'
+        env:
+          WANKA_TEST_ADMIN_URL: postgres://postgres:ci-superuser-not-a-secret@localhost:5432/wanka
+          WANKA_TEST_ROLE_PASSWORD: ci-roles-not-a-secret
         run: go test -race ./...
       - name: go build
         if: steps.changes.outputs.run == 'true'
