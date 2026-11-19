@@ -25,6 +25,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - ADR 0009 records the per-module layout and the CI tools; `docs/modules/README.md` marks the `openapi.yaml` split as done (#166).
 - `docs/architecture/review-checklist.md`: known defect classes from the kernel batches, read by developers before coding and used by reviews; `docs/delivery-process.md` adds the performance rules (one full suite run per PR, architect pre-review, shared test database, short reports).
 
+### Fixed
+- CI: the release PR (`chore/release*`) now runs the whole API job, rls-check included, even when it only changes docs and versions; before, the Go steps were skipped because no `apps/api` file changed.
+
 ## [0.18.0] - 2026-11-19
 
 ### Added
