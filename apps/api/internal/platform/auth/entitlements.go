@@ -37,7 +37,8 @@ type Spec struct {
 	// aplica el paso de RBAC (#176); aquí solo se exige que esté declarado.
 	Permission string
 	// Limit es la clave del límite que la ruta consume (entitlements.LimitUsers,
-	// LimitSites, LimitCPEPerMonth); vacío si no consume ninguno. Con
+	// LimitCPEPerMonth); LimitSites hace fallar el arranque hasta que alguien mida
+	// las sedes en uso (ADR 0005); vacío si no consume ninguno. Con
 	// used >= limit la ruta responde 403 plan_limit_reached.
 	Limit string
 }
@@ -53,7 +54,7 @@ var inactivePass = map[string]bool{
 }
 
 var knownLimits = map[string]bool{
-	entitlements.LimitUsers: true, entitlements.LimitSites: true, entitlements.LimitCPEPerMonth: true,
+	entitlements.LimitUsers: true, entitlements.LimitCPEPerMonth: true,
 }
 
 // checkSpec entra en pánico si spec no cumple las reglas del ADR 0009 para esa
@@ -68,6 +69,8 @@ func checkSpec(pattern string, class RouteClass, spec Spec) {
 		panic(fmt.Sprintf("auth: route %q is %s and does not go through entitlements: its module must be auth.NoModule", pattern, class))
 	case class == Tenant && (spec.Module == NoModule) != inactivePass[pattern]:
 		panic(fmt.Sprintf("auth: route %q: only GET /v1/exports and GET /v1/me/entitlements are Tenant routes with auth.NoModule, and they must use it", pattern))
+	case spec.Limit == entitlements.LimitSites:
+		panic(fmt.Sprintf("auth: route %q consumes %q, which has no usage measurement yet (ADR 0005)", pattern, spec.Limit))
 	case spec.Limit != "" && !knownLimits[spec.Limit]:
 		panic(fmt.Sprintf("auth: route %q consumes the unknown limit %q", pattern, spec.Limit))
 	case spec.Limit != "" && class != Tenant:

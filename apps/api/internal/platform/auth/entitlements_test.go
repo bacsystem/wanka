@@ -163,7 +163,7 @@ func TestPlanLimitAtTheEdge(t *testing.T) {
 func TestClosedCompanyOnlyReads(t *testing.T) {
 	closed := func(e *entitlements.Entitlements) { e.ReadOnly = true }
 	e := newEnvEnts(t, returns(bound()), ofPlan(closed), nil)
-	for _, m := range []string{"POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"} {
+	for _, m := range []string{"POST", "PUT", "PATCH", "DELETE", "OPTIONS"} {
 		rec := e.do(m, "/v1/items", bearer(token(1)))
 		if m == "OPTIONS" {
 			mustProblem(t, rec, 404, "not_found") // sin CORS: nunca llega a la cadena
@@ -173,6 +173,11 @@ func TestClosedCompanyOnlyReads(t *testing.T) {
 	}
 	if e.hits("tenant-write") != 0 || e.hits("users-create") != 0 {
 		t.Fatal("a write handler ran for a closed company")
+	}
+	for _, p := range []string{"/v1/items", "/v1/exports"} {
+		if rec := e.do("HEAD", p, bearer(token(1))); rec.Code != 200 {
+			t.Fatalf("HEAD %s = %d, want 200: HEAD is a read", p, rec.Code)
+		}
 	}
 	for _, p := range []string{"/v1/items", "/v1/exports", "/v1/me/entitlements"} {
 		if rec := e.get(p, bearer(token(1))); rec.Code != 200 {
@@ -193,7 +198,15 @@ func TestClosedCompanyIsNotAskedForTheSubscription(t *testing.T) {
 			t.Fatalf("GET %s = %d, want 200", p, rec.Code)
 		}
 	}
-	// Un GET de módulo no recibe 402: con la suscripción suspendida el módulo ya no está en la lista.
+	// Cerrada + suspendida con el módulo del último plan (la empresa cerrada lo conserva): el GET da 200, no 402.
+	e = newEnvEnts(t, returns(bound()), ofPlan(func(e *entitlements.Entitlements) {
+		e.ReadOnly, e.Status = true, entitlements.StatusSuspended
+	}), nil)
+	if rec := e.get("/v1/items", bearer(token(1))); rec.Code != 200 {
+		t.Fatalf("GET /v1/items = %d, want 200", rec.Code)
+	}
+	mustProblem(t, e.post("/v1/items", bearer(token(1))), 403, "tenant_read_only")
+	// Sin el módulo (override ausente) el GET sí es module_not_enabled.
 	e = newEnvEnts(t, returns(bound()), ofPlan(func(e *entitlements.Entitlements) {
 		e.ReadOnly, e.Status, e.Modules = true, entitlements.StatusSuspended, []string{}
 	}), nil)
@@ -479,6 +492,7 @@ func TestRouteSpecIsValidatedAtRegistration(t *testing.T) {
 		{"NoModule on Public", "POST /v1/auth/login", auth.Public, none, true},
 		{"empty spec on Public", "POST /v1/auth/login", auth.Public, auth.Spec{}, false},
 		{"a module on Public", "POST /v1/auth/login", auth.Public, auth.Spec{Module: "ventas", Permission: auth.NoPermission}, false},
+		{"sites has no usage measurement yet", "POST /v1/sites", auth.Tenant, auth.Spec{Module: "empresas", Permission: "x:y", Limit: entitlements.LimitSites}, false},
 		{"a known limit", "POST /v1/users", auth.Tenant, auth.Spec{Module: "identidad", Permission: "x:y", Limit: entitlements.LimitUsers}, true},
 		{"an unknown limit", "POST /v1/users", auth.Tenant, auth.Spec{Module: "identidad", Permission: "x:y", Limit: "seats"}, false},
 		{"a limit on a NoTenant route", "GET /v1/me", auth.NoTenant, auth.Spec{Module: auth.NoModule, Permission: auth.NoPermission, Limit: entitlements.LimitUsers}, false},

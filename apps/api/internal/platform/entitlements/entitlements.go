@@ -10,7 +10,8 @@
 // escrituras son de plataforma y empresas.
 //
 // La falta de datos cierra el acceso: sin suscripción, o con una suscripción
-// que no está activa ni en prueba, no hay ningún módulo ni flag habilitado.
+// que no está activa ni en prueba, no hay ningún módulo ni flag habilitado,
+// salvo en la empresa cerrada, que conserva los de su último plan.
 package entitlements
 
 import (
@@ -57,10 +58,10 @@ const (
 // devuelve For es una copia: el llamador puede modificarla sin afectar la caché.
 type Entitlements struct {
 	// Modules son los códigos de módulo habilitados, ordenados. Vacío si la
-	// suscripción no es Usable.
+	// suscripción no es Usable, salvo en la empresa cerrada (ReadOnly).
 	Modules []string `json:"modules"`
 	// Flags son las claves de los feature flags encendidos para la empresa,
-	// ordenadas. Vacío si la suscripción no es Usable.
+	// ordenadas. Vacío si la suscripción no es Usable, salvo en la empresa cerrada.
 	Flags []string `json:"flags"`
 	// Limits son los topes del plan por clave; todo plan declara las tres (CHECK
 	// de la base). Usar Limit, que cierra ante una clave ausente.

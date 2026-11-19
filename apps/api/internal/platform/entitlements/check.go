@@ -26,8 +26,9 @@ const (
 
 // Request es lo que una petición o un job pide a los entitlements.
 type Request struct {
-	// Method es el método HTTP. Vacío para un job: un job nunca es un GET, así
-	// que una empresa cerrada no lo corre.
+	// Method es el método HTTP. Con la empresa cerrada solo GET y HEAD (lecturas)
+	// pasan. Vacío para un job: un job nunca es una lectura, así que una empresa
+	// cerrada no lo corre.
 	Method string
 	// Module es el módulo que exige; NoModule si ninguno.
 	Module string
@@ -61,7 +62,7 @@ func (d *Denial) Error() string { return d.Code + ": " + d.Detail }
 // límite sin clave o con used >= limit, se rechaza.
 func (e Entitlements) Check(r Request) *Denial {
 	if e.ReadOnly {
-		if r.Method != http.MethodGet {
+		if r.Method != http.MethodGet && r.Method != http.MethodHead {
 			return &Denial{Code: CodeReadOnly, Detail: detailReadOnly}
 		}
 	} else if e.Status.Inactive() && !r.KeepsRunningWhenInactive {

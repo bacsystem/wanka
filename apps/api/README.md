@@ -149,8 +149,9 @@ lo cablea con los limitadores de `conventions.md` §7 y una goroutine que llama 
   una sola clase (el enrolamiento TOTP son dos rutas). `spec` es un `auth.Spec`
   con `Module` y `Permission` (el `x-module` y el `x-permission` del spec; para
   «ninguno», las constantes `auth.NoModule` y `auth.NoPermission`, que valen `none`)
-  y, si la ruta consume un límite del plan, `Limit` (`entitlements.LimitUsers`,
-  `LimitSites` o `LimitCPEPerMonth`). Un string vacío, un módulo en una ruta
+  y, si la ruta consume un límite del plan, `Limit` (`entitlements.LimitUsers` o
+  `LimitCPEPerMonth`; `LimitSites` hace fallar el arranque hasta que alguien mida
+  las sedes en uso). Un string vacío, un módulo en una ruta
   `Public` o `NoTenant`, `NoModule` en una ruta `Tenant` que no sea
   `GET /v1/exports` ni `GET /v1/me/entitlements` (y un módulo en esas dos), o un
   límite desconocido entran en pánico al arrancar.
@@ -182,7 +183,7 @@ lo cablea con los limitadores de `conventions.md` §7 y una goroutine que llama 
 - **Entitlements** (solo rutas `Tenant`, después de los limitadores): `For(ctx, tenant)`
   con la fase `entitlements` solo en el contexto de esa lectura (un error del handler
   lleva `phase=handler`), y las reglas de `entitlements.Entitlements.Check` en el
-  orden de la secuencia 08: empresa cerrada y método distinto de `GET` →
+  orden de la secuencia 08: empresa cerrada y método distinto de `GET` y `HEAD` →
   `403 tenant_read_only`; si no está cerrada, suscripción `morosa`, `suspendida` o
   `cancelada` → `402 subscription_inactive`, salvo las rutas de la lista fija en el
   código (`GET /v1/exports`, `GET /v1/me/entitlements`; `/v1/auth/*`, `GET /v1/me` y
@@ -243,7 +244,7 @@ lectura; el middleware que responde `402`, `403 tenant_read_only`,
   100) es menor que `rollout_pct`, igual en cualquier réplica.
 - **Falla cerrado**: sin suscripción `Status` es `sin_plan` (no el plan `semilla`); con
   `morosa`, `suspendida` o `cancelada` (`Status.Inactive()`), `Modules` y `Flags` vienen
-  vacíos; una empresa cerrada tiene `ReadOnly`. Una empresa que no existe es
+  vacíos, salvo en la empresa cerrada, que conserva los de su último plan y tiene `ReadOnly`. Una empresa que no existe es
   `ErrTenantNotFound`; un error de la base sale como `db.ErrOverloaded`,
   `db.ErrUnavailable` o `db.ErrStatementTimeout` y nunca se guarda.
 - **Caché** por empresa, TTL 30 s, con tope de 10 000 entradas; las lecturas en frío de
