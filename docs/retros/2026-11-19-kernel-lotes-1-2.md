@@ -2,6 +2,8 @@
 
 Primera retrospectiva por lote, hecha con el skill `retro` de `bacsystem/skills`. No hay una retro anterior con la que comparar: la lista «a vigilar» del final es la base de la próxima.
 
+Esta retro cubre dos lotes que ya se cerraron con el proceso anterior (versión por PR, sin PR de release), así que no va junto a un PR de release, como pide [`delivery-process.md`](../delivery-process.md) desde el PR #214: va en su propio PR de docs. Las próximas sí van con el release de su lote.
+
 - **Lote 1:** PR #201 a #205 (historias #196, #168, #25, #167 y #172).
 - **Lote 2:** PR #206 a #213 (historias #171, #175, #170, #187, #164, #169, #173 y #177), más el PR de proceso #214.
 - Los dos lotes se trabajaron como una **pila por versión**: cada PR partía del anterior para no chocar en `package.json` y `CHANGELOG.md`. Los PR de historia se mergearon entre las 13:38 y las 15:58 (UTC) del mismo día.
@@ -22,11 +24,11 @@ Fuente: `retro/scripts/collect.sh`, corregido a mano donde no cuadraba (ver la n
 | #207 | #175 middleware de entitlements | 2 | 1 | 0 | 1 | 2 | 7 (4) | 128 | 0 | 33 |
 | #208 | #170 tipo de cambio | 3 | 1 | 0 | 1 | 3 | 6 (3) | 125 | 1 | 40 |
 | #209 | #187 ex miembros sin RLS | 2 | 1 | 0 | 1 | 1 | 5 (3) | 122 | 0 | 43 |
-| #210 | #164 catálogo RLS | 3 | 1 | 0 | 3 | 1 | 8 (3) | 120 | 0 | 62 |
-| #211 | #169 jobs en River | 3 | 1 | 0 | 1 | 5 | 8 (3) | 111 | 1 | 52 |
+| #210 | #164 catálogo RLS | 3 | 1 | 0 | 3 | 1 | 8 (4) | 120 | 0 | 62 |
+| #211 | #169 jobs en River | 3 | 1 | 0 | 1 | 5 | 8 (4) | 111 | 1 | 52 |
 | #212 | #173 auditoría | 3 | 1 | 0 | 2 | 6 | 7 (2) | 93 | 1 | 29 |
 | #213 | #177 idempotencia | 2 | 1 | 0 | 0 | 4 | 8 (4) | 89 | 0 | 26 |
-| **Lote 2** | | **21** (2,6/PR) | **8** | **0** | **11** | **27** | **55 (23)** | | **3** | **320** |
+| **Lote 2** | | **21** (2,6/PR) | **8** | **0** | **11** | **27** | **55 (25)** | | **3** | **320** |
 | #214 | proceso por lotes | 3 | 0 | 0 | 1 | 4 | 8 (1, de `main`) | 81 | 0 | 26 |
 
 Notas sobre los números:
@@ -34,14 +36,14 @@ Notas sobre los números:
 - **Rondas.** `collect.sh` daba entre 4 y 12 rondas por PR porque cuenta cada línea que dice «Veredicto», también dentro de las tablas. La tabla cuenta los comentarios publicados cuya primera línea es un veredicto, una re-revisión o un cierre de revisión. #210 publicó la segunda ronda y QA en un mismo comentario: cuenta en las dos columnas.
 - **Hallazgos.** Son la suma de las cabeceras de cada veredicto (`N bloqueantes · N importantes · N menores`), y coinciden con lo que da `collect.sh`.
 - **Minutos hasta el merge.** `collect.sh` los da en horas enteras (1 o 2), que no distinguen nada en un lote de un día. Miden sobre todo la espera del merge del lote, no el trabajo: el dueño mergea todo el lote junto.
-- **Commits tras abrir.** `collect.sh` cuenta como trabajo los merges de la rama base. En la tabla van aparte: 32 de los 79 commits de los PR de historia (40 %) son merges de la base.
+- **Commits tras abrir.** `collect.sh` cuenta como trabajo los merges de la rama base. En la tabla van aparte: 34 de los 79 commits de los PR de historia (43 %) son merges de la base.
 
 ## Cuellos de botella
 
 ### 1. El apilado por versión: re-mergear y re-verificar toda la pila
 
-- **32 merges de la base** en 13 PR (9 en el lote 1 y 23 en el lote 2): el 40 % de los commits.
-- En el lote 2 hubo **tres cascadas**, en las que cada arreglo de abajo se propagó por toda la pila: a las 14:08 (#208, #209, #210, #211, en el mismo minuto), a las 14:43 (#208, #209, #210) y a las 15:09 (#209, #210, #211). Cada cascada obliga a volver a compilar, a correr tests y a re-revisar el PR de arriba.
+- **34 merges de la base** en 13 PR (9 en el lote 1 y 25 en el lote 2): el 43 % de los commits.
+- En el lote 2 hubo **tres cascadas**, en las que cada arreglo de abajo se propagó por toda la pila: a las 14:08 (#207, #208, #209, #210, #211, entre las 14:07 y las 14:08), a las 14:43 (#208, #210) y a las 15:09 (#209, #210, #211). Cada cascada obliga a volver a compilar, a correr tests y a re-revisar el PR de arriba.
 - **Defectos que causó el propio merge**, no la historia:
   - IDs de caso de `rls-check` repetidos tras el merge: #206 H6 y #208 H2.
   - Un `ROLLBACK` perdido en un merge de `05_app.sql`: #213 H2.
@@ -54,7 +56,7 @@ Notas sobre los números:
 - Comentarios de revisión y QA que reportan una corrida completa (`go test … ./...`): **3, 5, 4 y 4** en #201, #202, #204 y #205, sin contar la del desarrollador ni la de la CI.
 - En el lote 2, tras la regla de una suite por PR, bajaron a **2 por PR** en #208, #210, #211, #212 y #213 (y a 1 en #209).
 - `rls-check` se corrió completo hasta **3 veces** en un PR (#205 y #209), aunque solo cambiaba Go en los arreglos.
-- Los minutos de CI subieron de 145 en el lote 1 a 320 en el lote 2. El motivo es que cada merge de la base dispara la CI otra vez, no que la suite crezca: #210 (62 min) y #211 (52 min) son los que más merges de la base recibieron.
+- Los minutos de CI subieron de 145 en el lote 1 a 320 en el lote 2. El motivo es que cada merge de la base dispara la CI otra vez, no que la suite crezca: #210 (62 min) y #211 (52 min) están entre los que más merges de la base recibieron (4 cada uno).
 
 ### 3. Un contenedor de PostgreSQL por agente saturaba la máquina
 
@@ -70,7 +72,7 @@ Notas sobre los números:
   - #207: `HEAD` cuenta como lectura con la empresa cerrada (13:34, siete minutos después).
   - #212: las reglas de forma del actor como `CHECK` con nombre (13:54).
   - #213: la clave de idempotencia ligada al principal, con la PK `(tenant_id, principal_id, key)`, y el ADR 0012 aprobado por el dueño (14:04).
-- #203, el contrato del código por correo, escrito sin revisión previa: **4 importantes y 8 menores**, el máximo del lote. Son hallazgos de diseño (techo de fallos, precedencia `401`/`429`, grants que no impiden lo que el texto dice), no de código.
+- #203, el contrato del código por correo, escrito sin revisión previa: **4 importantes y 6 menores**, el máximo del lote. Son hallazgos de diseño (techo de fallos, precedencia `401`/`429`, grants que no impiden lo que el texto dice), no de código.
 - #204: el único **bloqueante** de los dos lotes (el descuento global recalculado a nivel de documento) era una regla de dominio que nadie había fijado antes de escribir `Compute`.
 
 ### 5. Revisión y QA en el mismo worktree se contaminaban
@@ -143,7 +145,7 @@ Del proyecto (esta retro):
 - **La lista de errores conocidos suma las 18 clases nuevas** de la tabla anterior, cada una con su PR (`docs/architecture/review-checklist.md`). Ataca los cuellos 6 y 7: los tests de tiempo con cotas que la CI pueda cumplir y los criterios no funcionales medidos antes de pedir la revisión, con el número en el cuerpo del PR.
 - **Los contratos de diseño (PR solo de docs bajo `docs/architecture/`) pasan por la revisión previa del architect como cualquier historia.** #203 fue el PR con más hallazgos del lote, y todos eran de diseño. No hace falta una regla nueva: la de «Revisión previa del architect» ya lo cubre si se aplica también a las historias de docs. Se vigila abajo.
 
-Genéricas, para `bacsystem/skills` (las sube el coordinador; no están en el PR #31):
+Genéricas, para `bacsystem/skills`, en el [PR #32](https://github.com/bacsystem/skills/pull/32) (no están en el PR #31):
 
 - `retro/scripts/collect.sh`: contar las rondas por comentario y no por línea, separar los merges de la base de los commits de trabajo, dar minutos en vez de horas enteras y clasificar las fallas de CI por test.
 - `pr-review`: comprobar que la CI corrió sobre el SHA revisado (un PR `DIRTY` no tiene CI) y leer el diff de cada merge de la base en los archivos compartidos.
@@ -156,11 +158,11 @@ Genéricas, para `bacsystem/skills` (las sube el coordinador; no están en el PR
 |---|---|---|
 | Rondas de revisión por PR | 2,8 y 2,6 | ≤ 2 de media; ningún PR con más de 3 |
 | Decisiones del architect después de implementar | 6 | 0: todas quedan en la issue antes de escribir código |
-| Merges de la base en PR de historia | 32 (40 % de los commits) | 0 en PR independientes; solo en los apilados por dependencia real |
+| Merges de la base en PR de historia | 34 (43 % de los commits) | 0 en PR independientes; solo en los apilados por dependencia real |
 | Defectos introducidos por un merge | 4 | 0 |
 | Corridas completas de la suite por PR (revisión + QA) | hasta 5 | 1 |
 | Corridas de CI fallidas por tests de tiempo | 4 de 4 | 0 |
 | Criterios no funcionales sin número en el PR | 4 PR | 0 |
 | Hallazgos importantes por PR | 1,8 y 1,4 | ≤ 1 |
 | Contaminación entre worktrees reportada por QA | 3 PR | 0 |
-| PR de skills sin revisión externa por falta de cupo | 8 de 16 | revisados con `/pr-review` |
+| PR de skills sin revisión externa por falta de cupo | 8 de 16 | 0 PR de skills mergeados sin un comentario de `/pr-review` |
