@@ -38,10 +38,16 @@ SELECT test.assert((SELECT string_agg(t.name || ':' || m.status, ',') FROM org.t
 COMMIT;
 -- Catalogo: el filtro de estado esta escrito en las dos politicas. Con own_memberships filtrando, la subconsulta de member_read
 -- ya no ve la suspendida, asi que quitarlo de member_read no cambia ninguna fila: solo el catalogo lo distingue.
-SELECT test.assert((SELECT qual ~ 'status' AND qual ~ 'invitado' AND qual ~ 'activo' AND qual ~ 'current_tenant' FROM pg_policies
-                     WHERE schemaname = 'org' AND tablename = 'tenants' AND policyname = 'member_read'), 'org.tenants member_read exige invitado/activo');
-SELECT test.assert((SELECT qual ~ 'status' AND qual ~ 'invitado' AND qual ~ 'activo' FROM pg_policies
-                     WHERE schemaname = 'iam' AND tablename = 'memberships' AND policyname = 'own_memberships'), 'iam.memberships own_memberships exige invitado/activo');
+-- El conjunto EXACTO de estados: todo literal entre comillas de la politica (solo hay estados) debe ser {activo,invitado}; un
+-- 'suspendido' de mas, o uno de menos, falla. Se mira tambien que la rama por usuario siga bajo app.current_tenant() IS NULL.
+SELECT test.assert((SELECT qual ~ 'status' AND qual ~ 'current_tenant'
+                           AND (SELECT array_agg(DISTINCT m[1] ORDER BY m[1]) FROM regexp_matches(qual, '''([^'']*)''', 'g') AS m) = ARRAY['activo','invitado']
+                      FROM pg_policies WHERE schemaname = 'org' AND tablename = 'tenants' AND policyname = 'member_read'),
+                   'org.tenants member_read exige exactamente invitado/activo');
+SELECT test.assert((SELECT qual ~ 'status'
+                           AND (SELECT array_agg(DISTINCT m[1] ORDER BY m[1]) FROM regexp_matches(qual, '''([^'']*)''', 'g') AS m) = ARRAY['activo','invitado']
+                      FROM pg_policies WHERE schemaname = 'iam' AND tablename = 'memberships' AND policyname = 'own_memberships'),
+                   'iam.memberships own_memberships exige exactamente invitado/activo');
 \echo '== A3. list_my_memberships (security_invoker) con solo app.user_id del cajero =='
 BEGIN;
 SELECT set_config('app.user_id','eeeeeeee-0000-0000-0000-000000000002', true);
