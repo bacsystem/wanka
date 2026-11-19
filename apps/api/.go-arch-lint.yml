@@ -20,6 +20,9 @@ components:
   # reciben *db.Pool y no pueden construir ni usar un pgxpool.Pool propio.
   platform_db: { in: internal/platform/db/** }
   platform: { in: internal/platform/* }
+  # Adaptadores del kernel sobre PostgreSQL: implementan un puerto de platform con db.
+  # Solo cmd los cablea; platform no los importa.
+  platform_pg: { in: internal/platform/auth/pgsession }
   main: { in: cmd/** }
   migrations: { in: migrations }
   bootstrap: { in: bootstrap }
@@ -36,8 +39,11 @@ deps:
   platform:
     mayDependOn: [platform, platform_db, migrations, bootstrap]
     canUse: [pgx, goose]
+  platform_pg:
+    mayDependOn: [platform, platform_pg, platform_db]
+    canUse: [pgx]
   main:
-    mayDependOn: [platform, platform_db, migrations]
+    mayDependOn: [platform, platform_pg, platform_db, migrations]
     canUse: [pgx]
 exclude:
   - testdata

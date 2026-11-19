@@ -72,10 +72,9 @@ type Options struct {
 // Routes es el registrador de rutas /v1: arma la cadena sesión -> limitadores ->
 // pasos de la ruta -> handler.
 //
-// Los módulos registran sus rutas /v1 solo por Routes. httpx.Router.Handle sigue
-// siendo público (httpx lo necesita para /healthz y los tests) y acepta /v1 sin
-// clase, así que el cableado de serve (#196) no expone el *httpx.Router fuera
-// de cmd/wanka.
+// Los módulos registran sus rutas /v1 solo por Routes: httpx.Router.Handle
+// rechaza /v1 con un pánico y el cableado de serve (#196) no entrega el
+// *httpx.Router a los módulos, solo este registrador.
 type Routes struct {
 	rt       *httpx.Router
 	resolver SessionResolver
@@ -179,14 +178,14 @@ func checkRoute(pattern string, class RouteClass) {
 func (r *Routes) Handle(pattern string, class RouteClass, h http.Handler, opts ...httpx.RouteOption) {
 	checkRoute(pattern, class)
 	if class == Public {
-		r.rt.Handle(pattern, h, opts...)
+		r.rt.HandleV1(pattern, h, opts...)
 		return
 	}
 	mws := []httpx.Middleware{r.sessionStep(class == Tenant), r.session.Middleware()}
 	if class == Tenant {
 		mws = append(mws, r.tenant.Middleware())
 	}
-	r.rt.Handle(pattern, h, append([]httpx.RouteOption{httpx.Use(mws...)}, opts...)...)
+	r.rt.HandleV1(pattern, h, append([]httpx.RouteOption{httpx.Use(mws...)}, opts...)...)
 }
 
 // HandleFunc es Handle con una función.
