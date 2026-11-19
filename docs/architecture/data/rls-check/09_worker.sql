@@ -30,10 +30,30 @@ SELECT test.assert((SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid 
                        AND pg_get_userbyid(p.proowner) <> 'wanka_definer') = 0, 'ninguna SECURITY DEFINER con otro duenio');
 SELECT test.assert((SELECT count(*) FROM pg_roles WHERE rolname LIKE 'wanka_%' AND (rolbypassrls OR rolsuper)) = 0,
                    'ningun rol wanka_* con BYPASSRLS ni superusuario');
-SELECT test.assert((SELECT count(*) = 5 AND bool_and(c.relrowsecurity AND c.relforcerowsecurity) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
-                     WHERE (n.nspname, c.relname) IN (('org','tenants'), ('org','sites'), ('iam','roles'), ('iam','memberships'), ('audit','events'))),
+SELECT test.assert((SELECT count(*) = 6 AND bool_and(c.relrowsecurity AND c.relforcerowsecurity) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+                     WHERE (n.nspname, c.relname) IN (('org','tenants'), ('org','sites'), ('iam','roles'), ('iam','memberships'), ('audit','events'), ('ops','idempotency_keys'))),
                    'tablas de tenant con RLS y FORCE RLS');
 SELECT test.assert(NOT has_schema_privilege('wanka_definer', 'iam', 'CREATE')
                    AND NOT has_schema_privilege('wanka_definer', 'ops', 'CREATE')
                    AND NOT has_schema_privilege('wanka_definer', 'platform_fn', 'CREATE'),
                    'wanka_definer sin CREATE tras el cambio de duenio');
+\echo '== K1d. (wanka_worker) ops.idempotency_keys: limpia cross-tenant solo lo de mas de 24 h, sin leer hash ni respuesta =='
+SELECT test.expect_error('SELECT request_hash FROM ops.idempotency_keys', '42501', 'wanka_worker no lee request_hash');
+SELECT test.expect_error('SELECT response FROM ops.idempotency_keys', '42501', 'wanka_worker no lee response');
+SELECT test.expect_error('SELECT key FROM ops.idempotency_keys', '42501', 'wanka_worker no lee las claves');
+SELECT test.expect_error($$INSERT INTO ops.idempotency_keys (tenant_id, key, request_hash) VALUES ('aaaaaaaa-0000-0000-0000-000000000001', 'w', sha256('x'))$$,
+  '42501', 'wanka_worker no inserta claves');
+SELECT test.expect_error($$UPDATE ops.idempotency_keys SET status_code = 200$$, '42501', 'wanka_worker no actualiza claves');
+DO $$ DECLARE n int; BEGIN
+  -- Sin tenant fijado: una limpieza que se pasa de largo no borra las vigentes (la politica purge_expired lo impide).
+  DELETE FROM ops.idempotency_keys WHERE created_at > now() - interval '24 hours'; GET DIAGNOSTICS n = ROW_COUNT;
+  PERFORM test.assert(n = 0, 'wanka_worker no borra claves de menos de 24 h');
+  DELETE FROM ops.idempotency_keys; GET DIAGNOSTICS n = ROW_COUNT;
+  PERFORM test.assert(n = 2, 'wanka_worker borra las 2 vencidas (una de A y una de B) y ninguna vigente, sin tenant fijado');
+  RAISE EXCEPTION 'rollback' USING ERRCODE = 'RR177';
+  EXCEPTION WHEN SQLSTATE 'RR177' THEN NULL; END $$;
+DO $$ DECLARE n int; BEGIN
+  DELETE FROM ops.idempotency_keys WHERE created_at < now() - interval '24 hours'; GET DIAGNOSTICS n = ROW_COUNT;
+  PERFORM test.assert(n = 2, 'el filtro de created_at (SELECT por columna) alcanza para el DELETE por antigüedad');
+  RAISE EXCEPTION 'rollback' USING ERRCODE = 'RR177';
+  EXCEPTION WHEN SQLSTATE 'RR177' THEN NULL; END $$;

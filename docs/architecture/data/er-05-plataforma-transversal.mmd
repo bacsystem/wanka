@@ -142,9 +142,10 @@ erDiagram
   IDEMPOTENCY_KEYS {
     uuid tenant_id PK
     text key PK
-    bytea request_hash
-    int status_code "solo 2xx: CHECK status_code BETWEEN 200 AND 299"
-    jsonb response
+    bytea request_hash "sha256 de metodo, ruta y cuerpo canonico"
+    smallint status_code "NULL solo dentro de la transaccion; solo 2xx: CHECK status_code BETWEEN 200 AND 299"
+    bytea response "bytes exactos de la respuesta"
+    jsonb response_headers "Content-Type, Location, ETag"
     timestamptz created_at "limpieza a las 24 h"
   }
   RIVER_JOB {

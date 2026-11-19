@@ -190,8 +190,9 @@ func migrate(ctx context.Context, log *slog.Logger, cfg config.Config) error {
 
 // worker ejecuta los jobs (internal/platform/jobs): abre su pool (una URL o un
 // tamaño inválidos lo detienen al arrancar), levanta las colas y, al recibir la
-// señal de parada, espera a los jobs en curso hasta JOBS_SHUTDOWN_TIMEOUT. Los
-// handlers de cada módulo se registran aquí cuando llegan sus historias.
+// señal de parada, espera a los jobs en curso hasta JOBS_SHUTDOWN_TIMEOUT. Registra
+// los jobs de mantenimiento del kernel; los handlers de cada módulo se registran
+// aquí cuando llegan sus historias.
 func worker(ctx context.Context, log *slog.Logger, cfg config.Config, svc config.Service, getenv func(string) string) error {
 	jcfg, err := jobs.ConfigFromEnv(getenv)
 	if err != nil {
@@ -202,7 +203,11 @@ func worker(ctx context.Context, log *slog.Logger, cfg config.Config, svc config
 		return fmt.Errorf("opening database pool: %w", err)
 	}
 	defer pool.Close()
-	w, err := jobs.NewWorker(pool, jobs.NewRegistry(pool), jcfg, log)
+	reg := jobs.NewRegistry(pool)
+	if err := jobs.RegisterMaintenance(reg, pool); err != nil {
+		return err
+	}
+	w, err := jobs.NewWorker(pool, reg, jcfg, log)
 	if err != nil {
 		return err
 	}

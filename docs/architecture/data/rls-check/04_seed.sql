@@ -21,3 +21,17 @@ SELECT set_config('app.tenant_id','aaaaaaaa-0000-0000-0000-000000000001', true);
 UPDATE iam.memberships SET authz_version = 2 WHERE id = '3e000000-0000-0000-0000-0000000000c1';
 COMMIT;
 INSERT INTO ops.webhook_routes VALUES ('r-0123456789abcdef', 'aaaaaaaa-0000-0000-0000-000000000001', 'khipu', '\xdeadbeef', NULL);
+-- ops.idempotency_keys (issue #177): claves de A y B, vencidas (mas de 24 h) y vigentes. created_at explicito: lo puede fijar el
+-- duenio, no wanka_app. Cada insercion con su tenant fijado.
+BEGIN;
+SELECT set_config('app.tenant_id','aaaaaaaa-0000-0000-0000-000000000001', true);
+INSERT INTO ops.idempotency_keys (tenant_id, key, request_hash, status_code, response, created_at) VALUES
+  ('aaaaaaaa-0000-0000-0000-000000000001', 'old-a', sha256('h-old-a'), 201, '\x7b7d', now() - interval '25 hours'),
+  ('aaaaaaaa-0000-0000-0000-000000000001', 'recent-a', sha256('h-recent-a'), 201, '\x7b7d', now() - interval '23 hours');
+COMMIT;
+BEGIN;
+SELECT set_config('app.tenant_id','bbbbbbbb-0000-0000-0000-000000000002', true);
+INSERT INTO ops.idempotency_keys (tenant_id, key, request_hash, status_code, response, created_at) VALUES
+  ('bbbbbbbb-0000-0000-0000-000000000002', 'old-b', sha256('h-old-b'), 201, '\x7b7d', now() - interval '30 hours'),
+  ('bbbbbbbb-0000-0000-0000-000000000002', 'recent-b', sha256('h-recent-b'), 201, '\x7b7d', now() - interval '1 hour');
+COMMIT;

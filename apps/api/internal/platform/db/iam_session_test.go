@@ -540,17 +540,28 @@ func TestCatalogRules(t *testing.T) {
 	})
 
 	t.Run("policies are exactly the standard ones", func(t *testing.T) {
-		rows, err := admin.Query(ctx, `SELECT schemaname || '.' || tablename, policyname, cmd, qual, with_check FROM pg_policies ORDER BY 1, 2`)
+		rows, err := admin.Query(ctx, `SELECT schemaname || '.' || tablename, policyname, cmd, qual, with_check, roles::text FROM pg_policies ORDER BY 1, 2`)
 		if err != nil {
 			t.Fatal(err)
 		}
 		defer rows.Close()
 		got := map[string]string{}
 		for rows.Next() {
-			var tbl, name, cmd string
+			var tbl, name, cmd, roles string
 			var qual, check *string
-			if err := rows.Scan(&tbl, &name, &cmd, &qual, &check); err != nil {
+			if err := rows.Scan(&tbl, &name, &cmd, &qual, &check, &roles); err != nil {
 				t.Fatal(err)
+			}
+			if tbl == "ops.idempotency_keys" && (name == "purge_expired" || name == "purge_expired_read") {
+				// Única excepción (#177): el job horario de limpieza corre sin tenant, y FORCE RLS no le dejaría ver
+				// ninguna fila. Solo wanka_worker, solo leer y borrar, solo filas de más de 24 h.
+				wantCmd := map[string]string{"purge_expired": "DELETE", "purge_expired_read": "SELECT"}[name]
+				if cmd != wantCmd || roles != "{wanka_worker}" || deref(check) != "" ||
+					deref(qual) != "(created_at < (now() - '24:00:00'::interval))" {
+					t.Errorf("%s: policy %s is %s for %s with %q / %q, want %s for {wanka_worker} on rows older than 24 h only",
+						tbl, name, cmd, roles, deref(qual), deref(check), wantCmd)
+				}
+				continue
 			}
 			if name != "tenant_isolation" || cmd != "ALL" {
 				t.Errorf("%s: unexpected policy %s (%s)", tbl, name, cmd)
@@ -569,8 +580,8 @@ func TestCatalogRules(t *testing.T) {
 		if err := rows.Err(); err != nil {
 			t.Fatal(err)
 		}
-		if len(got) != 3 {
-			t.Errorf("policies on %v, want org.tenants, iam.roles and iam.memberships only", got)
+		if len(got) != 4 {
+			t.Errorf("policies on %v, want org.tenants, iam.roles, iam.memberships and ops.idempotency_keys only", got)
 		}
 	})
 

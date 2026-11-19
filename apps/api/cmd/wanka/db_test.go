@@ -154,3 +154,50 @@ func TestWorkerStartsTheFiveQueuesAndStopsOnSIGTERM(t *testing.T) {
 	}
 	p.terminate(t)
 }
+
+// El comando worker registra la limpieza de claves de idempotencia: un job de ese kind lo ejecuta y borra solo las vencidas.
+func TestWorkerRunsThePurgeOfIdempotencyKeys(t *testing.T) {
+	d := dbtest.New(t)
+	ctx := context.Background()
+	d.Migrate(ctx, t)
+	s := d.SeedSession(t, dbtest.SessionSpec{})
+	conn := d.Admin(ctx, t)
+	if _, err := conn.Exec(ctx, `INSERT INTO ops.idempotency_keys (tenant_id, key, request_hash, status_code, created_at) VALUES
+		($1, 'old', sha256('a'), 200, now() - interval '25 hours'), ($1, 'new', sha256('b'), 200, now())`, s.TenantID); err != nil {
+		t.Fatal(err)
+	}
+	p := start(t, []string{"DATABASE_URL_WORKER=" + d.URL(dbtest.Worker)}, "worker")
+	p.waitMsg(t, "started")
+	if _, err := conn.Exec(ctx, `INSERT INTO ops.river_job (kind, args, queue) VALUES ('ops.purge_idempotency_keys', '{}', 'maintenance')`); err != nil {
+		t.Fatal(err)
+	}
+	deadline := time.Now().Add(15 * time.Second)
+	for {
+		var state string
+		err := conn.QueryRow(ctx, `SELECT state::text FROM ops.river_job WHERE kind = 'ops.purge_idempotency_keys'`).Scan(&state)
+		if err == nil && state == "completed" {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("the purge job did not complete (state %q, err %v)", state, err)
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	var keys []string
+	rows, err := conn.Query(ctx, `SELECT key FROM ops.idempotency_keys ORDER BY key`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for rows.Next() {
+		var k string
+		if err := rows.Scan(&k); err != nil {
+			t.Fatal(err)
+		}
+		keys = append(keys, k)
+	}
+	rows.Close()
+	if strings.Join(keys, ",") != "new" {
+		t.Fatalf("keys left: %v, want only the recent one", keys)
+	}
+	p.terminate(t)
+}
