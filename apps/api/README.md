@@ -17,9 +17,11 @@ internal/platform/    kernel: config, logging, httpx, auth (+ auth/pgsession, el
                       money, idgen (paquetes vacíos por ahora)
 bootstrap/roles.sql   bootstrap de roles: lo corre el superusuario con psql, fuera de goose
 migrations/           goose, SQL con timestamp, embebido en el binario, solo hacia adelante
-openapi/              contrato (vacío)
+openapi/              contrato OpenAPI 3.1 partido por módulo (ver «Servidor generado»)
+internal/apigen/      servidor generado de openapi/ (un paquete por módulo + components); no se edita a mano
 testdata/archlint/    ejemplo de la regla entre módulos para go-arch-lint
 scripts/archlint.sh   corre go-arch-lint y demuestra que una importación prohibida (y un pgxpool fuera de internal/platform/db) falla
+scripts/openapi-check.sh     Redocly lint y oasdiff breaking contra la base (versiones fijadas en el script)
 scripts/migrations-check.sh  check de migraciones solo hacia adelante y sus casos malos
 ```
 
@@ -33,6 +35,8 @@ go vet ./...
 go test -race ./...
 sh scripts/archlint.sh   # go-arch-lint (versión fijada en el script)
 sh scripts/migrations-check.sh   # solo hacia adelante (base: origin/main, o main)
+go generate ./... && git status --short .   # el servidor generado no debe cambiar
+sh scripts/openapi-check.sh origin/main      # lint del contrato y cambios incompatibles (necesita node)
 ```
 
 Los tests de integración usan una base PostgreSQL 16 real (sin mocks). Si no
@@ -325,6 +329,30 @@ con salida 0. Lo exige el revisor del PR (`/pr-review`) y la sección «Verifica
 del ADR 0001; el workflow `api.yml` corre ese script cuando cambia
 `apps/api/` o `rls-check/`.
 
+## Servidor generado (`openapi/`, `internal/apigen`)
+
+La fuente del contrato es `openapi/openapi.yaml` (ADR 0009). Es la raíz: `info`, seguridad, los tags y un `$ref` por camino, agrupados por módulo con un comentario `# --- <módulo> ---`. Cada módulo edita **solo** su `openapi/paths/<módulo>.yaml` (uno por código de `platform.modules`; los vacíos tienen `paths: {}`) y agrega la línea de su camino en su bloque de la raíz. Lo compartido está en `openapi/components/` (errores, paginación, dinero, cabeceras, comprobantes). El tag de una operación es el módulo de su archivo.
+
+Para agregar un endpoint:
+
+1. Escribe la operación en `paths/<módulo>.yaml` con `tags: [<módulo>]`, `operationId`, `x-module` y `x-permission`. Las dos extensiones son siempre un string: un código del catálogo o el literal `none` (ADR 0009, «Cómo se declara ninguno»). Ausente, `null` o vacío falla la prueba.
+2. Agrega su `$ref` en `openapi.yaml`, en el bloque de tu módulo.
+3. Si el módulo no tenía operaciones, crea `internal/apigen/<módulo>/` con `cfg.yaml` y `generate.go` (copia el de `ventas`) y regístralo en `opsByModule` de `openapi/contract_test.go`.
+4. `go generate ./...` y commitea el resultado: la CI falla si hay diff. No edites `*.gen.go`.
+
+Reglas del contrato (las comprueba `openapi/contract_test.go`; Redocly lint valida la sintaxis y los `$ref`):
+
+- **Pertenencia:** ningún parámetro ni propiedad se llama `tenantId`: el tenant sale de la sesión (ADR 0001).
+- **Dinero:** `type: string` con su patrón (`components/money.yaml`). Prohibido `type: number` (salvo `x-wanka-not-money: true` en la misma línea) y `x-go-type: decimal.Decimal`: su `MarshalJSON` no fija la escala. La conversión va en el handler, con `internal/platform/money`.
+- **Tiempo:** un día civil es `type: string, format: date` (llega como `openapi_types.Date`, sin zona); un instante es `format: date-time` con offset. Un filtro por día de un documento fiscal (`issuedFrom`, `issuedTo`) es un día civil, nunca `date-time`. Es regla de revisión: Redocly no la expresa.
+- **Nulos:** `oneOf` con `type: 'null'` y `type: [T, 'null']` generan un puntero opcional; la API no distingue «ausente» de `null`.
+
+Cómo se usa el código generado:
+
+- **Nunca `HandlerWithOptions`, `HandlerFromMux` ni `Handler`:** hacen `mux.HandleFunc` a secas y las rutas `/v1` solo se registran con `auth.Routes.Handle` (clase + `Spec`). Cada módulo registra el método del `ServerInterfaceWrapper` generado: `routes.HandleFunc("POST /v1/sales", auth.Tenant, auth.Spec{...}, w.CreateSale)`. Una prueba falla si otro código nombra esas funciones.
+- **Errores:** todo `ServerInterfaceWrapper` y todo `NewStrictHandlerWithOptions` se construyen con `ErrorHandlerFunc`, `RequestErrorHandlerFunc` y `ResponseErrorHandlerFunc` que escriben con `httpx`: parámetro mal formado → `400 malformed_request`; cuerpo que no es JSON → `400 malformed_request`; `*http.MaxBytesError` → `413 payload_too_large`; error del handler → `httpx.WriteError`. Lo que trae el generado por defecto es `http.Error` de texto plano y no sirve. `internal/apigen/ventas/errorhandling_test.go` es el ejemplo.
+- `internal/apigen` no lo importa `platform` (go-arch-lint).
+
 ## Entitlements (`internal/platform/entitlements`)
 
 `entitlements.New(pool, Options{}).For(ctx, tenantID)` devuelve lo que una empresa
@@ -333,7 +361,7 @@ tiene habilitado (ADR 0005): `Modules` y `Flags` (ordenados), `Limits` y `Usage`
 lectura; el middleware que responde `402`, `403 tenant_read_only`,
 `403 module_not_enabled` o `403 plan_limit_reached` está en `auth.Routes` (ver «Sesión»,
 #175), y `GET /v1/me/entitlements` lo cablea identidad
-(contrato en `docs/architecture/api/openapi.yaml`).
+(contrato en `apps/api/openapi/paths/identidad.yaml`).
 
 - **Una consulta** agregada en `InTenantReadTx` (rol `wanka_app`, `Actor` de tipo
   `KindSystem`): `org.tenants`, la suscripción, `plan_modules`, overrides, flags y

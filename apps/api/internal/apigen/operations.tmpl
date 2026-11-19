@@ -1,0 +1,45 @@
+{{/*
+  Reemplaza request-bodies.tmpl de oapi-codegen v2.8.2: conserva su contenido (los tipos de los
+  cuerpos) y agrega la tabla Operations con lo que la prueba de contrato (openapi/contract_test.go)
+  lee del spec sin una librería YAML: tags, x-module, x-permission y security de cada operación.
+  Una extensión ausente no aparece en Ext (y una null vale nil): la prueba distingue los casos.
+*/ -}}
+{{range .}}{{$opid := .OperationId}}
+{{range .Bodies}}
+{{if .IsSupported -}}
+{{$contentType := .ContentType -}}
+{{with .TypeDef $opid}}
+// {{.TypeName}} defines body for {{$opid}} for {{$contentType}} ContentType.
+{{- with .DeprecationComment}}
+//
+{{.}}
+{{- end}}
+type {{.TypeName}} {{if .IsAlias}}={{end}} {{.Schema.TypeDecl}}
+{{end}}
+{{end}}
+{{end}}
+{{end}}
+
+// OperationMeta es lo que el spec declara de una operación, para la prueba de contrato.
+type OperationMeta struct {
+	Method           string
+	Path             string
+	ID               string
+	Tags             []string
+	Ext              map[string]any // solo x-module y x-permission; nil = null en el spec
+	SecurityDeclared bool           // false: la operación hereda la seguridad global
+	Security         []string       // nombres de esquema; vacío con SecurityDeclared = Public
+}
+
+// Operations son las operaciones del archivo de paths de este paquete.
+var Operations = []OperationMeta{
+{{- range .}}
+	{
+		Method: {{printf "%q" .Method}}, Path: {{printf "%q" .Path}}, ID: {{printf "%q" .SpecOperationId}},
+		Tags: []string{ {{range .Spec.Tags}}{{printf "%q" .}}, {{end}} },
+		Ext: map[string]any{ {{range $k, $v := .Spec.Extensions}}{{if or (eq $k "x-module") (eq $k "x-permission")}}{{printf "%q" $k}}: {{if eq $v nil}}nil{{else}}{{printf "%#v" $v}}{{end}}, {{end}}{{end}} },
+		SecurityDeclared: {{if .Spec.Security}}true{{else}}false{{end}},
+		Security: []string{ {{with .Spec.Security}}{{range .}}{{range $n, $s := .}}{{printf "%q" $n}}, {{end}}{{end}}{{end}} },
+	},
+{{- end}}
+}

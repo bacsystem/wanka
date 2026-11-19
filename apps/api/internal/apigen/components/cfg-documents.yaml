@@ -1,0 +1,11 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/oapi-codegen/oapi-codegen/HEAD/configuration-schema.json
+package: components
+output: documents.gen.go
+compatibility:
+  always-prefix-enum-values: true
+generate:
+  models: true
+import-mapping:
+  money.yaml: '-'
+output-options:
+  skip-prune: true

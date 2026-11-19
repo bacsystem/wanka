@@ -1,6 +1,6 @@
 # ADR 0002: Monolito modular hexagonal en Go y librerías base
 
-- Estado: aceptado (2026-11-17: el dueño aprobó River, sqlc, goose, oapi-codegen, shopspring/decimal, pquerna/otp, OpenTelemetry y el SDK de S3, y también pgx/v5, golang.org/x/crypto y go-arch-lint; Go y PostgreSQL ya eran decisión del usuario)
+- Estado: aceptado (2026-11-17: el dueño aprobó River, sqlc, goose, oapi-codegen, shopspring/decimal, pquerna/otp, OpenTelemetry y el SDK de S3, y también pgx/v5, golang.org/x/crypto y go-arch-lint; Go y PostgreSQL ya eran decisión del usuario; 2026-11-19: el dueño aprobó Redocly CLI y oasdiff como herramientas de CI del contrato, #166)
 - Fecha: 2026-11-17
 
 ## Contexto
@@ -40,10 +40,11 @@ openapi/                   # contrato (ADR 0009)
 **Librerías** (todas maduras y con licencia permisiva). Aprobadas por el dueño el 2026-11-17: `oapi-codegen`, `sqlc`, `goose`, `River`, `shopspring/decimal`, `pquerna/otp`, OpenTelemetry Go SDK, `aws-sdk-go-v2/service/s3`, `jackc/pgx/v5`, `golang.org/x/crypto` (argon2) y `go-arch-lint`. Cualquier dependencia que no esté en esa lista necesita la aprobación del dueño antes de agregarse:
 | Necesidad | Elección | Alternativa descartada |
 |---|---|---|
-| HTTP | `net/http` (patrones de ruta de Go 1.22+) + `oapi-codegen` strict server | chi, echo, gin: no hacen falta con el mux estándar |
+| HTTP | `net/http` (patrones de ruta de Go 1.22+) + `oapi-codegen` v2.8.2 strict server (directiva `tool` de `go.mod`; runtime `github.com/oapi-codegen/runtime` v1.8.0) | chi, echo, gin: no hacen falta con el mux estándar |
 | Postgres | `jackc/pgx/v5` + `pgxpool` | `database/sql`+lib/pq (sin mantenimiento activo) |
 | Consultas | `sqlc` (SQL a mano, código tipado generado) | GORM/ent: ocultan el SQL que necesitamos controlar (locks, RLS) |
 | Migraciones | `pressly/goose/v3` | golang-migrate, Atlas (ver `data/data-model.md`) |
+| Contrato (CI) | `@redocly/cli` 2.82.0 (lint y bundle) y `oasdiff` 1.39.0 (cambios incompatibles), fijados en `apps/api/scripts/openapi-check.sh`; no son dependencias Go (ADR 0009) | Spectral (otro lint que mantener); comparar a mano |
 | Jobs/outbox | `riverqueue/river` (ADR 0006) | outbox propio |
 | Decimal | `shopspring/decimal` | `cockroachdb/apd` (más estricto, API menos cómoda); `float64` prohibido |
 | Hash de contraseñas | `golang.org/x/crypto/argon2` | bcrypt (límite de 72 bytes, menos resistente a GPU) |

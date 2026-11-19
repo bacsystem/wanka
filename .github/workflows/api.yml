@@ -171,3 +171,30 @@ jobs:
       - name: go-arch-lint
         if: steps.changes.outputs.run == 'true'
         run: sh scripts/archlint.sh
+      # ADR 0009 (#166): el servidor generado se commitea y no puede quedar desactualizado.
+      # `git status --porcelain` también ve los archivos nuevos que git diff no vería.
+      - name: generated server is up to date (go generate, no diff)
+        if: steps.changes.outputs.run == 'true'
+        run: |
+          go generate ./...
+          out="$(git status --porcelain -- .)"
+          if [ -n "$out" ]; then
+            echo "go generate changed files: commit the result"
+            echo "$out"
+            git diff -- . | head -100
+            exit 1
+          fi
+      # Redocly lint (un $ref roto falla) y oasdiff breaking contra la base: ambos fijados por
+      # versión en el script (checksum para oasdiff). Un cambio incompatible solo pasa con
+      # info.version nueva. El script también prueba sus casos malos.
+      - name: OpenAPI lint and breaking changes (Redocly, oasdiff)
+        if: steps.changes.outputs.run == 'true'
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          base="$BASE_SHA"
+          if [ "$EVENT" != "pull_request" ]; then base="$BEFORE_SHA"; fi
+          case "$base" in ""|0000000000000000000000000000000000000000) base=origin/main ;; esac
+          sh scripts/openapi-check.sh "$base"
