@@ -76,7 +76,12 @@ jobs:
           for wf in CI API; do
             ok=$(gh api "repos/$REPO/actions/runs?head_sha=$SHA&event=push" \
               --jq "[.workflow_runs[] | select(.name == \"$wf\") | .conclusion] | any(. == \"success\")")
-            if [ "$ok" != "true" ]; then echo "$wf is not green on $SHA yet"; exit 0; fi
+            if [ "$ok" != "true" ]; then
+              echo "$wf is not green on $SHA yet"
+              # Manual: que el run quede en rojo, para que no parezca que se creó el tag.
+              if [ -n "${INPUT_SHA:-}" ]; then exit 1; fi
+              exit 0
+            fi
           done
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

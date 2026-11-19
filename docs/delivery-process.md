@@ -31,7 +31,7 @@ Decisión del dueño, 2026-11-19. Reemplaza la regla anterior de que cada PR sub
 
 ## Tags automáticos
 
-`.github/workflows/release-tag.yml` crea el tag `vX.Y.Z` cuando el dueño mergea en `main` un PR de release (`chore(release): vX.Y.Z`), y solo después de que los workflows `CI` y `API` pasen sobre ese commit. Lee la versión del `package.json` del commit. Si el tag ya existe no hace nada, y en cualquier otro commit de `main` tampoco. El merge del release es la aprobación del dueño. Ninguna persona ni agente empuja tags a mano. Si la CI de ese commit falla y el arreglo llega en otro commit, el dueño lanza el workflow a mano (`workflow_dispatch`) con el SHA del commit que quedó en verde. El workflow comprueba que la versión de ese commit sea la del release y que su CI esté en verde. Si el tag ya existe sobre otro commit, falla y no lo mueve.
+`.github/workflows/release-tag.yml` crea el tag `vX.Y.Z` cuando el dueño mergea en `main` un PR de release (`chore(release): vX.Y.Z`), y solo después de que los workflows `CI` y `API` pasen sobre ese commit. Lee la versión del `package.json` del commit. Si el tag ya existe no hace nada, y en cualquier otro commit de `main` tampoco. El merge del release es la aprobación del dueño. Ninguna persona ni agente empuja tags a mano. Si la CI de ese commit falla y el arreglo llega en otro commit, el dueño lanza el workflow a mano (`workflow_dispatch`) con el SHA del **primer** commit en verde después del release. Si elige uno posterior, el tag arrastraría historias que siguen en `[Unreleased]`. El workflow comprueba que la versión de ese commit sea la del release y que su CI esté en verde. Si el tag ya existe sobre otro commit, falla y no lo mueve.
 
 ## Rendimiento (lecciones del lote 2 del kernel, 2026-11-19)
 
