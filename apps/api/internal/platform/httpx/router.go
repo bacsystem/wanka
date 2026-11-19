@@ -67,7 +67,36 @@ func Use(mw ...Middleware) RouteOption { return func(r *route) { r.mw = append(r
 
 // Handle registra h para pattern, que debe ser "MÉTODO /camino". Un patrón sin
 // método o de subárbol (termina en "/" o en "...}") es un error de programación y entra en pánico.
+//
+// Tampoco acepta ningún patrón que /v1 pueda alcanzar ("/v1", "/v1/...", o uno
+// que empiece con un comodín como "/{version}/x"): toda ruta /v1 lleva clase
+// (Public, NoTenant o Tenant) y se registra con auth.Routes, que valida la clase
+// y llama a HandleV1. Así un módulo no puede dejar una ruta sin sesión.
 func (rt *Router) Handle(pattern string, h http.Handler, opts ...RouteOption) {
+	if v1Path(pattern) {
+		panic("httpx: /v1 routes are registered through auth.Routes, not Router.Handle, got " + pattern)
+	}
+	rt.handle(pattern, h, opts)
+}
+
+// HandleV1 es Handle para una ruta /v1. Solo lo llama auth.Routes, después de
+// validar la clase de la ruta; los módulos no reciben el Router (ver Handle).
+// Entra en pánico si el patrón no es "MÉTODO /v1/...".
+func (rt *Router) HandleV1(pattern string, h http.Handler, opts ...RouteOption) {
+	if _, p, _ := strings.Cut(pattern, " "); !strings.HasPrefix(p, "/v1/") {
+		panic("httpx: HandleV1 only registers /v1/ routes, got " + pattern)
+	}
+	rt.handle(pattern, h, opts)
+}
+
+// v1Path dice si el camino del patrón puede coincidir con una ruta /v1.
+func v1Path(pattern string) bool {
+	_, p, _ := strings.Cut(pattern, " ")
+	// "/{$}" es solo la raíz; cualquier otro comodín inicial alcanza /v1.
+	return p == "/v1" || strings.HasPrefix(p, "/v1/") || strings.HasPrefix(p, "/{") && p != "/{$}"
+}
+
+func (rt *Router) handle(pattern string, h http.Handler, opts []RouteOption) {
 	method, p, ok := strings.Cut(pattern, " ")
 	if !ok || method == "" || strings.ToUpper(method) != method || !strings.HasPrefix(p, "/") || strings.HasSuffix(p, "/") || strings.HasSuffix(p, "...}") {
 		// Un patrón de subárbol ("/x/" o "/{p...}") hace que ServeMux redirija

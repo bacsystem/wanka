@@ -3,11 +3,26 @@
 All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [0.10.1] - 2026-11-19
 
 ### Changed
 - API contract for the owner's decision on #25 (option a): when login answers `mfa_enrollment_required`, the API emails a one-time `emailCode` and `POST /v1/auth/mfa/enrollment/totp/confirm` requires it next to the TOTP code. The code is 6 digits from the CSPRNG, stored only as an `HMAC-SHA256` keyed with the `enrollmentToken` and compared in constant time; it lives and dies with the token (10 min, a resend does not extend it). A wrong TOTP or `emailCode` counts one failure in the user's second-step counter, shared with `mfa/verify` (`422 validation_failed` per field with `attemptsRemaining`); the fifth one locks the second step for 15 minutes and consumes the token (`429 rate_limited`). The email is sent through `Mailer` after the commit, without links, and a failed send never fails the login (`emailCodeSent: false`). New `POST /v1/auth/mfa/enrollment/email-code/resend` (3 sends per token, 60 s apart, 10 per user per hour). Enrolling from `/perfil` does not ask for it. No new error `code` (`api/conventions.md` §2, §4, §7 and §8, `api/resources.md`, `api/openapi.yaml`, sequence 01) (#25).
 - `docs/architecture/data`: new table `iam.mfa_enrollments` (no RLS, column-level `UPDATE` for `wanka_app`, cleanup by `wanka_worker` 24 h after expiry) and `iam.users.mfa_failed_attempts` and `mfa_locked_until` (`data-model.md` §5 and §6, er-01); `rls-check` covers its grants and `CHECK`s (cases E1 and K1c) and adds the mutations `grant_app_update_all_mfa_enrollments` and `revoke_worker_mfa_enrollment_columns` (#25).
+
+## [0.10.0] - 2026-11-19
+
+### Added
+- `apps/api`: the `Mailer` port (`internal/platform/mailer`) with `Send(ctx, Message{To, Subject, TextBody, HTMLBody, Tags, IdempotencyKey})`, `Validate` (a single plain address and a non-empty subject, no line breaks in either; a `*ValidationError` that wraps `ErrInvalidMessage` and never repeats the values), `Mask` and the `Disabled` adapter (`MAILER=none`, `ErrDisabled`), and its stub adapter (`internal/platform/mailerstub`): an in-memory inbox readable with `Sent()` (bounded to 1000 messages, copies on the way in and out), one message per `IdempotencyKey`, and a JSON log line with only the masked recipient (`a***@example.com`) and the subject, never the body, links, tags or key. Modules import the port only. New variables `MAILER=stub|none` (default `stub`) and `APP_ENV=production|development` (default `production`): the stub in production starts but emits a `WARN` until a real adapter exists. Designed to carry the one-time code of the 2FA enrolment (#25), which goes in the body only (#168).
+
+## [0.9.0] - 2026-11-19
+
+### Added
+- `apps/api`: `internal/platform/auth/pgsession`, the PostgreSQL `auth.SessionResolver`. `Lookup` runs `SELECT ... FROM iam.session_lookup($1)` in `db.InNoTenantReadTx` and `Detach` runs the conditional `UPDATE` of ADR 0011 in `db.InNoTenantTx`, returning `detached = true` only when it updated one row; there is no other query and no cache. Database failures keep their type (`db.ErrOverloaded`, `db.ErrUnavailable`, `db.ErrStatementTimeout`) so the chain answers `503`, never `401` or `500`. Tests against PostgreSQL 16 with the real `wanka_app` role and the full chain (`Chain` -> `Router` -> `auth.Routes`) cover a bound session, a lost membership (deleted or suspended; the row loses `tenant_id`, `membership_id`, `site_id`, `cash_register_id` and `authz_version` and is never revoked), a membership that is active again, two concurrent requests (one `UPDATE` affects one row, the other zero), impersonated sessions (unchanged by membership loss; `401 session_expired` once revoked or expired), unknown, expired, revoked and half-login tokens, `statement_timeout`, `pg_cancel_backend`, the 1 s lookup deadline, `pg_terminate_backend`, a full pool, a failed unbinding and a session-level `app.tenant_id` left on the connection, and check that no log line holds a token or its `sha256` (#196).
+- `apps/api`: contract test between `iam.session_lookup` and `auth.SessionRecord`: the 12 columns of the function, in order and type, must be the ones `Lookup` selects and each must scan into its record field, and the record must have no field without a column (#196).
+- `apps/api`: `wanka serve --plane=tenant` mounts the session chain with the PostgreSQL resolver and the two limiters with the values of `api/conventions.md` §7, and runs a goroutine that calls `Routes.Sweep()` every 10 s and stops on graceful shutdown. `--plane=platform` and `--plane=webhooks` do not mount it. `.go-arch-lint.yml` has a new component for `internal/platform/auth/pgsession` that only `cmd` may wire (#196).
+
+### Changed
+- `apps/api`: `httpx.Router.Handle` panics on any pattern a `/v1` request can reach (`/v1`, `/v1/...` or a leading wildcard such as `/{version}/x`); `/v1` routes are registered only by `auth.Routes`, through the new `Router.HandleV1`, so a module cannot register a `/v1` route without a class (#196).
 
 ## [0.8.0] - 2026-11-19
 
