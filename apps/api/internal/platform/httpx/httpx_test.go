@@ -111,6 +111,9 @@ func TestNewServerTimeouts(t *testing.T) {
 	if s.ReadHeaderTimeout != 5*time.Second || s.IdleTimeout != 120*time.Second || s.ReadTimeout == 0 {
 		t.Fatalf("timeouts: %+v", s)
 	}
+	if s.MaxHeaderBytes != 64<<10 {
+		t.Fatalf("MaxHeaderBytes = %d, want 64 KiB", s.MaxHeaderBytes)
+	}
 	// El servidor no puede cortar un streaming antes de que venza su presupuesto.
 	if s.WriteTimeout != 30*time.Second || s.WriteTimeout <= httpx.DefaultStreamTimeout {
 		t.Fatalf("WriteTimeout = %v, want 30s and above the %v streaming budget", s.WriteTimeout, httpx.DefaultStreamTimeout)

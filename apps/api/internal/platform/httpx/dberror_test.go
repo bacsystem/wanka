@@ -2,6 +2,7 @@ package httpx_test
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -135,7 +136,7 @@ func TestStatementTimeoutUsesPhaseAndModuleFromTheContext(t *testing.T) {
 func TestOtherDBErrorsDoNotCountAsStatementTimeouts(t *testing.T) {
 	for _, err := range []error{db.ErrOverloaded, db.ErrUnavailable} {
 		_, _, buf, m := serveDBError(t, nil, err)
-		if len(buf.lines(t, "statement timeout")) != 0 || len(m.counts) != 0 {
+		if len(buf.lines(t, "statement timeout")) != 0 || m.get("db_statement_timeouts_total{phase,handler,route,GET /items/{id}}") != 0 {
 			t.Fatalf("%v counted as statement timeout: %s %v", err, buf.String(), m.counts)
 		}
 	}
@@ -202,3 +203,50 @@ func TestHandlerDeadlineWinsOverTheDBError(t *testing.T) {
 
 // Con el ctx terminado, db.typedErr no tipa 57014 como ErrStatementTimeout: llega el error de contexto.
 func pgTimeoutAfterCancel() error { return fmt.Errorf("canceled: %w", context.DeadlineExceeded) }
+
+// Una base caída o una conexión perdida deja una línea warn por respuesta, sin el
+// texto de PostgreSQL, y el COMMIT incierto se distingue por su fase.
+func TestDatabaseUnavailableLogsOneWarnPerResponse(t *testing.T) {
+	pg := &pgconn.PgError{Code: "57P01", Message: "terminating connection due to administrator command"}
+	cases := []struct {
+		name     string
+		err      error
+		phase    string
+		sqlstate any
+	}{
+		{"unavailable", fmt.Errorf("%w: connection refused", db.ErrUnavailable), "handler", nil},
+		{"connection lost", fmt.Errorf("x: %w", fmt.Errorf("%w: %w", db.ErrUnavailable, pg)), "handler", "57P01"},
+		{"commit uncertain", fmt.Errorf("%w: %w", db.ErrCommitUncertain, fmt.Errorf("%w: %w", db.ErrUnavailable, pg)), "commit", "57P01"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			rec, wrote, buf, m := serveDBError(t, nil, tc.err)
+			if !wrote {
+				t.Fatal("not written")
+			}
+			mustProblem(t, rec, http.StatusServiceUnavailable, "dependency_unavailable")
+			warns := buf.lines(t, "database unavailable")
+			if len(warns) != 1 {
+				t.Fatalf("warn lines = %d: %s", len(warns), buf.String())
+			}
+			w := warns[0]
+			if w["level"] != "WARN" || w["route"] != "GET /items/{id}" || w["phase"] != tc.phase || w["sqlstate"] != tc.sqlstate || w["request_id"] == nil {
+				t.Fatalf("warn = %v", w)
+			}
+			warnLine, _ := json.Marshal(w)
+			for _, banned := range []string{"terminating", "connection refused", "administrator", "SECRET-Q", "/items/42"} {
+				if strings.Contains(string(warnLine), banned) {
+					t.Fatalf("warn contains %q: %s", banned, warnLine)
+				}
+			}
+			if m.get("db_unavailable_total{phase,"+tc.phase+",route,GET /items/{id}}") != 1 {
+				t.Fatalf("counter = %v", m.counts)
+			}
+		})
+	}
+	// El pool lleno no es una base caída: sin warn.
+	_, _, buf, m := serveDBError(t, nil, db.ErrOverloaded)
+	if len(buf.lines(t, "database unavailable")) != 0 || len(m.counts) != 0 {
+		t.Fatalf("ErrOverloaded must not log as unavailable: %s", buf.String())
+	}
+}

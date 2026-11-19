@@ -33,6 +33,9 @@ const (
 	writeTimeout = 30 * time.Second
 	// idleTimeout es mayor que el keep-alive del proxy (60 s, supuesto).
 	idleTimeout = 120 * time.Second
+	// maxHeaderBytes: cabeceras de más de 64 KiB reciben 431 de net/http (conventions.md §4);
+	// el BFF envía unos pocos KB y el valor por defecto de Go (1 MB) es excesivo por conexión.
+	maxHeaderBytes = 64 << 10
 )
 
 // NewServer devuelve un http.Server con los timeouts de api/conventions.md §7.
@@ -44,6 +47,7 @@ func NewServer(addr string, h http.Handler) *http.Server {
 		ReadTimeout:       readTimeout,
 		WriteTimeout:      writeTimeout,
 		IdleTimeout:       idleTimeout,
+		MaxHeaderBytes:    maxHeaderBytes,
 		// Sin esto net/http responde "OPTIONS *" con un 200 vacío antes de Chain:
 		// sin X-Request-Id, sin log y sin RFC 9457. Así llega al Router (404).
 		DisableGeneralOptionsHandler: true,

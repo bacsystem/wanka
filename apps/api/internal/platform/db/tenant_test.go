@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"net/url"
 	"sync"
 	"syscall"
 	"testing"
@@ -558,7 +559,7 @@ func TestTypedErrClassifiesBySQLStateNotByMessage(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			got := db.TypedErr(c.ctx, c.err)
+			got := db.TypedErr(c.ctx, false, c.err)
 			if errors.Is(got, db.ErrStatementTimeout) != c.wantTyped {
 				t.Fatalf("typed = %v, want %v (err %v)", !c.wantTyped, c.wantTyped, got)
 			}
@@ -569,38 +570,44 @@ func TestTypedErrClassifiesBySQLStateNotByMessage(t *testing.T) {
 	}
 }
 
-// Un error de conexión (la base reinició, la sesión murió, la red cayó) con el
-// ctx vivo es ErrUnavailable: 503 dependency_unavailable, no un 500.
-func TestTypedErrClassifiesConnectionFailuresAsUnavailable(t *testing.T) {
+// Una base que se fue con el ctx vivo es ErrUnavailable (503, no 500); lo que
+// no deja la conexión cerrada ni trae SQLSTATE 57P0x/08 sigue siendo un error
+// de la aplicación (500 con su causa en el log).
+func TestTypedErrClassifiesLostConnectionsByStateNotByShape(t *testing.T) {
 	dead, cancel := context.WithCancel(context.Background())
 	cancel()
 	alive := context.Background()
 	pg := func(code string) error { return fmt.Errorf("fn: %w", &pgconn.PgError{Code: code, Message: "m"}) }
 	cases := []struct {
-		name string
-		ctx  context.Context
-		err  error
-		want bool
+		name   string
+		ctx    context.Context
+		closed bool
+		err    error
+		want   bool
 	}{
-		{"admin shutdown 57P01", alive, pg("57P01"), true},
-		{"crash shutdown 57P02", alive, pg("57P02"), true},
-		{"cannot connect now 57P03", alive, pg("57P03"), true},
-		{"connection exception 08006", alive, pg("08006"), true},
-		{"connection failure 08001", alive, pg("08001"), true},
-		{"EOF", alive, fmt.Errorf("beginning transaction: %w", io.EOF), true},
-		{"unexpected EOF", alive, fmt.Errorf("committing: %w", io.ErrUnexpectedEOF), true},
-		{"connection reset", alive, fmt.Errorf("read: %w", &net.OpError{Op: "read", Err: syscall.ECONNRESET}), true},
-		{"safe to retry", alive, fmt.Errorf("x: %w", safeToRetry{}), true},
-		{"caller canceled", dead, pg("57P01"), false},
-		{"statement timeout stays its own", alive, pg("57014"), false},
-		{"constraint violation", alive, pg("23505"), false},
-		{"syntax error", alive, pg("42601"), false},
-		{"domain error", alive, errors.New("insufficient stock"), false},
-		{"context deadline of the caller's own", alive, fmt.Errorf("x: %w", context.DeadlineExceeded), false},
+		{"admin shutdown 57P01", alive, false, pg("57P01"), true},
+		{"crash shutdown 57P02", alive, false, pg("57P02"), true},
+		{"cannot connect now 57P03", alive, false, pg("57P03"), true},
+		{"connection exception 08006", alive, false, pg("08006"), true},
+		{"connection failure 08001", alive, false, pg("08001"), true},
+		{"EOF on a closed connection", alive, true, fmt.Errorf("beginning transaction: %w", io.EOF), true},
+		{"reset on a closed connection", alive, true, fmt.Errorf("read: %w", &net.OpError{Op: "read", Err: syscall.ECONNRESET}), true},
+		{"conn closed without a cause", alive, true, errors.New("conn closed"), true},
+		{"caller canceled", dead, true, pg("57P01"), false},
+		{"closed but the caller's own deadline", alive, true, fmt.Errorf("x: %w", context.DeadlineExceeded), false},
+		{"statement timeout stays its own", alive, false, pg("57014"), false},
+		{"constraint violation", alive, false, pg("23505"), false},
+		{"syntax error", alive, false, pg("42601"), false},
+		{"domain error", alive, false, errors.New("insufficient stock"), false},
+		// Errores con forma de red pero con la conexión viva: no son de la base.
+		{"foreign EOF", alive, false, fmt.Errorf("parsing import: %w", io.EOF), false},
+		{"foreign unexpected EOF", alive, false, fmt.Errorf("parsing import: %w", io.ErrUnexpectedEOF), false},
+		{"foreign net error", alive, false, &url.Error{Op: "Get", URL: "https://other.example", Err: &net.OpError{Op: "dial", Err: syscall.ECONNREFUSED}}, false},
+		{"safe to retry (conn busy)", alive, false, fmt.Errorf("x: %w", safeToRetry{}), false},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			got := db.TypedErr(c.ctx, c.err)
+			got := db.TypedErr(c.ctx, c.closed, c.err)
 			if errors.Is(got, db.ErrUnavailable) != c.want {
 				t.Fatalf("unavailable = %v, want %v (%v)", !c.want, c.want, got)
 			}
@@ -611,6 +618,61 @@ func TestTypedErrClassifiesConnectionFailuresAsUnavailable(t *testing.T) {
 				t.Fatalf("the original error was lost: %v", got)
 			}
 		})
+	}
+}
+
+// Contra PostgreSQL real: lo que no es la base no se tipa como base caída, y la
+// conexión que muere durante fn o durante el COMMIT sí.
+func TestInTenantTxClassifiesRealFailures(t *testing.T) {
+	_, p := tenantDB(t, 2)
+	ctx := context.Background()
+	a := actor(t, tenantA, db.KindUser)
+
+	t.Run("conn busy is an application bug", func(t *testing.T) {
+		err := p.InTenantTx(ctx, a, func(tx pgx.Tx) error {
+			rows, err := tx.Query(ctx, `SELECT 1`)
+			if err != nil {
+				return err
+			}
+			defer rows.Close()
+			_, err = tx.Exec(ctx, `SELECT 2`) // rows sin cerrar: conn busy
+			return err
+		})
+		if err == nil || errors.Is(err, db.ErrUnavailable) {
+			t.Fatalf("conn busy = %v, want a plain error", err)
+		}
+	})
+	t.Run("foreign errors inside fn", func(t *testing.T) {
+		for name, ferr := range map[string]error{
+			"unexpected EOF": fmt.Errorf("parsing import: %w", io.ErrUnexpectedEOF),
+			"url error":      &url.Error{Op: "Get", URL: "https://other.example", Err: errors.New("boom")},
+		} {
+			err := p.InTenantTx(ctx, a, func(pgx.Tx) error { return ferr })
+			if err == nil || errors.Is(err, db.ErrUnavailable) {
+				t.Fatalf("%s = %v, want a plain error", name, err)
+			}
+		}
+	})
+	t.Run("connection killed inside fn", func(t *testing.T) {
+		err := p.InTenantTx(ctx, a, func(tx pgx.Tx) error {
+			_, err := tx.Exec(ctx, `SELECT pg_terminate_backend(pg_backend_pid())`)
+			return err
+		})
+		if !errors.Is(err, db.ErrUnavailable) || errors.Is(err, db.ErrCommitUncertain) {
+			t.Fatalf("killed in fn = %v, want ErrUnavailable and not commit-uncertain", err)
+		}
+	})
+	t.Run("connection lost at COMMIT is uncertain", func(t *testing.T) {
+		err := p.InTenantTx(ctx, a, func(tx pgx.Tx) error {
+			return tx.Conn().PgConn().Conn().Close() // el COMMIT que sigue ya no tiene conexión
+		})
+		if !errors.Is(err, db.ErrUnavailable) || !errors.Is(err, db.ErrCommitUncertain) {
+			t.Fatalf("lost at commit = %v, want ErrUnavailable and ErrCommitUncertain", err)
+		}
+	})
+	// El pool sigue sirviendo después de todo eso.
+	if err := p.InTenantReadTx(ctx, a, func(tx pgx.Tx) error { _, err := tx.Exec(ctx, `SELECT 1`); return err }); err != nil {
+		t.Fatalf("pool unusable: %v", err)
 	}
 }
 

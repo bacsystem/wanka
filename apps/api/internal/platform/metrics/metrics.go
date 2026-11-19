@@ -19,4 +19,5 @@ func (Nop) Inc(string, ...string) {}
 const (
 	StatementTimeouts = "db_statement_timeouts_total" // labels: phase, route
 	HandlerTimeouts   = "http_handler_timeouts_total" // labels: route
+	DBUnavailable     = "db_unavailable_total"        // labels: phase, route
 )

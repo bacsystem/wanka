@@ -15,6 +15,8 @@ const (
 	PhaseSessionLookup = "session_lookup"
 	PhaseEntitlements  = "entitlements"
 	PhaseExport        = "export"
+	// PhaseCommit la fija WriteDBError al perderse la conexión durante el COMMIT.
+	PhaseCommit = "commit"
 )
 
 type ctxKey int

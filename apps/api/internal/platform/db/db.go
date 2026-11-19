@@ -39,6 +39,10 @@ var (
 	ErrOverloaded = errors.New("db: no free connection")
 	// ErrUnavailable: la base no respondió: 503 dependency_unavailable.
 	ErrUnavailable = errors.New("db: database unavailable")
+	// ErrCommitUncertain acompaña a ErrUnavailable cuando la conexión se perdió
+	// durante el COMMIT: la transacción pudo confirmarse (reintentar solo es
+	// seguro con la misma Idempotency-Key o con If-Match).
+	ErrCommitUncertain = errors.New("db: commit outcome unknown")
 )
 
 const (

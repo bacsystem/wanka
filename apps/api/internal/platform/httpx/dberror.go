@@ -16,7 +16,9 @@ import (
 // caída (api/conventions.md §4), siempre con Retry-After: 1 y sin la causa:
 //
 //   - db.ErrOverloaded (pool sin conexión libre): 503 overloaded;
-//   - db.ErrUnavailable (la base no responde): 503 dependency_unavailable;
+//   - db.ErrUnavailable (la base no responde o la conexión se perdió): 503
+//     dependency_unavailable, con una línea warn y un contador igual que el
+//     statement_timeout (fase commit si db.ErrCommitUncertain);
 //   - db.ErrStatementTimeout (SQLSTATE 57014 con el ctx vivo): 503
 //     dependency_unavailable con el mismo cuerpo que ErrUnavailable, más una
 //     línea warn y un contador por fase y ruta (sin SQL ni mensaje de PostgreSQL).
@@ -41,21 +43,42 @@ func WriteDBError(w http.ResponseWriter, r *http.Request, err error) bool {
 	case errors.Is(err, db.ErrOverloaded):
 		WriteProblem(w, r, "overloaded", "the server is busy, retry shortly")
 	case errors.Is(err, db.ErrStatementTimeout):
-		d := depsFrom(ctx)
-		route := routeOf(r)
-		phase := phaseFrom(ctx)
-		attrs := []any{"route", route, "phase", phase, "sqlstate", "57014",
-			"elapsed_ms", time.Since(d.start).Milliseconds()}
-		if m := moduleFrom(ctx); m != "" {
-			attrs = append(attrs, "module", m)
-		}
-		d.log.WarnContext(ctx, "statement timeout", attrs...)
-		d.metrics.Inc(metrics.StatementTimeouts, "phase", phase, "route", route)
+		logDBFailure(r, "statement timeout", metrics.StatementTimeouts, phaseFrom(ctx), "57014")
 		WriteProblem(w, r, "dependency_unavailable", "a dependency is not responding")
 	case errors.Is(err, db.ErrUnavailable):
+		// Base caída o conexión perdida. Un COMMIT incierto tiene su propia fase:
+		// la transacción pudo confirmarse y soporte tendrá que conciliarla.
+		phase := phaseFrom(ctx)
+		if errors.Is(err, db.ErrCommitUncertain) {
+			phase = PhaseCommit
+		}
+		var pgErr *pgconn.PgError
+		sqlstate := ""
+		if errors.As(err, &pgErr) {
+			sqlstate = pgErr.Code
+		}
+		logDBFailure(r, "database unavailable", metrics.DBUnavailable, phase, sqlstate)
 		WriteProblem(w, r, "dependency_unavailable", "a dependency is not responding")
 	}
 	return true
+}
+
+// logDBFailure deja una línea warn y suma un contador por fase y ruta. Lleva la
+// ruta, la fase, el módulo si lo hay, el sqlstate si lo hay y el tiempo
+// transcurrido; nunca el mensaje de PostgreSQL ni el SQL.
+func logDBFailure(r *http.Request, msg, counter, phase, sqlstate string) {
+	ctx := r.Context()
+	d := depsFrom(ctx)
+	route := routeOf(r)
+	attrs := []any{"route", route, "phase", phase, "elapsed_ms", time.Since(d.start).Milliseconds()}
+	if sqlstate != "" {
+		attrs = append(attrs, "sqlstate", sqlstate)
+	}
+	if m := moduleFrom(ctx); m != "" {
+		attrs = append(attrs, "module", m)
+	}
+	d.log.WarnContext(ctx, msg, attrs...)
+	d.metrics.Inc(counter, "phase", phase, "route", route)
 }
 
 func isDBError(err error) bool {
