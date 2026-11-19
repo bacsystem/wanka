@@ -38,3 +38,19 @@ func TestLimitOfAnAbsentKeyIsZero(t *testing.T) {
 		t.Error("Limit must return the plan's value, and 0 (closed) for an absent key")
 	}
 }
+
+// Defensa: si un 1.0 llegara a la lectura (jsonb conserva la escala) se normaliza, no da un 500 en todo el plan.
+func TestParseLimitsNormalizesTrailingZeros(t *testing.T) {
+	got, err := parseLimits([]byte(`{"users": 1.0, "sites": 9223372036854775807.0, "cpe_per_month": 7}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got["users"] != 1 || got["sites"] != 9223372036854775807 || got["cpe_per_month"] != 7 {
+		t.Errorf("got %v", got)
+	}
+	for _, bad := range []string{`{"users": 1.5}`, `{"users": "x"}`, `{"users": 9223372036854775808}`, `{"users": 1e2}`} {
+		if _, err := parseLimits([]byte(bad)); err == nil {
+			t.Errorf("%s accepted", bad)
+		}
+	}
+}
