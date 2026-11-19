@@ -95,8 +95,9 @@ erDiagram
   USER_TOTP {
     uuid user_id PK, FK
     bytea secret_enc "cifrado AES-GCM, clave en env"
-    timestamptz confirmed_at
-    text recovery_codes_hash "array de hashes"
+    timestamptz confirmed_at "null mientras el enrolamiento desde perfil esta pendiente"
+    bigint last_used_step "ultimo paso TOTP aceptado: rechaza el codigo reutilizado"
+    text recovery_codes_hash "array de HMAC-SHA256 con clave derivada de TOTP_ENC_KEY; se quita el usado"
   }
   SESSIONS {
     uuid id PK "iam.sessions SIN RLS: se busca por hash antes de conocer el tenant"
