@@ -206,7 +206,7 @@ paths:
         invalidada por NOTIFY): nunca incluye datos de otra empresa. Pasa también con la suscripción
         inactiva (`status` morosa, suspendida o cancelada) o la empresa cerrada (`readOnly`), para que la UI
         muestre el motivo del bloqueo (conventions.md §4). Sin suscripción: `status` es `sin_plan` y las listas
-        vienen vacías. La UI usa esto solo para ocultar menús; la API es la que aplica.
+        vienen vacías (una empresa cerrada sin suscripción trae solo los módulos que un override encienda). La UI usa esto solo para ocultar menús; la API es la que aplica.
         `x-module: none` y `x-permission: none` (ADR 0009, «Cómo se declara ninguno»): solo pide una sesión
         ligada a una empresa, sin módulo ni permiso, porque quien no tiene plan o tiene la suscripción inactiva
         no tiene ningún módulo y aun así tiene que poder leer el motivo.
@@ -396,6 +396,23 @@ components:
               field: { type: string }
               code: { type: string }
               meta: { type: object, additionalProperties: true }
+        module:
+          type: string
+          description: Solo en module_not_enabled. Código de platform.modules que exige la ruta (x-module).
+          examples: ['rubro.lubricentro']
+        limit:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Solo en plan_limit_reached. Tope del plan para el límite que consume la ruta; la clave del límite se nombra en detail.
+        used:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Solo en plan_limit_reached. Uso actual de ese límite (mayor o igual que limit).
+        permission:
+          type: string
+          description: Solo en forbidden. Código del catálogo de resources.md que exige la ruta (x-permission).
     CreateSaleRequest:
       type: object
       description: |
@@ -484,7 +501,7 @@ components:
       type: object
       description: |
         Lo que la empresa tiene habilitado (paquete `internal/platform/entitlements`). `modules` y `flags`
-        van ordenados y vacíos si la suscripción no es activa ni trial (cierra en falla). `limits` trae los
+        van ordenados y vacíos si la suscripción no es activa ni trial (cierra en falla), salvo en la empresa cerrada (`readOnly`), que conserva los de su último plan con sus overrides aunque la suscripción esté caída (ADR 0005, «Empresa cerrada»). `limits` trae los
         topes del plan; todo plan declara todas las claves (CHECK en `platform.plans`) y viene vacío sin plan.
         Una clave ausente es tope 0, nunca «sin tope»: la falta de dato cierra. No hay topes ilimitados; un
         plan holgado declara un número alto. `usage` es el uso del mes de Lima.
@@ -502,5 +519,5 @@ components:
           description: 'Claves actuales: users, cpe_per_month.'
           additionalProperties: { type: integer, format: int64, minimum: 0 }
         status: { type: string, enum: [trial, activa, morosa, suspendida, cancelada, sin_plan] }
-        readOnly: { type: boolean, description: 'true si la empresa está cerrada: todo método distinto de GET da 403 tenant_read_only.' }
+        readOnly: { type: boolean, description: 'true si la empresa está cerrada: todo método distinto de GET y HEAD da 403 tenant_read_only.' }
         version: { type: string, pattern: '^[0-9a-f]{16}$' }

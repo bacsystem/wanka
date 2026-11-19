@@ -125,7 +125,8 @@ func load(ctx context.Context, d DB, tenant pgtype.UUID, now time.Time) (Entitle
 }
 
 // build convierte la fila en Entitlements. Aquí, y solo aquí, se decide que sin
-// suscripción usable no hay módulos ni flags (falla cerrado).
+// suscripción usable no hay módulos ni flags (falla cerrado), salvo en la
+// empresa cerrada, que conserva los de su último plan.
 func build(tenant pgtype.UUID, tenantStatus string, subStatus *string, limitsJSON, modulesJSON, flagsJSON, usageJSON []byte) (Entitlements, error) {
 	e := Entitlements{
 		Modules:  []string{},
@@ -150,7 +151,8 @@ func build(tenant pgtype.UUID, tenantStatus string, subStatus *string, limitsJSO
 		}
 		maps.Copy(e.Usage, u)
 	}
-	if e.Status.Usable() {
+	// Una empresa cerrada conserva los módulos y flags de su último plan aunque la suscripción esté caída: su lectura no depende del pago (ADR 0005, «Empresa cerrada»).
+	if e.Status.Usable() || e.ReadOnly {
 		if err := json.Unmarshal(modulesJSON, &e.Modules); err != nil {
 			return Entitlements{}, fmt.Errorf("decoding modules: %w", err)
 		}

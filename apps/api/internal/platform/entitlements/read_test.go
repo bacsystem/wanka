@@ -72,6 +72,45 @@ func TestInactiveSubscriptionEnablesNothingAndIsFlagged(t *testing.T) {
 	}
 }
 
+// Una empresa cerrada conserva los módulos y flags de su último plan aunque la
+// suscripción esté caída; una abierta no.
+func TestClosedTenantKeepsItsLastPlanWhateverTheSubscription(t *testing.T) {
+	e := newEnv(t)
+	e.exec(`INSERT INTO platform.feature_flags (key, default_on) VALUES ('f', true)`)
+	plan := e.plan("p", `{}`, "ventas")
+	s := e.service(entitlements.Options{})
+	for _, st := range []string{"cancelada", "suspendida", "morosa"} {
+		tenant := e.tenant("cerrada")
+		e.subscribe(tenant, plan, st)
+		got := mustFor(t, s, tenant)
+		if !got.ReadOnly || string(got.Status) != st || !slices.Equal(got.Modules, []string{"ventas"}) || !slices.Equal(got.Flags, []string{"f"}) {
+			t.Errorf("closed + %s: %+v, want readOnly with ventas and flag f", st, got)
+		}
+	}
+	t.Run("closed without a subscription keeps only its overrides", func(t *testing.T) {
+		tenant := e.tenant("cerrada")
+		e.exec(`INSERT INTO platform.tenant_module_overrides (tenant_id, module_code, enabled) VALUES ($1, 'agenda', true)`, tenant)
+		got := mustFor(t, s, tenant)
+		if got.Status != entitlements.StatusNoPlan || !slices.Equal(got.Modules, []string{"agenda"}) {
+			t.Errorf("modules = %v status %s, want [agenda] sin_plan", got.Modules, got.Status)
+		}
+	})
+	t.Run("closed without a subscription or overrides has nothing", func(t *testing.T) {
+		got := mustFor(t, s, e.tenant("cerrada"))
+		if len(got.Modules) != 0 || got.Modules == nil {
+			t.Errorf("modules = %#v, want []", got.Modules)
+		}
+	})
+	t.Run("regression: an open tenant with a cancelled subscription has nothing", func(t *testing.T) {
+		tenant := e.tenant("activa")
+		e.subscribe(tenant, plan, "cancelada")
+		got := mustFor(t, s, tenant)
+		if len(got.Modules) != 0 || len(got.Flags) != 0 {
+			t.Errorf("modules %v flags %v, want none", got.Modules, got.Flags)
+		}
+	})
+}
+
 // Una cancelada más una viva: cuenta la viva. Solo canceladas: cuenta la más reciente (inactiva).
 func TestTheLiveSubscriptionWinsOverCancelledOnes(t *testing.T) {
 	e := newEnv(t)

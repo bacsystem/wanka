@@ -140,13 +140,21 @@ lo cablea con los limitadores de `conventions.md` §7 y una goroutine que llama 
 `webhooks` no montan nada de esto.
 
 - **Registro**: los módulos registran sus rutas `/v1` con
-  `routes.Handle(pattern, class, h, opts...)`, `class` de tipo `auth.RouteClass`
+  `routes.Handle(pattern, class, spec, h, opts...)`, `class` de tipo `auth.RouteClass`
   (`Public`, `NoTenant`, `Tenant`; sin valor cero válido). Nadie recibe el
   `httpx.Router`: `Router.Handle` rechaza `/v1` y solo `auth.Routes` llama a
   `Router.HandleV1`, así que ninguna ruta `/v1` queda sin clase. Una clase omitida o que no cumple `conventions.md` §2 entra en
   pánico al arrancar. `Public` solo bajo `/v1/auth/`; `NoTenant` es `/v1/auth/*`,
   `GET /v1/me` y `GET /v1/me/memberships`; el resto es `Tenant`. Una ruta tiene
-  una sola clase (el enrolamiento TOTP son dos rutas).
+  una sola clase (el enrolamiento TOTP son dos rutas). `spec` es un `auth.Spec`
+  con `Module` y `Permission` (el `x-module` y el `x-permission` del spec; para
+  «ninguno», las constantes `auth.NoModule` y `auth.NoPermission`, que valen `none`)
+  y, si la ruta consume un límite del plan, `Limit` (`entitlements.LimitUsers` o
+  `LimitCPEPerMonth`; `LimitSites` hace fallar el arranque hasta que alguien mida
+  las sedes en uso). Un string vacío, un módulo en una ruta
+  `Public` o `NoTenant`, `NoModule` en una ruta `Tenant` que no sea
+  `GET /v1/exports` ni `GET /v1/me/entitlements` (y un módulo en esas dos), o un
+  límite desconocido entran en pánico al arrancar.
 - **Token**: `Authorization: Bearer wk_at_<43 caracteres>`, una sola cabecera.
   `auth.ParseAuthorization` comprueba los 43 caracteres de `[A-Za-z0-9_-]` uno por
   uno antes de decodificar con `Strict()` (Go ignora `\r` y `\n`) y devuelve el
@@ -156,8 +164,8 @@ lo cablea con los limitadores de `conventions.md` §7 y una goroutine que llama 
   al handler), `MFASatisfied` y coherencia de la fila, desligue de la membresía
   perdida (ADR 0011, una llamada a `Detach` y el contador
   `auth_session_detach_total{outcome}`), `403 tenant_access_denied` en rutas
-  `Tenant` sin empresa, límite por sesión y, solo en `Tenant`, por tenant, y los
-  pasos de la ruta (`httpx.Use`). Sin fila o `MFASatisfied = false` es
+  `Tenant` sin empresa, límite por sesión y, solo en `Tenant`, por tenant,
+  entitlements (abajo) y los pasos de la ruta (`httpx.Use`; ahí va RBAC, #176). Sin fila o `MFASatisfied = false` es
   `401 session_expired`; un fallo de la base o el plazo vencido es `503`; un error
   no tipado o una fila incoherente es `500`. Todo `401` lleva
   `WWW-Authenticate: Bearer`. Una impersonada llega con `UserID` vacío y su
@@ -171,7 +179,21 @@ lo cablea con los limitadores de `conventions.md` §7 y una goroutine que llama 
   versión, la 2FA, el RBAC y el límite del tenant. En una ruta `NoTenant` el
   tenant de la sesión (si lo tiene) es informativo y no se entra a datos de la
   empresa. Los módulos registran rutas solo por `auth.Routes`; el `httpx.Router`
-  no sale de `cmd/wanka` (`mountPlane`). Los entitlements (fase `entitlements`) llegan con #175.
+  no sale de `cmd/wanka` (`mountPlane`).
+- **Entitlements** (solo rutas `Tenant`, después de los limitadores): `For(ctx, tenant)`
+  con la fase `entitlements` solo en el contexto de esa lectura (un error del handler
+  lleva `phase=handler`), y las reglas de `entitlements.Entitlements.Check` en el
+  orden de la secuencia 08: empresa cerrada y método distinto de `GET` y `HEAD` →
+  `403 tenant_read_only`; si no está cerrada, suscripción `morosa`, `suspendida` o
+  `cancelada` → `402 subscription_inactive`, salvo las rutas de la lista fija en el
+  código (`GET /v1/exports`, `GET /v1/me/entitlements`; `/v1/auth/*`, `GET /v1/me` y
+  `GET /v1/me/memberships` no pasan por aquí); módulo fuera de la lista →
+  `403 module_not_enabled` con `module`; `usage >= limit` →
+  `403 plan_limit_reached` con `limit` y `used`. Una empresa sin suscripción
+  (`sin_plan`) no es un `402`: no tiene módulos, así que cae en
+  `module_not_enabled`. Si no se pueden leer, `503 dependency_unavailable` (o
+  `overloaded`) con `Retry-After: 1` y la petición no pasa. Un job de una empresa
+  usa la misma comprobación con `Service.CheckJob`.
 - Sobrecarga: `go test -run '^$' -bench Session -benchmem -count 5 ./internal/platform/auth`.
 
 ## Transacciones de tenant (`InTenantTx`)
@@ -207,8 +229,9 @@ dentro de `fn`. Las pruebas usan la tabla `rlstest.items`, que solo existe en
 `entitlements.New(pool, Options{}).For(ctx, tenantID)` devuelve lo que una empresa
 tiene habilitado (ADR 0005): `Modules` y `Flags` (ordenados), `Limits` y `Usage`
 (`Limits`: `users`, `sites`, `cpe_per_month`; todo plan declara las tres y `Limit(key)` de una ausente es 0. `Usage` solo trae `users` y `cpe_per_month`: `sites` no se mide), `Status`, `ReadOnly` y `Version`. Es solo
-lectura; el middleware que responde `402`, `403 tenant_read_only` o
-`403 module_not_enabled` es de #175, y `GET /v1/me/entitlements` lo cablea identidad
+lectura; el middleware que responde `402`, `403 tenant_read_only`,
+`403 module_not_enabled` o `403 plan_limit_reached` está en `auth.Routes` (ver «Sesión»,
+#175), y `GET /v1/me/entitlements` lo cablea identidad
 (contrato en `docs/architecture/api/openapi.yaml`).
 
 - **Una consulta** agregada en `InTenantReadTx` (rol `wanka_app`, `Actor` de tipo
@@ -221,7 +244,7 @@ lectura; el middleware que responde `402`, `403 tenant_read_only` o
   100) es menor que `rollout_pct`, igual en cualquier réplica.
 - **Falla cerrado**: sin suscripción `Status` es `sin_plan` (no el plan `semilla`); con
   `morosa`, `suspendida` o `cancelada` (`Status.Inactive()`), `Modules` y `Flags` vienen
-  vacíos; una empresa cerrada tiene `ReadOnly`. Una empresa que no existe es
+  vacíos, salvo en la empresa cerrada, que conserva los de su último plan y tiene `ReadOnly`. Una empresa que no existe es
   `ErrTenantNotFound`; un error de la base sale como `db.ErrOverloaded`,
   `db.ErrUnavailable` o `db.ErrStatementTimeout` y nunca se guarda.
 - **Caché** por empresa, TTL 30 s, con tope de 10 000 entradas; las lecturas en frío de
@@ -229,9 +252,9 @@ lectura; el middleware que responde `402`, `403 tenant_read_only` o
   `Service.Run(ctx)` escucha `entitlements_changed` (`db.Pool.Listen`, en una conexión
   propia fuera del pool) e invalida la entrada del tenant del payload, o todo si va vacío o
   al reconectar. Triggers de la migración notifican los cambios de suscripción,
-  overrides, catálogo, planes, flags y el cierre de una empresa; el uso no notifica. Quien
-  construye el servicio (`serve`, #175) lanza `Run` en una goroutine suya y la termina al
-  cancelar el contexto.
+  overrides, catálogo, planes, flags y el cierre de una empresa; el uso no notifica. `serve`
+  (plano tenant) lanza `Run` en una goroutine suya, igual que el barrido de los
+  limitadores, y en el apagado cancela su contexto y espera a que salga.
 - El plan `semilla` (todos los módulos, límites holgados, `non_production`) existe para
   desarrollo y pruebas; asignarlo a una empresa real lo decide el dueño (#31).
 - Medir: `go test -run '^$' -bench 'HotCache|ColdRead' -benchmem ./internal/platform/entitlements`.

@@ -24,6 +24,7 @@ import (
 	"github.com/bacsystem/wanka/apps/api/internal/platform/auth/pgsession"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/db"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/db/dbtest"
+	"github.com/bacsystem/wanka/apps/api/internal/platform/entitlements"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/httpx"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/logging"
 )
@@ -122,12 +123,22 @@ func int8Ptr(v pgtype.Int8) *int64 {
 	return &v.Int64
 }
 
+// openSource da a toda empresa el módulo ventas: estos tests prueban la sesión,
+// no los entitlements (esos están en entitlements_chain_test.go).
+type openSource struct{}
+
+func (openSource) For(context.Context, pgtype.UUID) (entitlements.Entitlements, error) {
+	return entitlements.Entitlements{Status: entitlements.StatusActive, Modules: []string{"ventas"}}, nil
+}
+
 type envConfig struct {
 	poolMax        int32
 	acquireTimeout time.Duration
 	// roleSetting es un ALTER ROLE wanka_app IN DATABASE ... SET <setting> previo a abrir el pool.
 	roleSettings [][2]string
 	wrap         func(auth.SessionResolver) auth.SessionResolver
+	// realEnts arma el servicio real de entitlements (y su escucha de NOTIFY) en vez de openSource.
+	realEnts bool
 }
 
 // env es la cadena completa: Chain -> Router -> auth.Routes -> resolver de PostgreSQL, sobre una base real y wanka_app.
@@ -140,6 +151,8 @@ type env struct {
 	metrics *counters
 	tokens  []string
 	ran     atomic.Int64 // veces que corrió el handler de la ruta Tenant
+	writes  atomic.Int64 // veces que corrió el handler de una ruta de escritura
+	ents    *entitlements.Service
 }
 
 func newEnv(t *testing.T, cfg envConfig) *env {
@@ -167,18 +180,49 @@ func newEnv(t *testing.T, cfg envConfig) *env {
 	if cfg.wrap != nil {
 		resolver = cfg.wrap(resolver)
 	}
+	var source auth.EntitlementSource = openSource{}
+	if cfg.realEnts {
+		e.ents = entitlements.New(pool, entitlements.Options{Logger: slog.New(slog.NewTextHandler(io.Discard, nil))})
+		source = e.ents
+		runCtx, stop := context.WithCancel(ctx)
+		done := make(chan struct{})
+		go func() { defer close(done); _ = e.ents.Run(runCtx) }()
+		t.Cleanup(func() { stop(); <-done })
+		// Los NOTIFY anteriores al LISTEN no llegan: se espera a que escuche.
+		deadline := time.Now().Add(5 * time.Second)
+		for {
+			var n int
+			_ = admin.QueryRow(ctx, `SELECT count(*) FROM pg_stat_activity WHERE query LIKE 'LISTEN %' AND datname = current_database()`).Scan(&n)
+			if n > 0 {
+				break
+			}
+			if time.Now().After(deadline) {
+				t.Fatal("the entitlements listener never connected")
+			}
+			time.Sleep(10 * time.Millisecond)
+		}
+	}
 	rt := httpx.NewRouter(httpx.RouterOptions{})
-	routes, err := auth.NewRoutes(rt, resolver, auth.Options{})
+	routes, err := auth.NewRoutes(rt, resolver, source, auth.Options{})
 	if err != nil {
 		t.Fatal(err)
 	}
+	ok := func(counter *atomic.Int64) http.HandlerFunc {
+		return func(w http.ResponseWriter, _ *http.Request) { counter.Add(1); writeView(w, view{}) }
+	}
+	none := auth.Spec{Module: auth.NoModule, Permission: auth.NoPermission}
+	routes.HandleFunc("POST /v1/items", auth.Tenant, auth.Spec{Module: "ventas", Permission: "ventas.pos:create"}, ok(&e.writes))
+	routes.HandleFunc("POST /v1/users", auth.Tenant, auth.Spec{Module: "ventas", Permission: "identidad.users:create", Limit: entitlements.LimitUsers}, ok(&e.writes))
+	routes.HandleFunc("GET /v1/vet", auth.Tenant, auth.Spec{Module: "rubro.veterinaria", Permission: "vet.pets:read"}, ok(&e.ran))
+	routes.HandleFunc("GET /v1/exports", auth.Tenant, none, ok(&e.ran))
+	routes.HandleFunc("GET /v1/me/entitlements", auth.Tenant, none, ok(&e.ran))
 	// GET /v1/me: ruta NoTenant de prueba; la real llega con #27.
-	routes.HandleFunc("GET /v1/me", auth.NoTenant, func(w http.ResponseWriter, r *http.Request) {
+	routes.HandleFunc("GET /v1/me", auth.NoTenant, auth.Spec{Module: auth.NoModule, Permission: auth.NoPermission}, func(w http.ResponseWriter, r *http.Request) {
 		s, _ := auth.FromContext(r.Context())
 		writeView(w, sessionView(s, nil))
 	})
 	// GET /v1/items: ruta Tenant de prueba; abre InTenantTx con el Actor del contexto.
-	routes.HandleFunc("GET /v1/items", auth.Tenant, func(w http.ResponseWriter, r *http.Request) {
+	routes.HandleFunc("GET /v1/items", auth.Tenant, auth.Spec{Module: "ventas", Permission: "ventas.pos:read"}, func(w http.ResponseWriter, r *http.Request) {
 		e.ran.Add(1)
 		s, _ := auth.FromContext(r.Context())
 		var roles []string
@@ -250,9 +294,11 @@ type result struct {
 	elapsed time.Duration
 }
 
-func (e *env) get(path, token string) result {
+func (e *env) get(path, token string) result { return e.request(http.MethodGet, path, token) }
+
+func (e *env) request(method, path, token string) result {
 	e.t.Helper()
-	req, err := http.NewRequest(http.MethodGet, e.srv.URL+path, nil)
+	req, err := http.NewRequest(method, e.srv.URL+path, nil)
 	if err != nil {
 		e.t.Fatal(err)
 	}

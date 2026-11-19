@@ -3,6 +3,17 @@
 All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.14.0] - 2026-11-19
+
+### Added
+- `apps/api`: entitlements middleware in `auth.Routes`, a step of every `Tenant` route after the two limiters and before the route steps (`NoTenant` and `Public` routes do not go through it). In the order of sequence 08, the first rule that fails wins: a closed company (`readOnly`) with a method other than `GET` or `HEAD` is `403 tenant_read_only` (a closed company is not asked for the subscription); a `morosa`, `suspendida` or `cancelada` subscription is `402 subscription_inactive` on every route, `GET` included, except a fixed list in the code (`GET /v1/exports`, `GET /v1/me/entitlements`); a module outside the enabled list is `403 module_not_enabled` with `module`; `used >= limit` is `403 plan_limit_reached` with `limit` and `used` (a limit key missing from the plan closes; a route that declares `Limit: LimitSites` makes startup fail until sites in use are measured). A company without a subscription (`sin_plan`) has no modules, so it gets `403 module_not_enabled`, not `402`. If the entitlements cannot be read the answer is `503 dependency_unavailable` (or `overloaded`) with `Retry-After: 1` and the request never passes; the log line and the counter of `httpx.WriteDBError` carry `phase=entitlements`, set only in the context of that read (the handler keeps `phase=handler`). The same rules are `Entitlements.Check` and, for the jobs of a company, `Service.CheckJob` (a job that finishes already-issued documents declares `NoModule`; with a module it is a programming error, `ErrFinishesNeedsNoModule`, because no module is enabled on an inactive subscription): a job does not run for a closed company or a disabled module, and with an inactive subscription only a job that finishes already-issued documents runs (#175).
+- `apps/api`: a closed company keeps the modules and flags of its last plan even when its subscription is cancelled, suspended or past due, so its reads do not depend on payment (ADR 0005, «Empresa cerrada»); an open company with a lapsed subscription still has none (#175).
+- `apps/api`: `httpx.WriteProblemExt` and the `module`, `limit` and `used` extension members of the problem (`conventions.md` §4) (#175).
+- `apps/api`: `wanka serve --plane=tenant` builds `entitlements.Service` over the pool and runs `Service.Run` (the `entitlements_changed` listener) in a goroutine that stops on graceful shutdown, which waits for it like the limiter sweep (#175).
+
+### Changed
+- `apps/api`: **breaking for module code, none released yet.** `auth.NewRoutes(rt, resolver, entitlements, options)` takes the entitlements source and `Routes.Handle`/`HandleFunc` take an `auth.Spec{Module, Permission, Limit}` after the class. `Module` and `Permission` are the `x-module` and `x-permission` of the spec; `auth.NoModule` and `auth.NoPermission` (the literal `none`) mean none, and an empty string, a module on a `Public` or `NoTenant` route, `NoModule` on a `Tenant` route outside `GET /v1/exports` and `GET /v1/me/entitlements`, or an unknown limit make startup fail (#175).
+
 ## [0.13.0] - 2026-11-19
 
 ### Added
