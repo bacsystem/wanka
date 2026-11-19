@@ -50,6 +50,7 @@ func NewRouter(o RouterOptions) *Router {
 type route struct {
 	streaming bool
 	mw        []Middleware
+	inner     []Middleware
 }
 
 // RouteOption ajusta una ruta en Handle.
@@ -64,6 +65,14 @@ func Streaming() RouteOption { return func(r *route) { r.streaming = true } }
 // Use agrega middlewares a la ruta, el primero es el más externo. Corren dentro
 // del plazo (sesión, limitador y demás ven el contexto con plazo) y antes del handler.
 func Use(mw ...Middleware) RouteOption { return func(r *route) { r.mw = append(r.mw, mw...) } }
+
+// Innermost agrega middlewares que se aplican más cerca del handler que todos los
+// Use, sin importar el orden de las opciones: corren después de la sesión, los
+// limitadores y todo paso de ruta. El primero es el más externo de los innermost.
+// Es el lugar de la idempotencia, que debe ser lo último antes del handler.
+func Innermost(mw ...Middleware) RouteOption {
+	return func(r *route) { r.inner = append(r.inner, mw...) }
+}
 
 // Handle registra h para pattern, que debe ser "MÉTODO /camino". Un patrón sin
 // método o de subárbol (termina en "/" o en "...}") es un error de programación y entra en pánico.
@@ -107,6 +116,9 @@ func (rt *Router) handle(pattern string, h http.Handler, opts []RouteOption) {
 	var ro route
 	for _, o := range opts {
 		o(&ro)
+	}
+	for i := len(ro.inner) - 1; i >= 0; i-- {
+		h = ro.inner[i](h)
 	}
 	for i := len(ro.mw) - 1; i >= 0; i-- {
 		h = ro.mw[i](h)

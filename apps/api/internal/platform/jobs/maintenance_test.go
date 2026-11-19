@@ -217,7 +217,7 @@ func TestSchemaMatchesRiversOwnMigrations(t *testing.T) {
 	for name, q := range queries {
 		ops, ref := norm(fetch(q, "ops"), "ops"), norm(fetch(q, "river_ref"), "river_ref")
 		if name != "enum" && name != "versions" {
-			// Fuera del esquema de River, ops tiene tablas propias del kernel (ops.exchange_rates, #170): solo river_*.
+			// Fuera del esquema de River, ops tiene tablas propias del kernel (ops.exchange_rates de #170, ops.idempotency_keys de #177): solo river_*.
 			// Los enums no se filtran: sus etiquetas no nombran la tabla y ops no tiene otros.
 			ops, ref = onlyRiver(ops), onlyRiver(ref)
 		}

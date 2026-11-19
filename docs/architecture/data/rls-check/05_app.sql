@@ -170,6 +170,61 @@ SELECT test.assert((SELECT created_at = now() FROM iam.sessions WHERE id = '5e00
 ROLLBACK;
 \echo '== A10. (wanka_app) tablas de River: solo INSERT en ops.river_job =='
 SELECT test.river_enqueue_only();
+\echo '== A11. (wanka_app) ops.idempotency_keys: aislada por tenant, la respuesta se guarda en UPDATE, sin DELETE =='
+SELECT test.assert((SELECT count(*) FROM ops.idempotency_keys) = 0, 'RLS: 0 claves sin tenant');
+SELECT test.expect_error($$INSERT INTO ops.idempotency_keys (tenant_id, key, request_hash) VALUES ('aaaaaaaa-0000-0000-0000-000000000001', 'sin-tenant', sha256('x'))$$,
+  '42501', 'sin tenant fijado no se inserta una clave');
+BEGIN;
+SELECT set_config('app.tenant_id','aaaaaaaa-0000-0000-0000-000000000001', true), set_config('app.user_id','eeeeeeee-0000-0000-0000-000000000001', true);
+SELECT test.assert((SELECT count(*) FROM ops.idempotency_keys) = 2 AND (SELECT count(*) FROM ops.idempotency_keys WHERE key IN ('old-b', 'recent-b')) = 0,
+  'tenant A ve sus 2 claves (la vencida incluida) y ninguna de B');
+-- INSERT primero (sin respuesta), UPDATE despues; created_at lo pone el servidor.
+INSERT INTO ops.idempotency_keys (tenant_id, key, request_hash) VALUES ('aaaaaaaa-0000-0000-0000-000000000001', 'k-new', sha256('body'));
+SELECT test.assert((SELECT status_code IS NULL AND response IS NULL AND created_at = now() FROM ops.idempotency_keys WHERE key = 'k-new'), 'la clave nace sin respuesta y con created_at del servidor');
+DO $$ DECLARE n int; BEGIN
+  INSERT INTO ops.idempotency_keys (tenant_id, key, request_hash) VALUES ('aaaaaaaa-0000-0000-0000-000000000001', 'k-new', sha256('otro')) ON CONFLICT DO NOTHING;
+  GET DIAGNOSTICS n = ROW_COUNT;
+  PERFORM test.assert(n = 0, 'ON CONFLICT DO NOTHING no inserta una clave repetida');
+END $$;
+UPDATE ops.idempotency_keys SET status_code = 201, response = '\x7b226964223a317d', response_headers = '{"Location": "/v1/x/1"}' WHERE key = 'k-new';
+SELECT test.assert((SELECT status_code = 201 AND response = '\x7b226964223a317d' FROM ops.idempotency_keys WHERE key = 'k-new'), 'el UPDATE guarda la respuesta');
+SELECT test.expect_error($$INSERT INTO ops.idempotency_keys (tenant_id, key, request_hash) VALUES ('bbbbbbbb-0000-0000-0000-000000000002', 'k-b', sha256('x'))$$,
+  '42501', 'tenant A no inserta una clave de B (WITH CHECK)');
+SELECT test.expect_error($$UPDATE ops.idempotency_keys SET status_code = 302 WHERE key = 'k-new'$$, '23514', 'solo 2xx: un 302 viola el CHECK');
+SELECT test.expect_error($$UPDATE ops.idempotency_keys SET status_code = 409 WHERE key = 'k-new'$$, '23514', 'solo 2xx: un 409 viola el CHECK');
+SELECT test.expect_error($$INSERT INTO ops.idempotency_keys (tenant_id, key, request_hash) VALUES ('aaaaaaaa-0000-0000-0000-000000000001', 'k-short', '\x00')$$,
+  '23514', 'request_hash de 32 bytes');
+SELECT test.expect_error($$UPDATE ops.idempotency_keys SET request_hash = sha256('otro') WHERE key = 'k-new'$$, '42501', 'el hash no se mueve');
+SELECT test.expect_error($$UPDATE ops.idempotency_keys SET created_at = now() + interval '1 year' WHERE key = 'k-new'$$, '42501', 'created_at no se mueve');
+SELECT test.expect_error($$INSERT INTO ops.idempotency_keys (tenant_id, key, request_hash, created_at) VALUES ('aaaaaaaa-0000-0000-0000-000000000001', 'k-future', sha256('x'), now() + interval '1 year')$$,
+  '42501', 'created_at no se elige en el INSERT');
+SELECT test.expect_error($$INSERT INTO ops.idempotency_keys (tenant_id, principal_id, key, request_hash) VALUES ('aaaaaaaa-0000-0000-0000-000000000001', 'eeeeeeee-0000-0000-0000-000000000002', 'k-imp', sha256('x'))$$,
+  '42501', 'principal_id lo fija el servidor: wanka_app no lo elige');
+SELECT test.assert((SELECT principal_id FROM ops.idempotency_keys WHERE key = 'k-new') = 'eeeeeeee-0000-0000-0000-000000000001', 'principal_id es app.user_id');
+SELECT test.expect_error($$UPDATE ops.idempotency_keys SET principal_id = 'eeeeeeee-0000-0000-0000-000000000002' WHERE key = 'k-new'$$, '42501', 'principal_id no se mueve');
+SELECT test.expect_error($$DELETE FROM ops.idempotency_keys WHERE key = 'k-new'$$, '42501', 'wanka_app no borra claves');
+SELECT test.expect_error($$TRUNCATE ops.idempotency_keys$$, '42501', 'wanka_app no hace TRUNCATE');
+ROLLBACK;
+-- La misma clave en dos tenants no interfiere (PK tenant_id, key).
+BEGIN;
+SELECT set_config('app.tenant_id','aaaaaaaa-0000-0000-0000-000000000001', true), set_config('app.user_id','eeeeeeee-0000-0000-0000-000000000001', true);
+INSERT INTO ops.idempotency_keys (tenant_id, key, request_hash) VALUES ('aaaaaaaa-0000-0000-0000-000000000001', 'compartida', sha256('a'));
+SELECT set_config('app.tenant_id','bbbbbbbb-0000-0000-0000-000000000002', true), set_config('app.user_id','eeeeeeee-0000-0000-0000-0000000000b1', true);
+INSERT INTO ops.idempotency_keys (tenant_id, key, request_hash) VALUES ('bbbbbbbb-0000-0000-0000-000000000002', 'compartida', sha256('b'));
+SELECT test.assert((SELECT count(*) FROM ops.idempotency_keys WHERE key = 'compartida') = 1
+                   AND (SELECT request_hash FROM ops.idempotency_keys WHERE key = 'compartida') = sha256('b'), 'B ve solo su clave compartida, con su hash');
+ROLLBACK;
+-- La clave es del principal: dos usuarios del mismo tenant con la misma clave dejan dos filas, sin conflicto.
+BEGIN;
+SELECT set_config('app.tenant_id','aaaaaaaa-0000-0000-0000-000000000001', true), set_config('app.user_id','eeeeeeee-0000-0000-0000-000000000001', true);
+INSERT INTO ops.idempotency_keys (tenant_id, key, request_hash) VALUES ('aaaaaaaa-0000-0000-0000-000000000001', 'dos-usuarios', sha256('u1'));
+SELECT set_config('app.user_id','eeeeeeee-0000-0000-0000-000000000002', true);
+DO $$ DECLARE n int; BEGIN
+  INSERT INTO ops.idempotency_keys (tenant_id, key, request_hash) VALUES ('aaaaaaaa-0000-0000-0000-000000000001', 'dos-usuarios', sha256('u2')) ON CONFLICT DO NOTHING;
+  GET DIAGNOSTICS n = ROW_COUNT;
+  PERFORM test.assert(n = 1, 'U2 inserta la misma clave que U1: es otra fila');
+END $$;
+SELECT test.assert((SELECT count(*) FROM ops.idempotency_keys WHERE key = 'dos-usuarios') = 2, 'U1 y U2 con la misma clave dejan dos filas');
 \echo '== A11. (wanka_app) audit.events: aislamiento por tenant, solo insercion, sin DDL de particiones (#173) =='
 -- Como Record: el tenant, el usuario y el tipo de sesion salen de las variables app.* de la transaccion.
 BEGIN;
