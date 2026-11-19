@@ -322,14 +322,26 @@ func TestStubMailerInProductionWarns(t *testing.T) {
 	}
 }
 
-func TestMailerWarningIsAbsentWhenNotStubInProduction(t *testing.T) {
+func TestMailerWarningIsAbsentInDevelopment(t *testing.T) {
 	for _, env := range [][]string{
 		{"APP_ENV=development"},
-		{"MAILER=none"},
 		{"MAILER=none", "APP_ENV=development"},
 	} {
 		if w := mailerWarnings(t, env...); len(w) != 0 {
 			t.Errorf("%v: unexpected WARN %v", env, w)
+		}
+	}
+}
+
+// staging cuenta como producción; sin correo real, también avisa MAILER=none.
+func TestMailerWarnsInStagingAndWhenDisabledInProduction(t *testing.T) {
+	for _, env := range [][]string{
+		{"APP_ENV=staging"},
+		{"MAILER=none"},
+		{"MAILER=none", "APP_ENV=staging"},
+	} {
+		if w := mailerWarnings(t, env...); len(w) != 1 {
+			t.Errorf("%v: want one mailer WARN, got %v", env, w)
 		}
 	}
 }

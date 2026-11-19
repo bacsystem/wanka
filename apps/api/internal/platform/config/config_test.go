@@ -154,6 +154,8 @@ func TestMailerAndEnvironmentOverrides(t *testing.T) {
 		{"none", "development", "none", false},
 		{"NONE", "Development", "none", false},
 		{"", "development", "stub", false},
+		{"", "staging", "stub", true}, // staging cuenta como producción (ADR 0007)
+		{"none", "STAGING", "none", true},
 	}
 	for _, tc := range cases {
 		cfg, err := config.Load(env(map[string]string{"DATABASE_URL_APP": "x", "MAILER": tc.mailer, "APP_ENV": tc.appEnv}), config.API)
@@ -167,7 +169,7 @@ func TestMailerAndEnvironmentOverrides(t *testing.T) {
 }
 
 func TestInvalidMailerOrEnvironmentNamesVariableNotValue(t *testing.T) {
-	for _, v := range []struct{ name, value string }{{"MAILER", "smtp-S3CRET"}, {"APP_ENV", "staging-S3CRET"}} {
+	for _, v := range []struct{ name, value string }{{"MAILER", "smtp-S3CRET"}, {"APP_ENV", "qa-S3CRET"}} {
 		_, err := config.Load(env(map[string]string{"DATABASE_URL_APP": "x", v.name: v.value}), config.API)
 		if err == nil || !strings.Contains(err.Error(), v.name) || strings.Contains(err.Error(), "S3CRET") {
 			t.Errorf("%s: error = %v", v.name, err)

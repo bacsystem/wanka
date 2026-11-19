@@ -61,7 +61,7 @@ type Config struct {
 	LogLevel  slog.Level
 	// Mailer es MailerStub (por defecto) o MailerNone.
 	Mailer string
-	// Production es true salvo APP_ENV=development: sin la variable se asume
+	// Production es true (también para staging) salvo APP_ENV=development: sin la variable se asume
 	// producción, para que un olvido avise de más y nunca de menos.
 	Production bool
 }
@@ -118,11 +118,11 @@ func Load(getenv func(string) string, svc Service) (Config, error) {
 		errs = append(errs, fmt.Errorf("environment variable %s must be one of %s, %s", EnvMailer, MailerStub, MailerNone))
 	}
 	switch strings.ToLower(getenv(EnvAppEnv)) {
-	case "", "production":
+	case "", "production", "staging": // staging se trata como producción (ADR 0007)
 	case "development":
 		cfg.Production = false
 	default:
-		errs = append(errs, fmt.Errorf("environment variable %s must be one of production, development", EnvAppEnv))
+		errs = append(errs, fmt.Errorf("environment variable %s must be one of production, staging, development", EnvAppEnv))
 	}
 	if err := errors.Join(errs...); err != nil {
 		return Config{}, err

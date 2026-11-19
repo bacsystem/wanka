@@ -92,8 +92,9 @@ func (rt *Router) HandleV1(pattern string, h http.Handler, opts ...RouteOption) 
 // v1Path dice si el camino del patrón puede coincidir con una ruta /v1.
 func v1Path(pattern string) bool {
 	_, p, _ := strings.Cut(pattern, " ")
-	// "/{$}" es solo la raíz; cualquier otro comodín inicial alcanza /v1.
-	return p == "/v1" || strings.HasPrefix(p, "/v1/") || strings.HasPrefix(p, "/{") && p != "/{$}"
+	// "/{$}" es solo la raíz; cualquier otro comodín inicial alcanza /v1. ServeMux
+	// desescapa los segmentos ("/v%31/x" es "/v1/x"): no se admite ningún "%".
+	return strings.Contains(p, "%") || p == "/v1" || strings.HasPrefix(p, "/v1/") || strings.HasPrefix(p, "/{") && p != "/{$}"
 }
 
 func (rt *Router) handle(pattern string, h http.Handler, opts []RouteOption) {
