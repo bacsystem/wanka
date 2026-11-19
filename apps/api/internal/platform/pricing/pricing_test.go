@@ -30,10 +30,10 @@ func TestAfectaciones(t *testing.T) {
 		tot [7]string
 	}{
 		{"gravado 18", line(t, "1", "118", pricing.Gravado, "0"),
-			wantLine{"100.0000000000", "100.00", "18.00", "118.00"},
+			wantLine{"100.0000", "100.00", "18.00", "118.00"},
 			[7]string{"100.00", "0.00", "0.00", "0.00", "18.00", "0.00", "118.00"}},
 		{"gravado quantity and discount", line(t, "2", "59", pricing.Gravado, "18"),
-			wantLine{"50.0000000000", "84.75", "15.25", "100.00"},
+			wantLine{"50.0000", "84.75", "15.25", "100.00"},
 			[7]string{"84.75", "0.00", "0.00", "0.00", "15.25", "0.00", "100.00"}},
 		{"exonerado", line(t, "2", "50", pricing.Exonerado, "0"),
 			wantLine{"", "100.00", "0.00", "100.00"},
@@ -86,7 +86,7 @@ func TestRoundingHalfUp(t *testing.T) {
 func TestRoundingGravadoBase(t *testing.T) {
 	// 0.59 / 1.18 = 0.5 exacto; 0.03 / 1.18 = 0.0254 -> base 0.03, IGV 0.00
 	r := compute(t, pen(t, line(t, "1", "0.03", pricing.Gravado, "0")))
-	checkLine(t, r.Lines[0], wantLine{"0.0254237288", "0.03", "0.00", "0.03"})
+	checkLine(t, r.Lines[0], wantLine{"0.0254", "0.03", "0.00", "0.03"})
 	// 1.77 / 1.18 = 1.5 exacto; 0.885 -> total 0.89 (half-up), base 0.75, IGV 0.14
 	r = compute(t, pen(t, line(t, "1", "0.885", pricing.Gravado, "0")))
 	checkLine(t, r.Lines[0], wantLine{"", "0.75", "0.14", "0.89"})
@@ -273,7 +273,7 @@ func TestValidation(t *testing.T) {
 		{"negative global discount", func(in *pricing.Input) { in.GlobalDiscount = amt(t, "-1") }, "globalDiscount"},
 		{"negative other charges", func(in *pricing.Input) { in.OtherCharges = amt(t, "-0.01") }, "otherCharges"},
 		{"3 decimals other charges", func(in *pricing.Input) { in.OtherCharges = amt(t, "0.001") }, "otherCharges"},
-		{"total over numeric(14,2)", func(in *pricing.Input) { in.OtherCharges = amt(t, "999999999999.99") }, "total"},
+		{"total over numeric(14,2)", func(in *pricing.Input) { in.OtherCharges = amt(t, "999999999999.99") }, "totals.total"},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
