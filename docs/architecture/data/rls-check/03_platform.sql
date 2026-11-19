@@ -22,3 +22,8 @@ SELECT test.assert(platform_fn.request_impersonation('99999999-0000-0000-0000-00
 SELECT test.assert(platform_fn.request_impersonation('99999999-0000-0000-0000-000000000002','5aff0000-0000-0000-0000-000000000001',
   'bbbbbbbb-0000-0000-0000-000000000002','7c000000-0000-0000-0000-000000000002','read_only','\x02'::bytea) IS NOT NULL, 'solicitud B');
 SELECT test.assert(NULLIF(current_setting('app.tenant_id', true), '') IS NULL, 'las funciones no filtran app.tenant_id al llamador');
+\echo '== P5. wanka_platform: iam.permissions es de solo lectura (issue #172) =='
+SELECT test.assert((SELECT count(*) FROM iam.permissions) > 100, 'wanka_platform lee el catalogo de permisos');
+SELECT test.expect_error($$INSERT INTO iam.permissions (code, description) VALUES ('ventas.pos:void', 'Anular ventas')$$, '42501', 'wanka_platform no inserta permisos');
+SELECT test.expect_error($$UPDATE iam.permissions SET description = 'x'$$, '42501', 'wanka_platform no actualiza permisos');
+SELECT test.expect_error($$DELETE FROM iam.permissions$$, '42501', 'wanka_platform no borra permisos');
