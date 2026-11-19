@@ -3,6 +3,11 @@
 All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.3.1] - 2026-11-18
+
+### Changed
+- API contract: a statement cancelled by `statement_timeout` (SQLSTATE `57014`) answers `503 dependency_unavailable` with `Retry-After: 1` on every route, with the same body as any dependency failure; the kernel/module distinction goes only to the log. `GET /v1/documents` now declares its `503` (`api/conventions.md` §4 and §7, `openapi.yaml`).
+
 ## [0.3.0] - 2026-11-18
 
 ### Added

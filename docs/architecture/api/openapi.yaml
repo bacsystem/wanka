@@ -78,6 +78,7 @@ paths:
                   page: { $ref: '#/components/schemas/PageInfo' }
         '401': { $ref: '#/components/responses/Problem' }
         '403': { $ref: '#/components/responses/Problem' }
+        '503': { $ref: '#/components/responses/Problem' }
 components:
   securitySchemes:
     tenantSession:
