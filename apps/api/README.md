@@ -18,7 +18,7 @@ bootstrap/roles.sql   bootstrap de roles: lo corre el superusuario con psql, fue
 migrations/           goose, SQL con timestamp, embebido en el binario, solo hacia adelante
 openapi/              contrato (vacío)
 testdata/archlint/    ejemplo de la regla entre módulos para go-arch-lint
-scripts/archlint.sh   corre go-arch-lint y demuestra que una importación prohibida falla
+scripts/archlint.sh   corre go-arch-lint y demuestra que una importación prohibida (y un pgxpool fuera de internal/platform/db) falla
 scripts/migrations-check.sh  check de migraciones solo hacia adelante y sus casos malos
 ```
 
@@ -82,6 +82,19 @@ Sin conexión libre en 200 ms el pool devuelve `db.ErrOverloaded`, que
 
 Cada respuesta lleva `X-Request-Id` (se conserva el entrante si es un token
 corto de `[A-Za-z0-9_-]`, si no se genera uno). Cuerpo máximo de petición: 1 MB.
+
+## Transacciones de tenant (`InTenantTx`)
+
+Todo acceso a tablas de tenant pasa por `db.Pool.InTenantTx` (lectura y
+escritura) o `InTenantReadTx` (`BEGIN READ ONLY`); el aislamiento lo da la RLS
+(ADR 0001), sin `WHERE tenant_id` en el código. `Actor` lleva `TenantID`,
+`UserID`, `Kind` (`KindUser`, `KindImpersonated`, `KindSystem`; no hay valor
+cero válido) e `ImpersonatorID` (solo con `KindImpersonated`). Los UUID son
+`pgtype.UUID` de pgx. Errores: `ErrNoTenant` (sesión sin empresa o UUID cero,
+para todo `Kind`), `ErrInvalidActor` (error de programación) y
+`ErrStatementTimeout` (5 s del rol `wanka_app`); ninguno de los dos primeros
+abre transacción. Las pruebas usan la tabla `rlstest.items`, que solo existe en
+`internal/platform/db/testdata/` y se aplica con `dbtest.MigrateWith`.
 
 ## Variables de entorno
 

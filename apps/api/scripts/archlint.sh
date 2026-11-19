@@ -30,3 +30,20 @@ if "$bin" check --project-path "$tmp"; then
   exit 1
 fi
 echo "OK: forbidden import was rejected"
+
+# Criterio de ADR 0001: ningún paquete fuera de internal/platform/db usa pgxpool.
+# Se prueba sobre una copia del módulo real, con un archivo prohibido en cada
+# lugar donde podría colarse el pool: otro paquete del kernel y un módulo.
+echo "== apps/api: pgxpool outside internal/platform/db must fail =="
+for place in internal/platform/httpx cmd/wanka; do
+  copy="$(mktemp -d)"
+  cp -R "$root/." "$copy/"
+  printf 'package %s\n\nimport _ "github.com/jackc/pgx/v5/pgxpool"\n' "$(basename "$place")" > "$copy/$place/forbidden_pool.go"
+  if "$bin" check --project-path "$copy" >/dev/null 2>&1; then
+    rm -rf "$copy"
+    echo "FAIL: go-arch-lint accepted pgxpool imported from $place" >&2
+    exit 1
+  fi
+  rm -rf "$copy"
+  echo "OK: pgxpool imported from $place was rejected"
+done

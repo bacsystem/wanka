@@ -16,11 +16,13 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"io"
+	"io/fs"
 	"log/slog"
 	"net/url"
 	"os"
 	"strings"
 	"testing"
+	"testing/fstest"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -217,4 +219,32 @@ func scrub(err error, raw string) string {
 		}
 	}
 	return msg
+}
+
+// MigrateWith aplica las migraciones embebidas más las de extra (migraciones
+// solo de test, como una tabla con la política estándar). Los nombres de extra
+// deben ordenarse después de los de producción para no alterar su orden.
+func (d *DB) MigrateWith(ctx context.Context, t testing.TB, extra fs.FS) {
+	t.Helper()
+	merged := fstest.MapFS{}
+	for _, src := range []fs.FS{migrations.FS, extra} {
+		files, err := fs.Glob(src, "*.sql")
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, name := range files {
+			data, err := fs.ReadFile(src, name)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, dup := merged[name]; dup {
+				t.Fatalf("migration %s is in both file sets", name)
+			}
+			merged[name] = &fstest.MapFile{Data: data}
+		}
+	}
+	log := slog.New(slog.NewTextHandler(io.Discard, nil))
+	if _, err := db.Migrate(ctx, d.URL(Migrator), merged, log); err != nil {
+		t.Fatalf("migrating: %v", err)
+	}
 }

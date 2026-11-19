@@ -3,7 +3,8 @@ name: API
 # The workflow has no `paths:` filter on purpose: a workflow skipped by a path
 # filter leaves its required check "Pending" and blocks the PR. Instead the job
 # always runs and decides in its first step whether apps/api (or this file)
-# changed; if not, the Go steps are skipped and the check ends green.
+# changed (or the RLS reference cases in docs/architecture/data/rls-check/); if
+# not, the Go steps are skipped and the check ends green.
 on:
   pull_request:
   push:
@@ -45,7 +46,7 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - name: Did apps/api or this workflow change?
+      - name: Did apps/api, the RLS cases or this workflow change?
         id: changes
         working-directory: .
         env:
@@ -56,7 +57,7 @@ jobs:
             echo "run=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          if git diff --name-only "$BASE_SHA"...HEAD | grep -qE '^(apps/api/|\.github/workflows/api\.yml$)'; then
+          if git diff --name-only "$BASE_SHA"...HEAD | grep -qE '^(apps/api/|docs/architecture/data/rls-check/|\.github/workflows/api\.yml$)'; then
             echo "run=true" >> "$GITHUB_OUTPUT"
           else
             echo "run=false" >> "$GITHUB_OUTPUT"
@@ -128,6 +129,27 @@ jobs:
           WANKA_TEST_ADMIN_URL: postgres://postgres:ci-superuser-not-a-secret@localhost:5432/wanka
           WANKA_TEST_ROLE_PASSWORD: ci-roles-not-a-secret
         run: go test -race ./...
+      # ADR 0001: los casos de referencia de RLS corren en un contenedor propio
+      # de PostgreSQL 16 con los roles reales (Docker del runner). Deben pasar, y
+      # la mutación naive_session_lookup debe hacerlos fallar: si no fallara, la
+      # verificación no detectaría el defecto que dice vigilar.
+      - name: RLS reference cases pass (rls-check/run.sh)
+        if: steps.changes.outputs.run == 'true'
+        working-directory: .
+        run: sh docs/architecture/data/rls-check/run.sh
+      - name: RLS reference cases fail under MUTATION=naive_session_lookup
+        if: steps.changes.outputs.run == 'true'
+        working-directory: .
+        run: |
+          rc=0; log="$(mktemp)"
+          MUTATION=naive_session_lookup sh docs/architecture/data/rls-check/run.sh > "$log" 2>&1 || rc=$?
+          cat "$log"
+          # exit 1 es un caso que falló; otro valor (p. ej. 2: Docker no arrancó) no prueba nada.
+          if [ "$rc" -ne 1 ] || ! grep -q "^FAILED at:" "$log"; then
+            echo "expected the mutation to make a case fail (exit 1), got exit $rc"
+            exit 1
+          fi
+          echo "OK: the mutation was detected"
       - name: go build
         if: steps.changes.outputs.run == 'true'
         run: go build ./...

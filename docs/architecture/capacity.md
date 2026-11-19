@@ -37,6 +37,18 @@ Estado: propuesto (2026-11-17). La carga por tenant (50 usuarios concurrentes, 3
 
 Las cuentas: **una cuenta por usuario virtual** (si no, se mide el lock de una sola sesión), generador de carga en una máquina distinta del servidor, y corrida de control en la misma tanda. Herramienta propuesta: k6 (scripts en el repo; decisión del tech-lead).
 
+### Sobrecarga medida de `InTenantTx`
+
+Medida en #163 con `BenchmarkAutocommitQuery`, `BenchmarkTxBaseline` y `BenchmarkInTenantTx` (`apps/api/internal/platform/db/tenant_bench_test.go`), contra PostgreSQL 16 real en Docker (macOS, Apple M4 Max, loopback; cada ida y vuelta de red cuesta ~0,2 ms en este entorno), una consulta `SELECT 1` por transacción, un solo cliente, mediana de 8 corridas de 2 000 iteraciones:
+
+| Caso | Tiempo por operación | Idas y vueltas |
+|---|---|---|
+| Consulta suelta (autocommit) | ~0,24 ms | 1 |
+| `BEGIN` + consulta + `COMMIT`, sin variables | ~0,66 ms | 3 |
+| `InTenantTx` (`BEGIN` + `set_config` ×4 + consulta + `COMMIT`) | ~0,87 ms | 4 |
+
+El `set_config` suma **~0,2 ms** sobre una transacción normal, es decir, una ida y vuelta: en el servidor el `SELECT set_config(...)` de las cuatro variables tarda 0,044 ms (`EXPLAIN ANALYZE`). El coste depende de la latencia de red entre la API y la base, no del cómputo: en el mismo entorno de Railway será menor. Es la referencia para el presupuesto de ~10-30 ms por transacción de arriba; hay que repetirla en la prueba de carga. Si hiciera falta recortarlo, `BEGIN` y `set_config` pueden ir en una sola ida y vuelta con un lote de pgx; hoy no se justifica.
+
 ## 3. Degradación y backpressure
 
 - Pool de conexiones lleno más de 200 ms → la API responde `503 overloaded` con `Retry-After: 1` en vez de encolar indefinidamente (`pgxpool` con `context` de 200 ms para adquirir conexión).

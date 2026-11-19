@@ -13,19 +13,27 @@
 version: 3
 workdir: .
 components:
-  platform: { in: internal/platform/** }
+  # db es el único dueño de pgxpool (ADR 0001): el resto del kernel y los módulos
+  # reciben *db.Pool y no pueden construir ni usar un pgxpool.Pool propio.
+  platform_db: { in: internal/platform/db/** }
+  platform: { in: internal/platform/* }
   main: { in: cmd/** }
   migrations: { in: migrations }
   bootstrap: { in: bootstrap }
 vendors:
-  pgx: { in: [github.com/jackc/pgx/v5, github.com/jackc/pgx/v5/**] }
+  # pgx sin pgxpool: ese paquete es un vendor aparte que solo usa internal/platform/db.
+  pgx: { in: [github.com/jackc/pgx/v5, github.com/jackc/pgx/v5/pgconn, github.com/jackc/pgx/v5/pgconn/**, github.com/jackc/pgx/v5/pgtype, github.com/jackc/pgx/v5/pgtype/**, github.com/jackc/pgx/v5/pgproto3, github.com/jackc/pgx/v5/stdlib] }
+  pgxpool: { in: github.com/jackc/pgx/v5/pgxpool }
   goose: { in: [github.com/pressly/goose/v3, github.com/pressly/goose/v3/**] }
 deps:
+  platform_db:
+    mayDependOn: [platform, platform_db, migrations, bootstrap]
+    canUse: [pgx, pgxpool, goose]
   platform:
-    mayDependOn: [platform, migrations, bootstrap]
+    mayDependOn: [platform, platform_db, migrations, bootstrap]
     canUse: [pgx, goose]
   main:
-    mayDependOn: [platform, migrations]
+    mayDependOn: [platform, platform_db, migrations]
     canUse: [pgx]
 exclude:
   - testdata
