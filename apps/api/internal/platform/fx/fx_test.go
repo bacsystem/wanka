@@ -2,6 +2,7 @@ package fx_test
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math/big"
@@ -18,7 +19,13 @@ import (
 	"github.com/bacsystem/wanka/apps/api/internal/platform/fx"
 )
 
-func day(y int, m time.Month, d int) time.Time { return time.Date(y, m, d, 0, 0, 0, 0, time.UTC) }
+func day(y int, m time.Month, d int) fx.Day { return fx.Day{Year: y, Month: m, Dom: d} }
+
+// nth devuelve el día n-ésimo después del 1 de enero de 2026 (para sembrar muchas fechas distintas).
+func nth(n int) fx.Day {
+	t := time.Date(2026, 1, 1+n, 0, 0, 0, 0, time.UTC)
+	return day(t.Year(), t.Month(), t.Day())
+}
 
 func dec(t *testing.T, s string) decimal.Decimal {
 	t.Helper()
@@ -70,11 +77,11 @@ func wantState(t *testing.T, err error, code, what string) {
 	}
 }
 
-func save(t *testing.T, w *fx.Writer, date time.Time, buy, sell, source string) {
+func save(t *testing.T, w *fx.Writer, date fx.Day, buy, sell, source string) {
 	t.Helper()
-	err := w.Save(context.Background(), fx.Rate{Date: date, Currency: fx.USD, Buy: dec(t, buy), Sell: dec(t, sell), Source: source})
+	err := w.Save(context.Background(), fx.Quote{Date: date, Currency: fx.USD, Buy: dec(t, buy), Sell: dec(t, sell), Source: source})
 	if err != nil {
-		t.Fatalf("saving %s: %v", date.Format(time.DateOnly), err)
+		t.Fatalf("saving %s: %v", date.String(), err)
 	}
 }
 
@@ -201,10 +208,9 @@ func TestRate(t *testing.T) {
 	save(t, e.w, day(2026, 11, 19), "3.750", "3.760", fx.SourceManual)
 	save(t, e.w, day(2026, 11, 25), "3.800", "3.810", fx.SourceOfficial) // posterior: nunca debe usarse antes de su día
 
-	lima := time.FixedZone("America/Lima", -5*3600)
 	tests := []struct {
 		name     string
-		date     time.Time
+		date     fx.Day
 		buy      string
 		sell     string
 		source   string
@@ -215,8 +221,6 @@ func TestRate(t *testing.T) {
 		{"gap falls back to the previous day", day(2026, 11, 20), "3.750", "3.760", fx.SourceFallback, "2026-11-19"},
 		{"gap falls back to the closest previous one", day(2026, 11, 18), "3.701", "3.711", fx.SourceFallback, "2026-11-16"},
 		{"the day before a later row does not use it", day(2026, 11, 24), "3.750", "3.760", fx.SourceFallback, "2026-11-19"},
-		{"a calendar day, not an instant: late evening in Lima", time.Date(2026, 11, 19, 23, 30, 0, 0, lima), "3.750", "3.760", fx.SourceManual, "2026-11-19"},
-		{"a calendar day, not an instant: early morning in Lima", time.Date(2026, 11, 19, 0, 30, 0, 0, lima), "3.750", "3.760", fx.SourceManual, "2026-11-19"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -224,8 +228,8 @@ func TestRate(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if got.Buy.StringFixed(3) != tt.buy || got.Sell.StringFixed(3) != tt.sell || got.Source != tt.source ||
-				got.Date.Format(time.DateOnly) != tt.rateDate || got.Currency != fx.USD {
+			if got.Buy.String() != tt.buy || got.Sell.String() != tt.sell || got.Source != tt.source ||
+				got.Date.String() != tt.rateDate || got.Currency != fx.USD {
 				t.Errorf("Rate = %+v, want buy=%s sell=%s source=%s date=%s", got, tt.buy, tt.sell, tt.source, tt.rateDate)
 			}
 		})
@@ -256,7 +260,7 @@ func TestRate(t *testing.T) {
 			if err != nil {
 				return err
 			}
-			if got.Source != fx.SourceFallback || got.Buy.StringFixed(3) != "3.750" {
+			if got.Source != fx.SourceFallback || got.Buy.String() != "3.750" {
 				t.Errorf("RateIn = %+v", got)
 			}
 			return nil
@@ -293,15 +297,15 @@ func TestSaveRoundsHalfUpOnce(t *testing.T) {
 		{"999.9994", "999.999"},
 	}
 	for i, tt := range tests {
-		date := day(2026, 1, 1).AddDate(0, 0, i)
+		date := nth(i)
 		t.Run(tt.in, func(t *testing.T) {
 			save(t, e.w, date, tt.in, tt.in, fx.SourceOfficial)
 			got, err := e.r.Rate(ctx, date, fx.USD)
 			if err != nil {
 				t.Fatal(err)
 			}
-			if got.Buy.StringFixed(3) != tt.want || got.Sell.StringFixed(3) != tt.want {
-				t.Errorf("stored %s as buy=%s sell=%s, want %s", tt.in, got.Buy.StringFixed(3), got.Sell.StringFixed(3), tt.want)
+			if got.Buy.String() != tt.want || got.Sell.String() != tt.want {
+				t.Errorf("stored %s as buy=%s sell=%s, want %s", tt.in, got.Buy.String(), got.Sell.String(), tt.want)
 			}
 		})
 	}
@@ -316,7 +320,7 @@ func TestSaveRoundsHalfUpOnce(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if got.Buy.StringFixed(3) != "3.457" || got.Sell.StringFixed(3) != "3.501" {
+		if got.Buy.String() != "3.457" || got.Sell.String() != "3.501" {
 			t.Errorf("Rate = %s / %s", got.Buy, got.Sell)
 		}
 	})
@@ -349,15 +353,15 @@ func TestSaveMatchesExactHalfUpForAnyInput(t *testing.T) {
 		if i%3 == 0 {
 			in = fmt.Sprintf("%d.%03d5", 1+rng.Intn(998), rng.Intn(1000))
 		}
-		date := day(2026, 1, 1).AddDate(0, 0, i)
+		date := nth(i)
 		want := roundHalfUp3(in)
 		save(t, e.w, date, in, in, fx.SourceOfficial)
 		got, err := e.r.Rate(ctx, date, fx.USD)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if got.Buy.StringFixed(3) != want || got.Sell.StringFixed(3) != want {
-			t.Fatalf("input %s stored as %s/%s, want %s", in, got.Buy.StringFixed(3), got.Sell.StringFixed(3), want)
+		if got.Buy.String() != want || got.Sell.String() != want {
+			t.Fatalf("input %s stored as %s/%s, want %s", in, got.Buy.String(), got.Sell.String(), want)
 		}
 	}
 }
@@ -377,15 +381,15 @@ func TestSaveRejectsInvalidAndIsRetrySafe(t *testing.T) {
 	date := day(2026, 11, 19)
 	bad := []struct {
 		name string
-		r    fx.Rate
+		r    fx.Quote
 	}{
-		{"currency EUR", fx.Rate{Date: date, Currency: "EUR", Buy: dec(t, "3.7"), Sell: dec(t, "3.8"), Source: fx.SourceOfficial}},
-		{"source unknown", fx.Rate{Date: date, Currency: fx.USD, Buy: dec(t, "3.7"), Sell: dec(t, "3.8"), Source: "sbs"}},
-		{"buy zero", fx.Rate{Date: date, Currency: fx.USD, Buy: dec(t, "0"), Sell: dec(t, "3.8"), Source: fx.SourceOfficial}},
-		{"sell negative", fx.Rate{Date: date, Currency: fx.USD, Buy: dec(t, "3.7"), Sell: dec(t, "-3.8"), Source: fx.SourceOfficial}},
-		{"buy rounds to zero", fx.Rate{Date: date, Currency: fx.USD, Buy: dec(t, "0.0004"), Sell: dec(t, "3.8"), Source: fx.SourceOfficial}},
-		{"rounds past numeric(6,3)", fx.Rate{Date: date, Currency: fx.USD, Buy: dec(t, "3.7"), Sell: dec(t, "999.9995"), Source: fx.SourceOfficial}},
-		{"zero value decimal", fx.Rate{Date: date, Currency: fx.USD, Source: fx.SourceOfficial}},
+		{"currency EUR", fx.Quote{Date: date, Currency: "EUR", Buy: dec(t, "3.7"), Sell: dec(t, "3.8"), Source: fx.SourceOfficial}},
+		{"source unknown", fx.Quote{Date: date, Currency: fx.USD, Buy: dec(t, "3.7"), Sell: dec(t, "3.8"), Source: "sbs"}},
+		{"buy zero", fx.Quote{Date: date, Currency: fx.USD, Buy: dec(t, "0"), Sell: dec(t, "3.8"), Source: fx.SourceOfficial}},
+		{"sell negative", fx.Quote{Date: date, Currency: fx.USD, Buy: dec(t, "3.7"), Sell: dec(t, "-3.8"), Source: fx.SourceOfficial}},
+		{"buy rounds to zero", fx.Quote{Date: date, Currency: fx.USD, Buy: dec(t, "0.0004"), Sell: dec(t, "3.8"), Source: fx.SourceOfficial}},
+		{"rounds past numeric(6,3)", fx.Quote{Date: date, Currency: fx.USD, Buy: dec(t, "3.7"), Sell: dec(t, "999.9995"), Source: fx.SourceOfficial}},
+		{"zero value decimal", fx.Quote{Date: date, Currency: fx.USD, Source: fx.SourceOfficial}},
 	}
 	for _, tt := range bad {
 		t.Run(tt.name, func(t *testing.T) {
@@ -399,12 +403,107 @@ func TestSaveRejectsInvalidAndIsRetrySafe(t *testing.T) {
 	}
 
 	save(t, e.w, date, "3.7", "3.8", fx.SourceOfficial)
-	err := e.w.Save(ctx, fx.Rate{Date: date, Currency: fx.USD, Buy: dec(t, "9.9"), Sell: dec(t, "9.9"), Source: fx.SourceManual})
+	err := e.w.Save(ctx, fx.Quote{Date: date, Currency: fx.USD, Buy: dec(t, "9.9"), Sell: dec(t, "9.9"), Source: fx.SourceManual})
 	if !errors.Is(err, fx.ErrAlreadyExists) {
 		t.Errorf("second Save err = %v, want ErrAlreadyExists", err)
 	}
 	got, err := e.r.Rate(ctx, date, fx.USD)
-	if err != nil || got.Buy.StringFixed(3) != "3.700" || got.Source != fx.SourceOfficial {
+	if err != nil || got.Buy.String() != "3.700" || got.Source != fx.SourceOfficial {
 		t.Errorf("after a duplicate Save: %+v (err=%v), want the first row untouched", got, err)
+	}
+}
+
+func TestToday(t *testing.T) {
+	lima := time.FixedZone("any", -5*3600)
+	tests := []struct {
+		name string
+		now  time.Time
+		want fx.Day
+	}{
+		{"20:30 of the 19th in Lima, written in UTC (already the 20th there)", time.Date(2026, 11, 20, 1, 30, 0, 0, time.UTC), day(2026, 11, 19)},
+		{"20:30 of the 19th in Lima, written in Lima", time.Date(2026, 11, 19, 20, 30, 0, 0, lima), day(2026, 11, 19)},
+		{"23:59 in Lima is still the 19th", time.Date(2026, 11, 19, 23, 59, 0, 0, lima), day(2026, 11, 19)},
+		{"23:59 in Lima, written in UTC", time.Date(2026, 11, 20, 4, 59, 0, 0, time.UTC), day(2026, 11, 19)},
+		{"00:01 in Lima is the 20th", time.Date(2026, 11, 20, 0, 1, 0, 0, lima), day(2026, 11, 20)},
+		{"00:01 in Lima, written in UTC", time.Date(2026, 11, 20, 5, 1, 0, 0, time.UTC), day(2026, 11, 20)},
+		{"a zone ahead of UTC does not move the day", time.Date(2026, 11, 20, 3, 0, 0, 0, time.FixedZone("far", 9*3600)), day(2026, 11, 19)},
+		{"year end", time.Date(2027, 1, 1, 4, 59, 0, 0, time.UTC), day(2026, 12, 31)},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := fx.Today(tt.now); got != tt.want {
+				t.Errorf("Today = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+// Un consumidor que pasa el instante actual por Today pide el día de Lima aunque el host esté en UTC.
+func TestRateForALimaInstantInUTC(t *testing.T) {
+	e := setup(t)
+	ctx := context.Background()
+	save(t, e.w, day(2026, 11, 19), "3.750", "3.760", fx.SourceManual)
+	save(t, e.w, day(2026, 11, 20), "3.800", "3.810", fx.SourceOfficial)
+	tests := []struct {
+		name       string
+		now        time.Time
+		buy, src   string
+		wantRateOn string
+	}{
+		{"20:30 of the 19th in Lima, in UTC", time.Date(2026, 11, 20, 1, 30, 0, 0, time.UTC), "3.750", fx.SourceManual, "2026-11-19"},
+		{"23:59 of the 19th in Lima, in UTC", time.Date(2026, 11, 20, 4, 59, 0, 0, time.UTC), "3.750", fx.SourceManual, "2026-11-19"},
+		{"00:01 of the 20th in Lima, in UTC", time.Date(2026, 11, 20, 5, 1, 0, 0, time.UTC), "3.800", fx.SourceOfficial, "2026-11-20"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := e.r.Rate(ctx, fx.Today(tt.now), fx.USD)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got.Buy.String() != tt.buy || got.Source != tt.src || got.Date.String() != tt.wantRateOn {
+				t.Errorf("Rate = %+v, want buy=%s source=%s on %s", got, tt.buy, tt.src, tt.wantRateOn)
+			}
+		})
+	}
+}
+
+func TestInvalidDay(t *testing.T) {
+	e := setup(t)
+	ctx := context.Background()
+	for _, d := range []fx.Day{{}, day(2026, 2, 30), day(2026, 13, 1), day(2026, 11, 0)} {
+		if _, err := e.r.Rate(ctx, d, fx.USD); !errors.Is(err, fx.ErrInvalidRate) {
+			t.Errorf("Rate(%v) err = %v, want ErrInvalidRate", d, err)
+		}
+		err := e.w.Save(ctx, fx.Quote{Date: d, Currency: fx.USD, Buy: dec(t, "3.7"), Sell: dec(t, "3.8"), Source: fx.SourceOfficial})
+		if !errors.Is(err, fx.ErrInvalidRate) {
+			t.Errorf("Save(%v) err = %v, want ErrInvalidRate", d, err)
+		}
+	}
+}
+
+// La salida (String y JSON) lleva siempre 3 decimales: 3.750, no 3.75 (api/conventions.md §6).
+func TestOutputKeepsThreeDecimals(t *testing.T) {
+	e := setup(t)
+	save(t, e.w, day(2026, 11, 19), "3.75", "3.7", fx.SourceOfficial)
+	got, err := e.r.Rate(context.Background(), day(2026, 11, 19), fx.USD)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Buy.String() != "3.750" || got.Sell.String() != "3.700" {
+		t.Errorf("String = %s / %s, want 3.750 / 3.700", got.Buy, got.Sell)
+	}
+	b, err := json.Marshal(got)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var m map[string]any
+	if err := json.Unmarshal(b, &m); err != nil {
+		t.Fatal(err)
+	}
+	if m["Buy"] != "3.750" || m["Sell"] != "3.700" {
+		t.Errorf("JSON = %s, want Buy \"3.750\" and Sell \"3.700\"", b)
+	}
+	if got.Buy.Decimal().Cmp(dec(t, "3.75")) != 0 {
+		t.Errorf("Decimal() = %s", got.Buy.Decimal())
 	}
 }
