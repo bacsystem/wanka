@@ -62,8 +62,8 @@ type Entitlements struct {
 	// Flags son las claves de los feature flags encendidos para la empresa,
 	// ordenadas. Vacío si la suscripción no es Usable.
 	Flags []string `json:"flags"`
-	// Limits son los topes del plan por clave. Una clave ausente es que el plan
-	// no impone tope a eso.
+	// Limits son los topes del plan por clave; todo plan declara las tres (CHECK
+	// de la base). Usar Limit, que cierra ante una clave ausente.
 	Limits map[string]int64 `json:"limits"`
 	// Usage es el uso del mes en curso (hora de Lima), con las mismas claves que
 	// Limits. Sin fila del mes, todo está en 0.
@@ -77,6 +77,9 @@ type Entitlements struct {
 	// hacer, así que sirve de ETag para la UI.
 	Version string `json:"version"`
 }
+
+// Limit es el tope del plan para key. Una clave ausente es 0: cierra, nunca "sin tope".
+func (e Entitlements) Limit(key string) int64 { return e.Limits[key] }
 
 // HasModule dice si el módulo está habilitado.
 func (e Entitlements) HasModule(code string) bool {

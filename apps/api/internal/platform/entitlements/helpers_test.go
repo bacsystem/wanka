@@ -56,12 +56,12 @@ func (e *env) tenant(status string) pgtype.UUID {
 	return id
 }
 
-// plan crea un plan con esos módulos y límites (JSON) y devuelve su id.
+// plan crea un plan con esos módulos; limits (JSON) se aplica sobre los tres límites por defecto, que el CHECK exige completos, y devuelve su id.
 func (e *env) plan(code, limits string, modules ...string) pgtype.UUID {
 	e.t.Helper()
 	var id pgtype.UUID
 	if err := e.admin.QueryRow(context.Background(),
-		`INSERT INTO platform.plans (code, name, limits) VALUES ($1, $1, $2::jsonb) RETURNING id`, code, limits).Scan(&id); err != nil {
+		`INSERT INTO platform.plans (code, name, limits) VALUES ($1, $1, '{"users": 1000, "sites": 100, "cpe_per_month": 1000}'::jsonb || $2::jsonb) RETURNING id`, code, limits).Scan(&id); err != nil {
 		e.t.Fatal(err)
 	}
 	for _, m := range modules {

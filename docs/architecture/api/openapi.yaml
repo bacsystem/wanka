@@ -85,8 +85,8 @@ paths:
     get:
       tags: [identidad]
       operationId: getMyEntitlements
-      x-module: identidad
-      x-permission: null
+      x-module: none
+      x-permission: none
       summary: Módulos, flags y límites habilitados para la empresa de la sesión
       description: |
         Lee `entitlements.For` (ADR 0005) para el tenant de la sesión, de la caché en memoria (TTL 30 s,
@@ -94,9 +94,9 @@ paths:
         inactiva (`status` morosa, suspendida o cancelada) o la empresa cerrada (`readOnly`), para que la UI
         muestre el motivo del bloqueo (conventions.md §4). Sin suscripción: `status` es `sin_plan` y las listas
         vienen vacías. La UI usa esto solo para ocultar menús; la API es la que aplica.
-        `x-module` y `x-permission` en `null`: solo pide sesión de una empresa, sin módulo ni permiso, porque
-        quien no tiene plan no tiene ningún módulo y igual tiene que poder leer el motivo (pendiente de confirmar
-        con el architect cómo declara el contrato una ruta así).
+        `x-module: none` y `x-permission: none` (ADR 0009, «Cómo se declara ninguno»): solo pide una sesión
+        ligada a una empresa, sin módulo ni permiso, porque quien no tiene plan o tiene la suscripción inactiva
+        no tiene ningún módulo y aun así tiene que poder leer el motivo.
       responses:
         '200':
           description: Entitlements de la empresa de la sesión
@@ -300,8 +300,10 @@ components:
       type: object
       description: |
         Lo que la empresa tiene habilitado (paquete `internal/platform/entitlements`). `modules` y `flags`
-        van ordenados y vacíos si la suscripción no es activa ni trial (cierra en falla). `limits` solo trae
-        los topes que el plan declara (una clave ausente es «sin tope»); `usage` es el uso del mes de Lima.
+        van ordenados y vacíos si la suscripción no es activa ni trial (cierra en falla). `limits` trae los
+        topes del plan; todo plan declara todas las claves (CHECK en `platform.plans`) y viene vacío sin plan.
+        Una clave ausente es tope 0, nunca «sin tope»: la falta de dato cierra. No hay topes ilimitados; un
+        plan holgado declara un número alto. `usage` es el uso del mes de Lima.
         `version` identifica el contenido sin el uso: sirve de ETag.
       required: [modules, flags, limits, usage, status, readOnly, version]
       properties:

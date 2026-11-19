@@ -19,3 +19,22 @@ func TestRolloutBucketGolden(t *testing.T) {
 		}
 	}
 }
+
+// Si la base devolviera límites que no son números (no debería: lo impide un CHECK), build falla en vez de abrir.
+func TestBuildRejectsNonNumericLimits(t *testing.T) {
+	sub := "activa"
+	got, err := build(pgtype.UUID{}, "activa", &sub, []byte(`{"users":"muchos"}`), []byte(`["ventas"]`), []byte(`[]`), nil)
+	if err == nil {
+		t.Fatalf("non-numeric limits accepted: %+v", got)
+	}
+	if len(got.Modules) != 0 {
+		t.Error("an error came with modules")
+	}
+}
+
+func TestLimitOfAnAbsentKeyIsZero(t *testing.T) {
+	e := Entitlements{Limits: map[string]int64{LimitUsers: 5}}
+	if e.Limit(LimitUsers) != 5 || e.Limit(LimitSites) != 0 || (Entitlements{}).Limit("x") != 0 {
+		t.Error("Limit must return the plan's value, and 0 (closed) for an absent key")
+	}
+}

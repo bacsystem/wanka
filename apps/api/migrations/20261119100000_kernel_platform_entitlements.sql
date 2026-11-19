@@ -7,19 +7,27 @@
 
 -- Catálogo de módulos (ADR 0005): core, rubro y addon. Una ruta declara su módulo por este código.
 CREATE TABLE platform.modules (
-  code text PRIMARY KEY CHECK (code ~ '^[a-z][a-z0-9-]*(\.[a-z][a-z0-9-]*)*$'),
+  code text PRIMARY KEY CHECK (code ~ '^[a-z][a-z0-9-]*(\.[a-z][a-z0-9-]*)*$' AND code <> 'none'),
   kind text NOT NULL CHECK (kind IN ('core', 'rubro', 'addon')),
   description text NOT NULL
 );
 
--- limits: topes numéricos por clave (users, sites, cpe_per_month). Una clave ausente es «sin tope».
+-- limits: topes numéricos por clave. Todo plan declara las tres claves (CHECK); no hay tope ilimitado;
+-- ausente al leer = 0.
 -- non_production marca el plan que solo existe para desarrollo y pruebas: asignarlo a una empresa real
 -- es una decisión del dueño (issue #171, Notas) y lo hace empresas (#31), nunca un valor por defecto.
 CREATE TABLE platform.plans (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   code text NOT NULL UNIQUE,
   name text NOT NULL,
-  limits jsonb NOT NULL DEFAULT '{}' CHECK (jsonb_typeof(limits) = 'object'),
+  limits jsonb NOT NULL CHECK (
+    jsonb_typeof(limits) = 'object'
+    AND limits ?& ARRAY['users', 'sites', 'cpe_per_month']
+    AND limits - ARRAY['users', 'sites', 'cpe_per_month'] = '{}'::jsonb
+    -- strict: en lax un array se desenvuelve y `[1]` pasaría por número
+    AND NOT jsonb_path_exists(limits, 'strict $.* ? (@.type() != "number")')
+    AND NOT jsonb_path_exists(limits, '$.* ? (@ < 0 || @ > 9223372036854775807 || @ != @.floor())')
+  ),
   active boolean NOT NULL DEFAULT true,
   non_production boolean NOT NULL DEFAULT false,
   created_at timestamptz NOT NULL DEFAULT now(),
@@ -92,7 +100,7 @@ CREATE TABLE platform.tenant_usage (
 );
 
 -- Semilla: el catálogo de módulos del ADR 0005 y el plan «semilla» con todos, solo para desarrollo y
--- pruebas. «identidad» y «empresas» son módulos para que toda ruta declare uno (x-module).
+-- pruebas. «identidad» y «empresas» controlan sus propias rutas de tenant (usuarios, roles, configuración).
 INSERT INTO platform.modules (code, kind, description) VALUES
   ('identidad', 'core', 'Usuarios, roles, sesiones y accesos'),
   ('empresas', 'core', 'Datos de la empresa, sedes y cajas'),

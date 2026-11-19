@@ -113,17 +113,3 @@ func TestInvalidInputs(t *testing.T) {
 		t.Errorf("canceled context: err = %v", err)
 	}
 }
-
-// Un plan con límites que no son números cierra con error en vez de abrir sin tope.
-func TestMalformedPlanLimitsFailClosed(t *testing.T) {
-	e := newEnv(t)
-	tenant := e.tenant("activa")
-	e.subscribe(tenant, e.plan("bad", `{"users": "muchos"}`, "ventas"), "activa")
-	got, err := e.service(entitlements.Options{}).For(ctx(t), tenant)
-	if err == nil {
-		t.Fatalf("a plan with a non-numeric limit was accepted: %+v", got)
-	}
-	if len(got.Modules) != 0 {
-		t.Error("an error came with modules")
-	}
-}

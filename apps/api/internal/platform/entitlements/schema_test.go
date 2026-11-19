@@ -237,3 +237,45 @@ func TestChangesNotifyTheAffectedTenant(t *testing.T) {
 		t.Errorf("after a usage write and a module update the next payload = %q, want the module's (empty)", got)
 	}
 }
+
+// Todo plan declara exactamente las tres claves de límite, números enteros no negativos: cierra, nunca "sin tope".
+func TestPlanLimitsCheckRejectsEverythingButTheThreeIntegerKeys(t *testing.T) {
+	e := newEnv(t)
+	c := ctx(t)
+	for name, limits := range map[string]string{
+		"missing key":   `{"users": 1, "sites": 1}`,
+		"empty":         `{}`,
+		"extra key":     `{"users": 1, "sites": 1, "cpe_per_month": 1, "otro": 1}`,
+		"string":        `{"users": "muchos", "sites": 1, "cpe_per_month": 1}`,
+		"negative":      `{"users": -1, "sites": 1, "cpe_per_month": 1}`,
+		"decimal":       `{"users": 1.5, "sites": 1, "cpe_per_month": 1}`,
+		"null":          `{"users": null, "sites": 1, "cpe_per_month": 1}`,
+		"too big":       `{"users": 1e30, "sites": 1, "cpe_per_month": 1}`,
+		"boolean":       `{"users": true, "sites": 1, "cpe_per_month": 1}`,
+		"array":         `{"users": [1], "sites": 1, "cpe_per_month": 1}`,
+		"not an object": `[1, 2, 3]`,
+	} {
+		_, err := e.admin.Exec(c, `INSERT INTO platform.plans (code, name, limits) VALUES ($1, $1, $2::jsonb)`, "bad-"+name, limits)
+		var pgErr *pgconn.PgError
+		if !errors.As(err, &pgErr) || pgErr.Code != "23514" {
+			t.Errorf("%s: err = %v, want SQLSTATE 23514", name, err)
+		}
+	}
+	// Los tres enteros en el borde sí entran.
+	if _, err := e.admin.Exec(c, `INSERT INTO platform.plans (code, name, limits) VALUES ('ok', 'ok', '{"users": 0, "sites": 9223372036854775807, "cpe_per_month": 3}')`); err != nil {
+		t.Errorf("valid limits rejected: %v", err)
+	}
+	if _, err := e.admin.Exec(c, `INSERT INTO platform.plans (code, name) VALUES ('nolimits', 'x')`); err == nil {
+		t.Error("a plan without limits was accepted (the column has no default)")
+	}
+}
+
+// «none» está reservado en los contratos para «sin módulo»: no puede ser un código de módulo.
+func TestModuleCodeNoneIsReserved(t *testing.T) {
+	e := newEnv(t)
+	_, err := e.admin.Exec(ctx(t), `INSERT INTO platform.modules (code, kind, description) VALUES ('none', 'core', 'x')`)
+	var pgErr *pgconn.PgError
+	if !errors.As(err, &pgErr) || pgErr.Code != "23514" {
+		t.Errorf("module none: err = %v, want SQLSTATE 23514", err)
+	}
+}
