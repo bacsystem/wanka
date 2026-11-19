@@ -4,16 +4,44 @@
 \echo '== A1. session_lookup sin variables: sesion en version 1, membresia en version 2 y activa =='
 SELECT test.assert(current_user = 'wanka_app' AND NULLIF(current_setting('app.tenant_id', true),'') IS NULL, 'rol wanka_app y sin tenant');
 SELECT test.assert(current_setting('statement_timeout') = '5s', 'wanka_app hereda statement_timeout 5s del bootstrap');
+-- La busqueda y la comprobacion de app.tenant_id van en UNA transaccion: set_config(..., true) dura hasta su fin, asi que
+-- fuera de ella el valor ya se borro y la asercion no distingue (mismo defecto que H6 en 07_after_delete.sql).
+BEGIN;
 SELECT test.assert((SELECT session_authz_version = 1 AND current_authz_version = 2 AND membership_status = 'activo'
                            AND site_id = 'a5000000-0000-0000-0000-0000000000a1' AND cash_register_id = 'ca000000-0000-0000-0000-0000000000a1'
                            AND mfa_satisfied AND mfa_method = 'none'
                       FROM iam.session_lookup(sha256('tok-cajero'))), 'session_lookup: version 1 -> 2/activo, con sede y caja');
-SELECT test.assert(NULLIF(current_setting('app.tenant_id', true),'') IS NULL, 'session_lookup no filtra app.tenant_id');
+SELECT test.assert(NULLIF(current_setting('app.tenant_id', true),'') IS NULL, 'TX: session_lookup no filtra app.tenant_id');
+COMMIT;
 SELECT test.assert((SELECT count(*) FROM iam.session_lookup(sha256('tok-a-medio-login'))) = 0, 'session_lookup ignora sesiones con mfa_satisfied = false');
 \echo '== A2. lectura directa de iam.memberships sin tenant =='
 SELECT test.assert((SELECT count(*) FROM iam.memberships) = 0, 'RLS: 0 membresias sin tenant');
 SELECT test.assert((SELECT count(*) FROM iam.roles) = 0, 'RLS: 0 roles sin tenant');
 SELECT test.assert((SELECT count(*) FROM org.tenants) = 0, 'RLS: 0 empresas sin tenant');
+\echo '== A2b. ex miembro (membresia suspendida) sin tenant: la base no le da ninguna fila de la empresa (issue #187) =='
+-- Sin app.tenant_id y solo con app.user_id, como GET /v1/me/memberships. No depende de que un handler filtre.
+BEGIN;
+SELECT set_config('app.user_id','eeeeeeee-0000-0000-0000-000000000003', true);
+SELECT test.assert((SELECT count(*) FROM org.tenants) = 0, 'ex miembro: 0 filas de org.tenants');
+SELECT test.assert((SELECT count(*) FROM iam.memberships) = 0, 'ex miembro: 0 membresias (la suspendida no se lee)');
+SELECT test.assert((SELECT count(*) FROM iam.roles) = 0 AND (SELECT count(*) FROM org.sites) = 0, 'ex miembro: 0 roles y 0 sedes');
+SELECT test.assert((SELECT count(*) FROM iam.list_my_memberships) = 0, 'ex miembro: list_my_memberships vacia');
+COMMIT;
+-- Las membresias invitado/activo siguen visibles: el filtro no cierra de mas.
+BEGIN;
+SELECT set_config('app.user_id','eeeeeeee-0000-0000-0000-000000000002', true);   -- cajero: activo en A
+SELECT test.assert((SELECT string_agg(t.name || ':' || m.status, ',') FROM org.tenants t JOIN iam.memberships m ON m.tenant_id = t.id) = 'Empresa A:activo', 'activo: ve su empresa y su membresia');
+COMMIT;
+BEGIN;
+SELECT set_config('app.user_id','eeeeeeee-0000-0000-0000-000000000009', true);   -- propietario de B: invitado
+SELECT test.assert((SELECT string_agg(t.name || ':' || m.status, ',') FROM org.tenants t JOIN iam.memberships m ON m.tenant_id = t.id) = 'Empresa B:invitado', 'invitado: ve su empresa y su membresia');
+COMMIT;
+-- Catalogo: el filtro de estado esta escrito en las dos politicas. Con own_memberships filtrando, la subconsulta de member_read
+-- ya no ve la suspendida, asi que quitarlo de member_read no cambia ninguna fila: solo el catalogo lo distingue.
+SELECT test.assert((SELECT qual ~ 'status' AND qual ~ 'invitado' AND qual ~ 'activo' AND qual ~ 'current_tenant' FROM pg_policies
+                     WHERE schemaname = 'org' AND tablename = 'tenants' AND policyname = 'member_read'), 'org.tenants member_read exige invitado/activo');
+SELECT test.assert((SELECT qual ~ 'status' AND qual ~ 'invitado' AND qual ~ 'activo' FROM pg_policies
+                     WHERE schemaname = 'iam' AND tablename = 'memberships' AND policyname = 'own_memberships'), 'iam.memberships own_memberships exige invitado/activo');
 \echo '== A3. list_my_memberships (security_invoker) con solo app.user_id del cajero =='
 BEGIN;
 SELECT set_config('app.user_id','eeeeeeee-0000-0000-0000-000000000002', true);

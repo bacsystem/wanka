@@ -27,7 +27,10 @@ sh "$run" || { echo "FAIL: rls-check/run.sh falló sin mutación" >&2; exit 1; }
 
 # Cada mutación rompe una línea clave y debe hacer fallar el paso que la prueba.
 for m in "naive_session_lookup|wanka_app" \
-         "session_lookup_no_restore|wanka_app (membresia borrada)" \
+         "session_lookup_no_restore|wanka_app" \
+         "session_lookup_no_restore_deleted|wanka_app (membresia borrada)" \
+         "member_read_tenants_no_status|wanka_app" \
+         "own_memberships_no_status|wanka_app" \
          "drop_authz_check|wanka_app" \
          "revoke_app_sessions_insert|wanka_app" \
          "grant_app_update_tenants|wanka_app" \

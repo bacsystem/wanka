@@ -21,7 +21,7 @@ sequenceDiagram
     A->>A: PUNTO UNICO DE DECISION: mfa_obligatorio = algun rol de sus membresias activas o invitadas con requires_mfa
     alt usuario con TOTP confirmado
       A->>DB: INSERT sessions (mfa_satisfied=false, tenant_id=null, refresh_family fijada en este INSERT, refresh_hash null): sin tokens de acceso hasta el codigo
-      A-->>W: 200 {status:"mfa_required", challengeToken} (wk_ch_, TTL 5 min, se consume en el primer verify correcto)
+      A-->>W: 200 {status:"mfa_required", challengeToken} (wk_ch_, TTL 5 min, se consume en el primer verify correcto. Vencido, consumido o inexistente: 401 session_expired y el BFF vuelve a /login, igual que el enrollmentToken)
       U->>W: codigo TOTP de 6 digitos
       W->>A: POST /v1/auth/mfa/verify {challengeToken, code}
       A->>A: verifica TOTP (ventana +-1 paso, rechaza codigo ya usado)
@@ -53,7 +53,7 @@ sequenceDiagram
     W->>W: reemplaza cookies, borra cookie legacy tenant_id
     W-->>U: redirige a /
   end
-  Note over W,A: Refresh solo en proxy.ts o en route handlers, con single-flight por proceso. Si llega el refresh anterior dentro de 10 s desde la rotacion, la API devuelve SOLO un access nuevo y el BFF no toca wk_rt (el navegador ya tiene el refresh ganador). Fuera de la gracia, el reuso revoca toda la familia (ADR 0004).
+  Note over W,A: Refresh solo en proxy.ts o en route handlers, con single-flight por proceso. Si llega el refresh anterior dentro de 10 s desde la rotacion, la API devuelve SOLO un access nuevo y el BFF no toca wk_rt (el navegador ya tiene el refresh ganador). Fuera de la gracia, el reuso revoca toda la familia (ADR 0004) y responde 401 session_expired, igual que un refresh inexistente, revocado o vencido: el BFF no reintenta y lleva a /login.
   Note over A: Recuperacion: POST /v1/auth/password/forgot (respuesta 202 siempre) -> token 15 min por correo -> POST /v1/auth/password/reset revoca todas las sesiones.
   Note over U,DB: Membresia perdida mientras usa la empresa A (ADR 0011, decision del dueno 2026-11-18): vuelve a /seleccionar-empresa, no a /login
   U->>W: sigue navegando en la empresa A
