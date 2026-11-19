@@ -12,7 +12,7 @@ más adelante).
 
 ```
 cmd/wanka/            main: serve, worker, migrate up
-internal/platform/    kernel: config, logging, httpx, auth (+ auth/pgsession, el resolver de sesión), metrics, clock, db (+ db/dbtest para tests) en uso;
+internal/platform/    kernel: config, logging, httpx, auth (+ auth/pgsession, el resolver de sesión), metrics, clock, db (+ db/dbtest para tests), permission en uso;
                       jobs, money, entitlements, idgen (paquetes vacíos por ahora)
 bootstrap/roles.sql   bootstrap de roles: lo corre el superusuario con psql, fuera de goose
 migrations/           goose, SQL con timestamp, embebido en el binario, solo hacia adelante
@@ -201,6 +201,21 @@ de sesión que otra petición dejó en la conexión no se hereda. Los errores so
 los de `InTenantTx`. En las dos puertas sigue prohibido `set_config(..., false)`
 dentro de `fn`. Las pruebas usan la tabla `rlstest.items`, que solo existe en
 `internal/platform/db/testdata/` y se aplica con `dbtest.MigrateWith`.
+
+## Catálogo de permisos (`internal/platform/permission`)
+
+Los permisos de tenant (`modulo.recurso:accion`) salen de un solo catálogo: la fuente de verdad es
+`docs/architecture/api/resources.md`, se siembra en `iam.permissions` (sin RLS; SELECT para `wanka_app`,
+`wanka_worker` y `wanka_platform`, nada de escritura para nadie en runtime) y el paquete `permission` es su copia
+en Go: un `permission.Code` por permiso (`permission.VentasPosCreate`). Un módulo declara los suyos con
+`Permissions() []permission.Code` y el arranque llama a `permission.Check(modulo, m)`: un código inventado no
+compila (constante) o aborta el arranque (`Code("...")`). El catálogo de plataforma (`plataforma.*`) es otro y no está aquí.
+
+Un permiso nuevo es un PR a `resources.md` más su migración hacia adelante (un `INSERT` en `iam.permissions`) más su
+constante en `catalog.go` y en `all`, a cargo de identidad. `go test ./internal/platform/permission` falla si
+`resources.md`, las migraciones y el código Go no tienen exactamente los mismos códigos, si una acción no está en
+la lista `read | read_all | create | update | void | export | import | approve | send | retry`, si una migración siembra un código
+que `resources.md` no lista o si la correspondencia de historias o el ADR 0004 nombran un permiso que no existe.
 
 ## Variables de entorno
 

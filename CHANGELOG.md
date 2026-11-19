@@ -3,6 +3,13 @@
 All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.12.0] - 2026-11-19
+
+### Added
+- `apps/api`: migration `20261119110000_kernel_iam_permissions.sql` creates `iam.permissions (code PK, description)`, the global catalog of tenant permissions, without RLS, and seeds all 143 codes of `api/resources.md` (a `CHECK` repeats the format and the ten allowed actions). `wanka_app`, `wanka_worker` and `wanka_platform` get `SELECT` only (`wanka_platform` also gets `USAGE` on schema `iam`); nobody can `INSERT`, `UPDATE`, `DELETE` or `TRUNCATE` it at runtime and `wanka_webhooks` has no access. The platform catalog stays apart for the platform wave (#172).
+- `apps/api`: package `internal/platform/permission` with one typed constant per permission (`permission.VentasPosCreate`), `All`, `Validate` and `Check` for the startup check of each module's `Permissions()`. Its parity tests fail when `resources.md`, the migrations and the Go catalog differ in a code, when an action is outside the allowed list, when a code is duplicated, when a migration seeds a code that `resources.md` does not list, or when the story-to-permission mapping or ADR 0004 name a permission that does not exist; the table tests run against a real PostgreSQL 16 with the real roles (#172).
+- `docs/architecture/data/rls-check`: new cases for `iam.permissions` (read-only for `wanka_app`, `wanka_worker` and `wanka_platform`, no access for `wanka_webhooks`) and four mutations (`grant_app_write_permissions`, `grant_worker_write_permissions`, `revoke_platform_permissions`, `grant_webhooks_permissions`) checked by `scripts/rls-check.sh` (#172).
+
 ## [0.11.0] - 2026-11-19
 
 ### Added

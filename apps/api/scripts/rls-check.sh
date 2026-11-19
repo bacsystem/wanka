@@ -46,6 +46,10 @@ for m in "naive_session_lookup|wanka_app" \
          "guard_allows_unrevoke|wanka_app" \
          "guard_no_server_created_at|wanka_app" \
          "guard_rerevoke_raises|wanka_app" \
+         "grant_app_write_permissions|wanka_app" \
+         "grant_worker_write_permissions|wanka_worker" \
+         "revoke_platform_permissions|wanka_platform" \
+         "grant_webhooks_permissions|wanka_webhooks" \
          "drop_force_rls|wanka_migrator: borra la membresia"; do
   name="${m%%|*}" step="${m#*|}"
   echo "== MUTATION=${name}: debe fallar en «${step}» =="
