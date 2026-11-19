@@ -80,6 +80,11 @@ func (e Entitlements) Check(r Request) *Denial {
 	return nil
 }
 
+// ErrFinishesNeedsNoModule es el error de programación de un Job con
+// FinishesIssued y un módulo: con la suscripción inactiva el módulo nunca está
+// habilitado y el job se rechazaría justo cuando debe correr.
+var ErrFinishesNeedsNoModule = errors.New("entitlements: a job that finishes issued documents must declare NoModule")
+
 // Job es lo que un job de un tenant declara antes de correr su lógica.
 type Job struct {
 	// Module es el módulo del job; NoModule si ninguno.
@@ -87,7 +92,10 @@ type Job struct {
 	// FinishesIssued marca el envío a Khipu de un CPE ya emitido y la recepción
 	// de sus webhooks: siguen con la suscripción inactiva porque el comprobante
 	// ya se entregó y tiene que llegar a SUNAT. Los demás jobs no inician
-	// operaciones nuevas con la suscripción inactiva.
+	// operaciones nuevas con la suscripción inactiva. Con la suscripción
+	// inactiva ningún módulo está habilitado, así que un job que termina CPE
+	// emitidos se declara con Module: NoModule; combinarlo con un módulo es un
+	// error de programación (ErrFinishesNeedsNoModule).
 	FinishesIssued bool
 }
 
@@ -99,6 +107,9 @@ type Job struct {
 func (s *Service) CheckJob(ctx context.Context, tenant pgtype.UUID, j Job) error {
 	if j.Module == "" {
 		return errors.New("entitlements: a job must declare its module or NoModule")
+	}
+	if j.FinishesIssued && j.Module != NoModule {
+		return ErrFinishesNeedsNoModule
 	}
 	e, err := s.For(ctx, tenant)
 	if err != nil {

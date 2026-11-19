@@ -8,7 +8,9 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"regexp"
 	"slices"
+	"strconv"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -137,9 +139,11 @@ func build(tenant pgtype.UUID, tenantStatus string, subStatus *string, limitsJSO
 	if subStatus != nil {
 		e.Status = Status(*subStatus)
 	}
-	if err := json.Unmarshal(limitsJSON, &e.Limits); err != nil {
-		return Entitlements{}, fmt.Errorf("plan limits are not numbers: %w", err)
+	limits, err := parseLimits(limitsJSON)
+	if err != nil {
+		return Entitlements{}, err
 	}
+	e.Limits = limits
 	if len(usageJSON) > 0 {
 		var u map[string]int64
 		if err := json.Unmarshal(usageJSON, &u); err != nil {
@@ -166,4 +170,30 @@ func build(tenant pgtype.UUID, tenantStatus string, subStatus *string, limitsJSO
 	}
 	e.Version = computeVersion(e)
 	return e, nil
+}
+
+// trailingZeros reconoce un entero escrito con decimales nulos (1.0): jsonb conserva la escala.
+var trailingZeros = regexp.MustCompile(`^(-?[0-9]+)\.0+$`)
+
+// parseLimits decodifica los topes como enteros int64. Acepta 1.0 como 1 (el CHECK de
+// la base ya lo impide, pero un 500 en todo el plan por eso sería peor que normalizar)
+// y rechaza todo lo demás que no sea un entero.
+func parseLimits(raw []byte) (map[string]int64, error) {
+	var nums map[string]json.Number
+	if err := json.Unmarshal(raw, &nums); err != nil {
+		return nil, fmt.Errorf("plan limits are not numbers: %w", err)
+	}
+	out := make(map[string]int64, len(nums))
+	for k, n := range nums {
+		txt := n.String()
+		if m := trailingZeros.FindStringSubmatch(txt); m != nil {
+			txt = m[1]
+		}
+		v, err := strconv.ParseInt(txt, 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("plan limit %q is not an int64: %w", k, err)
+		}
+		out[k] = v
+	}
+	return out, nil
 }

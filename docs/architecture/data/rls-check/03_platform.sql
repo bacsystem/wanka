@@ -22,7 +22,7 @@ SELECT test.assert(platform_fn.request_impersonation('99999999-0000-0000-0000-00
 SELECT test.assert(platform_fn.request_impersonation('99999999-0000-0000-0000-000000000002','5aff0000-0000-0000-0000-000000000001',
   'bbbbbbbb-0000-0000-0000-000000000002','7c000000-0000-0000-0000-000000000002','read_only','\x02'::bytea) IS NOT NULL, 'solicitud B');
 SELECT test.assert(NULLIF(current_setting('app.tenant_id', true), '') IS NULL, 'las funciones no filtran app.tenant_id al llamador');
-\echo '== P5. ops.exchange_rates (issue #170): wanka_platform solo lee =='
+\echo '== P6. ops.exchange_rates (issue #170): wanka_platform solo lee =='
 SELECT test.assert((SELECT count(*) FROM ops.exchange_rates) = 0, 'wanka_platform lee la tabla global (vacia en este paso)');
 SELECT test.expect_error($$INSERT INTO ops.exchange_rates VALUES ('2026-11-19', 'USD', 3.7, 3.8, 'official')$$, '42501', 'wanka_platform no inserta tipos de cambio');
 \echo '== P5. wanka_platform: iam.permissions es de solo lectura (issue #172) =='
