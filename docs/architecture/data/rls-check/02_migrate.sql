@@ -307,6 +307,50 @@ BEGIN
   IF got <> p_sqlstate THEN RAISE EXCEPTION 'ASSERT FAILED: % (se esperaba %, llego %)', p_msg, p_sqlstate, got; END IF;
   RETURN 'ok: ' || p_msg || ' -> ' || got;
 END $$;
+-- Tablas de River (ADR 0001, matriz de GRANT; apps/api/migrations/20261119143700_kernel_river_jobs.sql). Los tres servicios que
+-- encolan (wanka_app, wanka_webhooks, wanka_platform) solo insertan en ops.river_job y no leen nada de la cola: la tabla no
+-- tiene RLS y sus argumentos son de todos los tenants. Se llama como el rol que se prueba; el INSERT se deshace.
+CREATE FUNCTION test.river_enqueue_only() RETURNS text LANGUAGE plpgsql AS $fn$
+BEGIN
+  BEGIN
+    INSERT INTO ops.river_job (kind, args, queue) VALUES ('rls.probe', '{}', 'maintenance');
+    RAISE EXCEPTION 'rollback' USING ERRCODE = 'P0001';
+  EXCEPTION WHEN SQLSTATE 'P0001' THEN NULL;
+  END;
+  PERFORM test.expect_error('SELECT args FROM ops.river_job', '42501', current_user || ' no lee ops.river_job');
+  PERFORM test.expect_error('SELECT count(*) FROM ops.river_job', '42501', current_user || ' no cuenta ops.river_job');
+  PERFORM test.expect_error($$UPDATE ops.river_job SET queue = 'cpe'$$, '42501', current_user || ' no actualiza ops.river_job');
+  PERFORM test.expect_error('DELETE FROM ops.river_job', '42501', current_user || ' no borra ops.river_job');
+  PERFORM test.expect_error('SELECT * FROM ops.river_leader', '42501', current_user || ' no lee river_leader');
+  PERFORM test.expect_error($$INSERT INTO ops.river_queue (name) VALUES ('x')$$, '42501', current_user || ' no escribe river_queue');
+  PERFORM test.expect_error('SELECT * FROM ops.river_migration', '42501', current_user || ' no lee river_migration');
+  RETURN 'ok: ' || current_user || ' solo encola';
+END $fn$;
+-- El worker corre, reintenta, limpia y elige lider: todo el DML de las tablas de River, pero nunca river_migration.
+CREATE FUNCTION test.river_worker_full() RETURNS text LANGUAGE plpgsql AS $fn$
+DECLARE n int;
+BEGIN
+  BEGIN
+    INSERT INTO ops.river_job (kind, args, queue) VALUES ('rls.probe', '{}', 'maintenance');
+    PERFORM test.assert((SELECT count(*) FROM ops.river_job WHERE kind = 'rls.probe') = 1, 'wanka_worker lee lo que encola');
+    UPDATE ops.river_job SET state = 'completed', finalized_at = now() WHERE kind = 'rls.probe';
+    DELETE FROM ops.river_job WHERE kind = 'rls.probe' AND state = 'completed'; GET DIAGNOSTICS n = ROW_COUNT;
+    PERFORM test.assert(n = 1, 'wanka_worker actualiza y borra jobs (limpieza de terminados)');
+    INSERT INTO ops.river_leader (elected_at, expires_at, leader_id) VALUES (now(), now() + interval '10 seconds', 'rls-probe');
+    UPDATE ops.river_leader SET expires_at = now() + interval '20 seconds';
+    DELETE FROM ops.river_leader;
+    INSERT INTO ops.river_queue (name) VALUES ('rls-probe');
+    UPDATE ops.river_queue SET paused_at = now() WHERE name = 'rls-probe';
+    DELETE FROM ops.river_queue WHERE name = 'rls-probe';
+    INSERT INTO ops.river_notification (payload, topic) VALUES ('{}', 'rls-probe');
+    DELETE FROM ops.river_notification WHERE topic = 'rls-probe';
+    RAISE EXCEPTION 'rollback' USING ERRCODE = 'P0001';
+  EXCEPTION WHEN SQLSTATE 'P0001' THEN NULL;
+  END;
+  PERFORM test.expect_error('SELECT * FROM ops.river_migration', '42501', 'wanka_worker no lee river_migration');
+  PERFORM test.expect_error($$DELETE FROM ops.river_migration$$, '42501', 'wanka_worker no toca river_migration');
+  RETURN 'ok: wanka_worker con todo el DML de la cola';
+END $fn$;
 GRANT USAGE ON SCHEMA test TO wanka_app, wanka_platform, wanka_webhooks, wanka_worker;
 GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA test TO wanka_app, wanka_platform, wanka_webhooks, wanka_worker;
 

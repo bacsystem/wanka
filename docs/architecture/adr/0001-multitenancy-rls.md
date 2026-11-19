@@ -1,7 +1,7 @@
 # ADR 0001: Multi-tenancy con base única, `tenant_id` y Row-Level Security
 
 - Estado: aceptado (decisión del usuario); los detalles de implementación son una propuesta
-- Fecha: 2026-11-17 (revisado tras la revisión del PR #124: caminos que RLS bloqueaba, `NULLIF`, matriz de permisos por rol; 2026-11-18: creación de los roles, épica #154)
+- Fecha: 2026-11-17 (revisado tras la revisión del PR #124: caminos que RLS bloqueaba, `NULLIF`, matriz de permisos por rol; 2026-11-18: creación de los roles, épica #154; 2026-11-19: los workers van sin `UserID`, #169)
 
 ## Contexto
 
@@ -211,7 +211,7 @@ La revisión los reprodujo en PG16 (cero filas o `new row violates row-level sec
 
 ### Workers
 
-La tabla de jobs no es de tenant (no tiene RLS). Cada job lleva `tenant_id` en sus argumentos, y el handler abre `InTenantTx(Actor{TenantID: job.TenantID, UserID: systemUser, Kind: system})` antes de tocar datos. Los jobs que recorren tenants (recordatorios diarios) obtienen la lista desde `platform.tenant_usage` y las suscripciones, y abren una transacción por tenant.
+La tabla de jobs no es de tenant (no tiene RLS). Cada job lleva `tenant_id` en sus argumentos, y el handler abre `InTenantTx(Actor{TenantID: job.TenantID, Kind: system})` antes de tocar datos, **sin `UserID`**, igual que los webhooks y la activación de facturación (ADR 0003). No existe un usuario de sistema: un UUID fijo sería una fila falsa en `iam.users` (global, visible al login y a las membresías) o un `app.user_id` que no apunta a nada, y ninguna política de tenant lo necesita, porque filtran solo por `app.current_tenant()`; las ramas por usuario exigen `app.current_tenant() IS NULL` y no aplican aquí. Con `app.current_user_id()` en `NULL`, las funciones que piden un usuario fallan cerradas. En `audit.events` la fila queda con `actor_type = system` y `actor_user_id` en `NULL`, y en las columnas `created_by`/`updated_by` (anulables, `data/data-model.md` §1) queda `NULL`; el job identifica su origen en `action`/`diff` (p. ej. el id del job), no con un usuario inventado. (Corrección del 2026-11-19, #169: el texto anterior decía `UserID: systemUser`, que nunca se definió; la decisión de correr como `Kind: system` no cambia.) Los jobs que recorren tenants (recordatorios diarios) obtienen la lista desde `platform.tenant_usage` y las suscripciones, y abren una transacción por tenant.
 
 ### Migraciones y pruebas
 

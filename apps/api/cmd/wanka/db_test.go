@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -117,3 +118,39 @@ func TestServeIsReadyAgainstARealDatabase(t *testing.T) {
 }
 
 func toJSON(m map[string]any) string { b, _ := json.Marshal(m); return string(b) }
+
+// El worker con una base real levanta las cinco colas y se detiene limpio con SIGTERM.
+func TestWorkerStartsTheFiveQueuesAndStopsOnSIGTERM(t *testing.T) {
+	d := dbtest.New(t)
+	d.Migrate(context.Background(), t)
+	p := start(t, []string{"DATABASE_URL_WORKER=" + d.URL(dbtest.Worker), "JOBS_CONCURRENCY_REPORTS=1"}, "worker")
+	p.waitMsg(t, "started")
+
+	ctx := context.Background()
+	conn := d.Admin(ctx, t)
+	deadline := time.Now().Add(10 * time.Second)
+	var queues []string
+	for {
+		queues = queues[:0]
+		rows, err := conn.Query(ctx, `SELECT name FROM ops.river_queue ORDER BY name`)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for rows.Next() {
+			var n string
+			if err := rows.Scan(&n); err != nil {
+				t.Fatal(err)
+			}
+			queues = append(queues, n)
+		}
+		rows.Close()
+		if len(queues) == 5 || time.Now().After(deadline) {
+			break
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	if strings.Join(queues, ",") != "cpe,maintenance,notifications,reports,webhooks" {
+		t.Fatalf("queues started by the worker: %v", queues)
+	}
+	p.terminate(t)
+}

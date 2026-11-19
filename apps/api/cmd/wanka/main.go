@@ -22,6 +22,7 @@ import (
 	"github.com/bacsystem/wanka/apps/api/internal/platform/db"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/entitlements"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/httpx"
+	"github.com/bacsystem/wanka/apps/api/internal/platform/jobs"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/logging"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/mailer"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/mailer/stub"
@@ -149,7 +150,7 @@ func run(ctx context.Context, args []string, getenv func(string) string, stdout,
 	case "migrate":
 		err = migrate(ctx, log, cfg)
 	default:
-		err = worker(ctx, log, cfg, svc)
+		err = worker(ctx, log, cfg, svc, getenv)
 	}
 	if err != nil {
 		log.Error("terminated with error", "err", err.Error())
@@ -326,17 +327,27 @@ func migrate(ctx context.Context, log *slog.Logger, cfg config.Config) error {
 	return nil
 }
 
-// worker es el stub del ejecutor de jobs: abre su pool (una URL o un tamaño
-// inválidos lo detienen al arrancar), espera la señal de parada y sale limpio.
-// Los jobs llegan con su historia.
-func worker(ctx context.Context, log *slog.Logger, cfg config.Config, svc config.Service) error {
+// worker ejecuta los jobs (internal/platform/jobs): abre su pool (una URL o un
+// tamaño inválidos lo detienen al arrancar), levanta las colas y, al recibir la
+// señal de parada, espera a los jobs en curso hasta JOBS_SHUTDOWN_TIMEOUT. Los
+// handlers de cada módulo se registran aquí cuando llegan sus historias.
+func worker(ctx context.Context, log *slog.Logger, cfg config.Config, svc config.Service, getenv func(string) string) error {
+	jcfg, err := jobs.ConfigFromEnv(getenv)
+	if err != nil {
+		return fmt.Errorf("job configuration: %w", err)
+	}
 	pool, err := db.Open(ctx, cfg.DatabaseURL, db.Options{MaxConns: cfg.DBPoolMax, AppName: "wanka-" + svc.Name})
 	if err != nil {
 		return fmt.Errorf("opening database pool: %w", err)
 	}
 	defer pool.Close()
-	log.Info("started", "note", "worker is a stub until its story lands")
-	<-ctx.Done()
+	w, err := jobs.NewWorker(pool, jobs.NewRegistry(pool), jcfg, log)
+	if err != nil {
+		return err
+	}
+	if err := w.Run(ctx); err != nil {
+		return err
+	}
 	log.Info("stopped")
 	return nil
 }

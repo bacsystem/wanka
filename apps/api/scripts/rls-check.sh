@@ -62,7 +62,13 @@ for m in "naive_session_lookup|wanka_app" \
          "drop_force_rls|wanka_migrator: borra la membresia" \
          "grant_app_write_exchange_rates|wanka_app" \
          "grant_worker_read_exchange_rates|wanka_worker" \
-         "drop_exchange_rates_currency_check|wanka_worker"; do
+         "drop_exchange_rates_currency_check|wanka_worker" \
+         "grant_app_select_river_job|wanka_app" \
+         "revoke_app_river_sequence|wanka_app" \
+         "revoke_platform_river_insert|wanka_platform" \
+         "grant_webhooks_update_river_job|wanka_webhooks" \
+         "revoke_worker_river_delete|wanka_worker" \
+         "grant_worker_river_migration|wanka_worker"; do
   name="${m%%|*}" step="${m#*|}"
   echo "== MUTATION=${name}: debe fallar en «${step}» =="
   if ! detected "$name" "$step"; then

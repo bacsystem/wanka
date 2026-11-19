@@ -19,6 +19,8 @@ components:
   # db es el único dueño de pgxpool (ADR 0001): el resto del kernel y los módulos
   # reciben *db.Pool y no pueden construir ni usar un pgxpool.Pool propio.
   platform_db: { in: internal/platform/db/** }
+  # jobs es el único dueño de River (ADR 0006): los módulos usan jobs.Enqueuer y no ven sus tipos.
+  platform_jobs: { in: internal/platform/jobs }
   platform: { in: internal/platform/* }
   # Adaptadores del kernel sobre PostgreSQL: implementan un puerto de platform con db.
   # Solo cmd los cablea; platform no los importa.
@@ -35,22 +37,28 @@ vendors:
   pgxpool: { in: github.com/jackc/pgx/v5/pgxpool }
   pgxstdlib: { in: github.com/jackc/pgx/v5/stdlib }
   goose: { in: [github.com/pressly/goose/v3, github.com/pressly/goose/v3/**] }
+  # River (ADR 0006): el cliente y sus tipos solo en jobs; su driver de pgx lo construye db sobre su pool.
+  river: { in: [github.com/riverqueue/river, github.com/riverqueue/river/rivertype, github.com/riverqueue/river/rivermigrate] }
+  riverdriver: { in: github.com/riverqueue/river/riverdriver/riverpgxv5 }
   # decimal: dinero y cantidades (internal/platform/money y pricing, ADR 0008).
   decimal: { in: github.com/shopspring/decimal }
 deps:
   platform_db:
     mayDependOn: [platform, platform_db, migrations, bootstrap]
-    canUse: [pgx, pgxpool, pgxstdlib, goose]
+    canUse: [pgx, pgxpool, pgxstdlib, goose, riverdriver]
   platform:
     mayDependOn: [platform, platform_db, migrations, bootstrap]
     canUse: [pgx, goose, decimal]
+  platform_jobs:
+    mayDependOn: [platform, platform_db, migrations, bootstrap]
+    canUse: [pgx, river, riverdriver]
   platform_pg:
     mayDependOn: [platform, platform_pg, platform_db]
     canUse: [pgx]
   platform_mailer_stub:
     mayDependOn: [platform, platform_mailer_stub]
   main:
-    mayDependOn: [platform, platform_pg, platform_mailer_stub, platform_db, migrations]
+    mayDependOn: [platform, platform_pg, platform_mailer_stub, platform_db, platform_jobs, migrations]
     canUse: [pgx]
 exclude:
   - testdata
