@@ -94,7 +94,7 @@ BEGIN
   END IF;
   UPDATE platform.impersonation_grants SET status = 'canjeado', redeemed_at = now() WHERE id = g.id;
   INSERT INTO iam.sessions (id, user_id, tenant_id, membership_id, access_hash, access_expires_at, authz_version, mfa_satisfied, mfa_method, impersonator_id)
-       VALUES (p_session_id, g.platform_user_id, g.tenant_id, NULL, p_access_hash, now() + interval '60 minutes', NULL, true, 'platform', g.platform_user_id);
+       VALUES (p_session_id, NULL, g.tenant_id, NULL, p_access_hash, now() + interval '60 minutes', NULL, true, 'platform', g.platform_user_id);
   PERFORM set_config('app.tenant_id', g.tenant_id::text, true);
   INSERT INTO audit.events (tenant_id, actor_type, action) VALUES (g.tenant_id, 'platform_staff', 'impersonation:redeem');
   PERFORM set_config('app.tenant_id', coalesce(prev, ''), true);

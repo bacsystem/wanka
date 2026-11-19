@@ -24,7 +24,7 @@ const (
 	SessionExpired
 	// SessionRevoked está ligada y revocada.
 	SessionRevoked
-	// SessionImpersonated es de staff de plataforma: mfa_method = 'platform', sin membresía, versión ni refresh, y vence a los 60 min.
+	// SessionImpersonated es de staff de plataforma: mfa_method = 'platform', sin user_id, membresía, versión ni refresh, y vence a los 60 min.
 	SessionImpersonated
 )
 
@@ -92,6 +92,7 @@ func (d *DB) SeedSession(t testing.TB, spec SessionSpec) Seeded {
 	}
 
 	var (
+		userID                                       any = s.UserID
 		tenant, membership, site, cash, impersonator any // nil → NULL
 		version                                      any
 		mfaSatisfied                                 = true
@@ -111,11 +112,9 @@ func (d *DB) SeedSession(t testing.TB, spec SessionSpec) Seeded {
 	case SessionHalfLogin:
 		mfaSatisfied = false
 	case SessionImpersonated:
-		// El staff es un usuario más de iam.users; la sesión es de él, no del dueño de la membresía.
-		if err := conn.QueryRow(ctx, `INSERT INTO iam.users (id) VALUES (gen_random_uuid()) RETURNING id::text`).Scan(&s.ImpersonatorID); err != nil {
-			t.Fatalf("seeding the impersonator: %v", err)
-		}
-		s.UserID, impersonator, tenant, mfaMethod = s.ImpersonatorID, s.ImpersonatorID, s.TenantID, "platform"
+		// El staff vive en platform.platform_users (ola 6): la sesión no tiene user_id y el staff va en impersonator_id.
+		s.ImpersonatorID, s.UserID = newUUID(t), ""
+		userID, impersonator, tenant, mfaMethod = nil, s.ImpersonatorID, s.TenantID, "platform"
 		expires = "60 minutes" // sin refresh y con vigencia máxima de 60 min (CHECK de iam.sessions)
 	default:
 		t.Fatalf("unknown session kind %d", spec.Kind)
@@ -125,7 +124,7 @@ func (d *DB) SeedSession(t testing.TB, spec SessionSpec) Seeded {
 		       authz_version, mfa_satisfied, mfa_method, impersonator_id, revoked_at)
 		VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, now() + $7::interval, $8, $9, $10, $11, CASE WHEN $12 THEN now() END)
 		RETURNING id::text`,
-		s.UserID, tenant, site, cash, membership, hash[:], expires, version, mfaSatisfied, mfaMethod, impersonator, revoked).Scan(&s.SessionID)
+		userID, tenant, site, cash, membership, hash[:], expires, version, mfaSatisfied, mfaMethod, impersonator, revoked).Scan(&s.SessionID)
 	if err != nil {
 		t.Fatalf("seeding the session: %v", err)
 	}

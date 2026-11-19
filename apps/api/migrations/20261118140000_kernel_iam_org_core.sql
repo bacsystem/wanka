@@ -74,7 +74,9 @@ CREATE POLICY tenant_isolation ON iam.memberships
 -- único vínculo con la empresa es el que fijan los CHECK de abajo.
 CREATE TABLE iam.sessions (
   id uuid PRIMARY KEY,
-  user_id uuid NOT NULL REFERENCES iam.users,
+  -- NULL solo en la sesión impersonada: el staff vive en platform.platform_users y va en impersonator_id
+  -- (su FK llega con plataforma, ola 6). El resto de las sesiones es de un usuario.
+  user_id uuid REFERENCES iam.users,
   tenant_id uuid,
   site_id uuid,
   cash_register_id uuid,
@@ -95,6 +97,7 @@ CREATE TABLE iam.sessions (
   revoked_at timestamptz,
   created_at timestamptz NOT NULL DEFAULT now(),
   -- Con nombre propio para que rls-check/mutations pueda quitarlos uno a uno.
+  CONSTRAINT sessions_user_iff_not_impersonated CHECK ((user_id IS NULL) = (impersonator_id IS NOT NULL)),
   -- Una sesión con 2FA de plataforma es siempre impersonada, y al revés.
   CONSTRAINT sessions_platform_iff_impersonated CHECK ((mfa_method = 'platform') = (impersonator_id IS NOT NULL)),
   -- Nunca una membresía sin empresa ni una empresa sin membresía (salvo la impersonada).
@@ -108,6 +111,37 @@ CREATE TABLE iam.sessions (
 );
 CREATE INDEX sessions_user_id_idx ON iam.sessions (user_id);
 CREATE INDEX sessions_created_at_idx ON iam.sessions (created_at);  -- limpieza (data-model §5)
+
+-- Una sesión impersonada solo la crea iam.redeem_impersonation (wanka_definer, ola 6) y solo se puede revocar. Un
+-- trigger sin SECURITY DEFINER (corre con el rol que escribe) lo hace cumplir: cualquier otro rol que no sea
+-- wanka_definer ni superusuario (las semillas de prueba) recibe 42501 al insertar una con impersonator_id y al cambiar
+-- cualquier columna de una, salvo poner revoked_at de NULL a un instante. Así created_at, los vencimientos y el
+-- tenant de una impersonada no se mueven aunque el GRANT por columna los permita en las sesiones normales.
+-- +goose StatementBegin
+CREATE FUNCTION iam.guard_impersonated_session() RETURNS trigger
+  LANGUAGE plpgsql
+  SET search_path = pg_catalog, pg_temp
+AS $$
+BEGIN
+  IF current_user = 'wanka_definer'
+     OR coalesce((SELECT r.rolsuper FROM pg_catalog.pg_roles r WHERE r.rolname = current_user), false) THEN
+    RETURN NEW;
+  END IF;
+  IF TG_OP = 'INSERT' THEN
+    IF NEW.impersonator_id IS NOT NULL THEN
+      RAISE EXCEPTION 'impersonated sessions are created only by iam.redeem_impersonation' USING ERRCODE = 'insufficient_privilege';
+    END IF;
+  ELSIF OLD.impersonator_id IS NOT NULL OR NEW.impersonator_id IS NOT NULL THEN
+    IF NOT (OLD.revoked_at IS NULL AND NEW.revoked_at IS NOT NULL
+            AND pg_catalog.to_jsonb(NEW) - 'revoked_at' = pg_catalog.to_jsonb(OLD) - 'revoked_at') THEN
+      RAISE EXCEPTION 'an impersonated session can only be revoked' USING ERRCODE = 'insufficient_privilege';
+    END IF;
+  END IF;
+  RETURN NEW;
+END $$;
+-- +goose StatementEnd
+CREATE TRIGGER sessions_guard_impersonated BEFORE INSERT OR UPDATE ON iam.sessions
+  FOR EACH ROW EXECUTE FUNCTION iam.guard_impersonated_session();
 
 -- Búsqueda de sesión (ADR 0004). La corre wanka_app sin tenant ni usuario. Un JOIN directo contra
 -- iam.memberships devolvería NULL (FORCE RLS y un dueño que no se salta las políticas), por eso es plpgsql: lee la
@@ -151,7 +185,14 @@ GRANT EXECUTE ON FUNCTION iam.session_lookup(bytea) TO wanka_app;
 -- GRANT de la matriz del ADR 0001 para estas tablas, y nada más. wanka_webhooks y wanka_platform no
 -- reciben nada aquí (platform_rw llega con plataforma).
 GRANT USAGE ON SCHEMA iam, org TO wanka_app, wanka_worker, wanka_definer;
-GRANT SELECT, INSERT, UPDATE ON iam.users, iam.sessions, iam.roles, iam.memberships TO wanka_app;
+GRANT SELECT, INSERT, UPDATE ON iam.users, iam.roles, iam.memberships TO wanka_app;
+-- iam.sessions: INSERT de fila completa (lo que escriba una impersonada lo para el trigger de arriba) y UPDATE solo por
+-- columna. Quedan fuera id, user_id, impersonator_id, refresh_family y created_at: con created_at movible, una sesión
+-- impersonada estiraría su vigencia de 60 min. Los hashes sí: la rotación del refresh los reemplaza.
+GRANT SELECT, INSERT ON iam.sessions TO wanka_app;
+GRANT UPDATE (tenant_id, site_id, cash_register_id, membership_id, authz_version, access_hash, access_expires_at,
+              refresh_hash, prev_refresh_hash, rotated_at, refresh_expires_at, mfa_satisfied, mfa_method, ip, user_agent, revoked_at)
+  ON iam.sessions TO wanka_app;
 GRANT SELECT ON org.tenants TO wanka_app;
 -- Limpieza de sesiones: DELETE, más SELECT por columna sobre lo que usa el WHERE (sin él, el DELETE da
 -- «permission denied»). Nunca los hashes ni user_id/tenant_id (aclaración del ADR 0001, PR #197).

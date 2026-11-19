@@ -49,13 +49,13 @@ func wantState(t *testing.T, err error, code, what string) {
 
 // lookupRow es lo que devuelve iam.session_lookup.
 type lookupRow struct {
-	SessionID, UserID                            string
-	TenantID, SiteID, CashRegisterID, Membership *string
-	SessionVersion, CurrentVersion               *int64
-	MFASatisfied                                 bool
-	MFAMethod                                    string
-	Impersonator                                 *string
-	MembershipStatus                             *string
+	SessionID                                            string
+	UserID, TenantID, SiteID, CashRegisterID, Membership *string
+	SessionVersion, CurrentVersion                       *int64
+	MFASatisfied                                         bool
+	MFAMethod                                            string
+	Impersonator                                         *string
+	MembershipStatus                                     *string
 }
 
 const lookupSQL = `SELECT session_id::text, user_id::text, tenant_id::text, site_id::text, cash_register_id::text,
@@ -112,7 +112,7 @@ func TestSessionLookupBoundSessionReturnsBothVersionsAndRestoresTheTenant(t *tes
 		t.Fatalf("rows = %d, want 1", len(rows))
 	}
 	r := rows[0]
-	if r.SessionID != s.SessionID || r.UserID != s.UserID || deref(r.TenantID) != s.TenantID || deref(r.Membership) != s.MembershipID {
+	if r.SessionID != s.SessionID || deref(r.UserID) != s.UserID || deref(r.TenantID) != s.TenantID || deref(r.Membership) != s.MembershipID {
 		t.Errorf("ids = %+v, want %+v", r, s)
 	}
 	if deref(r.SiteID) != s.SiteID || deref(r.CashRegisterID) != s.CashRegisterID {
@@ -350,37 +350,47 @@ func TestUnbindingASessionKeepsItAliveAndPartialUnbindsFail(t *testing.T) {
 	}
 }
 
-// A7 y los demás CHECK de iam.sessions.
+// A7 y los demás CHECK de iam.sessions. Las filas impersonadas se insertan como superusuario: wanka_app no puede
+// (el trigger iam.guard_impersonated_session lo para antes de los CHECK), y los CHECK valen igual para quien sí.
 func TestSessionChecks(t *testing.T) {
 	d := migrated(t)
 	ctx := context.Background()
 	b := d.SeedSession(t, dbtest.SessionSpec{Kind: dbtest.SessionBound})
 	app := connectAs(t, d, dbtest.App)
+	admin := d.Admin(ctx, t)
 	const ins = `INSERT INTO iam.sessions (id, user_id, tenant_id, membership_id, access_hash, access_expires_at, authz_version, mfa_satisfied, mfa_method, impersonator_id)
 		VALUES (gen_random_uuid(), $1, $2, $3, sha256(gen_random_uuid()::text::bytea), now() + interval '1 hour', $4, true, $5, $6)`
 	u, tn, m := b.UserID, b.TenantID, b.MembershipID
+	staff := b.RoleID // cualquier uuid: el staff no tiene FK hasta la ola 6
 	cases := []struct {
 		name         string
+		user         *string
 		tenant, memb *string
 		version      *int64
 		method       string
 		imp          *string
 		want         string
 	}{
-		{"platform without impersonator (A7)", nil, nil, nil, "platform", nil, "23514"},
-		{"impersonator with another method (A7)", nil, nil, nil, "totp", &u, "23514"},
-		{"membership without tenant", nil, &m, nil, "none", nil, "23514"},
-		{"tenant without membership or impersonator", &tn, nil, nil, "none", nil, "23514"},
-		{"version without membership", nil, nil, i64(1), "none", nil, "23514"},
-		{"version on an impersonated session", &tn, nil, i64(1), "platform", &u, "23514"},
-		{"unknown mfa method", nil, nil, nil, "sms", nil, "23514"},
-		{"bound session", &tn, &m, i64(1), "none", nil, ""},
-		{"impersonated session", &tn, nil, nil, "platform", &u, ""},
-		{"unbound session", nil, nil, nil, "totp", nil, ""},
+		{"platform without impersonator (A7)", &u, nil, nil, nil, "platform", nil, "23514"},
+		{"impersonator with another method (A7)", nil, nil, nil, nil, "totp", &staff, "23514"},
+		{"impersonated session with a user_id", &u, &tn, nil, nil, "platform", &staff, "23514"},
+		{"normal session without user_id", nil, nil, nil, nil, "none", nil, "23514"},
+		{"membership without tenant", &u, nil, &m, nil, "none", nil, "23514"},
+		{"tenant without membership or impersonator", &u, &tn, nil, nil, "none", nil, "23514"},
+		{"version without membership", &u, nil, nil, i64(1), "none", nil, "23514"},
+		{"version on an impersonated session", nil, &tn, nil, i64(1), "platform", &staff, "23514"},
+		{"unknown mfa method", &u, nil, nil, nil, "sms", nil, "23514"},
+		{"bound session", &u, &tn, &m, i64(1), "none", nil, ""},
+		{"impersonated session", nil, &tn, nil, nil, "platform", &staff, ""},
+		{"unbound session", &u, nil, nil, nil, "totp", nil, ""},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			_, err := app.Exec(ctx, ins, u, c.tenant, c.memb, c.version, c.method, c.imp)
+			conn := app
+			if c.imp != nil {
+				conn = admin
+			}
+			_, err := conn.Exec(ctx, ins, c.user, c.tenant, c.memb, c.version, c.method, c.imp)
 			if c.want == "" {
 				if err != nil {
 					t.Errorf("valid row rejected: %v", err)
@@ -391,14 +401,14 @@ func TestSessionChecks(t *testing.T) {
 		})
 	}
 	t.Run("impersonated sessions have no refresh and live at most 60 minutes", func(t *testing.T) {
-		const impIns = `INSERT INTO iam.sessions (id, user_id, tenant_id, access_hash, access_expires_at, refresh_hash, mfa_satisfied, mfa_method, impersonator_id, created_at)
-			VALUES (gen_random_uuid(), $1, $2, sha256(gen_random_uuid()::text::bytea), '2026-01-01 01:00:00+00'::timestamptz + $3::interval,
-			        $4, true, 'platform', $1, '2026-01-01 01:00:00+00')`
-		_, err := app.Exec(ctx, impIns, u, tn, "60 minutes", []byte("0123456789abcdef0123456789abcdef"))
+		const impIns = `INSERT INTO iam.sessions (id, tenant_id, access_hash, access_expires_at, refresh_hash, mfa_satisfied, mfa_method, impersonator_id, created_at)
+			VALUES (gen_random_uuid(), $1, sha256(gen_random_uuid()::text::bytea), '2026-01-01 01:00:00+00'::timestamptz + $2::interval,
+			        $3, true, 'platform', $4, '2026-01-01 01:00:00+00')`
+		_, err := admin.Exec(ctx, impIns, tn, "60 minutes", []byte("0123456789abcdef0123456789abcdef"), staff)
 		wantState(t, err, "23514", "impersonated with refresh_hash")
-		_, err = app.Exec(ctx, impIns, u, tn, "61 minutes", nil)
+		_, err = admin.Exec(ctx, impIns, tn, "61 minutes", nil, staff)
 		wantState(t, err, "23514", "impersonated living 61 minutes")
-		if _, err = app.Exec(ctx, impIns, u, tn, "60 minutes", nil); err != nil {
+		if _, err = admin.Exec(ctx, impIns, tn, "60 minutes", nil, staff); err != nil {
 			t.Errorf("impersonated session living exactly 60 minutes rejected: %v", err)
 		}
 		// Una sesión normal sí lleva refresh y vive más.
@@ -667,7 +677,7 @@ func TestTableGrantsMatchTheADR0001Matrix(t *testing.T) {
 	admin := d.Admin(ctx, t)
 	want := map[string]string{
 		"wanka_app|iam.users":           "INSERT,SELECT,UPDATE",
-		"wanka_app|iam.sessions":        "INSERT,SELECT,UPDATE",
+		"wanka_app|iam.sessions":        "INSERT,SELECT",
 		"wanka_app|iam.roles":           "INSERT,SELECT,UPDATE",
 		"wanka_app|iam.memberships":     "INSERT,SELECT,UPDATE",
 		"wanka_app|org.tenants":         "SELECT",
@@ -707,6 +717,13 @@ func TestTableGrantsMatchTheADR0001Matrix(t *testing.T) {
 		if _, ok := want[k]; !ok {
 			t.Errorf("unexpected grant %s = %s (webhooks and platform get nothing here)", k, g)
 		}
+	}
+	// wanka_app: UPDATE de iam.sessions solo por columna, sin id, user_id, impersonator_id, refresh_family ni created_at.
+	appUpd := queryOne[string](t, admin, `SELECT string_agg(column_name, ',' ORDER BY column_name) FROM information_schema.column_privileges
+		WHERE grantee = 'wanka_app' AND table_schema = 'iam' AND table_name = 'sessions' AND privilege_type = 'UPDATE'`)
+	wantUpd := "access_expires_at,access_hash,authz_version,cash_register_id,ip,membership_id,mfa_method,mfa_satisfied,prev_refresh_hash,refresh_expires_at,refresh_hash,revoked_at,rotated_at,site_id,tenant_id,user_agent"
+	if appUpd != wantUpd {
+		t.Errorf("wanka_app column UPDATE on iam.sessions = %q, want %q", appUpd, wantUpd)
 	}
 	// wanka_worker: SELECT por columna sobre iam.sessions, sin los hashes (el WHERE del DELETE lo exige).
 	cols := queryOne[string](t, admin, `SELECT string_agg(column_name, ',' ORDER BY column_name) FROM information_schema.column_privileges
@@ -834,4 +851,45 @@ func TestWorkerCanPurgeSessionsByAgeButNeverReadTheHashes(t *testing.T) {
 	}
 	_, err = w.Exec(ctx, `UPDATE iam.sessions SET revoked_at = now()`)
 	wantState(t, err, "42501", "worker UPDATE")
+}
+
+// H13: sondeo de la escritura de wanka_app sobre iam.sessions (GRANT por columna y trigger de la impersonada).
+func TestAppCannotStretchOrRewriteImpersonatedSessions(t *testing.T) {
+	d := migrated(t)
+	ctx := context.Background()
+	imp := d.SeedSession(t, dbtest.SessionSpec{Kind: dbtest.SessionImpersonated})
+	b := d.SeedSession(t, dbtest.SessionSpec{Kind: dbtest.SessionBound})
+	app := connectAs(t, d, dbtest.App)
+	upd := func(id, set string) error {
+		_, err := app.Exec(ctx, `UPDATE iam.sessions SET `+set+` WHERE id = $1`, id)
+		return err
+	}
+
+	// (a) columnas fuera del GRANT, en una sesión normal y en la impersonada.
+	for _, id := range []string{b.SessionID, imp.SessionID} {
+		for _, set := range []string{`created_at = created_at + interval '30 days'`, `impersonator_id = NULL`, `user_id = NULL`,
+			`refresh_family = gen_random_uuid()`, `id = gen_random_uuid()`} {
+			wantState(t, upd(id, set), "42501", "(a) UPDATE "+set)
+		}
+	}
+	// (b) sobre una impersonada, columnas del GRANT, pero el trigger las para.
+	wantState(t, upd(imp.SessionID, `access_expires_at = access_expires_at + interval '30 days'`), "42501", "(b) stretch")
+	wantState(t, upd(imp.SessionID, `tenant_id = '`+b.TenantID+`'`), "42501", "(b) change tenant")
+	wantState(t, upd(imp.SessionID, `revoked_at = now(), access_expires_at = access_expires_at + interval '30 days'`), "42501", "(b) revoke and stretch")
+	// (c) INSERT de una impersonada.
+	_, err := app.Exec(ctx, `INSERT INTO iam.sessions (id, tenant_id, access_hash, access_expires_at, mfa_satisfied, mfa_method, impersonator_id)
+		VALUES (gen_random_uuid(), $1, sha256('imp-insert'), now() + interval '30 days', true, 'platform', gen_random_uuid())`, b.TenantID)
+	wantState(t, err, "42501", "(c) INSERT of an impersonated session")
+	// (d) revocar sí.
+	if err := upd(imp.SessionID, `revoked_at = now()`); err != nil {
+		t.Errorf("(d) revoking an impersonated session: %v", err)
+	}
+	wantState(t, upd(imp.SessionID, `revoked_at = NULL`), "42501", "un-revoking")
+
+	// La rotación del refresh de una sesión normal funciona.
+	err = upd(b.SessionID, `access_hash = sha256('new-a'), refresh_hash = sha256('new-r'), prev_refresh_hash = sha256('old-r'), rotated_at = now(),
+		access_expires_at = now() + interval '15 minutes', refresh_expires_at = now() + interval '30 days'`)
+	if err != nil {
+		t.Errorf("refresh rotation: %v", err)
+	}
 }

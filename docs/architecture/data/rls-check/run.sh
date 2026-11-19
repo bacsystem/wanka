@@ -36,6 +36,7 @@ fi
 step "wanka_platform"                      $P -U wanka_platform -f /sql/03_platform.sql
 step "wanka_migrator: datos de prueba"     $P -U wanka_migrator -f /sql/04_seed.sql
 step "wanka_app"                           $P -U wanka_app -f /sql/05_app.sql
+step "superusuario: sesiones impersonadas" $P -U postgres -f /sql/05b_superuser_sessions.sql
 step "wanka_migrator: borra la membresia"  $P -U wanka_migrator -f /sql/06_delete_and_others.sql
 step "wanka_app (membresia borrada)"       $P -U wanka_app -f /sql/07_after_delete.sql
 step "wanka_webhooks"                      $P -U wanka_webhooks -f /sql/08_webhooks_worker.sql

@@ -31,8 +31,11 @@ for m in "naive_session_lookup|wanka_app" \
          "drop_authz_check|wanka_app" \
          "revoke_app_sessions_insert|wanka_app" \
          "grant_app_update_tenants|wanka_app" \
-         "drop_impersonated_check|wanka_app" \
+         "drop_impersonated_check|superusuario: sesiones impersonadas" \
          "revoke_worker_session_columns|wanka_worker" \
+         "grant_app_update_all_sessions|wanka_app" \
+         "drop_guard_trigger|wanka_app" \
+         "drop_user_check|wanka_app" \
          "drop_force_rls|wanka_migrator: borra la membresia"; do
   name="${m%%|*}" step="${m#*|}"
   echo "== MUTATION=${name}: debe fallar en «${step}» =="

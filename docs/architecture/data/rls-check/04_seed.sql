@@ -8,9 +8,6 @@ INSERT INTO iam.users (id, email) VALUES ('eeeeeeee-0000-0000-0000-000000000002'
 INSERT INTO iam.memberships (id, tenant_id, user_id, role_id, status, authz_version)
   VALUES ('3e000000-0000-0000-0000-0000000000c1','aaaaaaaa-0000-0000-0000-000000000001','eeeeeeee-0000-0000-0000-000000000002','a0000000-0000-0000-0000-0000000000a2','activo', 1);
 COMMIT;
--- El staff de plataforma que impersona (usuario 5aff...01 de 03_platform.sql). iam.sessions.user_id referencia iam.users (issue #195),
--- asi que la sesion que crea iam.redeem_impersonation exige que el staff tenga fila en iam.users. Ver la nota sobre ADR 0011 en el PR.
-INSERT INTO iam.users (id, email) VALUES ('5aff0000-0000-0000-0000-000000000001', 'soporte@plataforma.pe');
 -- sesion de tenant del cajero (version 1, con sede y caja) y una sesion a medio login (mfa_satisfied = false)
 INSERT INTO iam.sessions (id, user_id, tenant_id, site_id, cash_register_id, membership_id, access_hash, access_expires_at, authz_version, mfa_satisfied, mfa_method)
   VALUES ('5e000000-0000-0000-0000-000000000001','eeeeeeee-0000-0000-0000-000000000002','aaaaaaaa-0000-0000-0000-000000000001',

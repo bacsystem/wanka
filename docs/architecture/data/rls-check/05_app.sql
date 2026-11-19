@@ -45,21 +45,10 @@ SELECT test.assert(iam.redeem_impersonation('\x01'::bytea, '5e000000-0000-0000-0
 SELECT test.assert((SELECT mfa_method = 'platform' AND impersonator_id IS NOT NULL AND membership_id IS NULL
                       FROM iam.session_lookup(sha256('tok-imp-a'))), 'sesion impersonada: platform, sin membresia');
 SELECT test.assert(NULLIF(current_setting('app.tenant_id', true),'') IS NULL, 'redeem no filtra app.tenant_id');
--- Vigencia de la sesion impersonada (data-model §6): sin refresh, 60 min como maximo (CHECK sessions_impersonated_short_no_refresh).
-SELECT test.expect_error($$INSERT INTO iam.sessions (id, user_id, tenant_id, access_hash, access_expires_at, refresh_hash, mfa_satisfied, mfa_method, impersonator_id)
-  VALUES (gen_random_uuid(), '5aff0000-0000-0000-0000-000000000001', 'aaaaaaaa-0000-0000-0000-000000000001', sha256('i1'), now() + interval '60 minutes', sha256('i1r'), true, 'platform', '5aff0000-0000-0000-0000-000000000001')$$,
-  '23514', 'impersonada con refresh_hash');
-SELECT test.expect_error($$INSERT INTO iam.sessions (id, user_id, tenant_id, access_hash, access_expires_at, mfa_satisfied, mfa_method, impersonator_id)
-  VALUES (gen_random_uuid(), '5aff0000-0000-0000-0000-000000000001', 'aaaaaaaa-0000-0000-0000-000000000001', sha256('i2'), now() + interval '61 minutes', true, 'platform', '5aff0000-0000-0000-0000-000000000001')$$,
-  '23514', 'impersonada que vive 61 minutos');
--- Revocada o vencida, la sesion impersonada ya no se encuentra (dentro de una transaccion que se deshace).
+-- Revocada, la sesion impersonada ya no se encuentra (dentro de una transaccion que se deshace); la vencida, en 05b.
 BEGIN;
 UPDATE iam.sessions SET revoked_at = now() WHERE access_hash = sha256('tok-imp-a');
 SELECT test.assert((SELECT count(*) FROM iam.session_lookup(sha256('tok-imp-a'))) = 0, 'impersonada revocada: 0 filas');
-ROLLBACK;
-BEGIN;
-UPDATE iam.sessions SET access_expires_at = now() - interval '1 second' WHERE access_hash = sha256('tok-imp-a');
-SELECT test.assert((SELECT count(*) FROM iam.session_lookup(sha256('tok-imp-a'))) = 0, 'impersonada vencida: 0 filas');
 ROLLBACK;
 \echo '== A7. CHECK y NOT NULL de iam.sessions =='
 SELECT test.expect_error($$INSERT INTO iam.sessions (id, user_id, access_hash, access_expires_at, mfa_satisfied, mfa_method)
@@ -71,12 +60,34 @@ SELECT test.expect_error($$INSERT INTO iam.sessions (id, user_id, access_hash, a
 -- Una sesion desligada o impersonada nunca tiene version (ADR 0011, CHECK sessions_version_needs_membership).
 SELECT test.expect_error($$INSERT INTO iam.sessions (id, user_id, access_hash, access_expires_at, authz_version, mfa_satisfied, mfa_method)
   VALUES (gen_random_uuid(), 'eeeeeeee-0000-0000-0000-000000000002', sha256('v1'), now(), 1, true, 'none')$$, '23514', 'authz_version sin membresia');
-SELECT test.expect_error($$INSERT INTO iam.sessions (id, user_id, tenant_id, access_hash, access_expires_at, authz_version, mfa_satisfied, mfa_method, impersonator_id)
-  VALUES (gen_random_uuid(), 'eeeeeeee-0000-0000-0000-000000000002', 'aaaaaaaa-0000-0000-0000-000000000001', sha256('v2'), now(), 1, true, 'platform', '5aff0000-0000-0000-0000-000000000001')$$,
-  '23514', 'authz_version en una sesion impersonada');
 SELECT test.expect_error($$INSERT INTO iam.sessions (id, user_id, access_hash, access_expires_at, mfa_satisfied, mfa_method)
   VALUES (gen_random_uuid(), 'eeeeeeee-0000-0000-0000-000000000002', '\x01', now(), true, 'none')$$, '23514', 'access_hash de 1 byte');
 SELECT test.expect_error($$INSERT INTO iam.sessions (id, user_id, access_hash, access_expires_at, mfa_satisfied, mfa_method)
   VALUES (gen_random_uuid(), gen_random_uuid(), sha256('v3'), now(), true, 'none')$$, '23503', 'sesion de un usuario inexistente');
 -- GRANT del ADR 0001: wanka_app escribe sesiones pero no empresas.
 SELECT test.expect_error($$UPDATE org.tenants SET status = 'activa'$$, '42501', 'wanka_app no escribe org.tenants');
+-- H13: GRANT por columna y trigger iam.guard_impersonated_session (sondeo de data-model §6, regla 2).
+-- (a) columnas fuera del GRANT
+SELECT test.expect_error($$UPDATE iam.sessions SET created_at = created_at + interval '30 days' WHERE access_hash = sha256('tok-cajero')$$, '42501', '(a) wanka_app no mueve created_at');
+SELECT test.expect_error($$UPDATE iam.sessions SET created_at = created_at + interval '30 days' WHERE access_hash = sha256('tok-imp-a')$$, '42501', '(a) ni en la impersonada');
+SELECT test.expect_error($$UPDATE iam.sessions SET impersonator_id = NULL WHERE access_hash = sha256('tok-imp-a')$$, '42501', '(a) wanka_app no mueve impersonator_id');
+SELECT test.expect_error($$UPDATE iam.sessions SET user_id = NULL WHERE access_hash = sha256('tok-cajero')$$, '42501', '(a) wanka_app no mueve user_id');
+-- (b) columnas del GRANT sobre una impersonada: las para el trigger
+SELECT test.expect_error($$UPDATE iam.sessions SET access_expires_at = access_expires_at + interval '30 days' WHERE access_hash = sha256('tok-imp-a')$$, '42501', '(b) no alarga la impersonada');
+SELECT test.expect_error($$UPDATE iam.sessions SET tenant_id = 'bbbbbbbb-0000-0000-0000-000000000002' WHERE access_hash = sha256('tok-imp-a')$$, '42501', '(b) no cambia su tenant');
+-- (c) INSERT de una impersonada
+SELECT test.expect_error($$INSERT INTO iam.sessions (id, tenant_id, access_hash, access_expires_at, mfa_satisfied, mfa_method, impersonator_id)
+  VALUES (gen_random_uuid(), 'aaaaaaaa-0000-0000-0000-000000000001', sha256('p2'), now() + interval '30 days', true, 'platform', gen_random_uuid())$$, '42501', '(c) wanka_app no inserta impersonadas');
+-- (d) revocar si; la rotacion del refresh de una sesion normal tambien
+BEGIN;
+UPDATE iam.sessions SET revoked_at = now() WHERE access_hash = sha256('tok-imp-a');
+SELECT test.assert((SELECT revoked_at IS NOT NULL FROM iam.sessions WHERE access_hash = sha256('tok-imp-a')), '(d) revocar la impersonada funciona');
+ROLLBACK;
+BEGIN;
+UPDATE iam.sessions SET access_hash = sha256('rot-a'), refresh_hash = sha256('rot-r'), prev_refresh_hash = sha256('old-r'), rotated_at = now(),
+  access_expires_at = now() + interval '15 minutes', refresh_expires_at = now() + interval '30 days' WHERE access_hash = sha256('tok-cajero');
+SELECT test.assert((SELECT count(*) FROM iam.sessions WHERE access_hash = sha256('rot-a')) = 1, 'rotacion del refresh de una sesion normal');
+ROLLBACK;
+-- user_id solo es NULL en la impersonada
+SELECT test.expect_error($$INSERT INTO iam.sessions (id, access_hash, access_expires_at, mfa_satisfied, mfa_method) VALUES (gen_random_uuid(), sha256('nu'), now(), true, 'none')$$,
+  '23514', 'sesion normal sin user_id');
