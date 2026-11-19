@@ -124,10 +124,26 @@ func (p *Pool) InTenantReadTx(ctx context.Context, a Actor, fn func(pgx.Tx) erro
 	return p.inTenantTx(ctx, a, pgx.ReadOnly, fn)
 }
 
-func (p *Pool) inTenantTx(ctx context.Context, a Actor, mode pgx.TxAccessMode, fn func(pgx.Tx) error) (err error) {
+func (p *Pool) inTenantTx(ctx context.Context, a Actor, mode pgx.TxAccessMode, fn func(pgx.Tx) error) error {
 	if err := a.validate(); err != nil {
 		return err
 	}
+	// tenant_id sale solo del Actor.
+	return p.runTx(ctx, mode, setTenantVarsSQL,
+		[]any{uuidText(a.TenantID), uuidText(a.UserID), a.Kind.String(), uuidText(a.ImpersonatorID)}, fn)
+}
+
+// setTenantVarsSQL fija las cuatro variables app.* de una transacción de tenant.
+// set_config(..., true) es local a la transacción: al terminar, la conexión no
+// conserva nada.
+const setTenantVarsSQL = `SELECT set_config('app.tenant_id', $1, true), set_config('app.user_id', $2, true),
+		set_config('app.session_kind', $3, true), set_config('app.impersonator_id', $4, true)`
+
+// runTx es el ciclo común de las puertas de transacción (tenant y sin tenant):
+// toma una conexión, hace BEGIN, ejecuta setSQL con args como primera sentencia
+// (fija las variables app.*), llama a fn y hace COMMIT, o ROLLBACK si fn falla
+// o entra en pánico (el pánico se relanza). Los errores salen tipados con typedErr.
+func (p *Pool) runTx(ctx context.Context, mode pgx.TxAccessMode, setSQL string, args []any, fn func(pgx.Tx) error) (err error) {
 	conn, err := p.acquire(ctx)
 	if err != nil {
 		return err
@@ -151,11 +167,7 @@ func (p *Pool) inTenantTx(ctx context.Context, a Actor, mode pgx.TxAccessMode, f
 		_ = tx.Rollback(rctx)
 	}()
 
-	// tenant_id sale solo del Actor. set_config(..., true) es local a la
-	// transacción: al terminar, la conexión no conserva nada.
-	_, err = tx.Exec(ctx, `SELECT set_config('app.tenant_id', $1, true), set_config('app.user_id', $2, true),
-		set_config('app.session_kind', $3, true), set_config('app.impersonator_id', $4, true)`,
-		uuidText(a.TenantID), uuidText(a.UserID), a.Kind.String(), uuidText(a.ImpersonatorID))
+	_, err = tx.Exec(ctx, setSQL, args...)
 	if err != nil {
 		return p.txError(ctx, conn, "setting session variables", err)
 	}

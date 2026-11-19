@@ -5,7 +5,16 @@
 // nunca crea roles ni es dueño de objetos. Los errores que pueden llevar la
 // cadena de conexión se limpian antes de salir de este paquete.
 //
-// Los datos de tenant se tocan solo dentro de InTenantTx o InTenantReadTx; el
+// Hay dos puertas de transacción:
+//   - InTenantTx (e InTenantReadTx, BEGIN READ ONLY) para los datos de tenant:
+//     fija app.tenant_id y el resto del Actor.
+//   - InNoTenantTx (e InNoTenantReadTx) solo para lo que aún no tiene tenant: la
+//     búsqueda y el desligue de sesión (#174 y su resolver real, #196), el login
+//     (#24), iam.list_my_memberships() con el UserID del scope (#27) y el canje
+//     de impersonación (plataforma). Limpia las cuatro variables app.* antes de
+//     llamar a fn, así que no hereda lo que otra petición dejó en la conexión.
+//
+// Los datos de tenant se tocan solo dentro de esas puertas; el
 // pool no entrega conexiones crudas (acquire no es exportado). Esto no impide
 // todo desvío: go-arch-lint prohíbe importar pgxpool y pgx/stdlib fuera de este
 // paquete, y un test (rawconn_test.go) falla si el código de fuera llama a
@@ -16,9 +25,10 @@
 //
 // Dentro de fn está prohibido fijar las variables app.* a nivel de sesión
 // (set_config con false o SET sin LOCAL): sobreviven al COMMIT en esa conexión.
-// No filtran datos de otro tenant porque la siguiente InTenantTx vuelve a fijar
-// las cuatro variables y el pool no entrega la conexión a nadie más, pero es un
-// uso incorrecto igualmente.
+// No filtran datos de otro tenant porque la siguiente transacción (de tenant o
+// sin tenant) vuelve a fijar o a limpiar las cuatro variables y el pool no
+// entrega la conexión a nadie más, pero es un uso incorrecto igualmente. La regla
+// vale para las dos puertas.
 package db
 
 import (

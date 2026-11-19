@@ -53,6 +53,17 @@ cd apps/api && go test -run '^$' -bench 'Tx|Autocommit' -benchtime 2000x -count 
 | `BEGIN` + consulta + `COMMIT`, sin variables | 0,64 ms | 3 |
 | `InTenantTx` (`BEGIN` + `set_config` ×4 + consulta + `COMMIT`) | 0,91 ms | 4 |
 
+`InNoTenantReadTx` (#194; `BEGIN READ ONLY` + `set_config` ×4 que limpia las variables + consulta + `COMMIT`) cuesta lo mismo que `InTenantTx`: misma sentencia `set_config` y las mismas 4 idas y vueltas, no una más. Medida en la misma máquina con el mismo comando (`BenchmarkInNoTenantReadTx`, mediana de 8 corridas de 2 000 iteraciones), todos los casos juntos:
+
+| Caso | Tiempo por operación | Idas y vueltas |
+|---|---|---|
+| Consulta suelta (autocommit) | 0,26 ms | 1 |
+| `BEGIN` + consulta + `COMMIT`, sin variables | 0,70 ms | 3 |
+| `InTenantTx` | 0,96 ms | 4 |
+| `InNoTenantReadTx` | 0,98 ms (+2 % sobre `InTenantTx`) | 4 |
+
+Las cifras de esta corrida salen más altas que las de #163 por el estado de la máquina; lo que vale es la comparación entre filas de una misma corrida.
+
 `InTenantTx` suma **una ida y vuelta** (RTT) por transacción respecto de una transacción normal: 0,26 ms en esta medición, que coincide con el coste de una consulta suelta (0,23 ms). En el servidor, el `SELECT set_config(...)` de las cuatro variables tarda 0,03-0,04 ms (`EXPLAIN ANALYZE`), así que el coste es de red y no de cómputo. Por eso la sobrecarga se debe leer como "1 RTT entre la API y la base", y su valor en ms en cada entorno se mide en la prueba de carga: esta medición no dice qué cifra dará la red entre servicios del despliegue. Es la referencia para el presupuesto de ~10-30 ms por transacción de arriba. Si hiciera falta recortarlo, `BEGIN` y `set_config` pueden ir en una sola ida y vuelta con un lote de pgx; hoy no se justifica.
 
 ## 3. Degradación y backpressure
