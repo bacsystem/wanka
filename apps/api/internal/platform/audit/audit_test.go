@@ -142,6 +142,13 @@ func TestActorChecks(t *testing.T) {
 			}
 		})
 	}
+	for _, bad := range []string{"tenants:create", "Ventas.doc:void", "a.b", "a.b:c d", ""} {
+		_, err := c.Exec(ctx, `INSERT INTO audit.events (tenant_id, actor_type, action) VALUES ($1, 'system', $2)`, tenantA, bad)
+		var pe *pgconn.PgError
+		if !errors.As(err, &pe) || pe.Code != "23514" {
+			t.Errorf("action %q: err = %v, want a CHECK violation", bad, err)
+		}
+	}
 	if _, err := c.Exec(ctx, `INSERT INTO audit.events (tenant_id, actor_type, action, result) VALUES ($1, 'system', 'x.y:z', 'quizas')`, tenantA); sqlState(err) != "23514" {
 		t.Errorf("result outside ok|denegado: %v", err)
 	}
@@ -550,3 +557,28 @@ func TestInvalidEvents(t *testing.T) {
 }
 
 var _ = context.Background
+
+// H1 de punta a punta: un diff en bytes con un secreto no llega a la tabla.
+func TestRecordSanitizesSerializedDiffs(t *testing.T) {
+	e := newEnv(t)
+	ctx := testCtx(t)
+	for i, d := range []any{`{"password":"hunter2"}`, []byte(`{"password":"hunter2"}`)} {
+		err := e.app.InTenantTx(ctx, userActor(t, tenantA, userA), func(tx pgx.Tx) error {
+			return e.w.Record(ctx, tx, audit.Event{Action: "iam.usuario:update", Diff: d})
+		})
+		if err != nil {
+			t.Fatalf("case %d: %v", i, err)
+		}
+	}
+	for _, r := range events(t, ctx, e) {
+		if strings.Contains(string(r.Diff), "hunter2") {
+			t.Errorf("stored %s", r.Diff)
+		}
+	}
+	err := e.app.InTenantTx(ctx, userActor(t, tenantA, userA), func(tx pgx.Tx) error {
+		return e.w.Record(ctx, tx, audit.Event{Action: "iam.usuario:update", Diff: "password=hunter2"})
+	})
+	if !errors.Is(err, audit.ErrInvalidEvent) {
+		t.Errorf("err = %v, want ErrInvalidEvent", err)
+	}
+}

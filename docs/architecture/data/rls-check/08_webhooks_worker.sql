@@ -13,7 +13,7 @@ SELECT set_config('app.tenant_id','aaaaaaaa-0000-0000-0000-000000000001', true);
 SELECT test.expect_error($$INSERT INTO audit.events (tenant_id, actor_type, action) VALUES (app.current_tenant(), 'system', 'rls.check:w')$$,
                          '42501', 'wanka_webhooks no inserta en audit.events');
 ROLLBACK;
-\echo '== W2. entitlements (#171): wanka_webhooks no tiene acceso a platform =='
+\echo '== W3. entitlements (#171): wanka_webhooks no tiene acceso a platform =='
 SELECT test.expect_error('SELECT count(*) FROM platform.modules', '42501', 'wanka_webhooks sin acceso a las tablas de entitlements');
 SELECT test.expect_error('SELECT count(*) FROM platform.tenant_usage', '42501', 'wanka_webhooks sin acceso al uso');
 \echo '== W2. (wanka_webhooks) sin acceso a iam.permissions (issue #172) =='

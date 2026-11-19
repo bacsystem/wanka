@@ -252,7 +252,7 @@ jobs.Register(reg, func(ctx context.Context, job jobs.Job[SendReceipt]) error {
   y el campo `json:"tenant_id"`. Sin secretos ni datos personales: la tabla de jobs se ve desde la consola.
 - **Colas**: `WithQueue` es obligatoria (`cpe`, `webhooks`, `notifications`, `reports`, `maintenance`).
   `WithMaxAttempts` (por defecto 10), `WithScheduledAt` y `WithUnique` (uno solo en curso por clave:
-  los argumentos serializados, o los campos con la etiqueta `river:"unique"`; un duplicado no falla ni aborta la transacción).
+  los argumentos serializados, todos los campos; un duplicado no falla ni aborta la transacción).
 - **Resultados de un handler**: `nil` (completado, se limpia a los 7 días), un error cualquiera
   (transitorio: backoff exponencial de 10 s duplicando hasta 1 h, con jitter; al agotar los intentos
   queda `discarded` y se conserva 30 días), `jobs.Cancel(err)` (definitivo: sin reintentos; `cancelled`, 7 días)
@@ -291,8 +291,9 @@ cualquier módulo queda cubierta sin tocar el test.
 
 | Regla | Falla si |
 |---|---|
-| `tenant-tables-have-force-rls-and-policy` | una tabla con `tenant_id` (o `org.tenants`) no tiene RLS, `FORCE` y `tenant_isolation` (`FOR ALL`, `USING` y `WITH CHECK` con `app.current_tenant()`) |
-| `extra-policies-are-whitelisted` | hay una política que no es `tenant_isolation` ni está en `policyAllow` (tabla, comando, `TO` y rama `app.current_tenant() IS NULL`) |
+| `tenant-tables-have-force-rls-and-policy` | una tabla con `tenant_id` (o `org.tenants`) no tiene RLS, `FORCE` y `tenant_isolation` (`FOR ALL`) cuyo `USING` y `WITH CHECK` son exactamente `(tenant_id = app.current_tenant())` (`id` en `org.tenants`) |
+| `partitions-of-tenant-tables` | una partición de una tabla de tenant tiene algún privilegio (de tabla o de columna) para un rol `wanka_*` de ejecución y no tiene su propia RLS, `FORCE` y `tenant_isolation`: una consulta directa a la partición no pasa por las políticas de la madre |
+| `extra-policies-are-whitelisted` | hay una política que no es `tenant_isolation` ni está en `policyAllow` (tabla, comando, `TO`, rama `app.current_tenant() IS NULL` y, donde el ADR escribe el `USING`, la expresión exacta con el filtro de estado `invitado`/`activo`) |
 | `unique-and-pk-start-with-tenant-id` | un `UNIQUE` o PK de una tabla con `tenant_id` no empieza por `tenant_id` (la PK sustituta `id uuid` o identidad no cuenta) |
 | `policies-wrap-current-setting-in-nullif` | una política usa `current_setting` sin `NULLIF` |
 | `foreign-keys-are-indexed` | una FK no tiene índice que empiece por sus columnas |
@@ -314,7 +315,7 @@ objeto exista, para que no queden entradas viejas):
 - `noRLSTables`: tabla con `tenant_id` que por diseño no es de tenant (clave `esquema.tabla`). Hoy `iam.sessions` y las cuatro tablas `platform.*` de entitlements con `tenant_id` (`subscriptions`, `tenant_module_overrides`, `tenant_flag_overrides`, `tenant_usage`). Una tabla `platform.*` sin RLS por ADR entra aquí.
 - `uniqueAllow`: `UNIQUE` global marcado (clave `esquema.tabla(col1,col2)`).
 - `fkAllow`: FK entre tablas de tenant sin `tenant_id` (clave `esquema.tabla.restricción`).
-- `policyAllow`: política adicional (clave `esquema.tabla:política`), con comandos, roles y si exige la rama `IS NULL`.
+- `policyAllow`: política adicional (clave `esquema.tabla:política`), con comandos, roles, si exige la rama `IS NULL`, fragmentos obligatorios (`mustContain`) y, si el ADR escribe el `USING`, el texto exacto (`qual`, tal como lo deparsa PostgreSQL 16; los espacios se colapsan). El número de ADR del motivo tiene que existir en `docs/architecture/adr/`.
 - `tenantRoots`: tabla de tenant que se aísla por otra columna que `tenant_id` (hoy `org.tenants`, por `id`).
 
 **PR que toca políticas, roles, grants o funciones definer.** Además de estas
@@ -328,7 +329,7 @@ del ADR 0001; el workflow `api.yml` corre ese script cuando cambia
 
 `entitlements.New(pool, Options{}).For(ctx, tenantID)` devuelve lo que una empresa
 tiene habilitado (ADR 0005): `Modules` y `Flags` (ordenados), `Limits` y `Usage`
-(`users`, `sites`, `cpe_per_month`; todo plan declara las tres y `Limit(key)` de una ausente es 0), `Status`, `ReadOnly` y `Version`. Es solo
+(`Limits`: `users`, `sites`, `cpe_per_month`; todo plan declara las tres y `Limit(key)` de una ausente es 0. `Usage` solo trae `users` y `cpe_per_month`: `sites` no se mide), `Status`, `ReadOnly` y `Version`. Es solo
 lectura; el middleware que responde `402`, `403 tenant_read_only`,
 `403 module_not_enabled` o `403 plan_limit_reached` está en `auth.Routes` (ver «Sesión»,
 #175), y `GET /v1/me/entitlements` lo cablea identidad
@@ -390,6 +391,7 @@ rol y no lee las de los demás.
 | `DATABASE_URL_WORKER` | `worker` | URL del rol `wanka_worker`. Secreto |
 | `DATABASE_URL_MIGRATOR` | `migrate up` | URL del rol `wanka_migrator`. Secreto |
 | `JOBS_CONCURRENCY_<COLA>` | no | Jobs en ejecución a la vez por réplica del worker, 1 a 1000. Colas `CPE` (20), `WEBHOOKS` (10), `NOTIFICATIONS` (10), `REPORTS` (2), `MAINTENANCE` (2). Solo `worker` |
+| `JOBS_JOB_TIMEOUT` | no (`1m`) | Duración de Go, de `1s` a `1h`: plazo de cada ejecución de un job; `jobs.WithJobTimeout` lo cambia por tipo. Solo `worker` |
 | `JOBS_SHUTDOWN_TIMEOUT` | no (`30s`) | Duración de Go, de `1s` a `10m`: cuánto espera el worker a los jobs en curso tras `SIGTERM`; vencida, cancela su contexto y el job se reintenta. El plazo de drenaje de Railway debe ser mayor. Solo `worker` |
 | `DB_POOL_MAX_CONNS` | no | Tamaño máximo del pool, 1 a 200. Por defecto: api 20, worker 10, webhooks 5, platform 5 (`capacity.md`) |
 | `HTTP_ADDR` | no (`:8080`) | Dirección donde escucha `serve` (con `127.0.0.1:0` el sistema elige el puerto y se informa en el log `listening`) |

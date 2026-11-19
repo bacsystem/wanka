@@ -423,13 +423,29 @@ func TestJobsDoNotHoldAPoolConnectionDuringTheNetworkCall(t *testing.T) {
 	}
 }
 
-// Criterio no funcional: 44 jobs concurrentes en un pool de 10; la espera por conexión p99 < 50 ms.
+// Criterio no funcional: 44 jobs corriendo de verdad a la vez en un pool de 10; la espera por conexión p99 < 50 ms.
 func TestPoolWaitStaysUnder50msWith44ConcurrentJobs(t *testing.T) {
+	const jobs44, txPerJob = 44, 10
 	e := newWorkerEnv(t, 10)
 	var mu sync.Mutex
 	var waits []time.Duration
-	startWorker(t, e.worker, Config{}, registerPing(t, func(ctx context.Context, j Job[pingArgs]) error {
-		for range 2 {
+	var running, peak atomic.Int32
+	allIn := make(chan struct{})
+	startWorker(t, e.worker, Config{Concurrency: map[string]int{
+		QueueCPE: jobs44, QueueWebhooks: 1, QueueNotifications: 1, QueueReports: 1, QueueMaintenance: 1,
+	}}, registerPing(t, func(ctx context.Context, j Job[pingArgs]) error {
+		n := running.Add(1)
+		for p := peak.Load(); n > p && !peak.CompareAndSwap(p, n); p = peak.Load() {
+		}
+		if n == jobs44 {
+			close(allIn)
+		}
+		select { // se mide con los 44 en curso
+		case <-allIn:
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+		for range txPerJob {
 			t0 := time.Now()
 			// La transacción completa (conexión, BEGIN, SET, SELECT, COMMIT) es una cota superior de la espera.
 			if err := j.InTenantTx(ctx, func(tx pgx.Tx) error { _, err := tx.Exec(ctx, `SELECT 1`); return err }); err != nil {
@@ -438,28 +454,71 @@ func TestPoolWaitStaysUnder50msWith44ConcurrentJobs(t *testing.T) {
 			mu.Lock()
 			waits = append(waits, time.Since(t0))
 			mu.Unlock()
-			time.Sleep(300 * time.Millisecond)
+			time.Sleep(30 * time.Millisecond)
 		}
 		return nil
 	}))
-	for i := range 44 {
+	for i := range jobs44 {
 		e.ping(t, string(rune('A'+i)), WithQueue(QueueCPE))
 	}
-	eventually(t, 60*time.Second, "44 jobs to complete", func() bool {
+	eventually(t, 90*time.Second, "44 jobs to complete", func() bool {
 		n := 0
 		for _, r := range e.rows(t, "test.ping") {
 			if r.State == "completed" {
 				n++
 			}
 		}
-		return n == 44
+		return n == jobs44
 	})
+	if peak.Load() != jobs44 {
+		t.Fatalf("peak concurrency %d, want %d jobs at once", peak.Load(), jobs44)
+	}
 	mu.Lock()
 	defer mu.Unlock()
 	slices.Sort(waits)
 	p99 := waits[len(waits)*99/100]
 	t.Logf("InTenantTx latency over %d transactions: p50 %s, p99 %s, max %s", len(waits), waits[len(waits)/2], p99, waits[len(waits)-1])
+	if len(waits) != jobs44*txPerJob {
+		t.Fatalf("%d samples, want %d", len(waits), jobs44*txPerJob)
+	}
+	if raceEnabled {
+		t.Skip("the 50 ms bound is not meaningful with -race; CI runs it without")
+	}
 	if p99 >= 50*time.Millisecond {
 		t.Errorf("p99 %s, want under 50ms", p99)
+	}
+}
+
+// H2: el plazo por defecto (Config.JobTimeout) y el de un tipo de job (WithJobTimeout) cancelan el contexto del handler.
+func TestJobTimeoutDefaultAndPerKind(t *testing.T) {
+	e := newWorkerEnv(t, 5)
+	var defaultHit, perKindHit atomic.Bool
+	wait := func(ctx context.Context, hit *atomic.Bool) error {
+		select {
+		case <-ctx.Done():
+			hit.Store(true)
+			return ctx.Err()
+		case <-time.After(5 * time.Second):
+			return nil
+		}
+	}
+	startWorker(t, e.worker, Config{JobTimeout: 300 * time.Millisecond}, func(r *Registry) {
+		if err := Register(r, func(ctx context.Context, j Job[pingArgs]) error { return wait(ctx, &defaultHit) }); err != nil {
+			t.Fatal(err)
+		}
+		if err := Register(r, func(ctx context.Context, j Job[noTenantArgs]) error { return wait(ctx, &perKindHit) }, WithJobTimeout(3*time.Second)); err != nil {
+			t.Fatal(err)
+		}
+	})
+	e.ping(t, "slow", WithQueue(QueueMaintenance), WithMaxAttempts(1))
+	enqueueTx(context.Background(), t, e.app, e.enq, e.s, noTenantArgs{Key: "slow"}, WithQueue(QueueMaintenance), WithMaxAttempts(1))
+
+	eventually(t, 10*time.Second, "the default timeout to fire", defaultHit.Load)
+	if perKindHit.Load() {
+		t.Fatal("the per-kind timeout (3 s) fired with the 300 ms default")
+	}
+	eventually(t, 10*time.Second, "the per-kind timeout to fire", perKindHit.Load)
+	if err := Register(NewRegistry(e.worker), func(context.Context, Job[tickArgs]) error { return nil }, WithJobTimeout(-time.Second)); !errors.Is(err, ErrInvalidOption) {
+		t.Fatalf("negative timeout: %v", err)
 	}
 }

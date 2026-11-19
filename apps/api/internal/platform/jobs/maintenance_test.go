@@ -186,6 +186,8 @@ func TestSchemaMatchesRiversOwnMigrations(t *testing.T) {
 			WHERE n.nspname = $1 AND c.relkind = 'r' ORDER BY 1`,
 		"functions": `SELECT p.proname || ' ' || pg_get_function_arguments(p.oid) || ' ' || p.provolatile::text FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
 			WHERE n.nspname = $1 ORDER BY 1`,
+		"function bodies": `SELECT p.proname::text || ' ' || pg_get_functiondef(p.oid) FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+			WHERE n.nspname = $1 ORDER BY 1`,
 		"versions": `SELECT line || ' ' || version FROM ` + `%s.river_migration ORDER BY 1`,
 	}
 	norm := func(in []string, schema string) []string {

@@ -243,7 +243,7 @@ func TestNewPartitionHasNoGrantsAndKeepsTheKey(t *testing.T) {
 	if count(t, ctx, c, `SELECT count(*) FROM pg_index i WHERE i.indrelid = ('audit.' || $1)::regclass AND i.indisprimary`, name) != 1 {
 		t.Error("the new partition has no primary key")
 	}
-	if count(t, ctx, c, `SELECT count(*) FROM unnest(ARRAY['wanka_app','wanka_worker']) r WHERE has_table_privilege(r, ('audit.' || $1)::regclass, 'SELECT,INSERT,UPDATE,DELETE')`, name) != 0 {
+	if count(t, ctx, c, `SELECT count(*) FROM unnest(ARRAY['wanka_app','wanka_worker','wanka_webhooks','wanka_platform']) r WHERE has_table_privilege(r, ('audit.' || $1)::regclass, 'SELECT,INSERT,UPDATE,DELETE')`, name) != 0 {
 		t.Error("a role holds privileges on the new partition")
 	}
 }

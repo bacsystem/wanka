@@ -397,3 +397,23 @@ func exportedPart(e ast.Expr) ast.Node {
 		return e
 	}
 }
+
+// Un job que espera su reintento (retryable) sigue «en curso»: encolar otro igual no lo duplica.
+func TestUniqueJobCountsRetryableAsInProgress(t *testing.T) {
+	ctx := ctx5(t)
+	d := migrated(t)
+	admin := d.Admin(ctx, t)
+	app := openPool(t, d, dbtest.App, 5)
+	enq := newEnqueuer(t, app)
+	s := d.SeedSession(t, dbtest.SessionSpec{})
+	args := pingArgs{TenantID: uuidOf(t, s.TenantID), Key: "r"}
+	opts := []Option{WithQueue(QueueMaintenance), WithUnique()}
+	enqueueTx(ctx, t, app, enq, s, args, opts...)
+	if _, err := admin.Exec(ctx, `UPDATE ops.river_job SET state = 'retryable', attempt = 1, scheduled_at = now() + interval '1 hour' WHERE args->>'key' = 'r'`); err != nil {
+		t.Fatal(err)
+	}
+	enqueueTx(ctx, t, app, enq, s, args, opts...)
+	if n := len(jobsOfKind(ctx, t, admin, "test.ping")); n != 1 {
+		t.Fatalf("%d jobs while the first waits for its retry, want 1", n)
+	}
+}

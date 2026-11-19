@@ -99,7 +99,7 @@ DO $$ DECLARE n int; BEGIN
   PERFORM test.assert(n = 1, 'con tenant A fijado, la limpieza no alcanza las vencidas de B');
   RAISE EXCEPTION 'rollback' USING ERRCODE = 'RR177';
   EXCEPTION WHEN SQLSTATE 'RR177' THEN NULL; END $$;
-\echo '== K3. ops.exchange_rates (issue #170): wanka_worker solo inserta, y la base valida moneda, fuente y valores =='
+\echo '== K4. ops.exchange_rates (issue #170): wanka_worker solo inserta, y la base valida moneda, fuente y valores =='
 SELECT test.expect_error('SELECT buy FROM ops.exchange_rates', '42501', 'wanka_worker no lee los tipos de cambio');
 SELECT test.expect_error($$UPDATE ops.exchange_rates SET buy = 1$$, '42501', 'wanka_worker no actualiza tipos de cambio');
 SELECT test.expect_error($$DELETE FROM ops.exchange_rates$$, '42501', 'wanka_worker no borra tipos de cambio');

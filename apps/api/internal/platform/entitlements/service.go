@@ -153,7 +153,9 @@ func (s *Service) For(ctx context.Context, tenant pgtype.UUID) (Entitlements, er
 func (s *Service) lead(ctx context.Context, tenant pgtype.UUID, key [16]byte, c *call, epoch uint64) (Entitlements, error) {
 	defer func() {
 		s.mu.Lock()
-		delete(s.inflight, key)
+		if s.inflight[key] == c { // una invalidación pudo sacarla y otra lectura ocupar su lugar
+			delete(s.inflight, key)
+		}
 		if c.err == nil && s.epoch == epoch {
 			s.store(key, entry{ent: c.ent, expires: s.clock.Now().Add(s.ttl)})
 		}
@@ -191,6 +193,8 @@ func (s *Service) Invalidate(tenant pgtype.UUID) {
 	defer s.mu.Unlock()
 	s.epoch++
 	delete(s.cache, tenant.Bytes)
+	// La lectura en vuelo empezó antes del cambio: que la petición siguiente no se una a ella.
+	delete(s.inflight, tenant.Bytes)
 }
 
 // InvalidateAll descarta toda la caché.
@@ -199,6 +203,7 @@ func (s *Service) InvalidateAll() {
 	defer s.mu.Unlock()
 	s.epoch++
 	clear(s.cache)
+	clear(s.inflight)
 }
 
 // onNotify aplica un NOTIFY entitlements_changed. Un payload vacío o que no es
