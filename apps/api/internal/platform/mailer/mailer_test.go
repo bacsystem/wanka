@@ -39,6 +39,8 @@ func TestValidate(t *testing.T) {
 		{"address over 254", func(m *mailer.Message) {
 			m.To = "a@" + strings.Repeat("b", 60) + "." + strings.Repeat("c", 60) + "." + strings.Repeat("d", 60) + "." + strings.Repeat("e", 60) + "." + strings.Repeat("f", 60) + ".com"
 		}, "To"},
+		{"address 254 bytes", func(m *mailer.Message) { m.To = addrOfLen(254) }, ""},
+		{"address 255 bytes", func(m *mailer.Message) { m.To = addrOfLen(255) }, "To"},
 		{"subject with NUL", func(m *mailer.Message) { m.Subject = "Ho\x00la" }, "Subject"},
 		{"subject with vertical tab", func(m *mailer.Message) { m.Subject = "Ho\vla" }, "Subject"},
 		{"subject with C1 control", func(m *mailer.Message) { m.Subject = "Ho\u0085la" }, "Subject"},
@@ -154,5 +156,37 @@ func TestMessageLoggedWholeLeaksNothing(t *testing.T) {
 		fmt.Sprintf("%v", &m), fmt.Errorf("send %v: %w", m, errors.New("x")).Error(),
 	} {
 		assertNoLeak(t, out)
+	}
+}
+
+// addrOfLen arma una dirección válida de n bytes: parte local de 64 y un dominio
+// de etiquetas de a lo sumo 63.
+func addrOfLen(n int) string {
+	domain := n - 65     // tras la parte local y la arroba
+	last := domain - 128 // dos etiquetas de 63 y dos puntos
+	return strings.Repeat("a", 64) + "@" + strings.Repeat("x", 63) + "." + strings.Repeat("y", 63) + "." + strings.Repeat("z", last)
+}
+
+// Fija lo que se garantiza y lo que no. Directo (valor o puntero) slog usa
+// LogValue; dentro de un contenedor no hay garantía y se filtra todo. Si este test
+// cambia, cambia lo que el doc del paquete promete.
+func TestLoggingGuaranteeEndsAtContainers(t *testing.T) {
+	m := fullMessage()
+	log := func(v any) string {
+		var buf bytes.Buffer
+		slog.New(slog.NewJSONHandler(&buf, nil)).Error("x", "message", v)
+		return buf.String()
+	}
+	assertNoLeak(t, log(m))
+	assertNoLeak(t, log(&m))
+
+	for name, v := range map[string]any{
+		"slice":  []mailer.Message{m},
+		"map":    map[string]mailer.Message{"m": m},
+		"struct": struct{ M mailer.Message }{m},
+	} {
+		if out := log(v); !strings.Contains(out, "482913") {
+			t.Errorf("%s: the documented limitation no longer holds (now masked?): %s", name, out)
+		}
 	}
 }

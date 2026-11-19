@@ -9,6 +9,16 @@
 // en el log. El asunto y el destinatario sí se registran (el destinatario
 // enmascarado, ver Mask), así que el asunto no puede llevar ni códigos ni
 // tokens: van solo en el cuerpo.
+//
+// Reglas para quien llama:
+//   - Nunca registres un Message dentro de otra estructura, slice o map
+//     (log.Error("x", "batch", []Message{m}), json.Marshal(struct{M Message})):
+//     slog y encoding/json no pasan por LogValue ahí y vuelcan el cuerpo (el
+//     código de la 2FA), la dirección completa y la llave. Registra los campos
+//     que necesites, o m.String().
+//   - No mandes un mensaje con un código de 2FA o un token por un job ni por el
+//     outbox: se serializaría a una tabla o a una cola. El envío es síncrono,
+//     después del COMMIT (contrato de la #25).
 package mailer
 
 import (
@@ -48,14 +58,19 @@ type Message struct {
 	IdempotencyKey string
 }
 
-// LogValue deja que slog registre un Message entero sin filtrar nada: solo el
-// destinatario enmascarado y el asunto. Nunca el cuerpo, las etiquetas ni la llave.
+// LogValue hace que slog registre un Message pasado directamente como atributo
+// (por valor o por puntero) con solo el destinatario enmascarado y el asunto.
+// La garantía acaba ahí: dentro de un slice, un map o un struct, slog y
+// encoding/json no la consultan y vuelcan todos los campos (ver las reglas del
+// paquete).
 func (m Message) LogValue() slog.Value {
 	return slog.GroupValue(slog.String("recipient", Mask(m.To)), slog.String("subject", m.Subject))
 }
 
-// String y GoString dan lo mismo que LogValue a fmt (%v, %+v, %#v, %s) y a los
-// errores que formatean el mensaje.
+// String y GoString dan lo mismo a fmt (%v, %+v, %#v, %s) cuando recibe el
+// Message directo, por valor o por puntero, y a los errores que lo formatean así.
+// Un Message dentro de otro valor formateado con %v también pasa por String, pero
+// no cuentes con ello para slog ni JSON.
 func (m Message) String() string {
 	return fmt.Sprintf("Message{recipient:%s subject:%q}", Mask(m.To), m.Subject)
 }
