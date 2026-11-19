@@ -1,6 +1,6 @@
 # ADR 0012: Mantenimiento sin tenant en tablas con RLS (limpieza de `ops.idempotency_keys`)
 
-- Estado: propuesto (architect, 2026-11-19, historia #177). Pasa a aceptado cuando el dueño apruebe el PR de #177.
+- Estado: Aceptado (2026-11-19, decisión del dueño)
 - Fecha: 2026-11-19
 - Modifica: [ADR 0001](0001-multitenancy-rls.md), solo en lo que lista «Qué cambia del ADR 0001». El resto del ADR 0001 sigue vigente. Su texto no se reescribe ([README §9](../README.md)): ante una diferencia, manda este ADR.
 

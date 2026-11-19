@@ -50,20 +50,27 @@ type policyRule struct {
 	cmds   []string // pg_policies.cmd admitidos
 	roles  []string // TO <roles>; nil = PUBLIC
 	userIs bool     // la rama por usuario debe contener app.current_tenant() IS NULL
+	qual   string   // si no está vacío, pg_policies.qual tiene que ser exactamente este texto
 	reason string
 }
 
+// purgeQual24h es el predicado de las políticas de limpieza de ADR 0012: sin
+// tenant fijado y solo filas de más de 24 h, tal como lo devuelve pg_policies.
+const purgeQual24h = "((app.current_tenant() IS NULL) AND (created_at < (now() - '24:00:00'::interval)))"
+
 // policyAllow: clave «esquema.tabla:política». Es la lista blanca del ADR 0001
-// (a); incluye tablas que llegan en olas siguientes, porque la lista es del ADR
-// y la regla solo la consulta.
+// (a) más las políticas de limpieza del ADR 0012; incluye tablas que llegan en
+// olas siguientes, porque la lista es del ADR y la regla solo la consulta.
 var policyAllow = map[string]policyRule{
-	"iam.memberships:own_memberships":      {cmds: []string{"SELECT"}, userIs: true, reason: "ADR 0001, «Caminos que no tienen un tenant fijado», 1"},
-	"iam.membership_sites:own_memberships": {cmds: []string{"SELECT"}, userIs: true, reason: "ADR 0001, «Caminos que no tienen un tenant fijado», 1"},
-	"org.tenants:member_read":              {cmds: []string{"SELECT"}, userIs: true, reason: "ADR 0001, «Caminos que no tienen un tenant fijado», 1"},
-	"iam.roles:member_read":                {cmds: []string{"SELECT"}, userIs: true, reason: "ADR 0001, «Caminos que no tienen un tenant fijado», 1"},
-	"org.sites:member_read":                {cmds: []string{"SELECT"}, userIs: true, reason: "ADR 0001, «Caminos que no tienen un tenant fijado», 1"},
-	"org.cash_registers:member_read":       {cmds: []string{"SELECT"}, userIs: true, reason: "ADR 0001, «Caminos que no tienen un tenant fijado», 1"},
-	"org.tenants:platform_rw":              {cmds: []string{"ALL", "SELECT", "UPDATE"}, roles: []string{"wanka_platform"}, reason: "ADR 0001, matriz de GRANT: única política que no es solo de lectura, limitada TO wanka_platform"},
+	"iam.memberships:own_memberships":         {cmds: []string{"SELECT"}, userIs: true, reason: "ADR 0001, «Caminos que no tienen un tenant fijado», 1"},
+	"iam.membership_sites:own_memberships":    {cmds: []string{"SELECT"}, userIs: true, reason: "ADR 0001, «Caminos que no tienen un tenant fijado», 1"},
+	"org.tenants:member_read":                 {cmds: []string{"SELECT"}, userIs: true, reason: "ADR 0001, «Caminos que no tienen un tenant fijado», 1"},
+	"iam.roles:member_read":                   {cmds: []string{"SELECT"}, userIs: true, reason: "ADR 0001, «Caminos que no tienen un tenant fijado», 1"},
+	"org.sites:member_read":                   {cmds: []string{"SELECT"}, userIs: true, reason: "ADR 0001, «Caminos que no tienen un tenant fijado», 1"},
+	"org.cash_registers:member_read":          {cmds: []string{"SELECT"}, userIs: true, reason: "ADR 0001, «Caminos que no tienen un tenant fijado», 1"},
+	"org.tenants:platform_rw":                 {cmds: []string{"ALL", "SELECT", "UPDATE"}, roles: []string{"wanka_platform"}, reason: "ADR 0001, matriz de GRANT: única política que no es solo de lectura, limitada TO wanka_platform"},
+	"ops.idempotency_keys:purge_expired_read": {cmds: []string{"SELECT"}, roles: []string{"wanka_worker"}, userIs: true, qual: purgeQual24h, reason: "ADR 0012: limpieza sin tenant de wanka_worker, solo filas de más de 24 h"},
+	"ops.idempotency_keys:purge_expired":      {cmds: []string{"DELETE"}, roles: []string{"wanka_worker"}, userIs: true, qual: purgeQual24h, reason: "ADR 0012: limpieza sin tenant de wanka_worker, solo filas de más de 24 h"},
 }
 
 // uniqueAllow: UNIQUE o PK de una tabla con tenant_id que no empieza por
@@ -236,7 +243,7 @@ func rulePolicies(ctx context.Context, q queryer) ([]string, error) {
 		}
 		rule, ok := policyAllow[p.table+":"+p.name]
 		if !ok {
-			out = append(out, fmt.Sprintf("%s: policy %s is not in the ADR 0001 whitelist (own_memberships, member_read, platform_rw)", p.table, p.name))
+			out = append(out, fmt.Sprintf("%s: policy %s is not in the ADR 0001 whitelist (own_memberships, member_read, platform_rw) nor ADR 0012 (purge_*)", p.table, p.name))
 			continue
 		}
 		if !contains(rule.cmds, p.cmd) {
@@ -251,6 +258,9 @@ func rulePolicies(ctx context.Context, q queryer) ([]string, error) {
 		}
 		if rule.userIs && !strings.Contains(p.qual, "app.current_tenant() IS NULL") {
 			out = append(out, fmt.Sprintf("%s: policy %s has no app.current_tenant() IS NULL in its user branch: %q", p.table, p.name, p.qual))
+		}
+		if rule.qual != "" && p.qual != rule.qual {
+			out = append(out, fmt.Sprintf("%s: policy %s has USING %q, want exactly %q", p.table, p.name, p.qual, rule.qual))
 		}
 	}
 	return out, nil
@@ -793,6 +803,11 @@ func TestCatalogRulesCatchMutations(t *testing.T) {
 		{name: "platform_rw open to PUBLIC", rule: "extra-policies-are-whitelisted",
 			up:   "DROP POLICY IF EXISTS platform_rw ON org.tenants; CREATE POLICY platform_rw ON org.tenants USING (true);",
 			want: []string{"org.tenants: policy platform_rw is TO [public], want [wanka_platform]"}},
+		{name: "purge_expired with a wider predicate", rule: "extra-policies-are-whitelisted",
+			up: `DROP POLICY IF EXISTS purge_expired ON ops.idempotency_keys;
+			     CREATE POLICY purge_expired ON ops.idempotency_keys FOR DELETE TO wanka_worker
+			       USING (app.current_tenant() IS NULL AND created_at < now() - interval '1 hour');`,
+			want: []string{"ops.idempotency_keys: policy purge_expired has USING"}},
 		{name: "tenant_isolation on a table that is not a tenant table", rule: "extra-policies-are-whitelisted",
 			up: `CREATE TABLE mut.g (id uuid PRIMARY KEY); ALTER TABLE mut.g ENABLE ROW LEVEL SECURITY;
 			     CREATE POLICY tenant_isolation ON mut.g USING (true);`,
