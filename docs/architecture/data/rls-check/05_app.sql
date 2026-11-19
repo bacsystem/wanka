@@ -134,3 +134,71 @@ INSERT INTO iam.sessions (id, user_id, access_hash, access_expires_at, mfa_satis
   VALUES ('5e000000-0000-0000-0000-0000000000e2', 'eeeeeeee-0000-0000-0000-000000000002', sha256('old-created'), now(), true, 'none', now() - interval '400 days');
 SELECT test.assert((SELECT created_at = now() FROM iam.sessions WHERE id = '5e000000-0000-0000-0000-0000000000e2'), 'created_at del INSERT lo fija el servidor');
 ROLLBACK;
+\echo '== E1. iam.mfa_enrollments (#25): grants por columna, CHECK y trigger del token de enrolamiento =='
+-- e1: token consumido con dos envios; e2: token vivo con el secreto pendiente fijado.
+BEGIN;
+INSERT INTO iam.mfa_enrollments (id, user_id, token_hash, email_code_hmac, expires_at)
+  VALUES ('e0000000-0000-0000-0000-0000000000e1', 'eeeeeeee-0000-0000-0000-000000000002', sha256('wk_en_prueba'),
+          sha256('hmac-prueba'), now() + interval '10 minutes'),
+         ('e0000000-0000-0000-0000-0000000000e2', 'eeeeeeee-0000-0000-0000-000000000002', sha256('wk_en_vivo'),
+          sha256('hmac-vivo'), now() + interval '10 minutes');
+-- reenvio, secreto pendiente y consumo: lo que el contrato permite
+UPDATE iam.mfa_enrollments SET email_code_hmac = sha256('hmac-2'), email_sends = 2, totp_secret_enc = '\x00', consumed_at = now()
+ WHERE id = 'e0000000-0000-0000-0000-0000000000e1';
+UPDATE iam.mfa_enrollments SET totp_secret_enc = '\x01' WHERE id = 'e0000000-0000-0000-0000-0000000000e2';
+SELECT test.assert((SELECT email_sends = 2 AND consumed_at IS NOT NULL FROM iam.mfa_enrollments WHERE id = 'e0000000-0000-0000-0000-0000000000e1'),
+                   'wanka_app reenvia, guarda el secreto pendiente y consume el token');
+COMMIT;
+SELECT test.expect_error($$UPDATE iam.mfa_enrollments SET expires_at = expires_at + interval '1 hour'$$, '42501', 'wanka_app no alarga un token de enrolamiento');
+SELECT test.expect_error($$UPDATE iam.mfa_enrollments SET user_id = 'eeeeeeee-0000-0000-0000-000000000001'$$, '42501', 'wanka_app no pasa el token a otro usuario');
+SELECT test.expect_error($$UPDATE iam.mfa_enrollments SET token_hash = sha256('otro')$$, '42501', 'wanka_app no cambia token_hash');
+SELECT test.expect_error($$DELETE FROM iam.mfa_enrollments$$, '42501', 'wanka_app no borra tokens de enrolamiento');
+SELECT test.assert(NOT has_column_privilege('wanka_app', 'iam.mfa_enrollments', c, 'UPDATE'), 'wanka_app sin UPDATE en iam.mfa_enrollments.' || c)
+  FROM unnest(ARRAY['id','user_id','token_hash','expires_at','created_at']) AS c;
+SELECT test.expect_error($$INSERT INTO iam.mfa_enrollments (id, user_id, token_hash, email_code_hmac, expires_at)
+  VALUES (gen_random_uuid(), 'eeeeeeee-0000-0000-0000-000000000002', sha256('t2'), sha256('h2'), now() + interval '11 minutes')$$,
+  '23514', 'token de enrolamiento de mas de 10 min');
+SELECT test.expect_error($$INSERT INTO iam.mfa_enrollments (id, user_id, token_hash, email_code_hmac, expires_at)
+  VALUES (gen_random_uuid(), 'eeeeeeee-0000-0000-0000-000000000002', sha256('t3'), '\x00', now() + interval '5 minutes')$$,
+  '23514', 'email_code_hmac de 32 bytes');
+SELECT test.expect_error($$UPDATE iam.users SET mfa_failed_attempts = 5 WHERE id = 'eeeeeeee-0000-0000-0000-000000000002'$$, '23514', 'el 5o fallo bloquea, no se guarda');
+SELECT test.expect_error($$UPDATE iam.users SET mfa_lockouts = 4 WHERE id = 'eeeeeeee-0000-0000-0000-000000000002'$$, '23514', 'con 3 bloqueos el segundo paso ya esta cerrado');
+-- Trigger, INSERT: created_at lo fija el servidor. Un created_at futuro no hace pasar un TTL largo por el CHECK.
+SELECT test.expect_error($$INSERT INTO iam.mfa_enrollments (id, user_id, token_hash, email_code_hmac, created_at, expires_at)
+  VALUES (gen_random_uuid(), 'eeeeeeee-0000-0000-0000-000000000002', sha256('t4'), sha256('h4'), now() + interval '30 days' - interval '5 minutes', now() + interval '30 days')$$,
+  '23514', 'un created_at futuro no deja un token vigente semanas');
+BEGIN;
+INSERT INTO iam.mfa_enrollments (id, user_id, token_hash, email_code_hmac, created_at, email_sent_at, email_sends, consumed_at, expires_at)
+  VALUES ('e0000000-0000-0000-0000-0000000000e3', 'eeeeeeee-0000-0000-0000-000000000002', sha256('t5'), sha256('h5'),
+          now() - interval '1 day', now() - interval '1 day', 3, now(), now() + interval '5 minutes');
+SELECT test.assert((SELECT created_at = now() AND email_sent_at = now() AND email_sends = 1 AND consumed_at IS NULL
+                      FROM iam.mfa_enrollments WHERE id = 'e0000000-0000-0000-0000-0000000000e3'),
+                   'el INSERT fija created_at, email_sent_at, email_sends = 1 y consumed_at NULL');
+ROLLBACK;
+-- Trigger, UPDATE de un token consumido: no se reabre ni cambia; consumir otra vez conserva el instante viejo.
+SELECT test.expect_error($$UPDATE iam.mfa_enrollments SET consumed_at = NULL WHERE id = 'e0000000-0000-0000-0000-0000000000e1'$$, '42501', 'un token consumido no se reabre');
+SELECT test.expect_error($$UPDATE iam.mfa_enrollments SET email_sends = 3, email_code_hmac = sha256('h-otra') WHERE id = 'e0000000-0000-0000-0000-0000000000e1'$$,
+  '42501', 'un token consumido no recibe reenvios');
+BEGIN;
+UPDATE iam.mfa_enrollments SET consumed_at = now() + interval '1 hour' WHERE user_id = 'eeeeeeee-0000-0000-0000-000000000002';
+SELECT test.assert((SELECT consumed_at < now() FROM iam.mfa_enrollments WHERE id = 'e0000000-0000-0000-0000-0000000000e1'),
+                   'consumir otra vez (UPDATE masivo del restablecimiento) conserva el instante viejo');
+SELECT test.assert((SELECT consumed_at = now() FROM iam.mfa_enrollments WHERE id = 'e0000000-0000-0000-0000-0000000000e2'),
+                   'consumed_at lo fija el servidor');
+ROLLBACK;
+-- Trigger, UPDATE de un token vivo: envios solo suben, el codigo cambia solo con un envio, el secreto no rota, email_sent_at no se finge.
+SELECT test.expect_error($$UPDATE iam.mfa_enrollments SET email_code_hmac = sha256('h-sin-envio') WHERE id = 'e0000000-0000-0000-0000-0000000000e2'$$,
+  '42501', 'un codigo nuevo exige un envio nuevo');
+SELECT test.expect_error($$UPDATE iam.mfa_enrollments SET totp_secret_enc = '\x02' WHERE id = 'e0000000-0000-0000-0000-0000000000e2'$$,
+  '42501', 'el secreto pendiente no rota');
+BEGIN;
+UPDATE iam.mfa_enrollments SET email_code_hmac = sha256('h-3'), email_sends = 2 WHERE id = 'e0000000-0000-0000-0000-0000000000e2';
+SELECT test.expect_error($$UPDATE iam.mfa_enrollments SET email_sends = 1 WHERE id = 'e0000000-0000-0000-0000-0000000000e2'$$,
+  '42501', 'email_sends no baja');
+UPDATE iam.mfa_enrollments SET email_code_hmac = sha256('h-4'), email_sends = 3 WHERE id = 'e0000000-0000-0000-0000-0000000000e2';
+SELECT test.expect_error($$UPDATE iam.mfa_enrollments SET email_sends = 4, email_code_hmac = sha256('h-5') WHERE id = 'e0000000-0000-0000-0000-0000000000e2'$$,
+  '23514', 'mas de 3 envios por token');
+UPDATE iam.mfa_enrollments SET email_sent_at = now() - interval '1 hour' WHERE id = 'e0000000-0000-0000-0000-0000000000e2';
+SELECT test.assert((SELECT email_sent_at = now() FROM iam.mfa_enrollments WHERE id = 'e0000000-0000-0000-0000-0000000000e2'),
+                   'email_sent_at no se finge: lo fija el servidor en cada envio');
+ROLLBACK;

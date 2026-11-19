@@ -34,6 +34,11 @@ for m in "naive_session_lookup|wanka_app" \
          "drop_impersonated_check|superusuario: sesiones impersonadas" \
          "revoke_worker_session_columns|wanka_worker" \
          "grant_app_update_all_sessions|wanka_app" \
+         "grant_app_update_all_mfa_enrollments|wanka_app" \
+         "drop_mfa_guard_trigger|wanka_app" \
+         "mfa_guard_no_server_created_at|wanka_app" \
+         "mfa_guard_allows_reopen|wanka_app" \
+         "revoke_worker_mfa_enrollment_columns|wanka_worker" \
          "drop_guard_trigger|wanka_app" \
          "drop_user_check|wanka_app" \
          "lookup_without_user_check|wanka_app" \
