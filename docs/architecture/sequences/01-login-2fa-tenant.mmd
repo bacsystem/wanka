@@ -7,6 +7,7 @@ sequenceDiagram
   participant W as web (BFF Next.js)
   participant A as api /v1 (identidad)
   participant DB as PostgreSQL
+  participant M as Mailer (puerto, issue 168)
 
   U->>W: POST /login (email, password)
   W->>A: POST /v1/auth/login {email, password}
@@ -27,10 +28,26 @@ sequenceDiagram
       A->>A: verifica TOTP (ventana +-1 paso, rechaza codigo ya usado)
       A->>DB: UPDATE sessions SET mfa_satisfied=true, mfa_method=totp, access_hash y refresh_hash nuevos (refresh_family no cambia: wanka_app no tiene UPDATE sobre ella)
     else sin TOTP y mfa_obligatorio
-      A-->>W: 200 {status:"mfa_enrollment_required", enrollmentToken} (wk_en_, TTL 10 min, solo sirve para enrolar, vale hasta el confirm correcto) y, pendiente de decision del dueno (issue 25), un emailCode al correo del usuario
-      U->>W: escanea el QR y escribe el primer codigo
-      W->>A: POST /v1/auth/mfa/enrollment/totp {enrollmentToken} y luego /confirm {enrollmentToken, code, emailCode si el dueno lo aprueba, issue 25}, rutas Public sin sesion (desde /perfil, con sesion, son /v1/auth/mfa/totp/enroll y /confirm)
-      A->>DB: INSERT user_totp (secreto cifrado), codigos de recuperacion, INSERT sessions mfa_satisfied=true, mfa_method=totp, con refresh_family y refresh_hash en el INSERT
+      Note over A: segundo paso bloqueado (mfa_locked_until) o 10 correos del usuario en la ultima hora: 429 rate_limited con Retry-After, sin token ni correo
+      A->>DB: tx: users FOR UPDATE, INSERT mfa_enrollments (token_hash, email_code_hmac = HMAC del emailCode de 6 digitos con el token como clave y expires_at = +10 min), COMMIT
+      A->>M: Mailer.Send emailCode despues del COMMIT (plazo 5 s, un intento, sin enlaces en el correo)
+      A-->>W: 200 {status:"mfa_enrollment_required", enrollmentToken, expiresAt, emailCodeSent} (wk_en_, TTL 10 min, solo sirve para enrolar, vale hasta el confirm correcto. emailCodeSent=false si el Mailer fallo: el token sirve igual)
+      M-->>U: correo con el emailCode (decision del dueno, issue 25)
+      U->>W: escanea el QR, escribe el primer codigo TOTP y el emailCode
+      opt no llego el correo
+        W->>A: POST /v1/auth/mfa/enrollment/email-code/resend {enrollmentToken}: codigo nuevo, el anterior deja de valer, 3 envios por token, 60 s entre envios, si no 429
+      end
+      W->>A: POST /v1/auth/mfa/enrollment/totp {enrollmentToken} (mismo secreto si se repite) y luego /confirm {enrollmentToken, code, emailCode}, rutas Public sin sesion (desde /perfil, con sesion, son /v1/auth/mfa/totp/enroll y /confirm, sin emailCode)
+      A->>DB: tx: users FOR UPDATE, mfa_enrollments FOR UPDATE, evalua TOTP y emailCode (hmac.Equal) siempre los dos
+      alt TOTP o emailCode malos, fallo 1 a 4
+        A->>DB: mfa_failed_attempts++ y COMMIT (el token sigue vigente)
+        A-->>W: 422 validation_failed, errors[] por campo (code, emailCode) con meta.attemptsRemaining
+      else 5o fallo seguido
+        A->>DB: mfa_locked_until = +15 min, contador a 0, consumed_at en el token, COMMIT
+        A-->>W: 429 rate_limited con Retry-After (hay que volver a iniciar sesion)
+      else los dos correctos
+        A->>DB: INSERT user_totp (secreto cifrado), codigos de recuperacion, contador a 0, consumed_at, INSERT sessions mfa_satisfied=true, mfa_method=totp, con refresh_family y refresh_hash en el INSERT
+      end
     else sin TOTP y ningun rol lo exige
       A->>DB: INSERT sessions (mfa_satisfied=true, mfa_method=none, tenant_id=null): la 2FA no se requeria, la sesion la cumple
     end

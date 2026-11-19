@@ -16,10 +16,14 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/bacsystem/wanka/apps/api/internal/platform/auth"
+	"github.com/bacsystem/wanka/apps/api/internal/platform/auth/pgsession"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/config"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/db"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/httpx"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/logging"
+	"github.com/bacsystem/wanka/apps/api/internal/platform/mailer"
+	"github.com/bacsystem/wanka/apps/api/internal/platform/mailerstub"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/metrics"
 	"github.com/bacsystem/wanka/apps/api/migrations"
 )
@@ -30,6 +34,9 @@ const (
 	exitUsage = 2
 
 	shutdownTimeout = 10 * time.Second
+
+	// sweepInterval cada cuánto se barren los buckets llenos de los limitadores (#196).
+	sweepInterval = 10 * time.Second
 )
 
 // planes asocia cada plano con el servicio (rol de base de datos) que lo atiende.
@@ -111,6 +118,11 @@ func run(ctx context.Context, args []string, getenv func(string) string, stdout,
 	}
 	log := logging.New(stdout, cfg.LogLevel).With("command", sub)
 
+	if sub != "migrate" {
+		// Aún ningún módulo lo consume; cuando lleguen, reciben el puerto aquí.
+		_ = newMailer(log, cfg)
+	}
+
 	switch sub {
 	case "serve":
 		err = serve(ctx, log, cfg, svc, plane)
@@ -124,6 +136,18 @@ func run(ctx context.Context, args []string, getenv func(string) string, stdout,
 		return exitError
 	}
 	return exitOK
+}
+
+// newMailer elige el adaptador de correo según MAILER. El stub no entrega nada:
+// en producción avisa con WARN hasta que exista un adaptador real.
+func newMailer(log *slog.Logger, cfg config.Config) mailer.Mailer {
+	if cfg.Mailer == config.MailerNone {
+		return mailer.Disabled{}
+	}
+	if cfg.Production {
+		log.Warn("mailer is the stub: no email is delivered until a real mailer adapter exists", "mailer", cfg.Mailer)
+	}
+	return mailerstub.New(log, mailerstub.DefaultMaxSent)
 }
 
 // serve runs the HTTP server of one plane until ctx is cancelled, then shuts
@@ -144,9 +168,15 @@ func serve(ctx context.Context, log *slog.Logger, cfg config.Config, svc config.
 		}
 		return err
 	}
-	// Every plane mounts only the health routes for now; the module routes
-	// arrive with their stories (tenant never mounts plataforma, ADR 0002).
-	handler := httpx.Chain(httpx.NewMux(ready), log, metrics.Nop{})
+	// Every plane mounts the health routes; the tenant plane also mounts the
+	// session chain. The module routes arrive with their stories (tenant never
+	// mounts plataforma, ADR 0002).
+	rt := httpx.NewMux(ready)
+	sweeper, err := mountPlane(plane, rt, pool)
+	if err != nil {
+		return err
+	}
+	handler := httpx.Chain(rt, log, metrics.Nop{})
 	srv := httpx.NewServer(cfg.HTTPAddr, handler)
 
 	ln, err := net.Listen("tcp", cfg.HTTPAddr)
@@ -157,6 +187,13 @@ func serve(ctx context.Context, log *slog.Logger, cfg config.Config, svc config.
 
 	errc := make(chan error, 1)
 	go func() { errc <- srv.Serve(ln) }()
+
+	if sweeper != nil {
+		// El bucle termina con el apagado: se espera a que salga antes de volver.
+		sweepCtx, stopSweep := context.WithCancel(ctx)
+		sweepDone := startSweepLoop(sweepCtx, sweeper, sweepInterval)
+		defer func() { stopSweep(); <-sweepDone }()
+	}
 
 	select {
 	case err := <-errc:
@@ -174,6 +211,46 @@ func serve(ctx context.Context, log *slog.Logger, cfg config.Config, svc config.
 	}
 	log.Info("stopped")
 	return nil
+}
+
+// sweeper es lo que el bucle de barrido necesita de auth.Routes.
+type sweeper interface{ Sweep() int }
+
+// mountPlane monta en rt lo propio de cada plano. En el plano tenant arma el
+// registrador de rutas /v1 con el resolver de PostgreSQL y los dos limitadores
+// con los valores de conventions.md §7, y devuelve quien barre sus buckets; en
+// los demás no monta nada y devuelve nil. El *auth.Routes no sale de aquí hacia
+// los módulos todavía: cuando haya rutas /v1 de módulo, se les pasará solo
+// ese registrador y nunca rt, para que ninguna ruta /v1 quede sin clase.
+func mountPlane(plane string, rt *httpx.Router, pool *db.Pool) (sweeper, error) {
+	if plane != "tenant" {
+		return nil, nil
+	}
+	routes, err := auth.NewRoutes(rt, pgsession.New(pool), auth.Options{})
+	if err != nil {
+		return nil, fmt.Errorf("mounting the session chain: %w", err)
+	}
+	return routes, nil
+}
+
+// startSweepLoop llama a s.Sweep cada interval hasta que ctx termine; el canal
+// devuelto se cierra cuando el bucle salió.
+func startSweepLoop(ctx context.Context, s sweeper, interval time.Duration) <-chan struct{} {
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		t := time.NewTicker(interval)
+		defer t.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-t.C:
+				s.Sweep()
+			}
+		}
+	}()
+	return done
 }
 
 // migrate aplica las migraciones pendientes como wanka_migrator y termina.
