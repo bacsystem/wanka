@@ -7,6 +7,7 @@ sequenceDiagram
   participant W as web (BFF Next.js)
   participant A as api /v1 (identidad)
   participant DB as PostgreSQL
+  participant M as Mailer (puerto, issue 168)
 
   U->>W: POST /login (email, password)
   W->>A: POST /v1/auth/login {email, password}
@@ -27,15 +28,39 @@ sequenceDiagram
       A->>A: verifica TOTP (ventana +-1 paso, rechaza codigo ya usado)
       A->>DB: UPDATE sessions SET mfa_satisfied=true, mfa_method=totp, access_hash y refresh_hash nuevos (refresh_family no cambia: wanka_app no tiene UPDATE sobre ella)
     else sin TOTP y mfa_obligatorio
-      A-->>W: 200 {status:"mfa_enrollment_required", enrollmentToken} (wk_en_, TTL 10 min, solo sirve para enrolar, vale hasta el confirm correcto) y, pendiente de decision del dueno (issue 25), un emailCode al correo del usuario
-      U->>W: escanea el QR y escribe el primer codigo
-      W->>A: POST /v1/auth/mfa/enrollment/totp {enrollmentToken} y luego /confirm {enrollmentToken, code, emailCode si el dueno lo aprueba, issue 25}, rutas Public sin sesion (desde /perfil, con sesion, son /v1/auth/mfa/totp/enroll y /confirm)
-      A->>DB: INSERT user_totp (secreto cifrado), codigos de recuperacion, INSERT sessions mfa_satisfied=true, mfa_method=totp, con refresh_family y refresh_hash en el INSERT
+      break segundo paso cerrado tras 3 bloqueos (mfa_lockouts = 3)
+        A-->>W: 401 invalid_credentials, mismo cuerpo y tiempo que una contrasena mala, sin sumar failed_logins (la salida es restablecer la contrasena)
+      end
+      break bloqueo vigente (mfa_locked_until) o topes de correo del usuario (10 por hora, 20 en 24 h)
+        A-->>W: 429 rate_limited con Retry-After, sin token ni correo
+      end
+      A->>DB: tx: users FOR UPDATE, INSERT mfa_enrollments (token_hash, email_code_hmac = HMAC del emailCode de 6 digitos con el token como clave y expires_at = +10 min), COMMIT
+      A->>M: Mailer.Send emailCode despues del COMMIT (plazo 5 s, un intento, sin enlaces en el correo)
+      A-->>W: 200 {status:"mfa_enrollment_required", enrollmentToken, expiresAt, emailCodeSent} (wk_en_, TTL 10 min, solo sirve para enrolar, vale hasta el confirm correcto. emailCodeSent=false si el Mailer fallo: el token sirve igual)
+      M-->>U: correo con el emailCode (decision del dueno, issue 25)
+      U->>W: escanea el QR, escribe el primer codigo TOTP y el emailCode
+      opt no llego el correo
+        W->>A: POST /v1/auth/mfa/enrollment/email-code/resend {enrollmentToken}: codigo nuevo, el anterior deja de valer. 3 envios por token, 60 s entre envios, 10 por hora y 20 en 24 h por usuario, si no 429
+      end
+      W->>A: POST /v1/auth/mfa/enrollment/totp {enrollmentToken} (mismo secreto si se repite) y luego /confirm {enrollmentToken, code, emailCode}, rutas Public sin sesion y sin Idempotency-Key (desde /perfil, con sesion, son /v1/auth/mfa/totp/enroll y /confirm, sin emailCode)
+      break token vencido, consumido (tambien por un bloqueo) o inexistente: se comprueba antes que el bloqueo
+        A-->>W: 401 session_expired (issue 187), el BFF vuelve a /login
+      end
+      A->>DB: tx: users FOR UPDATE, mfa_enrollments FOR UPDATE, evalua TOTP y emailCode (hmac.Equal) siempre los dos
+      break TOTP o emailCode malos, fallo 1 a 4
+        A->>DB: mfa_failed_attempts++ y COMMIT (el token sigue vigente)
+        A-->>W: 422 validation_failed, errors[] por campo (code, emailCode) con meta.attemptsRemaining
+      end
+      break 5o fallo seguido
+        A->>DB: mfa_locked_until = +15 min, contador a 0, mfa_lockouts++, consumed_at en todos los tokens de paso vivos del usuario, aviso por el outbox, COMMIT. Si mfa_lockouts llega a 3, segundo paso cerrado hasta restablecer la contrasena
+        A-->>W: 429 rate_limited con Retry-After (hay que volver a iniciar sesion)
+      end
+      A->>DB: los dos correctos: INSERT user_totp (secreto cifrado), codigos de recuperacion, mfa_failed_attempts a 0 (mfa_lockouts solo lo limpia el restablecimiento), consumed_at, INSERT sessions mfa_satisfied=true, mfa_method=totp, con refresh_family y refresh_hash en el INSERT
     else sin TOTP y ningun rol lo exige
       A->>DB: INSERT sessions (mfa_satisfied=true, mfa_method=none, tenant_id=null): la 2FA no se requeria, la sesion la cumple
     end
     A->>DB: emite access (15 min) + refresh (rotativo)
-    A-->>W: 200 {accessToken, refreshToken, expiresAt, memberships:[{tenant, role, requiresMfa, sites, cashRegisters}]}
+    A-->>W: 200 {accessToken, refreshToken, expiresAt, memberships:[{tenant, role, requiresMfa, sites, cashRegisters}]}, y en el confirm del enrolamiento ademas recoveryCodes (10, se muestran una sola vez)
     W->>W: route handler: Set-Cookie wk_at, wk_at_exp, wk_rt (httpOnly, Secure, SameSite=Lax, Path=/)
     W-->>U: redirige a /seleccionar-empresa
   end
@@ -54,7 +79,7 @@ sequenceDiagram
     W-->>U: redirige a /
   end
   Note over W,A: Refresh solo en proxy.ts o en route handlers, con single-flight por proceso. Si llega el refresh anterior dentro de 10 s desde la rotacion, la API devuelve SOLO un access nuevo y el BFF no toca wk_rt (el navegador ya tiene el refresh ganador). Fuera de la gracia, el reuso revoca toda la familia (ADR 0004) y responde 401 session_expired, igual que un refresh inexistente, revocado o vencido: el BFF no reintenta y lleva a /login.
-  Note over A: Recuperacion: POST /v1/auth/password/forgot (respuesta 202 siempre) -> token 15 min por correo -> POST /v1/auth/password/reset revoca todas las sesiones.
+  Note over A: Recuperacion: POST /v1/auth/password/forgot (respuesta 202 siempre) -> token 15 min por correo -> POST /v1/auth/password/reset revoca todas las sesiones, consume los tokens de paso vivos y pone a 0 mfa_failed_attempts, mfa_lockouts y mfa_locked_until.
   Note over U,DB: Membresia perdida mientras usa la empresa A (ADR 0011, decision del dueno 2026-11-18): vuelve a /seleccionar-empresa, no a /login
   U->>W: sigue navegando en la empresa A
   W->>A: GET /v1/... Bearer wk_at (sesion ligada a A)

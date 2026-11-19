@@ -511,6 +511,7 @@ func TestCatalogRules(t *testing.T) {
 			       EXISTS (SELECT 1 FROM pg_policy p WHERE p.polrelid = c.oid AND p.polname = 'tenant_isolation' AND p.polcmd = '*')
 			  FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
 			 WHERE c.relkind = 'r' AND n.nspname NOT IN ('pg_catalog', 'information_schema', 'goose')
+			   AND n.nspname <> 'platform'  -- excepción documentada: platform.* es global y no tiene RLS (ADR 0001); lo prueba entitlements
 			   AND c.oid <> 'iam.sessions'::regclass  -- excepción documentada: tiene tenant_id y no RLS, se busca por hash antes de conocer el tenant (ADR 0004)
 			   AND (c.oid = 'org.tenants'::regclass OR EXISTS (SELECT 1 FROM pg_attribute a WHERE a.attrelid = c.oid AND a.attname = 'tenant_id' AND NOT a.attisdropped))`)
 		if err != nil {
@@ -709,6 +710,10 @@ func TestTableGrantsMatchTheADR0001Matrix(t *testing.T) {
 		"wanka_worker|org.tenants":      "SELECT",
 		"wanka_definer|iam.sessions":    "SELECT",
 		"wanka_definer|iam.memberships": "SELECT",
+		// Catálogo de permisos (#172): solo lectura para api, worker y plataforma.
+		"wanka_app|iam.permissions":      "SELECT",
+		"wanka_worker|iam.permissions":   "SELECT",
+		"wanka_platform|iam.permissions": "SELECT",
 	}
 	rows, err := admin.Query(ctx, `
 		SELECT grantee, table_schema || '.' || table_name, string_agg(privilege_type, ',' ORDER BY privilege_type)
@@ -765,8 +770,15 @@ func TestTableGrantsMatchTheADR0001Matrix(t *testing.T) {
 			}
 		}
 	}
+	// wanka_platform lee iam.permissions (#172): USAGE en iam, y nada en org. wanka_webhooks no tiene ninguno.
+	if !queryOne[bool](t, admin, `SELECT has_schema_privilege('wanka_platform', 'iam', 'USAGE')`) {
+		t.Error("wanka_platform lacks USAGE on iam (needed to read iam.permissions)")
+	}
 	for _, role := range []string{"wanka_webhooks", "wanka_platform"} {
 		for _, schema := range []string{"iam", "org"} {
+			if role == "wanka_platform" && schema == "iam" {
+				continue
+			}
 			if queryOne[bool](t, admin, `SELECT has_schema_privilege($1, $2, 'USAGE')`, role, schema) {
 				t.Errorf("%s must not have USAGE on %s", role, schema)
 			}
@@ -1056,5 +1068,49 @@ func TestSessionLookupImpersonatedWithAMembershipSeesItAbsent(t *testing.T) {
 	}
 	if r := rows[0]; r.UserID != nil || r.Membership == nil || r.CurrentVersion != nil || r.MembershipStatus != nil {
 		t.Errorf("row = %+v, want user_id NULL, membership_id set and the membership absent", r)
+	}
+}
+
+// publicExecuteAllowed lista las funciones de iam que PUBLIC puede ejecutar a propósito (firma como la
+// imprime regprocedure). Está vacía: una función nueva de iam sale de CREATE FUNCTION con EXECUTE para PUBLIC y
+// wanka_platform, que desde #172 tiene USAGE en iam, podría llamarla. Cada función debe hacer REVOKE ... FROM PUBLIC
+// y GRANT al rol que la usa; agregar una excepción aquí es una decisión de arquitectura.
+var publicExecuteAllowed = map[string]bool{}
+
+// Ninguna función de iam (salvo triggers, que solo dispara el motor) conserva el EXECUTE por defecto de PUBLIC.
+func TestNoIAMFunctionIsExecutableByPublic(t *testing.T) {
+	d := migrated(t)
+	ctx := context.Background()
+	rows, err := d.Admin(ctx, t).Query(ctx, `
+		SELECT p.oid::regprocedure::text
+		  FROM pg_proc p
+		 WHERE p.pronamespace = 'iam'::regnamespace
+		   AND p.prorettype <> 'trigger'::regtype
+		   AND has_function_privilege('public', p.oid, 'EXECUTE')
+		 ORDER BY 1`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	n := 0
+	for rows.Next() {
+		var fn string
+		if err := rows.Scan(&fn); err != nil {
+			t.Fatal(err)
+		}
+		if !publicExecuteAllowed[fn] {
+			t.Errorf("PUBLIC can execute %s: REVOKE ALL ON FUNCTION ... FROM PUBLIC and grant it to the role that uses it", fn)
+		}
+		n++
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatal(err)
+	}
+	if n != len(publicExecuteAllowed) {
+		t.Errorf("%d functions of iam are executable by PUBLIC, the allowlist has %d", n, len(publicExecuteAllowed))
+	}
+	// La consulta no está vacía por error: iam tiene funciones que no son triggers (session_lookup).
+	if c := queryOne[int](t, d.Admin(ctx, t), `SELECT count(*) FROM pg_proc WHERE pronamespace = 'iam'::regnamespace AND prorettype <> 'trigger'::regtype`); c == 0 {
+		t.Error("no non-trigger function found in iam: the query checks nothing")
 	}
 }

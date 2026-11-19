@@ -53,14 +53,14 @@ sequenceDiagram
     end
     E-->>MW: {modules, flags, limits, usage, version}
   end
-  alt empresa cerrada y metodo distinto de GET
-    MW-->>W: 403 tenant_read_only (los GET y los exportes pasan, no se evalua la suscripcion)
+  alt empresa cerrada y metodo distinto de GET y HEAD
+    MW-->>W: 403 tenant_read_only (los GET, HEAD y exportes pasan, no se evalua la suscripcion. Lee los modulos de su ultimo plan con overrides aunque la suscripcion este caida, ADR 0005)
   else suscripcion morosa, suspendida o cancelada (empresa no cerrada)
     MW-->>W: 402 subscription_inactive (bloqueo total, tambien GET, solo pasan GET /v1/exports y GET /v1/me/entitlements, las rutas sin tenant ya terminaron arriba, decision del dueno 2026-11-18)
   else modulo rubro.lubricentro no habilitado
     MW-->>W: 403 module_not_enabled {module}
-  else limite de plan alcanzado (ej. CPE del mes, usuarios, sedes)
-    MW-->>W: 403 plan_limit_reached {limit, used}
+  else limite de plan alcanzado (CPE del mes o usuarios, sedes aun sin medicion, ninguna ruta lo consume)
+    MW-->>W: 403 plan_limit_reached {limit, used} enteros
   else ok
     alt current_version distinta de s.authz_version (rol cambiado desde la ultima peticion)
       MW->>DB: re-resuelve el rol (requires_mfa) y los permisos, UPDATE sessions SET authz_version = current_version WHERE id = s.id AND membership_id = s.membership_id AND revoked_at IS NULL (si un desligue concurrente gano, 0 filas: la sesion sin tenant nunca queda con version)

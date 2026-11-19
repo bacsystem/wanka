@@ -28,3 +28,4 @@ INSERT INTO iam.memberships (id, tenant_id, user_id, role_id, status)
   VALUES ('3e000000-0000-0000-0000-0000000000d1','bbbbbbbb-0000-0000-0000-000000000002','eeeeeeee-0000-0000-0000-000000000003','b0000000-0000-0000-0000-0000000000b1','suspendido');
 COMMIT;
 INSERT INTO ops.webhook_routes VALUES ('r-0123456789abcdef', 'aaaaaaaa-0000-0000-0000-000000000001', 'khipu', '\xdeadbeef', NULL);
+INSERT INTO ops.exchange_rates VALUES ('2026-11-19', 'USD', 3.7, 3.8, 'official');

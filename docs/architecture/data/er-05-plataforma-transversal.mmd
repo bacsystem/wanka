@@ -1,5 +1,5 @@
 ---
-title: plataforma (esquema platform, SIN RLS, solo roles de plataforma) + transversales (audit con RLS, ops)
+title: plataforma (esquema platform, SIN RLS; wanka_app y wanka_worker solo leen las tablas de entitlements) + transversales (audit con RLS, ops)
 ---
 erDiagram
   PLANS ||--o{ PLAN_MODULES : incluye
@@ -23,7 +23,7 @@ erDiagram
     uuid id PK
     text code UK
     text name
-    jsonb limits "usuarios, sedes, CPE por mes"
+    jsonb limits "users, sites, cpe_per_month: las tres obligatorias (CHECK), sin tope ilimitado"
     boolean active
   }
   PLAN_MODULES {
