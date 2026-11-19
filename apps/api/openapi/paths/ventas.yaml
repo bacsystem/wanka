@@ -1,0 +1,108 @@
+openapi: 3.1.0
+info:
+  title: Wanka API - ventas
+  version: 0.1.0-draft
+paths:
+  /v1/sales:
+    post:
+      tags: [ventas]
+      operationId: createSale
+      x-module: ventas
+      x-permission: ventas.pos:create
+      summary: Registra una venta POS y encola la emisión del CPE
+      description: |
+        Rol: cualquiera con permiso ventas.pos:create y turno de caja abierto
+        en la sede de la sesión. Descuenta stock, asigna serie y número y
+        crea el CPE en estado pendiente en una sola transacción.
+      parameters:
+        - $ref: '../components/headers.yaml#/components/parameters/IdempotencyKey'
+        - $ref: '../components/headers.yaml#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateSaleRequest' }
+      responses:
+        '201':
+          description: Venta registrada; CPE pendiente de emisión
+          headers:
+            Idempotent-Replayed: { schema: { type: boolean } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SaleCreated' }
+        '401': { $ref: '../components/problem.yaml#/components/responses/Problem' }
+        '403': { $ref: '../components/problem.yaml#/components/responses/Problem' }
+        '409': { $ref: '../components/problem.yaml#/components/responses/Problem' }
+        '422': { $ref: '../components/problem.yaml#/components/responses/Problem' }
+        '429': { $ref: '../components/problem.yaml#/components/responses/Problem' }
+        '503': { $ref: '../components/problem.yaml#/components/responses/Problem' }
+components:
+  schemas:
+    PaymentMethod:
+      type: string
+      description: credito solo en factura (Khipu emite la boleta al contado).
+      enum: [efectivo, tarjeta, yape, plin, transferencia, credito]
+    CreateSaleRequest:
+      type: object
+      description: |
+        La caja y la sede salen de la sesión; shiftId debe ser el turno abierto de esa caja
+        (409 shift_not_open si no). La serie se toma de (caja, documentType).
+      required: [shiftId, documentType, currency, lines, payments, expectedTotal]
+      properties:
+        shiftId: { type: string, format: uuid }
+        documentType: { type: string, enum: [boleta, factura] }
+        currency: { $ref: '../components/money.yaml#/components/schemas/Currency' }
+        exchangeRate:
+          description: Obligatorio si currency = USD (422 exchange_rate_required); prohibido si PEN.
+          oneOf:
+            - $ref: '../components/money.yaml#/components/schemas/ExchangeRate'
+            - type: 'null'
+        customerId:
+          type: [string, 'null']
+          format: uuid
+          description: Obligatorio para factura. null = cliente varios (boleta en soles hasta S/ 700.00, límite de Khipu).
+        quoteId: { type: [string, 'null'], format: uuid }
+        discountApprovalToken:
+          type: [string, 'null']
+          description: Token de re-autenticación del supervisor si algún descuento supera el tope del rol (ventas.discounts:approve).
+        lines:
+          type: array
+          minItems: 1
+          maxItems: 200
+          items:
+            type: object
+            required: [variantId, quantity, unitPrice]
+            properties:
+              variantId: { type: string, format: uuid }
+              quantity: { $ref: '../components/money.yaml#/components/schemas/Quantity' }
+              unitPrice: { $ref: '../components/money.yaml#/components/schemas/UnitPrice' }
+              discount: { $ref: '../components/money.yaml#/components/schemas/MoneyNonNegative' }
+              discountReason: { type: string, maxLength: 200, description: Obligatorio si discount > 0. }
+        payments:
+          type: array
+          minItems: 1
+          maxItems: 10
+          items:
+            type: object
+            required: [method, currency, amount]
+            properties:
+              method: { $ref: '#/components/schemas/PaymentMethod' }
+              currency: { $ref: '../components/money.yaml#/components/schemas/Currency' }
+              amount: { $ref: '../components/money.yaml#/components/schemas/MoneyPositive' }
+              exchangeRate:
+                description: Obligatorio si la moneda del pago difiere de la de la venta.
+                oneOf:
+                  - $ref: '../components/money.yaml#/components/schemas/ExchangeRate'
+                  - type: 'null'
+              reference: { type: string, maxLength: 64 }
+        expectedTotal:
+          $ref: '../components/money.yaml#/components/schemas/MoneyPositive'
+    SaleCreated:
+      type: object
+      required: [saleId, total, currency, change, document]
+      properties:
+        saleId: { type: string, format: uuid }
+        total: { $ref: '../components/money.yaml#/components/schemas/MoneyPositive' }
+        currency: { $ref: '../components/money.yaml#/components/schemas/Currency' }
+        change: { $ref: '../components/money.yaml#/components/schemas/MoneyNonNegative' }
+        document: { $ref: '../components/documents.yaml#/components/schemas/SalesDocument' }

@@ -1,0 +1,52 @@
+openapi: 3.1.0
+info:
+  title: Wanka API - errores (RFC 9457)
+  version: 0.1.0-draft
+paths: {}
+components:
+  responses:
+    Problem:
+      description: Error (RFC 9457)
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+  schemas:
+    Problem:
+      type: object
+      required: [type, title, status, code, requestId]
+      properties:
+        type: { type: string, format: uri }
+        title: { type: string }
+        status: { type: integer }
+        code:
+          type: string
+          description: Uno de la lista cerrada de conventions.md §4; un valor desconocido se trata por status y title.
+          examples: [insufficient_stock]
+        detail: { type: string }
+        requestId: { type: string }
+        errors:
+          type: array
+          items:
+            type: object
+            required: [field, code]
+            properties:
+              field: { type: string }
+              code: { type: string }
+              meta: { type: object, additionalProperties: true }
+        module:
+          type: string
+          description: Solo en module_not_enabled. Código de platform.modules que exige la ruta (x-module).
+          examples: ['rubro.lubricentro']
+        limit:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Solo en plan_limit_reached. Tope del plan para el límite que consume la ruta; la clave del límite se nombra en detail.
+        used:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Solo en plan_limit_reached. Uso actual de ese límite (mayor o igual que limit).
+        permission:
+          type: string
+          description: Solo en forbidden. Código del catálogo de resources.md que exige la ruta (x-permission).

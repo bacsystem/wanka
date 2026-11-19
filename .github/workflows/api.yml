@@ -68,7 +68,7 @@ jobs:
             rls=true
           fi
           echo "rls=$rls" >> "$GITHUB_OUTPUT"
-          if git diff --name-only "$BASE_SHA"...HEAD | grep -qE '^(apps/api/|docs/architecture/data/rls-check/|docs/architecture/api/resources\.md$|docs/architecture/adr/0004-in-house-auth\.md$|\.github/workflows/api\.yml$)'; then
+          if git diff --name-only "$BASE_SHA"...HEAD | grep -qE '^(apps/api/|docs/architecture/data/rls-check/|docs/architecture/api/resources\.md$|docs/architecture/adr/0004-in-house-auth\.md$|\.nvmrc$|\.github/workflows/api\.yml$)'; then
             echo "run=true" >> "$GITHUB_OUTPUT"
           else
             echo "run=false" >> "$GITHUB_OUTPUT"
@@ -171,3 +171,34 @@ jobs:
       - name: go-arch-lint
         if: steps.changes.outputs.run == 'true'
         run: sh scripts/archlint.sh
+      # ADR 0009 (#166): el servidor generado se commitea y no puede quedar desactualizado.
+      # `git status --porcelain` también ve los archivos nuevos que git diff no vería.
+      - name: generated server is up to date (go generate, no diff)
+        if: steps.changes.outputs.run == 'true'
+        run: |
+          go generate ./...
+          out="$(git status --porcelain -- .)"
+          if [ -n "$out" ]; then
+            echo "go generate changed files: commit the result"
+            echo "$out"
+            git diff -- . | head -100
+            exit 1
+          fi
+      # Redocly lint (un $ref roto falla) y oasdiff breaking contra la base: Redocly por package-lock.json (npm ci)
+      # y oasdiff por versión y checksum en el script. Un cambio incompatible solo pasa con
+      # info.version nueva. El script también prueba sus casos malos.
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        if: steps.changes.outputs.run == 'true'
+        with:
+          node-version-file: .nvmrc
+      - name: OpenAPI lint and breaking changes (Redocly, oasdiff)
+        if: steps.changes.outputs.run == 'true'
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          base="$BASE_SHA"
+          if [ "$EVENT" != "pull_request" ]; then base="$BEFORE_SHA"; fi
+          case "$base" in ""|0000000000000000000000000000000000000000) base=origin/main ;; esac
+          sh scripts/openapi-check.sh "$base"

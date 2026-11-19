@@ -1,0 +1,18 @@
+openapi: 3.1.0
+info:
+  title: Wanka API - cabeceras
+  version: 0.1.0-draft
+paths: {}
+components:
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: { type: string, format: uuid }
+    RequestId:
+      name: X-Request-Id
+      in: header
+      required: false
+      description: Se conserva si cumple el patrón; si falta o no lo cumple, la API lo reemplaza por uno propio y nunca responde 400 por esta cabecera (conventions.md §3).
+      schema: { type: string, minLength: 1, maxLength: 128, pattern: '^[A-Za-z0-9_-]{1,128}$' }

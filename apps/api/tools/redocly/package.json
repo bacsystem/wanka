@@ -1,0 +1,8 @@
+{
+  "name": "wanka-api-redocly",
+  "private": true,
+  "description": "Redocly CLI fijado para el lint y el bundle del contrato (scripts/openapi-check.sh, ADR 0009). No es parte de ningún build.",
+  "devDependencies": {
+    "@redocly/cli": "2.74.0"
+  }
+}

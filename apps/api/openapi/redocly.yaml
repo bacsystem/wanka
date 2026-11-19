@@ -1,0 +1,6 @@
+# Lint del contrato (ADR 0009). Lo corre scripts/openapi-check.sh y la CI; un $ref roto falla.
+extends:
+  - recommended
+rules:
+  # El contrato es interno (solo el BFF lo consume): no publica una licencia.
+  info-license: off
