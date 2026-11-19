@@ -83,7 +83,7 @@ erDiagram
   }
   SESSIONS {
     uuid id PK "iam.sessions SIN RLS: se busca por hash antes de conocer el tenant"
-    uuid user_id FK
+    uuid user_id FK "NULL solo en la impersonada: CHECK (user_id IS NULL) = (impersonator_id IS NOT NULL); el staff vive en platform"
     uuid tenant_id "nullable hasta elegir empresa"
     uuid site_id "nullable"
     uuid cash_register_id "nullable: caja elegida al entrar, fija la serie"
@@ -96,8 +96,8 @@ erDiagram
     timestamptz refresh_expires_at
     boolean mfa_satisfied "true si paso la 2FA o si ningun rol la requeria al iniciar sesion"
     text mfa_method "NOT NULL, CHECK IN (totp, recovery_code, none, platform); CHECK (mfa_method = platform) = (impersonator_id IS NOT NULL)"
-    uuid impersonator_id "staff que impersona; null en sesiones normales"
-    uuid membership_id "CHECK membership_id NULL o tenant_id NOT NULL; y tenant_id NULL o membership_id NOT NULL o impersonator_id NOT NULL"
+    uuid impersonator_id "staff que impersona (platform.platform_users, FK en ola 6); null en sesiones normales; solo wanka_definer crea o cambia la fila (trigger)"
+    uuid membership_id "sin FK a memberships, tenants, sites ni cash_registers (ADR 0011). CHECK membership_id NULL o tenant_id NOT NULL; y tenant_id NULL o membership_id NOT NULL o impersonator_id NOT NULL; y authz_version NULL o membership_id NOT NULL; impersonada: sin refresh y access_expires_at hasta created_at + 60 min"
     bigint authz_version "copia de memberships.authz_version al resolver el rol; se compara en cada peticion"
     inet ip
     text user_agent

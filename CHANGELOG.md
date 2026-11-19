@@ -3,11 +3,24 @@
 All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/).
 
-## [0.6.0] - 2026-11-19
+## [0.7.0] - 2026-11-19
 
 ### Added
 - `apps/api`: session middleware and the `auth.SessionResolver` port (`internal/platform/auth`), tested with a double and no PostgreSQL. Modules register `/v1` routes with `auth.Routes.Handle(pattern, class, h)`, where `auth.RouteClass` is `Public`, `NoTenant` or `Tenant` (no valid zero value); startup panics when a class is missing or breaks the rules of `api/conventions.md` §2. A request goes through: token check without touching the database (one `Authorization` header, `Bearer`, `wk_at_` plus exactly 43 characters of `[A-Za-z0-9_-]` checked one by one before a strict base64url decode; the hash is `sha256` of the whole token, and neither is ever logged), lookup with a 1 s deadline in phase `session_lookup`, `MFASatisfied` and row coherence checks, unbinding of a session whose membership was lost without revoking it (ADR 0011, counter `auth_session_detach_total{outcome}`), `403 tenant_access_denied` on a tenant route without a company, the per-session limiter (10/s, burst 20, 50 000 keys) and, on tenant routes only, the per-tenant limiter (100/s, burst 200, 10 000 keys), with `Routes.Sweep()` for full buckets. No row or an unfinished 2FA is `401 session_expired`; a database failure or the lookup deadline is `503`, never `401`; an untyped error or an inconsistent row is `500`. An impersonated session arrives with an empty `UserID` and its `Actor.UserID` is the staff `ImpersonatorID`. Every kernel `401` carries `WWW-Authenticate: Bearer` (#199, #174).
 - `apps/api`: `httpx.Logger`, `httpx.Metrics`, `httpx.Route` and `httpx.LogDBFailure` for kernel packages that write their own failures (#199, #174).
+
+## [0.6.0] - 2026-11-19
+
+### Added
+- `apps/api`: `db.Pool.InNoTenantTx` and `InNoTenantReadTx` (`BEGIN READ ONLY`) with `db.NoTenantScope{UserID}`: a transaction without tenant, the door for every database access with no tenant set, from any service (session lookup and unlink, login, `iam.list_my_memberships()` and impersonation redemption in `api`; webhook route resolution; `platform_fn.*`; session purge in `worker`). Its first statement is one `set_config` that clears `app.tenant_id`, `app.session_kind` and `app.impersonator_id` and sets `app.user_id` to the scope's user or `''`, so a session-level value left on the pooled connection is never inherited (a `SECURITY DEFINER` function that saves and restores `app.tenant_id`, like `iam.session_lookup`, restores `''`). Same four round trips and the same typed errors as `InTenantTx` (shared transaction cycle `runTx`); `set_config(..., false)` stays forbidden in both doors. Overhead recorded in `docs/architecture/capacity.md` (#198, #194).
+
+## [0.5.1] - 2026-11-18
+
+### Changed
+- Kernel story #174 split into #174 (session middleware with a test double), #194 (`InNoTenantTx`), #195 (`iam`/`org` tables and `iam.session_lookup`) and #196 (PostgreSQL resolver and wiring). API contract: access tokens are a prefix plus 43 base64url characters and are stored as the `sha256` of the full token; every route declares its class (`Public`, `NoTenant`, `Tenant`); every kernel `401` carries `WWW-Authenticate: Bearer`; default limiter values per session and per tenant (`api/conventions.md` §2, §3, §4 and §7, sequence 08, `data-model.md` §6).
+- ADR 0011 status set to accepted (owner decision on PR #185).
+- TOTP enrollment split into `mfa/totp/enroll` (`NoTenant`, from the profile) and the new `mfa/enrollment/totp` (`Public`, login, token in the body): one route, one class. Login step tokens fixed: `challengeToken` (`wk_ch_`, 5 min, consumed on the first good `verify`) and `enrollmentToken` (`wk_en_`, 10 min, valid until the first good `confirm`), 32 random bytes in base64url, stored as `sha256`.
+- Impersonated sessions locked to the database: no refresh and at most 60 min (CHECK), `user_id` is NULL with the staff in `impersonator_id`, a trigger reserves inserting or changing them to `wanka_definer` (only setting `revoked_at` is allowed), revocation goes through wave-6 definer functions. `wanka_app` gets column-level `UPDATE` on `iam.sessions` (no `created_at`, `user_id`, `impersonator_id`); `wanka_worker` column-level `SELECT` without the hashes (ADR 0001 matrix, `data-model.md` §6, er-01).
 
 ## [0.5.0] - 2026-11-18
 
