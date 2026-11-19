@@ -43,6 +43,7 @@ var (
 	tokenRe     = regexp.MustCompile("`([^`]+)`")
 	fullCodeRe  = regexp.MustCompile(`^([a-z]+\.[a-z_]+):([a-z_]+(?:/[a-z_]+)*)$`)
 	shortCodeRe = regexp.MustCompile(`^:([a-z_]+(?:/[a-z_]+)*)$`)
+	bareCodeRe  = regexp.MustCompile(`[a-z]+\.[a-z_]+:[a-z_]+`)
 )
 
 // parseCatalogTable lee la tabla del catálogo de resources.md: cada código entre comillas inversas
@@ -53,6 +54,9 @@ func parseCatalogTable(section string) ([]string, error) {
 	for _, line := range strings.Split(section, "\n") {
 		if !strings.HasPrefix(line, "|") {
 			continue
+		}
+		if bare := bareCodeRe.FindString(tokenRe.ReplaceAllString(line, "")); bare != "" {
+			return nil, fmt.Errorf("code %q is written without backticks", bare)
 		}
 		for _, m := range tokenRe.FindAllStringSubmatch(line, -1) {
 			parts := fullCodeRe.FindStringSubmatch(m[1])

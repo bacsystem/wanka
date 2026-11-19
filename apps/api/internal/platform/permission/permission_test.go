@@ -96,13 +96,18 @@ func TestReferencedCodesExist(t *testing.T) {
 
 	doc := readRepoFile(t, "docs/architecture/api/resources.md")
 	mapping := section(t, doc, "## Correspondencia: código de historia", "## Catálogo de permisos de plataforma")
-	codes, _ := referencedCodes(mapping)
+	codes, mappingWildcards := referencedCodes(mapping)
 	if len(codes) < 50 {
 		t.Fatalf("resources.md mapping: only %d codes found, the parser lost the tables", len(codes))
 	}
 	for _, c := range codes {
 		if !slices.Contains(catalog, c) {
 			t.Errorf("resources.md mapping uses %s, which is not in the catalog", c)
+		}
+	}
+	for _, r := range mappingWildcards {
+		if !resources[r] {
+			t.Errorf("resources.md mapping uses %s:*, but that resource is not in the catalog", r)
 		}
 	}
 

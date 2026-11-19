@@ -28,6 +28,7 @@ func TestParseCatalogTable(t *testing.T) {
 		{"rejects a duplicate inside one cell", "| m | `a.b:read/read` |", nil, "listed twice"},
 		{"rejects a token that is not a code", "| m | `a.b` |", nil, "not modulo.recurso:accion"},
 		{"rejects an uppercase code", "| m | `A.b:read` |", nil, "not modulo.recurso:accion"},
+		{"rejects a code without backticks", "| m | `a.b:read` y a.b:update |", nil, "without backticks"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

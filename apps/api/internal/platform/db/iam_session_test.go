@@ -1069,3 +1069,47 @@ func TestSessionLookupImpersonatedWithAMembershipSeesItAbsent(t *testing.T) {
 		t.Errorf("row = %+v, want user_id NULL, membership_id set and the membership absent", r)
 	}
 }
+
+// publicExecuteAllowed lista las funciones de iam que PUBLIC puede ejecutar a propósito (firma como la
+// imprime regprocedure). Está vacía: una función nueva de iam sale de CREATE FUNCTION con EXECUTE para PUBLIC y
+// wanka_platform, que desde #172 tiene USAGE en iam, podría llamarla. Cada función debe hacer REVOKE ... FROM PUBLIC
+// y GRANT al rol que la usa; agregar una excepción aquí es una decisión de arquitectura.
+var publicExecuteAllowed = map[string]bool{}
+
+// Ninguna función de iam (salvo triggers, que solo dispara el motor) conserva el EXECUTE por defecto de PUBLIC.
+func TestNoIAMFunctionIsExecutableByPublic(t *testing.T) {
+	d := migrated(t)
+	ctx := context.Background()
+	rows, err := d.Admin(ctx, t).Query(ctx, `
+		SELECT p.oid::regprocedure::text
+		  FROM pg_proc p
+		 WHERE p.pronamespace = 'iam'::regnamespace
+		   AND p.prorettype <> 'trigger'::regtype
+		   AND has_function_privilege('public', p.oid, 'EXECUTE')
+		 ORDER BY 1`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	n := 0
+	for rows.Next() {
+		var fn string
+		if err := rows.Scan(&fn); err != nil {
+			t.Fatal(err)
+		}
+		if !publicExecuteAllowed[fn] {
+			t.Errorf("PUBLIC can execute %s: REVOKE ALL ON FUNCTION ... FROM PUBLIC and grant it to the role that uses it", fn)
+		}
+		n++
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatal(err)
+	}
+	if n != len(publicExecuteAllowed) {
+		t.Errorf("%d functions of iam are executable by PUBLIC, the allowlist has %d", n, len(publicExecuteAllowed))
+	}
+	// La consulta no está vacía por error: iam tiene funciones que no son triggers (session_lookup).
+	if c := queryOne[int](t, d.Admin(ctx, t), `SELECT count(*) FROM pg_proc WHERE pronamespace = 'iam'::regnamespace AND prorettype <> 'trigger'::regtype`); c == 0 {
+		t.Error("no non-trigger function found in iam: the query checks nothing")
+	}
+}
