@@ -17,12 +17,17 @@ import (
 	"time"
 
 	"github.com/bacsystem/wanka/apps/api/internal/platform/audit"
+	"github.com/bacsystem/wanka/apps/api/internal/platform/auth"
+	"github.com/bacsystem/wanka/apps/api/internal/platform/auth/pgsession"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/clock"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/config"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/db"
+	"github.com/bacsystem/wanka/apps/api/internal/platform/entitlements"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/httpx"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/jobs"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/logging"
+	"github.com/bacsystem/wanka/apps/api/internal/platform/mailer"
+	"github.com/bacsystem/wanka/apps/api/internal/platform/mailer/stub"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/metrics"
 	"github.com/bacsystem/wanka/apps/api/migrations"
 )
@@ -34,6 +39,25 @@ const (
 
 	shutdownTimeout = 10 * time.Second
 )
+
+// wiring es lo que serve toma de afuera para armar el plano: lo fija el
+// contrato y los tests lo reemplazan.
+type wiring struct {
+	// sweepInterval es cada cuánto se barren los buckets llenos de los limitadores (#196).
+	sweepInterval time.Duration
+	// auth son las opciones de auth.NewRoutes; vacías toman los valores de conventions.md §7.
+	auth auth.Options
+	// entitlements son las opciones de entitlements.New (TTL 30 s por defecto);
+	// el Logger lo pone serve.
+	entitlements entitlements.Options
+	// wrapSweeper, si no es nil, envuelve o reemplaza el barredor (solo los tests).
+	wrapSweeper func(sweeper) sweeper
+	// wrapListener, si no es nil, envuelve o reemplaza el escucha de NOTIFY (solo los tests).
+	wrapListener func(listener) listener
+}
+
+// defaultWiring es el cableado de producción.
+var defaultWiring = wiring{sweepInterval: 10 * time.Second}
 
 // planes asocia cada plano con el servicio (rol de base de datos) que lo atiende.
 var planes = map[string]config.Service{
@@ -114,9 +138,14 @@ func run(ctx context.Context, args []string, getenv func(string) string, stdout,
 	}
 	log := logging.New(stdout, cfg.LogLevel).With("command", sub)
 
+	if sub != "migrate" {
+		// Aún ningún módulo lo consume; cuando lleguen, reciben el puerto aquí.
+		_ = newMailer(log, cfg)
+	}
+
 	switch sub {
 	case "serve":
-		err = serve(ctx, log, cfg, svc, plane)
+		err = serve(ctx, log, cfg, svc, plane, defaultWiring)
 	case "migrate":
 		err = migrate(ctx, log, cfg)
 	default:
@@ -129,9 +158,25 @@ func run(ctx context.Context, args []string, getenv func(string) string, stdout,
 	return exitOK
 }
 
+// newMailer elige el adaptador de correo según MAILER. El stub no entrega nada:
+// En producción (y staging), tanto el stub como none avisan con WARN hasta que exista
+// un adaptador real.
+func newMailer(log *slog.Logger, cfg config.Config) mailer.Mailer {
+	if cfg.Mailer == config.MailerNone {
+		if cfg.Production {
+			log.Warn("mailer is disabled: every send fails until a real mailer adapter exists", "mailer", cfg.Mailer)
+		}
+		return mailer.Disabled{}
+	}
+	if cfg.Production {
+		log.Warn("mailer is the stub: no email is delivered until a real mailer adapter exists", "mailer", cfg.Mailer)
+	}
+	return stub.New(log, stub.DefaultMaxSent)
+}
+
 // serve runs the HTTP server of one plane until ctx is cancelled, then shuts
 // it down gracefully.
-func serve(ctx context.Context, log *slog.Logger, cfg config.Config, svc config.Service, plane string) error {
+func serve(ctx context.Context, log *slog.Logger, cfg config.Config, svc config.Service, plane string, w wiring) error {
 	log = log.With("plane", plane)
 	// El pool no conecta al abrirse: con la base caída el proceso arranca
 	// igual y /readyz responde 503 hasta que la base conteste.
@@ -147,9 +192,22 @@ func serve(ctx context.Context, log *slog.Logger, cfg config.Config, svc config.
 		}
 		return err
 	}
-	// Every plane mounts only the health routes for now; the module routes
-	// arrive with their stories (tenant never mounts plataforma, ADR 0002).
-	handler := httpx.Chain(httpx.NewMux(ready), log, metrics.Nop{})
+	// Every plane mounts the health routes; the tenant plane also mounts the
+	// session chain. The module routes arrive with their stories (tenant never
+	// mounts plataforma, ADR 0002).
+	rt := httpx.NewMux(ready)
+	w.entitlements.Logger = log
+	sw, ls, err := mountPlane(plane, rt, pool, w)
+	if err != nil {
+		return err
+	}
+	if sw != nil && w.wrapSweeper != nil {
+		sw = w.wrapSweeper(sw)
+	}
+	if ls != nil && w.wrapListener != nil {
+		ls = w.wrapListener(ls)
+	}
+	handler := httpx.Chain(rt, log, metrics.Nop{})
 	srv := httpx.NewServer(cfg.HTTPAddr, handler)
 
 	ln, err := net.Listen("tcp", cfg.HTTPAddr)
@@ -160,6 +218,20 @@ func serve(ctx context.Context, log *slog.Logger, cfg config.Config, svc config.
 
 	errc := make(chan error, 1)
 	go func() { errc <- srv.Serve(ln) }()
+
+	if sw != nil {
+		// El bucle termina con el apagado: se espera a que salga antes de volver.
+		sweepCtx, stopSweep := context.WithCancel(ctx)
+		sweepDone := startSweepLoop(sweepCtx, sw, w.sweepInterval)
+		defer func() { stopSweep(); <-sweepDone }()
+	}
+	if ls != nil {
+		// Igual con el escucha de entitlements_changed: sin él la caché sigue
+		// siendo correcta, solo tarda hasta el TTL en enterarse de un cambio.
+		listenCtx, stopListen := context.WithCancel(ctx)
+		listenDone := startListener(listenCtx, ls, log)
+		defer func() { stopListen(); <-listenDone }()
+	}
 
 	select {
 	case err := <-errc:
@@ -177,6 +249,67 @@ func serve(ctx context.Context, log *slog.Logger, cfg config.Config, svc config.
 	}
 	log.Info("stopped")
 	return nil
+}
+
+// sweeper es lo que el bucle de barrido necesita de auth.Routes.
+type sweeper interface{ Sweep() int }
+
+// listener es el escucha de NOTIFY que invalida la caché de entitlements.
+type listener interface {
+	Run(ctx context.Context) error
+}
+
+// mountPlane monta en rt lo propio de cada plano. En el plano tenant arma el
+// servicio de entitlements, el registrador de rutas /v1 con el resolver de
+// PostgreSQL, los dos limitadores con los valores de conventions.md §7 y el
+// paso de entitlements, y devuelve quien barre los buckets y quien escucha los
+// NOTIFY; en los demás no monta nada y devuelve nil. El *auth.Routes no sale de
+// aquí hacia los módulos todavía: cuando haya rutas /v1 de módulo, se les
+// pasará solo ese registrador y nunca rt, para que ninguna ruta /v1 quede sin clase.
+func mountPlane(plane string, rt *httpx.Router, pool *db.Pool, w wiring) (sweeper, listener, error) {
+	if plane != "tenant" {
+		return nil, nil, nil
+	}
+	ent := entitlements.New(pool, w.entitlements)
+	routes, err := auth.NewRoutes(rt, pgsession.New(pool), ent, w.auth)
+	if err != nil {
+		return nil, nil, fmt.Errorf("mounting the session chain: %w", err)
+	}
+	return routes, ent, nil
+}
+
+// startListener corre l.Run hasta que ctx termine; el canal devuelto se cierra
+// cuando salió. Run solo devuelve error si no puede seguir: se registra y la
+// caché queda acotada por su TTL.
+func startListener(ctx context.Context, l listener, log *slog.Logger) <-chan struct{} {
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		if err := l.Run(ctx); err != nil && ctx.Err() == nil {
+			log.Error("entitlements listener stopped, the cache falls back to its TTL", "err", err.Error())
+		}
+	}()
+	return done
+}
+
+// startSweepLoop llama a s.Sweep cada interval hasta que ctx termine; el canal
+// devuelto se cierra cuando el bucle salió.
+func startSweepLoop(ctx context.Context, s sweeper, interval time.Duration) <-chan struct{} {
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		t := time.NewTicker(interval)
+		defer t.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-t.C:
+				s.Sweep()
+			}
+		}
+	}()
+	return done
 }
 
 // migrate aplica las migraciones pendientes como wanka_migrator y termina.

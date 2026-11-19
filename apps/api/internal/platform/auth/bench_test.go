@@ -30,7 +30,7 @@ func benchSession(b *testing.B, withSession bool) {
 	res := &fakeResolver{lookup: func(context.Context, [32]byte) (auth.SessionRecord, bool, error) { return bound(), true, nil }}
 	rt := httpx.NewRouter(httpx.RouterOptions{})
 	huge := httpx.LimiterConfig{Capacity: 1 << 30, Refill: time.Nanosecond, MaxKeys: 10}
-	routes, err := auth.NewRoutes(rt, res, auth.Options{SessionLimiter: huge, TenantLimiter: huge})
+	routes, err := auth.NewRoutes(rt, res, grants(plan()), auth.Options{SessionLimiter: huge, TenantLimiter: huge})
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -39,7 +39,7 @@ func benchSession(b *testing.B, withSession bool) {
 		_, _ = io.WriteString(w, `{"ok":true}`)
 	})
 	if withSession {
-		routes.Handle("GET /v1/x", auth.Tenant, ok)
+		routes.Handle("GET /v1/x", auth.Tenant, auth.Spec{Module: "ventas", Permission: "ventas.pos:read"}, ok)
 	} else {
 		rt.Handle("GET /v1/x", ok)
 	}

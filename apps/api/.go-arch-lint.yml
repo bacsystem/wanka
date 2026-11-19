@@ -22,6 +22,12 @@ components:
   # jobs es el único dueño de River (ADR 0006): los módulos usan jobs.Enqueuer y no ven sus tipos.
   platform_jobs: { in: internal/platform/jobs }
   platform: { in: internal/platform/* }
+  # Adaptadores del kernel sobre PostgreSQL: implementan un puerto de platform con db.
+  # Solo cmd los cablea; platform no los importa.
+  platform_pg: { in: internal/platform/auth/pgsession }
+  # Adaptador de prueba del correo: lo cablea cmd y lo usan los tests (go-arch-lint no
+  # los analiza). Ni platform ni los módulos lo importan: dependen del puerto platform/mailer.
+  platform_mailer_stub: { in: internal/platform/mailer/stub }
   main: { in: cmd/** }
   migrations: { in: migrations }
   bootstrap: { in: bootstrap }
@@ -34,18 +40,25 @@ vendors:
   # River (ADR 0006): el cliente y sus tipos solo en jobs; su driver de pgx lo construye db sobre su pool.
   river: { in: [github.com/riverqueue/river, github.com/riverqueue/river/rivertype, github.com/riverqueue/river/rivermigrate] }
   riverdriver: { in: github.com/riverqueue/river/riverdriver/riverpgxv5 }
+  # decimal: dinero y cantidades (internal/platform/money y pricing, ADR 0008).
+  decimal: { in: github.com/shopspring/decimal }
 deps:
   platform_db:
     mayDependOn: [platform, platform_db, migrations, bootstrap]
     canUse: [pgx, pgxpool, pgxstdlib, goose, riverdriver]
   platform:
     mayDependOn: [platform, platform_db, migrations, bootstrap]
-    canUse: [pgx, goose]
+    canUse: [pgx, goose, decimal]
   platform_jobs:
     mayDependOn: [platform, platform_db, migrations, bootstrap]
     canUse: [pgx, river, riverdriver]
+  platform_pg:
+    mayDependOn: [platform, platform_pg, platform_db]
+    canUse: [pgx]
+  platform_mailer_stub:
+    mayDependOn: [platform, platform_mailer_stub]
   main:
-    mayDependOn: [platform, platform_db, platform_jobs, migrations]
+    mayDependOn: [platform, platform_pg, platform_mailer_stub, platform_db, platform_jobs, migrations]
     canUse: [pgx]
 exclude:
   - testdata
