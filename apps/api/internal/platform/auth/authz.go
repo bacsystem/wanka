@@ -79,7 +79,7 @@ const (
 var noPermissionTenant = map[string]bool{"GET /v1/me/entitlements": true}
 
 // impersonationExcluded son los recursos (y el código suelto) que ninguna
-// impersonada alcanza, con alcance full o sin él (ADR 0001, «Impersonación de soporte»).
+// impersonada alcanza, con cualquier alcance (ADR 0001, «Impersonación de soporte»).
 var impersonationExcluded = []string{
 	"identidad.support_access:", "identidad.users:", "identidad.roles:", "identidad.sessions:", "empresas.einvoicing:update",
 }

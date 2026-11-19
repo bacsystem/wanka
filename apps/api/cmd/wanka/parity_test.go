@@ -6,9 +6,7 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/bacsystem/wanka/apps/api/internal/apigen/facturacion-electronica"
-	"github.com/bacsystem/wanka/apps/api/internal/apigen/identidad"
-	"github.com/bacsystem/wanka/apps/api/internal/apigen/ventas"
+	"github.com/bacsystem/wanka/apps/api/internal/apigen"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/auth"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/httpx"
 )
@@ -18,31 +16,23 @@ import (
 // con el mismo método, ruta, x-module y x-permission, y cada operación del
 // contrato está registrada o figura en pendingOperations.
 
-// specOp es una operación del contrato, leída de las tablas Operations que
-// genera oapi-codegen (las mismas que usa openapi/contract_test.go).
-type specOp struct{ Module, Permission string }
+// specOp es una operación del contrato, leída del registro apigen.Modules (el mismo
+// que usa openapi/contract_test.go). Class sale de su security como en conventions.md §2.
+type specOp struct{ Module, Permission, Class string }
 
 // specOperations devuelve las operaciones del contrato por "MÉTODO /ruta".
 func specOperations(t *testing.T) map[string]specOp {
 	t.Helper()
 	out := map[string]specOp{}
-	add := func(method, path string, ext map[string]any) {
-		m, _ := ext["x-module"].(string)
-		p, _ := ext["x-permission"].(string)
-		key := method + " " + path
-		if _, dup := out[key]; dup {
-			t.Fatalf("%s is declared twice in the generated tables", key)
+	for _, ops := range apigen.Modules() {
+		for _, o := range ops {
+			m, _ := o.Ext["x-module"].(string)
+			p, _ := o.Ext["x-permission"].(string)
+			if _, dup := out[o.Pattern()]; dup {
+				t.Fatalf("%s is declared twice in the generated tables", o.Pattern())
+			}
+			out[o.Pattern()] = specOp{Module: m, Permission: p, Class: o.Class()}
 		}
-		out[key] = specOp{Module: m, Permission: p}
-	}
-	for _, o := range identidad.Operations {
-		add(o.Method, o.Path, o.Ext)
-	}
-	for _, o := range ventas.Operations {
-		add(o.Method, o.Path, o.Ext)
-	}
-	for _, o := range facturacionelectronica.Operations {
-		add(o.Method, o.Path, o.Ext)
 	}
 	return out
 }
@@ -71,6 +61,8 @@ func parityProblems(registered []auth.RouteInfo, spec map[string]specOp, pending
 		switch {
 		case !ok:
 			out = append(out, fmt.Sprintf("route %q is registered but the contract has no such operation", ri.Pattern))
+		case op.Class != ri.Class.String():
+			out = append(out, fmt.Sprintf("route %q: the contract's security makes it %s and it is registered as %s", ri.Pattern, op.Class, ri.Class))
 		case op.Module != ri.Spec.Module:
 			out = append(out, fmt.Sprintf("route %q: x-module is %q in the contract and Spec.Module is %q", ri.Pattern, op.Module, ri.Spec.Module))
 		case op.Permission != ri.Spec.Permission:
@@ -97,7 +89,7 @@ func parityProblems(registered []auth.RouteInfo, spec map[string]specOp, pending
 // El router que arma serve (mountPlane) y el contrato dicen lo mismo.
 func TestRegisteredRoutesMatchTheContract(t *testing.T) {
 	rt := httpx.NewRouter(httpx.RouterOptions{})
-	sw, _, err := mountPlane("tenant", rt, nil, wiring{})
+	sw, _, err := mountPlane("tenant", rt, nil, defaultWiring) // el cableado que usa serve, con su mount
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -113,11 +105,15 @@ func TestRegisteredRoutesMatchTheContract(t *testing.T) {
 // La comparación misma: cada diferencia se detecta, en las dos direcciones.
 func TestParityProblems(t *testing.T) {
 	spec := map[string]specOp{
-		"GET /v1/a":  {Module: "ventas", Permission: "ventas.pos:read"},
-		"POST /v1/b": {Module: "none", Permission: "none"},
+		"GET /v1/a":  {Module: "ventas", Permission: "ventas.pos:read", Class: "Tenant"},
+		"POST /v1/b": {Module: "none", Permission: "none", Class: "Public"},
 	}
 	route := func(pattern, module, perm string) auth.RouteInfo {
-		return auth.RouteInfo{Pattern: pattern, Spec: auth.Spec{Module: module, Permission: perm}}
+		class := auth.Tenant
+		if pattern == "POST /v1/b" {
+			class = auth.Public
+		}
+		return auth.RouteInfo{Pattern: pattern, Class: class, Spec: auth.Spec{Module: module, Permission: perm}}
 	}
 	for _, tc := range []struct {
 		name       string
@@ -132,6 +128,7 @@ func TestParityProblems(t *testing.T) {
 		{"another permission", []auth.RouteInfo{route("GET /v1/a", "ventas", "ventas.pos:create")}, []string{"POST /v1/b"}, 1},
 		{"another module", []auth.RouteInfo{route("GET /v1/a", "compras", "ventas.pos:read")}, []string{"POST /v1/b"}, 1},
 		{"another method", []auth.RouteInfo{route("POST /v1/a", "ventas", "ventas.pos:read")}, []string{"GET /v1/a", "POST /v1/b"}, 1},
+		{"another class", []auth.RouteInfo{route("GET /v1/a", "ventas", "ventas.pos:read"), {Pattern: "POST /v1/b", Class: auth.NoTenant, Spec: auth.Spec{Module: "none", Permission: "none"}}}, nil, 1},
 		{"a stale pending: already registered", []auth.RouteInfo{route("GET /v1/a", "ventas", "ventas.pos:read")}, []string{"GET /v1/a", "POST /v1/b"}, 1},
 		{"a pending not in the contract", []auth.RouteInfo{route("GET /v1/a", "ventas", "ventas.pos:read")}, []string{"POST /v1/b", "GET /v1/gone"}, 1},
 	} {
