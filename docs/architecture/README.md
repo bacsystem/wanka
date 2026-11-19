@@ -118,7 +118,7 @@ Modelo y reglas en [`data/data-model.md`](data/data-model.md): `tenant_id` y RLS
 | [0008](adr/0008-money-and-numbering.md) | Dinero `numeric` y correlativos sin huecos | propuesto |
 | [0009](adr/0009-api-contract-openapi.md) | Contrato spec-first OpenAPI 3.1 | propuesto |
 | [0010](adr/0010-frontend-khipu-migration.md) | Migración total del frontend al design system khipu | propuesto |
-| [0011](adr/0011-membership-loss-keeps-user-session.md) | Perder la membresía desliga la sesión de esa empresa (a `/seleccionar-empresa`), no la revoca; modifica 0004 | propuesto |
+| [0011](adr/0011-membership-loss-keeps-user-session.md) | Perder la membresía desliga la sesión de esa empresa (a `/seleccionar-empresa`), no la revoca; modifica 0004 | aceptado |
 
 **Proceso de los ADR, desde que este PR se mergea:**
 - Un ADR nuevo toma el siguiente número libre (`adr/NNNN-titulo-en-kebab.md`), con contexto, opciones, decisión, consecuencias (también las malas), estado y fecha. Se agrega a esta tabla en el mismo PR.

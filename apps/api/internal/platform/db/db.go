@@ -5,7 +5,20 @@
 // nunca crea roles ni es dueño de objetos. Los errores que pueden llevar la
 // cadena de conexión se limpian antes de salir de este paquete.
 //
-// Los datos de tenant se tocan solo dentro de InTenantTx o InTenantReadTx; el
+// Hay dos puertas de transacción:
+//   - InTenantTx (e InTenantReadTx, BEGIN READ ONLY) para los datos de tenant:
+//     fija app.tenant_id y el resto del Actor.
+//   - InNoTenantTx (e InNoTenantReadTx) para todo acceso a la base sin tenant
+//     fijado, de cualquier servicio (docs/architecture/data/data-model.md,
+//     «Puerta sin tenant»): en api, la búsqueda y el desligue de sesión (#174,
+//     #196), el login (#24), la vista iam.list_my_memberships con el UserID del
+//     scope (#27) y el canje iam.redeem_impersonation; en webhooks,
+//     ops.resolve_webhook_route; en platform-api, las platform_fn.* y las
+//     tablas platform.*; en worker, la limpieza de iam.sessions
+//     (iam.purge_sessions). Limpia las cuatro variables app.* antes de llamar a
+//     fn, así que no hereda lo que otra petición dejó en la conexión.
+//
+// Los datos de tenant se tocan solo dentro de esas puertas; el
 // pool no entrega conexiones crudas (acquire no es exportado). Esto no impide
 // todo desvío: go-arch-lint prohíbe importar pgxpool y pgx/stdlib fuera de este
 // paquete, y un test (rawconn_test.go) falla si el código de fuera llama a
@@ -16,9 +29,10 @@
 //
 // Dentro de fn está prohibido fijar las variables app.* a nivel de sesión
 // (set_config con false o SET sin LOCAL): sobreviven al COMMIT en esa conexión.
-// No filtran datos de otro tenant porque la siguiente InTenantTx vuelve a fijar
-// las cuatro variables y el pool no entrega la conexión a nadie más, pero es un
-// uso incorrecto igualmente.
+// No filtran datos de otro tenant porque la siguiente transacción (de tenant o
+// sin tenant) vuelve a fijar o a limpiar las cuatro variables y el pool no
+// entrega la conexión a nadie más, pero es un uso incorrecto igualmente. La regla
+// vale para las dos puertas.
 package db
 
 import (
@@ -74,6 +88,12 @@ type Pool struct {
 // caída debe arrancar igual e informarlo por /readyz. Los errores nunca incluyen
 // la URL ni su contraseña.
 func Open(ctx context.Context, rawURL string, o Options) (*Pool, error) {
+	return openPool(ctx, rawURL, o, nil)
+}
+
+// openPool es Open con un ajuste opcional de la configuración del pool, que
+// usan los tests para inyectar un tracer sin copiar la construcción.
+func openPool(ctx context.Context, rawURL string, o Options, tweak func(*pgxpool.Config)) (*Pool, error) {
 	scrub := scrubber(rawURL)
 	if o.MaxConns < 1 {
 		return nil, errors.New("db: pool size must be at least 1")
@@ -93,6 +113,9 @@ func Open(ctx context.Context, rawURL string, o Options) (*Pool, error) {
 	cfg.ConnConfig.ConnectTimeout = 5 * time.Second
 	if o.AppName != "" {
 		cfg.ConnConfig.RuntimeParams["application_name"] = o.AppName
+	}
+	if tweak != nil {
+		tweak(cfg)
 	}
 	pool, err := pgxpool.NewWithConfig(ctx, cfg)
 	if err != nil {
