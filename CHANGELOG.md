@@ -7,6 +7,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ### Changed
 - Status docs (`apps/api/README.md`, `docs/architecture/README.md`, `docs/modules/README.md`, `CLAUDE.md`): the wave 0 kernel is done (epic #154, v0.19.0); the Khipu BETA checks moved to #224 and the kernel follow-ups to #225.
+- `docs/delivery-process.md`: the GitHub board (Project, issues, epics, status docs) is updated when each change happens, with a table of what changes on each event and which built-in Project workflows do it automatically.
 
 ## [0.19.0] - 2026-11-19
 

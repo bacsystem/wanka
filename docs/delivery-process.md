@@ -46,6 +46,26 @@ Al cerrar cada lote, junto con el PR de release, quien coordina (con Claude o co
 
 Cada retro compara contra la lista «a vigilar» de la anterior. El dueño aprueba las mejoras mergeando esos PR.
 
+## Tablero de GitHub siempre al día (decisión del dueño, 2026-11-19)
+
+El Project «Wanka · Mapa de módulos», las issues, las épicas y los docs de estado muestran el estado real en todo momento. Se actualizan cuando ocurre el cambio, no al cierre del lote. Quien coordina, sea Claude o Gemini, hace en el mismo momento todo lo que el Project no automatiza:
+
+| Cuando… | Se actualiza |
+|---|---|
+| se abre una issue | se agrega al Project con `Status`, `Ola`, `Tipo` y `Prioridad`, y se cuelga de su épica (sub-issue) con sus relaciones *blocked by* |
+| empieza la implementación | `Status` «En curso» |
+| se abre el PR | `Status` «En revisión» |
+| se mergea el PR y se cierra la issue | `Status` «Hecho» y los checkboxes tildados con su evidencia (ver «Definición de terminado») |
+| se cierra la última sub-issue de una épica | se cierra la épica (o se dice qué falta y dónde quedó), las épicas que bloqueaba pasan de «Bloqueado» a «Por hacer», y en un PR se actualizan el roadmap (`docs/modules/README.md`) y las líneas de estado (`CLAUDE.md`, `docs/architecture/README.md`, `apps/api/README.md`) |
+| aparece un seguimiento (un hallazgo menor, un spike) | issue nueva en el Project, colgada de una épica, nunca suelta |
+
+Los workflows integrados del Project que el dueño enciende en la UI (`Settings → Workflows`) hacen solos algunos de estos pasos. Lo que no cubren se sigue haciendo a mano, como dice la tabla:
+
+- «Item added to project» → «Por hacer»;
+- «Pull request linked to issue» → «En revisión»;
+- «Item closed» y «Pull request merged» → «Hecho»;
+- «Auto-add sub-issues to project», que ya está encendido.
+
 ## Tags automáticos
 
 `.github/workflows/release-tag.yml` crea el tag `vX.Y.Z` cuando el dueño mergea en `main` un PR de release (`chore(release): vX.Y.Z`), y solo después de que los workflows `CI` y `API` pasen sobre ese commit. Lee la versión del `package.json` del commit. Si el tag ya existe no hace nada, y en cualquier otro commit de `main` tampoco. El merge del release es la aprobación del dueño. Ninguna persona ni agente empuja tags a mano. Si la CI de ese commit falla y el arreglo llega en otro commit, el dueño lanza el workflow a mano (`workflow_dispatch`) con el SHA del **primer** commit en verde después del release. Si elige uno posterior, el tag arrastraría historias que siguen en `[Unreleased]`. El workflow comprueba que la versión de ese commit sea la del release y que su CI esté en verde. Si el tag ya existe sobre otro commit, falla y no lo mueve.
