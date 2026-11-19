@@ -1,6 +1,6 @@
 # Convenciones de la API
 
-Estado: **congelado (2026-11-18)**, historia #160. Aplica a `api` (plano tenant, `/v1`) y `platform-api` (plano plataforma, `/platform/v1`). La fuente de verdad del contrato será `apps/api/openapi/openapi.yaml` (spec-first, [ADR 0009](../adr/0009-api-contract-openapi.md)); este documento fija las reglas que ese archivo debe cumplir. El esqueleto inicial ya no existe en esta carpeta: se partió en #166.
+Estado: **congelado (2026-11-18)**, historia #160. Aplica a `api` (plano tenant, `/v1`) y `platform-api` (plano plataforma, `/platform/v1`). La fuente de verdad del contrato es `apps/api/openapi/openapi.yaml` (spec-first, [ADR 0009](../adr/0009-api-contract-openapi.md)); este documento fija las reglas que ese archivo debe cumplir. El esqueleto inicial ya no existe en esta carpeta: se partió en #166.
 
 ## 0. Contrato congelado: cómo se cambia
 

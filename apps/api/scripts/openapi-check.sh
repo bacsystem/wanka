@@ -6,13 +6,13 @@
 #      Si <ref-base> aún no tiene apps/api/openapi/, compara con docs/architecture/api/openapi.yaml
 #      (el esqueleto que esta historia partió). Sin <ref-base>, solo el lint.
 #   3. Prueba sus casos malos: un camino quitado debe fallar, y pasar con la versión subida.
-# Se puede correr desde cualquier carpeta. Necesita node (npx), git y, en Linux x86-64, curl.
+# Se puede correr desde cualquier carpeta. Necesita node (npm), git y, en Linux x86-64, curl.
 set -eu
 
 # Versiones fijadas (ADR 0002): se cambian a propósito. El checksum es el de checksums.txt del release.
-REDOCLY="@redocly/cli@2.82.0"
-OASDIFF_VERSION="1.39.0"
-OASDIFF_LINUX_AMD64_SHA256="71a85930728f367a2086077b7ae1411319421549d18473a3e8258b6451520433"
+# Redocly va fijado en tools/redocly/package.json y package-lock.json (npm ci, con integridad).
+OASDIFF_VERSION="1.35.0"
+OASDIFF_LINUX_AMD64_SHA256="a8023002fcb2eaa7f5758148a9303cb63d33b939886df312268bc0fc7b939140"
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
 repo="$(git -C "$root" rev-parse --show-toplevel)"
@@ -20,7 +20,12 @@ base_ref="${1:-}"
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"; git -C "$repo" worktree prune' EXIT
 
-redocly() { npx --yes "$REDOCLY" "$@"; }
+redocly() {
+  if [ ! -x "$root/tools/redocly/node_modules/.bin/redocly" ]; then
+    npm ci --prefix "$root/tools/redocly" --ignore-scripts --no-audit --no-fund >&2
+  fi
+  "$root/tools/redocly/node_modules/.bin/redocly" "$@"
+}
 
 oasdiff_bin() {
   if [ -n "${OASDIFF:-}" ]; then echo "$OASDIFF"; return; fi
@@ -52,8 +57,13 @@ bumped() {
 
 # breaking <base.yaml> <head.yaml>: falla ante un cambio ERR sin versión nueva.
 breaking() {
-  if "$OASDIFF_BIN" breaking "$1" "$2" --fail-on ERR >"$tmp/oasdiff.out" 2>&1; then return 0; fi
+  rc=0
+  "$OASDIFF_BIN" breaking "$1" "$2" --fail-on ERR >"$tmp/oasdiff.out" 2>&1 || rc=$?
+  [ "$rc" -ne 0 ] || return 0
   cat "$tmp/oasdiff.out"
+  # Solo el exit 1 es «hay un cambio incompatible»; cualquier otro (p. ej. 102, un spec que no
+  # carga) es un error de la herramienta y falla aunque la versión haya subido.
+  if [ "$rc" -ne 1 ]; then echo "oasdiff failed (exit $rc): nothing was compared" >&2; return 1; fi
   if bumped "$(version "$1")" "$(version "$2")"; then
     echo "breaking change accepted: info.version went from $(version "$1") to $(version "$2")"
     return 0
@@ -93,3 +103,9 @@ echo "OK: the removed path was rejected"
 sed 's|^  version: .*|  version: 0.99.0|' "$tmp/head.yaml" > "$tmp/selftest-head.yaml"
 breaking "$tmp/selftest-base.yaml" "$tmp/selftest-head.yaml" >/dev/null
 echo "OK: the same change passes with a new minor version"
+sed 's|^paths:|paths:\n  /v1/zz-bad: 5|' "$tmp/selftest-head.yaml" > "$tmp/selftest-broken.yaml"
+if breaking "$tmp/selftest-base.yaml" "$tmp/selftest-broken.yaml" >/dev/null 2>&1; then
+  echo "FAIL: an oasdiff error (spec that does not load) was read as an accepted breaking change" >&2
+  exit 1
+fi
+echo "OK: an oasdiff error fails even with a new version"

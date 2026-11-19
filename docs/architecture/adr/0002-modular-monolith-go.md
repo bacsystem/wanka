@@ -44,7 +44,7 @@ openapi/                   # contrato (ADR 0009)
 | Postgres | `jackc/pgx/v5` + `pgxpool` | `database/sql`+lib/pq (sin mantenimiento activo) |
 | Consultas | `sqlc` (SQL a mano, código tipado generado) | GORM/ent: ocultan el SQL que necesitamos controlar (locks, RLS) |
 | Migraciones | `pressly/goose/v3` | golang-migrate, Atlas (ver `data/data-model.md`) |
-| Contrato (CI) | `@redocly/cli` 2.82.0 (lint y bundle) y `oasdiff` 1.39.0 (cambios incompatibles), fijados en `apps/api/scripts/openapi-check.sh`; no son dependencias Go (ADR 0009) | Spectral (otro lint que mantener); comparar a mano |
+| Contrato (CI) | `@redocly/cli` 2.74.0 (lint y bundle) y `oasdiff` 1.35.0 (cambios incompatibles), fijados (Redocly en `apps/api/tools/redocly/package-lock.json`, oasdiff en `apps/api/scripts/openapi-check.sh`); no son dependencias Go (ADR 0009) | Spectral (otro lint que mantener); comparar a mano |
 | Jobs/outbox | `riverqueue/river` (ADR 0006) | outbox propio |
 | Decimal | `shopspring/decimal` | `cockroachdb/apd` (más estricto, API menos cómoda); `float64` prohibido |
 | Hash de contraseñas | `golang.org/x/crypto/argon2` | bcrypt (límite de 72 bytes, menos resistente a GPU) |

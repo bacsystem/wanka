@@ -1,6 +1,7 @@
 package openapi_test
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io/fs"
@@ -150,7 +151,12 @@ func escapePointer(p string) string {
 var (
 	tenantIDRe = regexp.MustCompile(`\btenant_?[iI]d\b`)
 	numberRe   = regexp.MustCompile(`type:\s*(number\b|\[[^\]]*\bnumber\b)`)
-	handlerRe  = regexp.MustCompile(`\b(HandlerWithOptions|HandlerFromMux|HandlerFromMuxWithBaseURL)\b`)
+	// Funciones de registro de rutas que genera oapi-codegen (std-http-server): Handler,
+	// HandlerFromMux, HandlerFromMuxWithBaseURL y HandlerWithOptions.
+	handlerRe    = regexp.MustCompile(`\b(HandlerWithOptions|HandlerFromMux\w*)\b`)
+	handlerSelRe = regexp.MustCompile(`\b\w+\.Handler\b`) // solo cuenta en un archivo que importa internal/apigen
+	patternRe    = regexp.MustCompile(`\bpattern:\s*(?:'((?:[^']|'')*)'|"((?:[^"\\]|\\.)*)"|([^'"\s{},][^{},]*))`)
+	blockNumRe   = regexp.MustCompile(`^\s*-\s*['"]?number['"]?\s*$`)
 )
 
 // check devuelve las violaciones de las reglas del contrato; vacío = cumple.
@@ -246,8 +252,31 @@ func check(s spec) []string {
 
 	// 4. pertenencia, 5. representación del dinero: reglas de texto sobre todos los YAML.
 	for _, p := range keys(s.texts) {
+		inType := false // dentro de un `type:` en forma de bloque (lista con guiones)
 		for i, line := range strings.Split(s.texts[p], "\n") {
 			at := fmt.Sprintf("%s:%d", p, i+1)
+			if t := strings.TrimSpace(line); t == "type:" {
+				inType = true
+			} else if inType && !strings.HasPrefix(t, "- ") {
+				inType = false
+			}
+			if inType && blockNumRe.MatchString(line) {
+				add("%s: type number (block list) is forbidden (money is a string, ADR 0008)", at)
+			}
+			for _, m := range patternRe.FindAllStringSubmatch(line, -1) {
+				pat := m[1]
+				switch {
+				case m[1] != "":
+					pat = strings.ReplaceAll(m[1], "''", "'")
+				case m[2] != "":
+					pat = strings.ReplaceAll(m[2], `\\`, `\`)
+				default:
+					pat = m[3]
+				}
+				if _, err := regexp.Compile(pat); err != nil {
+					add("%s: pattern %q does not compile in Go (RE2, no lookahead): %v", at, pat, err)
+				}
+			}
 			if tenantIDRe.MatchString(line) {
 				add("%s: tenantId must not appear in the contract: the tenant comes from the session (ADR 0001)", at)
 			}
@@ -381,6 +410,11 @@ func TestContractRejects(t *testing.T) {
 			s.texts["components/money.yaml"] += "    Foo: { type: number, x-wanka-not-money: true }\n"
 		}, "type number is forbidden"},
 		{"number in a module", func(s *spec) { s.texts["paths/ventas.yaml"] += "    total: { type: number }\n" }, "type number is forbidden"},
+		{"number as block list", func(s *spec) {
+			s.texts["paths/ventas.yaml"] += "    total:\n      type:\n        - number\n        - 'null'\n"
+		}, "type number (block list)"},
+		{"pattern with lookahead", func(s *spec) { s.texts["components/money.yaml"] += "      pattern: '^(?!0)[0-9]+$'\n" }, "does not compile"},
+		{"pattern with lookahead in double quotes", func(s *spec) { s.texts["paths/ventas.yaml"] += "      pattern: \"^(?=a)a\"\n" }, "does not compile"},
 		{"nullable number in a module", func(s *spec) { s.texts["paths/ventas.yaml"] += "    total: { type: [number, 'null'] }\n" }, "type number is forbidden"},
 	}
 	for _, tc := range cases {
@@ -464,7 +498,7 @@ func handlerUses(t *testing.T, root string) []string {
 		if err != nil {
 			return err
 		}
-		if handlerRe.Match(b) {
+		if handlerRe.Match(b) || (bytes.Contains(b, []byte("internal/apigen/")) && handlerSelRe.Match(b)) {
 			bad = append(bad, p)
 		}
 		return nil
@@ -476,11 +510,30 @@ func handlerUses(t *testing.T, root string) []string {
 }
 
 func TestHandlerUseIsDetected(t *testing.T) {
-	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "x.go"), []byte("package x\n\nvar _ = ventas.HandlerWithOptions\n"), 0o600); err != nil {
-		t.Fatal(err)
+	imp := "package x\n\nimport \"github.com/bacsystem/wanka/apps/api/internal/apigen/ventas\"\n\n"
+	for name, src := range map[string]string{
+		"HandlerWithOptions": imp + "var _ = ventas.HandlerWithOptions\n",
+		"Handler":            imp + "var _ = ventas.Handler\n",
+		"HandlerFromMux":     imp + "var _ = ventas.HandlerFromMux\n",
+		"WithBaseURL":        imp + "var _ = ventas.HandlerFromMuxWithBaseURL\n",
+	} {
+		t.Run(name, func(t *testing.T) {
+			dir := t.TempDir()
+			if err := os.WriteFile(filepath.Join(dir, "x.go"), []byte(src), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			if got := handlerUses(t, dir); len(got) != 1 {
+				t.Errorf("uses = %v, want the file using %s", got, name)
+			}
+		})
 	}
-	if got := handlerUses(t, dir); len(got) != 1 {
-		t.Errorf("uses = %v, want the file with HandlerWithOptions", got)
-	}
+	t.Run("a Handler field of something else is fine", func(t *testing.T) {
+		dir := t.TempDir()
+		if err := os.WriteFile(filepath.Join(dir, "x.go"), []byte("package x\n\nvar _ = w.Handler\n"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		if got := handlerUses(t, dir); len(got) != 0 {
+			t.Errorf("uses = %v, want none (no apigen import)", got)
+		}
+	})
 }

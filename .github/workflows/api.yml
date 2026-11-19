@@ -184,9 +184,13 @@ jobs:
             git diff -- . | head -100
             exit 1
           fi
-      # Redocly lint (un $ref roto falla) y oasdiff breaking contra la base: ambos fijados por
-      # versión en el script (checksum para oasdiff). Un cambio incompatible solo pasa con
+      # Redocly lint (un $ref roto falla) y oasdiff breaking contra la base: Redocly por package-lock.json (npm ci)
+      # y oasdiff por versión y checksum en el script. Un cambio incompatible solo pasa con
       # info.version nueva. El script también prueba sus casos malos.
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        if: steps.changes.outputs.run == 'true'
+        with:
+          node-version-file: .nvmrc
       - name: OpenAPI lint and breaking changes (Redocly, oasdiff)
         if: steps.changes.outputs.run == 'true'
         env:
