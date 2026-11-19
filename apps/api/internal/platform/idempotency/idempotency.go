@@ -14,9 +14,12 @@
 //   - Misma clave y mismo cuerpo, ya confirmada: repite el código, el cuerpo y las
 //     cabeceras guardadas con Idempotent-Replayed: true, sin tocar el handler.
 //   - Misma clave y otro cuerpo (o otra ruta): 422 idempotency_key_reused.
-//   - Misma clave mientras la primera sigue en curso: el INSERT espera el lock de
-//     la fila no confirmada, hasta lock_timeout (3 s); si vence, 409
-//     request_in_progress con Retry-After: 1, el único caso de ese código.
+//   - Misma clave mientras la primera sigue en curso: en la misma réplica la
+//     segunda espera en memoria, sin conexión de la base; entre réplicas espera
+//     el INSERT el lock de la fila no confirmada. La espera total es de 3 s; si
+//     vence, 409 request_in_progress con Retry-After: 1, el único caso de ese código.
+//   - La clave es del principal (el usuario): otro usuario con la misma clave es
+//     otra operación.
 //
 // Un 422 idempotency_key_reused, un 409 request_in_progress y toda respuesta no
 // 2xx se escriben después del ROLLBACK y no se guardan.
@@ -34,10 +37,12 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/bacsystem/wanka/apps/api/internal/platform/auth"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/db"
@@ -84,6 +89,7 @@ type Config struct {
 type Middleware struct {
 	pool        Pool
 	lockTimeout time.Duration
+	locks       keyLocks
 }
 
 // New devuelve el middleware sobre pool. Entra en pánico si pool es nil: es un
@@ -95,23 +101,24 @@ func New(pool Pool, c Config) *Middleware {
 	if c.LockTimeout <= 0 {
 		c.LockTimeout = DefaultLockTimeout
 	}
-	return &Middleware{pool: pool, lockTimeout: c.LockTimeout}
+	return &Middleware{pool: pool, lockTimeout: c.LockTimeout, locks: keyLocks{held: map[string]chan struct{}{}}}
 }
 
 // Required es el paso de un POST marcado (I) en resources.md: sin Idempotency-Key
 // responde 422 validation_failed y no ejecuta nada.
-func (m *Middleware) Required() httpx.Middleware { return m.step(true) }
+func (m *Middleware) Required() httpx.RouteOption { return m.step(true) }
 
 // Optional es el paso de los demás POST: sin clave el handler corre como siempre
 // (y abre su propia transacción); con clave, como Required.
-func (m *Middleware) Optional() httpx.Middleware { return m.step(false) }
+func (m *Middleware) Optional() httpx.RouteOption { return m.step(false) }
 
-func (m *Middleware) step(required bool) httpx.Middleware {
-	return func(next http.Handler) http.Handler {
+func (m *Middleware) step(required bool) httpx.RouteOption {
+	// Innermost: va después de la sesión, los limitadores y todo paso de ruta (Use), pegado al handler.
+	return httpx.Innermost(func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			m.serve(w, r, next, required)
 		})
-	}
+	})
 }
 
 type txKey struct{}
@@ -169,6 +176,12 @@ func (m *Middleware) serve(w http.ResponseWriter, r *http.Request, next http.Han
 		httpx.WriteProblem(w, r, "internal", "")
 		return
 	}
+	if emptyUUID(s.Actor.UserID) {
+		// La clave es del principal: sin usuario (sesión de sistema) no hay a quién ligarla.
+		httpx.Logger(r.Context()).ErrorContext(r.Context(), "idempotency middleware on a session without a user", "route", httpx.Route(r))
+		httpx.WriteProblem(w, r, "internal", "")
+		return
+	}
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		httpx.WriteError(w, r, bodyError(err))
@@ -177,10 +190,25 @@ func (m *Middleware) serve(w http.ResponseWriter, r *http.Request, next http.Han
 	r.Body = io.NopCloser(bytes.NewReader(body))
 	hash := fingerprint(r, body)
 
+	// Una sola petición por (tenant, usuario, clave) llega a la base en esta réplica; las demás esperan aquí, en
+	// memoria y sin conexión, hasta lockTimeout en total. Entre réplicas espera el INSERT (insertKey).
+	deadline := time.Now().Add(m.lockTimeout)
+	wctx, cancel := context.WithDeadline(r.Context(), deadline)
+	release, werr := m.locks.enter(wctx, s.Actor.TenantID.String()+"|"+s.Actor.UserID.String()+"|"+key)
+	cancel()
+	if werr != nil {
+		if r.Context().Err() == nil {
+			httpx.Metrics(r.Context()).Inc(metricName, "outcome", OutcomeInProgress)
+			httpx.WriteProblem(w, r, "request_in_progress", "another request with the same Idempotency-Key is still running")
+		}
+		return // el cliente se fue o venció el plazo del handler: responde otro o nadie
+	}
+	defer release()
+
 	var res result
 	err = m.pool.InTenantTx(r.Context(), s.Actor, func(tx pgx.Tx) error {
 		var err error
-		res, err = m.inTx(tx, r, next, key, hash)
+		res, err = m.inTx(tx, r, next, key, hash, time.Until(deadline))
 		return err
 	})
 	var inProgress *inProgressError
@@ -207,9 +235,12 @@ func (e *inProgressError) Unwrap() error { return e.err }
 // con la respuesta que dejó el result. El ROLLBACK deshace la clave y el efecto.
 var errRollback = errors.New("idempotency: roll back and answer")
 
-func (m *Middleware) inTx(tx pgx.Tx, r *http.Request, next http.Handler, key string, hash []byte) (result, error) {
+func (m *Middleware) inTx(tx pgx.Tx, r *http.Request, next http.Handler, key string, hash []byte, budget time.Duration) (result, error) {
 	ctx := r.Context()
-	inserted, err := m.insertKey(ctx, tx, key, hash)
+	if budget < time.Millisecond {
+		return result{}, &inProgressError{err: context.DeadlineExceeded} // la espera en memoria consumió los 3 s
+	}
+	inserted, err := m.insertKey(ctx, tx, key, hash, budget)
 	if err != nil {
 		return result{}, err
 	}
@@ -247,11 +278,11 @@ func (m *Middleware) inTx(tx pgx.Tx, r *http.Request, next http.Handler, key str
 
 // insertKey inserta la fila de la clave con lock_timeout acotado. Devuelve false
 // si la clave ya existía confirmada (esperó a la otra petición si seguía en curso).
-func (m *Middleware) insertKey(ctx context.Context, tx pgx.Tx, key string, hash []byte) (bool, error) {
+func (m *Middleware) insertKey(ctx context.Context, tx pgx.Tx, key string, hash []byte, budget time.Duration) (bool, error) {
 	b := &pgx.Batch{}
 	// set_config con is_local = true es el SET LOCAL con parámetro; RESET devuelve el valor del rol
 	// para que el resto del efecto no herede el límite.
-	b.Queue(`SELECT set_config('lock_timeout', $1, true)`, strconv.FormatInt(m.lockTimeout.Milliseconds(), 10)+"ms")
+	b.Queue(`SELECT set_config('lock_timeout', $1, true)`, strconv.FormatInt(budget.Milliseconds(), 10)+"ms")
 	b.Queue(`INSERT INTO ops.idempotency_keys (tenant_id, key, request_hash)
 		VALUES (app.current_tenant(), $1, $2) ON CONFLICT DO NOTHING`, key, hash)
 	b.Queue(`RESET lock_timeout`)
@@ -291,7 +322,7 @@ func readKey(ctx context.Context, tx pgx.Tx, key string) (*storedRow, error) {
 	var row storedRow
 	var raw []byte
 	err := tx.QueryRow(ctx, `SELECT request_hash, status_code, response, response_headers
-		FROM ops.idempotency_keys WHERE tenant_id = app.current_tenant() AND key = $1`, key).
+		FROM ops.idempotency_keys WHERE tenant_id = app.current_tenant() AND principal_id = app.current_user_id() AND key = $1`, key).
 		Scan(&row.hash, &row.status, &row.body, &raw)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
@@ -330,7 +361,7 @@ func saveResponse(ctx context.Context, tx pgx.Tx, key string, rec *recorder) err
 		return fmt.Errorf("encoding response headers: %w", err)
 	}
 	tag, err := tx.Exec(ctx, `UPDATE ops.idempotency_keys SET status_code = $2, response = $3, response_headers = $4
-		WHERE tenant_id = app.current_tenant() AND key = $1`, key, int16(rec.status()), rec.body.Bytes(), raw)
+		WHERE tenant_id = app.current_tenant() AND principal_id = app.current_user_id() AND key = $1`, key, int16(rec.status()), rec.body.Bytes(), raw)
 	if err != nil {
 		return err
 	}
@@ -429,4 +460,39 @@ func bodyError(err error) error {
 		return httpx.NewError("payload_too_large", "request body exceeds "+strconv.Itoa(httpx.MaxBodyBytes)+" bytes")
 	}
 	return httpx.NewError("malformed_request", "the request body could not be read")
+}
+
+func emptyUUID(u pgtype.UUID) bool { return !u.Valid || u.Bytes == [16]byte{} }
+
+// keyLocks deja pasar a la base una petición por id a la vez; las otras esperan
+// en memoria, sin conexión del pool.
+type keyLocks struct {
+	mu   sync.Mutex
+	held map[string]chan struct{}
+}
+
+// enter toma id o espera a que lo suelte quien lo tiene. Devuelve el error del
+// contexto si este termina antes. El release es obligatorio.
+func (l *keyLocks) enter(ctx context.Context, id string) (release func(), err error) {
+	for {
+		l.mu.Lock()
+		ch, busy := l.held[id]
+		if !busy {
+			ch = make(chan struct{})
+			l.held[id] = ch
+			l.mu.Unlock()
+			return func() {
+				l.mu.Lock()
+				delete(l.held, id)
+				l.mu.Unlock()
+				close(ch)
+			}, nil
+		}
+		l.mu.Unlock()
+		select {
+		case <-ch:
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
+	}
 }

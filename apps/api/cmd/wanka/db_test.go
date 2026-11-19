@@ -162,8 +162,8 @@ func TestWorkerRunsThePurgeOfIdempotencyKeys(t *testing.T) {
 	d.Migrate(ctx, t)
 	s := d.SeedSession(t, dbtest.SessionSpec{})
 	conn := d.Admin(ctx, t)
-	if _, err := conn.Exec(ctx, `INSERT INTO ops.idempotency_keys (tenant_id, key, request_hash, status_code, created_at) VALUES
-		($1, 'old', sha256('a'), 200, now() - interval '25 hours'), ($1, 'new', sha256('b'), 200, now())`, s.TenantID); err != nil {
+	if _, err := conn.Exec(ctx, `INSERT INTO ops.idempotency_keys (tenant_id, principal_id, key, request_hash, status_code, created_at) VALUES
+		($1, gen_random_uuid(), 'old', sha256('a'), 200, now() - interval '25 hours'), ($1, gen_random_uuid(), 'new', sha256('b'), 200, now())`, s.TenantID); err != nil {
 		t.Fatal(err)
 	}
 	p := start(t, []string{"DATABASE_URL_WORKER=" + d.URL(dbtest.Worker)}, "worker")

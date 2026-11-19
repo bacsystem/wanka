@@ -57,3 +57,10 @@ DO $$ DECLARE n int; BEGIN
   PERFORM test.assert(n = 2, 'el filtro de created_at (SELECT por columna) alcanza para el DELETE por antigüedad');
   RAISE EXCEPTION 'rollback' USING ERRCODE = 'RR177';
   EXCEPTION WHEN SQLSTATE 'RR177' THEN NULL; END $$;
+DO $$ DECLARE n int; BEGIN
+  -- Con tenant fijado la rama cross-tenant no aplica (app.current_tenant() IS NULL): solo la vencida de A.
+  PERFORM set_config('app.tenant_id', 'aaaaaaaa-0000-0000-0000-000000000001', true);
+  DELETE FROM ops.idempotency_keys WHERE created_at < now() - interval '24 hours'; GET DIAGNOSTICS n = ROW_COUNT;
+  PERFORM test.assert(n = 1, 'con tenant A fijado, la limpieza no alcanza las vencidas de B');
+  RAISE EXCEPTION 'rollback' USING ERRCODE = 'RR177';
+  EXCEPTION WHEN SQLSTATE 'RR177' THEN NULL; END $$;

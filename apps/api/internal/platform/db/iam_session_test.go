@@ -554,11 +554,11 @@ func TestCatalogRules(t *testing.T) {
 			}
 			if tbl == "ops.idempotency_keys" && (name == "purge_expired" || name == "purge_expired_read") {
 				// Única excepción (#177): el job horario de limpieza corre sin tenant, y FORCE RLS no le dejaría ver
-				// ninguna fila. Solo wanka_worker, solo leer y borrar, solo filas de más de 24 h.
+				// ninguna fila. Solo wanka_worker, solo leer y borrar, solo filas de más de 24 h y solo sin tenant fijado (ADR 0012).
 				wantCmd := map[string]string{"purge_expired": "DELETE", "purge_expired_read": "SELECT"}[name]
 				if cmd != wantCmd || roles != "{wanka_worker}" || deref(check) != "" ||
-					deref(qual) != "(created_at < (now() - '24:00:00'::interval))" {
-					t.Errorf("%s: policy %s is %s for %s with %q / %q, want %s for {wanka_worker} on rows older than 24 h only",
+					deref(qual) != "((app.current_tenant() IS NULL) AND (created_at < (now() - '24:00:00'::interval)))" {
+					t.Errorf("%s: policy %s is %s for %s with %q / %q, want %s for {wanka_worker} on rows older than 24 h with no tenant set only",
 						tbl, name, cmd, roles, deref(qual), deref(check), wantCmd)
 				}
 				continue

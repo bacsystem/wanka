@@ -75,7 +75,7 @@ func TestMissingOrInvalidKey(t *testing.T) {
 		if first.Code != http.StatusCreated || second.Code != http.StatusCreated || second.Header().Get("Idempotent-Replayed") != "true" {
 			t.Fatalf("first %d, second %d replayed %q", first.Code, second.Code, second.Header().Get("Idempotent-Replayed"))
 		}
-		if e.count(`SELECT count(*) FROM rlstest.items WHERE name = 'opt'`) != 1 {
+		if e.count(`SELECT count(*) FROM rlstest.items WHERE name LIKE 'opt@%'`) != 1 {
 			t.Fatal("the effect ran twice")
 		}
 	})
@@ -555,4 +555,182 @@ func sortDurations(d []time.Duration) {
 			d[j], d[j-1] = d[j-1], d[j]
 		}
 	}
+}
+
+// La clave es del principal: otro usuario de la misma empresa con la misma clave y el mismo cuerpo ejecuta su propia
+// operación (sin 422) y nunca recibe la respuesta guardada del primero.
+func TestSameKeyFromAnotherUserIsANewOperation(t *testing.T) {
+	e := newEnv(t, envOpts{})
+	u1 := e.post("/v1/items", "a", keyA, itemReq{Name: "same"})
+	u2 := e.post("/v1/items", "a2", keyA, itemReq{Name: "same"})
+	if u1.Code != 201 || u2.Code != 201 || u2.Header().Get("Idempotent-Replayed") != "" {
+		t.Fatalf("u1 %d, u2 %d replayed %q: %s", u1.Code, u2.Code, u2.Header().Get("Idempotent-Replayed"), u2.Body.String())
+	}
+	if u1.Body.String() == u2.Body.String() {
+		t.Fatalf("u2 got u1's response: %s", u2.Body.String())
+	}
+	if e.calls.Load() != 2 || e.items("a") != 2 || e.keys() != 2 {
+		t.Fatalf("calls %d items %d keys %d: each user must run the effect once", e.calls.Load(), e.items("a"), e.keys())
+	}
+	// Otro cuerpo de u2 con esa clave: tampoco es «reused» (no revela la clave de u1).
+	if rec := e.post("/v1/items", "a2", keyB, itemReq{Name: "other"}); rec.Code != 201 {
+		t.Fatalf("%d %s", rec.Code, rec.Body.String())
+	}
+	if rec := e.post("/v1/items", "a2", keyA, itemReq{Name: "other"}); rec.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("u2 changing the body of its own key must be reused, got %d", rec.Code)
+	}
+	// Cada uno repite lo suyo.
+	r1 := e.post("/v1/items", "a", keyA, itemReq{Name: "same"})
+	r2 := e.post("/v1/items", "a2", keyA, itemReq{Name: "same"})
+	if r1.Body.String() != u1.Body.String() || r2.Body.String() != u2.Body.String() ||
+		r1.Header().Get("Idempotent-Replayed") != "true" || r2.Header().Get("Idempotent-Replayed") != "true" {
+		t.Fatalf("replays: %q %q", r1.Body.String(), r2.Body.String())
+	}
+}
+
+// Una sesión sin usuario no puede tener clave: error de cableado (500), sin ejecutar nada.
+func TestSessionWithoutUserIsAnInternalError(t *testing.T) {
+	e := newEnv(t, envOpts{})
+	rec := e.post("/v1/items", "nouser", keyA, itemReq{Name: "x"})
+	mustProblem(t, rec, http.StatusInternalServerError, "internal")
+	if e.calls.Load() != 0 || e.keys() != 0 {
+		t.Fatal("something ran")
+	}
+	if !strings.Contains(e.log.String(), "without a user") {
+		t.Fatalf("no log line for the wiring error: %s", e.log.String())
+	}
+}
+
+// La idempotencia es lo último antes del handler: un paso de permiso puesto con Use, aunque se declare después,
+// corre antes. Quien perdió el permiso recibe 403, no la respuesta guardada, y no se abre transacción ni se toca la clave.
+func TestIdempotencyRunsAfterThePermissionSteps(t *testing.T) {
+	e := newEnv(t, envOpts{})
+	first := e.post("/v1/items", "a", keyA, itemReq{Name: "once"})
+	if first.Code != 201 {
+		t.Fatalf("%d %s", first.Code, first.Body.String())
+	}
+	e.denied.Store(true)
+	rec := e.post("/v1/items", "a", keyA, itemReq{Name: "once"})
+	mustProblem(t, rec, http.StatusForbidden, "forbidden")
+	if rec.Header().Get("Idempotent-Replayed") != "" || strings.Contains(rec.Body.String(), "once") {
+		t.Fatalf("a denied request got the stored response: %s", rec.Body.String())
+	}
+	// Una clave nueva rechazada tampoco deja fila.
+	rec = e.post("/v1/items", "a", keyB, itemReq{Name: "new"})
+	mustProblem(t, rec, http.StatusForbidden, "forbidden")
+	if e.keys() != 1 || e.calls.Load() != 1 {
+		t.Fatalf("keys %d calls %d: a rejected request must not touch the key", e.keys(), e.calls.Load())
+	}
+}
+
+// Las peticiones que esperan por una clave en la misma réplica esperan en memoria: con 50 simultáneas con la misma
+// clave, la réplica usa como máximo 1 conexión y otra sesión sigue atendida sin 503, aunque el pool tenga 2 conexiones.
+func TestWaitingRequestsHoldNoConnection(t *testing.T) {
+	e := newEnv(t, envOpts{maxConns: 2, acquireTimeout: 500 * time.Millisecond})
+	ctx := context.Background()
+	var maxBusy int
+	stop := make(chan struct{})
+	sampled := make(chan struct{})
+	go func() {
+		defer close(sampled)
+		for {
+			select {
+			case <-stop:
+				return
+			default:
+			}
+			var n int
+			if err := e.admin.QueryRow(ctx, `SELECT count(*) FROM pg_stat_activity WHERE application_name = 'idempotency-test' AND state <> 'idle'`).Scan(&n); err == nil && n > maxBusy {
+				maxBusy = n
+			}
+			time.Sleep(5 * time.Millisecond)
+		}
+	}()
+	started := make(chan struct{})
+	var once sync.Once
+	e.onTx = func(ctx context.Context, tx pgx.Tx) { once.Do(func() { close(started) }) }
+	const n = 50
+	recs := make([]*httptest.ResponseRecorder, n)
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		recs[0] = e.post("/v1/items", "a", keyA, itemReq{Name: "burst", SleepMS: 1500})
+	}()
+	<-started
+	for i := 1; i < n; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			recs[i] = e.post("/v1/items", "a", keyA, itemReq{Name: "burst", SleepMS: 1500})
+		}()
+	}
+	time.Sleep(300 * time.Millisecond) // las 49 ya están esperando
+	other := e.post("/v1/notes", "b", "", itemReq{Name: "other session"})
+	if other.Code != http.StatusCreated {
+		t.Fatalf("another session got %d while 49 requests waited on a key: %s", other.Code, other.Body.String())
+	}
+	wg.Wait()
+	close(stop)
+	<-sampled
+	replayed := 0
+	for i, rec := range recs {
+		if rec.Code != 201 {
+			t.Fatalf("request %d: %d %s", i, rec.Code, rec.Body.String())
+		}
+		if rec.Header().Get("Idempotent-Replayed") == "true" {
+			replayed++
+		}
+	}
+	if replayed != n-1 || e.calls.Load() != 2 { // 1 de la ráfaga + la otra sesión
+		t.Fatalf("replayed %d, handler calls %d", replayed, e.calls.Load())
+	}
+	if maxBusy > 2 { // la ráfaga (1) + la otra sesión (1); con espera en la base serían 2 de la ráfaga y la otra sesión fallaría
+		t.Fatalf("up to %d busy connections", maxBusy)
+	}
+	t.Logf("max busy connections: %d (pool of 2)", maxBusy)
+}
+
+// Entre réplicas la espera ocurre en el INSERT (lock del índice único): la segunda réplica espera a la primera y repite
+// su respuesta; si pasa de lock_timeout, 409 request_in_progress.
+func TestTwoReplicasWaitInTheDatabase(t *testing.T) {
+	e := newEnv(t, envOpts{lockTimeout: 500 * time.Millisecond})
+	other := e.replica()
+	started := make(chan struct{})
+	var once sync.Once
+	e.onTx = func(ctx context.Context, tx pgx.Tx) { once.Do(func() { close(started) }) }
+	var wg sync.WaitGroup
+	var first *httptest.ResponseRecorder
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		first = e.post("/v1/items", "a", keyA, itemReq{Name: "slow", SleepMS: 250})
+	}()
+	<-started
+	second := e.postTo(other, "/v1/items", "a", keyA, itemReq{Name: "slow", SleepMS: 250})
+	wg.Wait()
+	if first.Code != 201 || second.Code != 201 || second.Header().Get("Idempotent-Replayed") != "true" || second.Body.String() != first.Body.String() {
+		t.Fatalf("first %d, second %d %v", first.Code, second.Code, second.Header())
+	}
+	if e.calls.Load() != 1 || e.items("a") != 1 {
+		t.Fatalf("calls %d items %d", e.calls.Load(), e.items("a"))
+	}
+
+	// Ahora la primera tarda más que lock_timeout: la otra réplica recibe 409 de la base (55P03).
+	once = sync.Once{}
+	started = make(chan struct{})
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		first = e.post("/v1/items", "a", keyB, itemReq{Name: "slower", SleepMS: 1500})
+	}()
+	<-started
+	t0 := time.Now()
+	second = e.postTo(other, "/v1/items", "a", keyB, itemReq{Name: "slower", SleepMS: 1500})
+	waited := time.Since(t0)
+	mustProblem(t, second, http.StatusConflict, "request_in_progress")
+	if second.Header().Get("Retry-After") != "1" || waited < 400*time.Millisecond || waited > 1200*time.Millisecond {
+		t.Fatalf("Retry-After %q after %v", second.Header().Get("Retry-After"), waited)
+	}
+	wg.Wait()
 }

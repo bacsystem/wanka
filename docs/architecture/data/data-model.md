@@ -91,7 +91,7 @@ RETURNING series, last_number;
 |---|---|---|
 | `iam.sessions` | revocadas/expiradas + 30 días | job diario `iam.purge_sessions` por `created_at` |
 | `iam.password_resets`, invitaciones | 7 días | job diario |
-| `ops.idempotency_keys` | 24 h | job horario por `created_at` (índice) |
+| `ops.idempotency_keys` | 24 h | job horario `ops.purge_idempotency_keys` por `created_at` (índice), sin tenant, por las políticas `purge_expired*` ([ADR 0012](../adr/0012-maintenance-without-tenant.md)) |
 | `einv.provider_webhook_events` | 90 días | job diario |
 | Tabla de jobs de River | completados 7 días, descartados 30 días | `JobCleaner` de River |
 | `audit.events` | 5 años | particiones mensuales; se separan las antiguas |

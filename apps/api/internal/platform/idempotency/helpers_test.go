@@ -52,10 +52,12 @@ type env struct {
 	pool  *db.Pool
 	admin *pgx.Conn
 	h     http.Handler
+	opts  envOpts
 	log   *logBuf
 
 	calls     atomic.Int32 // veces que corrió el handler
 	shiftOpen atomic.Bool
+	denied    atomic.Bool // el paso de permiso de /v1/items responde 403
 	// onTx, si está, corre dentro del handler con la transacción de la petición.
 	onTx func(ctx context.Context, tx pgx.Tx)
 
@@ -83,6 +85,7 @@ type envOpts struct {
 	lockTimeout    time.Duration
 	maxConns       int32
 	handlerTimeout time.Duration
+	acquireTimeout time.Duration
 }
 
 func newEnv(t *testing.T, o envOpts) *env {
@@ -97,23 +100,54 @@ func newEnv(t *testing.T, o envOpts) *env {
 	ctx := context.Background()
 	d := dbtest.New(t)
 	d.MigrateWith(ctx, t, fstest.MapFS{"99990101000000_tenant_probe.sql": {Data: probe}})
-	pool, err := db.Open(ctx, d.URL(dbtest.App), db.Options{MaxConns: o.maxConns, AcquireTimeout: 10 * time.Second, AppName: "idempotency-test"})
+	pool, err := db.Open(ctx, d.URL(dbtest.App), db.Options{MaxConns: o.maxConns, AcquireTimeout: orDur(o.acquireTimeout, 10*time.Second), AppName: "idempotency-test"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(pool.Close)
 	e := &env{t: t, d: d, pool: pool, admin: d.Admin(ctx, t), log: &logBuf{},
 		tenants: map[string]dbtest.Seeded{"a": d.SeedSession(t, dbtest.SessionSpec{}), "b": d.SeedSession(t, dbtest.SessionSpec{})}}
+	// "a2": otro usuario de la misma empresa que "a".
+	a2 := e.tenants["a"]
+	a2.UserID = "0190c1a2-9999-7000-8000-0000000000a2"
+	e.tenants["a2"] = a2
+	nouser := e.tenants["a"]
+	nouser.UserID = "00000000-0000-0000-0000-000000000000"
+	e.tenants["nouser"] = nouser
 	e.shiftOpen.Store(false)
 
-	mw := idempotency.New(pool, idempotency.Config{LockTimeout: o.lockTimeout})
-	rt := httpx.NewRouter(httpx.RouterOptions{HandlerTimeout: o.handlerTimeout})
-	rt.HandleFunc("POST /v1/items", e.handler(), httpx.Use(e.session, mw.Required()))
-	rt.HandleFunc("POST /v1/notes", e.handler(), httpx.Use(e.session, mw.Optional()))
-	// Sin sesión: error de cableado.
-	rt.HandleFunc("POST /v1/nosession", e.handler(), httpx.Use(mw.Required()))
-	e.h = httpx.Chain(rt, logging.New(e.log, slog.LevelDebug), nil)
+	e.opts = o
+	e.h = e.replica()
 	return e
+}
+
+func orDur(d, def time.Duration) time.Duration {
+	if d > 0 {
+		return d
+	}
+	return def
+}
+
+// replica arma otra instancia de la API sobre la misma base: su propio Middleware, y por tanto su propio candado en memoria.
+func (e *env) replica() http.Handler {
+	mw := idempotency.New(e.pool, idempotency.Config{LockTimeout: e.opts.lockTimeout})
+	rt := httpx.NewRouter(httpx.RouterOptions{HandlerTimeout: e.opts.handlerTimeout})
+	itemsOpts := []httpx.RouteOption{httpx.Use(e.session), mw.Required()}
+	// Un paso de permiso con Use puesto DESPUÉS de la idempotencia en la lista de opciones: igual corre antes.
+	itemsOpts = append(itemsOpts, httpx.Use(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if e.denied.Load() {
+				httpx.WriteProblem(w, r, "forbidden", "missing permission")
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	}))
+	rt.HandleFunc("POST /v1/items", e.handler(), itemsOpts...)
+	rt.HandleFunc("POST /v1/notes", e.handler(), httpx.Use(e.session), mw.Optional())
+	// Sin sesión: error de cableado.
+	rt.HandleFunc("POST /v1/nosession", e.handler(), mw.Required())
+	return httpx.Chain(rt, logging.New(e.log, slog.LevelDebug), nil)
 }
 
 func uuidOf(t testing.TB, s string) pgtype.UUID {
@@ -150,7 +184,7 @@ func (e *env) handler() http.HandlerFunc {
 			if e.onTx != nil {
 				e.onTx(r.Context(), tx)
 			}
-			if err := tx.QueryRow(r.Context(), `INSERT INTO rlstest.items (tenant_id, name) VALUES (app.current_tenant(), $1) RETURNING id`, in.Name).Scan(&id); err != nil {
+			if err := tx.QueryRow(r.Context(), `INSERT INTO rlstest.items (tenant_id, name) VALUES (app.current_tenant(), $1 || '@' || app.current_user_id()::text) RETURNING id`, in.Name).Scan(&id); err != nil {
 				return err
 			}
 			if in.SleepMS > 0 {
@@ -196,6 +230,11 @@ func (e *env) handler() http.HandlerFunc {
 // post envía un POST JSON; key vacía no manda la cabecera.
 func (e *env) post(path, tenant, key string, body any) *httptest.ResponseRecorder {
 	e.t.Helper()
+	return e.postTo(e.h, path, tenant, key, body)
+}
+
+func (e *env) postTo(h http.Handler, path, tenant, key string, body any) *httptest.ResponseRecorder {
+	e.t.Helper()
 	var rd io.Reader
 	switch b := body.(type) {
 	case string:
@@ -214,7 +253,7 @@ func (e *env) post(path, tenant, key string, body any) *httptest.ResponseRecorde
 		req.Header.Set("Idempotency-Key", key)
 	}
 	rec := httptest.NewRecorder()
-	e.h.ServeHTTP(rec, req)
+	h.ServeHTTP(rec, req)
 	return rec
 }
 

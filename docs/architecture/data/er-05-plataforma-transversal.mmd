@@ -141,8 +141,9 @@ erDiagram
   }
   IDEMPOTENCY_KEYS {
     uuid tenant_id PK
+    uuid principal_id PK "app.current_user_id(): usuario o staff impersonando; DEFAULT, sin FK"
     text key PK
-    bytea request_hash "sha256 de metodo, ruta y cuerpo canonico"
+    bytea request_hash "sha256 de metodo, URL con query y cuerpo canonico"
     smallint status_code "NULL solo dentro de la transaccion; solo 2xx: CHECK status_code BETWEEN 200 AND 299"
     bytea response "bytes exactos de la respuesta"
     jsonb response_headers "Content-Type, Location, ETag"

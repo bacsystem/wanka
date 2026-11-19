@@ -14,8 +14,8 @@ func seedKeys(ctx context.Context, t *testing.T, d *dbtest.DB, tenantID, prefix 
 	t.Helper()
 	admin := d.Admin(ctx, t)
 	for i := 0; i < n; i++ {
-		_, err := admin.Exec(ctx, `INSERT INTO ops.idempotency_keys (tenant_id, key, request_hash, status_code, response, created_at)
-			VALUES ($1, $2::text, sha256(convert_to($2::text, 'UTF8')), 201, '\x7b7d', now() - make_interval(secs => $3))`,
+		_, err := admin.Exec(ctx, `INSERT INTO ops.idempotency_keys (tenant_id, principal_id, key, request_hash, status_code, response, created_at)
+			VALUES ($1, gen_random_uuid(), $2::text, sha256(convert_to($2::text, 'UTF8')), 201, '\x7b7d', now() - make_interval(secs => $3))`,
 			tenantID, fmt.Sprintf("%s-%d", prefix, i), age.Seconds())
 		if err != nil {
 			t.Fatal(err)

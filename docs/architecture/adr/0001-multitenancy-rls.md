@@ -1,6 +1,6 @@
 # ADR 0001: Multi-tenancy con base única, `tenant_id` y Row-Level Security
 
-- Estado: aceptado (decisión del usuario); los detalles de implementación son una propuesta
+- Estado: aceptado (decisión del usuario); los detalles de implementación son una propuesta; modificado por [0012](0012-maintenance-without-tenant.md) (2026-11-19) en la lista blanca de políticas de la prueba (a) y en la fila de `ops.idempotency_keys` de la matriz de GRANT
 - Fecha: 2026-11-17 (revisado tras la revisión del PR #124: caminos que RLS bloqueaba, `NULLIF`, matriz de permisos por rol; 2026-11-18: creación de los roles, épica #154; 2026-11-19: los workers van sin `UserID`, #169)
 
 ## Contexto

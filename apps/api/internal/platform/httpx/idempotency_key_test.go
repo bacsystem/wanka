@@ -3,6 +3,7 @@ package httpx_test
 import (
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/bacsystem/wanka/apps/api/internal/platform/httpx"
@@ -43,5 +44,28 @@ func TestRejectIdempotencyKey(t *testing.T) {
 				mustProblem(t, rec, http.StatusBadRequest, "malformed_request")
 			}
 		})
+	}
+}
+
+// Innermost corre más cerca del handler que todo Use, aunque se declare antes.
+func TestInnermostRunsAfterEveryUse(t *testing.T) {
+	var order []string
+	step := func(name string) httpx.Middleware {
+		return func(next http.Handler) http.Handler {
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				order = append(order, name)
+				next.ServeHTTP(w, r)
+			})
+		}
+	}
+	h, _, _ := chain(t, func(rt *httpx.Router) {
+		rt.HandleFunc("POST /x", func(w http.ResponseWriter, r *http.Request) {
+			order = append(order, "handler")
+			w.WriteHeader(http.StatusNoContent)
+		}, httpx.Innermost(step("inner1"), step("inner2")), httpx.Use(step("use1")), httpx.Use(step("use2")))
+	})
+	do(h, httptest.NewRequest(http.MethodPost, "/x", nil))
+	if got := strings.Join(order, ","); got != "use1,use2,inner1,inner2,handler" {
+		t.Fatalf("order = %s", got)
 	}
 }
