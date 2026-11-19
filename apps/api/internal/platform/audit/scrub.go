@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strings"
+	"unicode"
 )
 
 // Redacted reemplaza el valor de un campo prohibido: la clave se conserva para
@@ -24,7 +26,14 @@ const (
 var forbiddenParts = []string{
 	"password", "passwd", "contrasena", "clave", "secret", "token", "apikey", "privatekey",
 	"certificate", "certificado", "credential", "authorization", "cookie", "totp", "recoverycode", "hash", "cvv",
+	"hmac", "accesskey", "jwt",
 }
+
+// forbiddenWords son nombres cortos que solo cuentan como palabra completa del campo (separada por _, - o un
+// cambio de mayúsculas): "otp" y "pin" como fragmento enmascararían "footprint" o "shipping".
+var forbiddenWords = map[string]bool{"otp": true, "pin": true}
+
+var jwtShape = regexp.MustCompile(`^eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*$`)
 
 // secretValuePrefixes son los prefijos de los tokens del sistema (wk_at_, wk_rt_)
 // y de las API keys de Khipu (fk_): un valor que empieza así se enmascara
@@ -48,7 +57,43 @@ func forbiddenKey(key string) bool {
 			return true
 		}
 	}
+	return slicesAny(words(key), func(w string) bool { return forbiddenWords[w] })
+}
+
+func slicesAny(ws []string, f func(string) bool) bool {
+	for _, w := range ws {
+		if f(w) {
+			return true
+		}
+	}
 	return false
+}
+
+// words parte un nombre de campo en palabras en minúsculas: por separadores y por cambios de minúscula a mayúscula.
+func words(key string) []string {
+	var out []string
+	var cur []rune
+	flush := func() {
+		if len(cur) > 0 {
+			out = append(out, strings.ToLower(string(cur)))
+			cur = cur[:0]
+		}
+	}
+	var prev rune
+	for _, r := range key {
+		switch {
+		case !unicode.IsLetter(r) && !unicode.IsDigit(r):
+			flush()
+		case unicode.IsUpper(r) && unicode.IsLower(prev):
+			flush()
+			cur = append(cur, r)
+		default:
+			cur = append(cur, r)
+		}
+		prev = r
+	}
+	flush()
+	return out
 }
 
 // scrubDiff serializa v a JSON y enmascara, a cualquier profundidad, los campos
@@ -59,9 +104,19 @@ func scrubDiff(v any) ([]byte, error) {
 	if v == nil {
 		return nil, nil
 	}
-	raw, err := json.Marshal(v)
-	if err != nil {
-		return nil, fmt.Errorf("%w: diff is not JSON: %v", ErrInvalidEvent, err)
+	var raw []byte
+	switch t := v.(type) {
+	case []byte: // JSON ya serializado: se sanea igual que un objeto
+		raw = t
+	case json.RawMessage:
+		raw = t
+	case string:
+		raw = []byte(t)
+	default:
+		var err error
+		if raw, err = json.Marshal(v); err != nil {
+			return nil, fmt.Errorf("%w: diff is not JSON: %v", ErrInvalidEvent, err)
+		}
 	}
 	dec := json.NewDecoder(bytes.NewReader(raw))
 	dec.UseNumber() // no pierde precisión en enteros grandes
@@ -71,6 +126,12 @@ func scrubDiff(v any) ([]byte, error) {
 	}
 	if tree == nil {
 		return nil, nil
+	}
+	if _, ok := tree.(map[string]any); !ok {
+		return nil, fmt.Errorf("%w: diff must be a JSON object", ErrInvalidEvent)
+	}
+	if dec.More() {
+		return nil, fmt.Errorf("%w: diff has trailing data", ErrInvalidEvent)
 	}
 	clean, err := scrubValue(tree, 0)
 	if err != nil {
@@ -118,6 +179,9 @@ func scrubValue(v any, depth int) (any, error) {
 			if strings.HasPrefix(t, p) {
 				return Redacted, nil
 			}
+		}
+		if len(t) >= 7 && strings.EqualFold(t[:7], "bearer ") || jwtShape.MatchString(t) {
+			return Redacted, nil
 		}
 	}
 	return v, nil

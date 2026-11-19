@@ -35,6 +35,8 @@ CREATE TABLE audit.events (
   CONSTRAINT events_staff_has_staff CHECK (actor_type <> 'platform_staff' OR (actor_user_id IS NULL AND impersonator_id IS NOT NULL)),
   CONSTRAINT events_impersonator_is_staff CHECK (impersonator_id IS NULL OR actor_type = 'platform_staff'),
   CONSTRAINT events_action_check CHECK (char_length(action) BETWEEN 3 AND 120),
+  -- modulo.recurso:accion, el mismo formato que valida audit.Event (api/resources.md).
+  CONSTRAINT events_action_format CHECK (action ~ '^[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*:[a-z][a-z0-9_]*$'),
   CONSTRAINT events_request_id_check CHECK (char_length(request_id) <= 128)
 ) PARTITION BY RANGE (at);
 

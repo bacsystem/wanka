@@ -151,7 +151,7 @@ BEGIN
    WHERE g.id = p_grant_id AND g.status = 'solicitado' AND g.tenant_id = app.current_tenant();
   GET DIAGNOSTICS n = ROW_COUNT;
   IF n = 0 THEN RAISE EXCEPTION 'grant not found for this tenant' USING ERRCODE = 'no_data_found'; END IF;
-  INSERT INTO audit.events (tenant_id, actor_type, actor_user_id, action) VALUES (app.current_tenant(), 'user', app.current_user_id(), 'support_access:' || CASE WHEN p_approve THEN 'approve' ELSE 'reject' END);
+  INSERT INTO audit.events (tenant_id, actor_type, actor_user_id, action) VALUES (app.current_tenant(), 'user', app.current_user_id(), 'identidad.support_access:' || CASE WHEN p_approve THEN 'approve' ELSE 'reject' END);
   RETURN CASE WHEN p_approve THEN 'aprobado' ELSE 'rechazado' END;
 END $$;
 
@@ -170,7 +170,7 @@ BEGIN
   INSERT INTO iam.sessions (id, user_id, tenant_id, membership_id, access_hash, access_expires_at, authz_version, mfa_satisfied, mfa_method, impersonator_id)
        VALUES (p_session_id, NULL, g.tenant_id, NULL, p_access_hash, now() + interval '60 minutes', NULL, true, 'platform', g.platform_user_id);
   PERFORM set_config('app.tenant_id', g.tenant_id::text, true);
-  INSERT INTO audit.events (tenant_id, actor_type, impersonator_id, action) VALUES (g.tenant_id, 'platform_staff', g.platform_user_id, 'impersonation:redeem');
+  INSERT INTO audit.events (tenant_id, actor_type, impersonator_id, action) VALUES (g.tenant_id, 'platform_staff', g.platform_user_id, 'plataforma.impersonation:redeem');
   PERFORM set_config('app.tenant_id', coalesce(prev, ''), true);
   RETURN g.tenant_id;
 END $$;
@@ -187,7 +187,7 @@ BEGIN
   INSERT INTO iam.roles (id, tenant_id, name, requires_mfa) VALUES (p_role, p_tenant, 'Propietario', true);
   INSERT INTO iam.users (id, email) VALUES (p_owner, p_owner_email) ON CONFLICT (email) DO NOTHING;
   INSERT INTO iam.memberships (id, tenant_id, user_id, role_id, status) VALUES (gen_random_uuid(), p_tenant, p_owner, p_role, 'invitado');
-  INSERT INTO audit.events (tenant_id, actor_type, impersonator_id, action) VALUES (p_tenant, 'platform_staff', app.current_user_id(), 'tenants:create');
+  INSERT INTO audit.events (tenant_id, actor_type, impersonator_id, action) VALUES (p_tenant, 'platform_staff', app.current_user_id(), 'plataforma.tenants:create');
   PERFORM set_config('app.tenant_id', coalesce(prev, ''), true);
   RETURN p_tenant;
 END $$;
@@ -201,7 +201,7 @@ BEGIN
   INSERT INTO platform.impersonation_grants (id, platform_user_id, tenant_id, ticket_id, scope, status, exchange_token_hash)
        VALUES (p_grant, p_staff, p_tenant, p_ticket, p_scope, 'solicitado', p_token_hash);
   PERFORM set_config('app.tenant_id', p_tenant::text, true);
-  INSERT INTO audit.events (tenant_id, actor_type, impersonator_id, action) VALUES (p_tenant, 'platform_staff', p_staff, 'impersonation:request');
+  INSERT INTO audit.events (tenant_id, actor_type, impersonator_id, action) VALUES (p_tenant, 'platform_staff', p_staff, 'plataforma.impersonation:request');
   PERFORM set_config('app.tenant_id', coalesce(prev, ''), true);
   RETURN p_grant;
 END $$;
@@ -215,7 +215,7 @@ BEGIN
   PERFORM set_config('app.tenant_id', p_tenant::text, true);
   UPDATE org.tenants SET status = 'suspendida' WHERE id = p_tenant;
   IF NOT FOUND THEN RAISE EXCEPTION 'tenant not found'; END IF;
-  INSERT INTO audit.events (tenant_id, actor_type, impersonator_id, action) VALUES (p_tenant, 'platform_staff', app.current_user_id(), 'tenants:suspend');
+  INSERT INTO audit.events (tenant_id, actor_type, impersonator_id, action) VALUES (p_tenant, 'platform_staff', app.current_user_id(), 'plataforma.tenants:suspend');
   PERFORM set_config('app.tenant_id', coalesce(prev, ''), true);
 END $$;
 

@@ -2,6 +2,7 @@ package audit
 
 import (
 	"encoding/json"
+	"errors"
 	"strings"
 	"testing"
 )
@@ -109,6 +110,61 @@ func TestForbiddenKey(t *testing.T) {
 	} {
 		if got := forbiddenKey(k); got != want {
 			t.Errorf("forbiddenKey(%q) = %v, want %v", k, got, want)
+		}
+	}
+}
+
+// H1: un diff ya serializado (string, []byte o json.RawMessage) se sanea igual que un objeto.
+func TestScrubDiffSanitizesSerializedJSON(t *testing.T) {
+	const doc = `{"password":"hunter2","nested":{"api_key":"k"},"ok":1}`
+	for name, in := range map[string]any{"string": doc, "bytes": []byte(doc), "raw message": json.RawMessage(doc)} {
+		t.Run(name, func(t *testing.T) {
+			raw, err := scrubDiff(in)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if strings.Contains(string(raw), "hunter2") || strings.Contains(string(raw), `"k"`) || !strings.Contains(string(raw), `"ok":1`) {
+				t.Errorf("not sanitized: %s", raw)
+			}
+		})
+	}
+}
+
+func TestScrubDiffRequiresAnObject(t *testing.T) {
+	for name, in := range map[string]any{
+		"array": []any{1}, "string json scalar": `"hunter2"`, "number": 7, "plain text": "password=hunter2",
+		"bytes array": []byte(`[{"password":"x"}]`), "trailing data": `{"a":1} {"password":"x"}`, "bool": true,
+	} {
+		t.Run(name, func(t *testing.T) {
+			if raw, err := scrubDiff(in); !errors.Is(err, ErrInvalidEvent) {
+				t.Errorf("got %s, %v; want ErrInvalidEvent", raw, err)
+			}
+		})
+	}
+}
+
+// H2: nombres cortos por palabra, hmac, access key, y valores con forma de credencial.
+func TestScrubDiffExtraNamesAndValueShapes(t *testing.T) {
+	jwt := "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIn0.c2ln"
+	raw, err := scrubDiff(map[string]any{
+		"email_code_hmac": "h", "access_key": "k", "accessKey": "k", "otp": "123456", "email_otp": "1", "emailOtp": "1", "pin": "1234", "jwt": "x",
+		"note": "Bearer abc.def", "lower": "bearer abc", "shape": jwt, "footprint": "keep", "shipping": "keep", "mapping": "keep", "plain": "eyJ.only.one",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var out map[string]any
+	if err := json.Unmarshal(raw, &out); err != nil {
+		t.Fatal(err)
+	}
+	for _, k := range []string{"email_code_hmac", "access_key", "accessKey", "otp", "email_otp", "emailOtp", "pin", "jwt", "note", "lower", "shape"} {
+		if out[k] != Redacted {
+			t.Errorf("%q = %v, want redacted", k, out[k])
+		}
+	}
+	for _, k := range []string{"footprint", "shipping", "mapping", "plain"} {
+		if out[k] == Redacted {
+			t.Errorf("%q was masked", k)
 		}
 	}
 }
