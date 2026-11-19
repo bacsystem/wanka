@@ -12,7 +12,7 @@ más adelante).
 
 ```
 cmd/wanka/            main: serve, worker, migrate up
-internal/platform/    kernel: config, logging, httpx, auth, metrics, clock, db (+ db/dbtest para tests) en uso;
+internal/platform/    kernel: config, logging, httpx, auth (+ auth/pgsession, el resolver de sesión), metrics, clock, db (+ db/dbtest para tests) en uso;
                       jobs, money, entitlements, idgen (paquetes vacíos por ahora)
 bootstrap/roles.sql   bootstrap de roles: lo corre el superusuario con psql, fuera de goose
 migrations/           goose, SQL con timestamp, embebido en el binario, solo hacia adelante
@@ -80,8 +80,10 @@ wanka migrate up                # aplica las migraciones pendientes y termina
 ## Base HTTP (`internal/platform/httpx`)
 
 `httpx.Chain` (request id, log de acceso, recuperación de `panic`, límite de
-cuerpo) envuelve a un `httpx.Router`; los módulos registran ahí sus rutas con
-`rt.Handle("GET /v1/items/{id}", h, opts...)`.
+cuerpo) envuelve a un `httpx.Router`. Las rutas que no son `/v1` (salud) se
+registran con `rt.Handle("GET /healthz", h, opts...)`; `Handle` entra en pánico
+con cualquier patrón que `/v1` pueda alcanzar (`/v1`, `/v1/...` o un comodín
+inicial como `/{version}/x`). Las rutas `/v1` van por `auth.Routes` (ver «Sesión»).
 
 - **Errores**: todo error es `application/problem+json` (RFC 9457) con `type`,
   `title`, `status`, `code` y `requestId`. El `code` sale de la lista cerrada de
@@ -129,13 +131,19 @@ caracteres de `[A-Za-z0-9_-]` y, si falta o no cumple, se reemplaza por uno nuev
 
 `auth` define el puerto `SessionResolver` (`Lookup` por `sha256` del token y
 `Detach`), la `SessionRecord` que devuelve `iam.session_lookup`, la `Session`
-del handler y el registrador `auth.Routes`. El adaptador de PostgreSQL llega con
-#196; el middleware se prueba con un doble.
+del handler y el registrador `auth.Routes`. El adaptador de PostgreSQL es
+`internal/platform/auth/pgsession`: `Lookup` corre `SELECT ... FROM
+iam.session_lookup($1)` en `db.InNoTenantReadTx` y `Detach` el `UPDATE` del ADR
+0011 en `db.InNoTenantTx`; ni otra consulta ni caché. `wanka serve --plane=tenant`
+lo cablea con los limitadores de `conventions.md` §7 y una goroutine que llama a
+`Routes.Sweep()` cada 10 s y termina en el apagado; los planos `platform` y
+`webhooks` no montan nada de esto.
 
 - **Registro**: los módulos registran sus rutas `/v1` con
   `routes.Handle(pattern, class, h, opts...)`, `class` de tipo `auth.RouteClass`
   (`Public`, `NoTenant`, `Tenant`; sin valor cero válido). Nadie recibe el
-  `httpx.Router` (`Router.Handle` sigue siendo público: el cableado de #196 no lo expone). Una clase omitida o que no cumple `conventions.md` §2 entra en
+  `httpx.Router`: `Router.Handle` rechaza `/v1` y solo `auth.Routes` llama a
+  `Router.HandleV1`, así que ninguna ruta `/v1` queda sin clase. Una clase omitida o que no cumple `conventions.md` §2 entra en
   pánico al arrancar. `Public` solo bajo `/v1/auth/`; `NoTenant` es `/v1/auth/*`,
   `GET /v1/me` y `GET /v1/me/memberships`; el resto es `Tenant`. Una ruta tiene
   una sola clase (el enrolamiento TOTP son dos rutas).
@@ -157,13 +165,13 @@ del handler y el registrador `auth.Routes`. El adaptador de PostgreSQL llega con
 - **Límites por defecto** (`auth.Options` los reemplaza en los tests): sesión 10/s
   con ráfaga de 20, tenant 100/s con ráfaga de 200, con topes de 50 000 y 10 000
   claves por réplica. Son supuestos que ajusta la prueba de carga de #196.
-  `Routes.Sweep()` elimina los buckets llenos; llamarlo cada 10 s es de `serve`.
+  `Routes.Sweep()` elimina los buckets llenos; `serve` lo llama cada 10 s.
 - El handler lee la sesión con `auth.FromContext(ctx)`. Solo un handler de ruta
   `Tenant` pasa su `Actor` a `db.InTenantTx`: ahí corren los entitlements, la
   versión, la 2FA, el RBAC y el límite del tenant. En una ruta `NoTenant` el
   tenant de la sesión (si lo tiene) es informativo y no se entra a datos de la
   empresa. Los módulos registran rutas solo por `auth.Routes`; el `httpx.Router`
-  no sale de `cmd/wanka`. Los entitlements (fase `entitlements`) llegan con #175.
+  no sale de `cmd/wanka` (`mountPlane`). Los entitlements (fase `entitlements`) llegan con #175.
 - Sobrecarga: `go test -run '^$' -bench Session -benchmem -count 5 ./internal/platform/auth`.
 
 ## Transacciones de tenant (`InTenantTx`)

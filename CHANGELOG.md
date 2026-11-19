@@ -3,6 +3,16 @@
 All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.9.0] - 2026-11-19
+
+### Added
+- `apps/api`: `internal/platform/auth/pgsession`, the PostgreSQL `auth.SessionResolver`. `Lookup` runs `SELECT ... FROM iam.session_lookup($1)` in `db.InNoTenantReadTx` and `Detach` runs the conditional `UPDATE` of ADR 0011 in `db.InNoTenantTx`, returning `detached = true` only when it updated one row; there is no other query and no cache. Database failures keep their type (`db.ErrOverloaded`, `db.ErrUnavailable`, `db.ErrStatementTimeout`) so the chain answers `503`, never `401` or `500`. Tests against PostgreSQL 16 with the real `wanka_app` role and the full chain (`Chain` -> `Router` -> `auth.Routes`) cover a bound session, a lost membership (deleted or suspended; the row loses `tenant_id`, `membership_id`, `site_id`, `cash_register_id` and `authz_version` and is never revoked), a membership that is active again, two concurrent requests (one `UPDATE` affects one row, the other zero), impersonated sessions (unchanged by membership loss; `401 session_expired` once revoked or expired), unknown, expired, revoked and half-login tokens, `statement_timeout`, `pg_cancel_backend`, the 1 s lookup deadline, `pg_terminate_backend`, a full pool, a failed unbinding and a session-level `app.tenant_id` left on the connection, and check that no log line holds a token or its `sha256` (#196).
+- `apps/api`: contract test between `iam.session_lookup` and `auth.SessionRecord`: the 12 columns of the function, in order and type, must be the ones `Lookup` selects and each must scan into its record field, and the record must have no field without a column (#196).
+- `apps/api`: `wanka serve --plane=tenant` mounts the session chain with the PostgreSQL resolver and the two limiters with the values of `api/conventions.md` §7, and runs a goroutine that calls `Routes.Sweep()` every 10 s and stops on graceful shutdown. `--plane=platform` and `--plane=webhooks` do not mount it. `.go-arch-lint.yml` has a new component for `internal/platform/auth/pgsession` that only `cmd` may wire (#196).
+
+### Changed
+- `apps/api`: `httpx.Router.Handle` panics on any pattern a `/v1` request can reach (`/v1`, `/v1/...` or a leading wildcard such as `/{version}/x`); `/v1` routes are registered only by `auth.Routes`, through the new `Router.HandleV1`, so a module cannot register a `/v1` route without a class (#196).
+
 ## [0.8.0] - 2026-11-19
 
 ### Added
