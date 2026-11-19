@@ -1,0 +1,2 @@
+# Dos PR que agregan líneas a [Unreleased] se integran sin conflicto (retro del lote 3).
+CHANGELOG.md merge=union

@@ -35,6 +35,7 @@ Lista viva: cada revisión que encuentra un tipo de error nuevo lo agrega aquí.
 - Las 4 fallas de CI de los lotes 1 y 2 fueron tests de tiempo o de concurrencia: una cota tiene que cumplirse en el runner de la CI, y un test concurrente no lanza más trabajo que el tamaño del pool (#205, #208, #211, #212).
 - Los topes tienen su borde fijado: el valor exacto pasa y el siguiente falla (254 y 255, no 310) (#202).
 - **Criterios no funcionales:** si la issue pide «medido y reportado», el número va en el cuerpo del PR antes de pedir la revisión, y el test mide la magnitud que el criterio nombra, no una parecida (#206, #211, #212, #213).
+- Un test de conjuntos (permisos de un alcance, catálogos, listas blancas) compara contra una **lista escrita a mano**, nunca contra lo que da la misma fórmula del código: si la copia, fija el defecto (#218).
 
 ## Cableado
 - Lo que arranca `serve`, sea el escucha o el bucle, es el mismo objeto que usan las rutas, y hay un test que lo comprueba (#207).
@@ -45,6 +46,9 @@ Lista viva: cada revisión que encuentra un tipo de error nuevo lo agrega aquí.
 - Una caché que se invalida también descarta la lectura en vuelo: una petición que llega después del aviso no se une a la lectura que empezó antes (#206).
 - Los timeouts se fijan de forma explícita y configurable, no por el default de una librería (#211).
 - Lo que el contrato dice que un componente no importa (un adaptador, un tipo de una librería) lo impone `go-arch-lint`, no la buena voluntad (#202, #211).
+- Un test de cableado (paridad router ↔ contrato, smoke del router) monta **exactamente** lo que monta `serve` (`defaultWiring`), no un `wiring{}` vacío (#218).
+- Un chequeo de paridad compara todas las dimensiones que pide el criterio: método, ruta, módulo, permiso **y clase** (#218).
+- Una guarda que promete detectar una lista de nombres prueba cada nombre con una mutación (#219).
 
 ## Configuración, CI y documentación
 - Cada variable de entorno nueva está en la tabla del README de `apps/api`, en el CHANGELOG y en la sección de despliegue del PR, y sus valores aceptados coinciden con los entornos del ADR 0007 (`staging` incluido) (#202, #211).
@@ -52,6 +56,10 @@ Lista viva: cada revisión que encuentra un tipo de error nuevo lo agrega aquí.
 - Un workflow que dice ser idempotente compara el objeto (el commit de un tag, las dos versiones de `package.json`), no solo si existe (#214).
 - Toda afirmación de un documento («lo vigila un test», «la prueba de carga mide…», «ningún rol puede…») tiene el test o la medición que la respalda, y no contradice otra sección del mismo documento ni un ADR (#203, #205, #206, #213, #214).
 - Una tabla o un grant nuevos se registran en la matriz del ADR que los gobierna, aunque el PR sea de docs (#203).
+- Una herramienta de CI se fija por lockfile o por checksum, con una versión de **al menos 14 días** desde su publicación; el runtime (Node) sale de `.nvmrc`, nunca del runner (#219).
+- El script que usa una herramienta distingue sus exit codes: «encontró un problema» no es lo mismo que «no pudo correr» (#219).
+- El cuerpo del PR no afirma que la CI corrió algo hasta que `gh pr checks` lo muestra; un PR `DIRTY` no corre ningún check (#219).
+- Corregir un ADR aceptado lleva la nota fechada del §9 del README de arquitectura y la decide el architect; nunca se reescribe la decisión en su lugar sin nota (#218).
 
 ## Higiene de la pila
 - Los IDs de caso de `rls-check` (`A11`, `K4`…) no se repiten: antes de numerar uno nuevo, busca el siguiente libre (#208).
