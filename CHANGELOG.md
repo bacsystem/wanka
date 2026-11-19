@@ -5,6 +5,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Added
+- `docs/retros/2026-11-19-kernel-lotes-1-2.md`: first batch retrospective (kernel batches 1 and 2, PRs #201-#214), with the batch metrics, the bottlenecks and their evidence (stacked re-merges, repeated suite runs, one database container per agent, design decisions made after implementing, shared worktrees, timing tests failing CI, unmeasured non-functional criteria), the improvements already shipped and the targets for the next batch. `docs/architecture/review-checklist.md` gains the new defect classes found in those reviews, each with its PR.
+
 ### Changed
 - `docs/ai-collaboration.md`: how a collaborator works with Claude Code or Gemini, where every rule and state lives (repo docs, issues, PRs, `wanka-memory`, `bacsystem/skills`, never an AI's private memory), how to set up each tool and how to pick up work another person or AI started; owner rules that only lived in conversation are written down.
 - Delivery process: stories ship as independent PRs from `main` that never touch the version; one release PR per batch bumps it and gets one tag. Risky PRs keep separate review and QA; the rest get both in one pass. Rules in `docs/delivery-process.md` and `CLAUDE.md` (owner decision, 2026-11-19).
