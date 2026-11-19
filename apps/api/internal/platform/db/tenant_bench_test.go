@@ -82,3 +82,19 @@ func BenchmarkInTenantTx(b *testing.B) {
 		}
 	}
 }
+
+// BenchmarkInNoTenantReadTx se compara con BenchmarkInTenantTx: mismas 4 idas y
+// vueltas (BEGIN, set_config, consulta, COMMIT).
+func BenchmarkInNoTenantReadTx(b *testing.B) {
+	p := benchPool(b)
+	ctx := context.Background()
+	for b.Loop() {
+		err := p.InNoTenantReadTx(ctx, db.NoTenantScope{}, func(tx pgx.Tx) error {
+			var n int
+			return tx.QueryRow(ctx, `SELECT 1`).Scan(&n)
+		})
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}

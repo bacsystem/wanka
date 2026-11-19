@@ -3,6 +3,11 @@
 All notable changes to this project are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.6.0] - 2026-11-19
+
+### Added
+- `apps/api`: `db.Pool.InNoTenantTx` and `InNoTenantReadTx` (`BEGIN READ ONLY`) with `db.NoTenantScope{UserID}`: a transaction without tenant, the door for every database access with no tenant set, from any service (session lookup and unlink, login, `iam.list_my_memberships()` and impersonation redemption in `api`; webhook route resolution; `platform_fn.*`; session purge in `worker`). Its first statement is one `set_config` that clears `app.tenant_id`, `app.session_kind` and `app.impersonator_id` and sets `app.user_id` to the scope's user or `''`, so a session-level value left on the pooled connection is never inherited (a `SECURITY DEFINER` function that saves and restores `app.tenant_id`, like `iam.session_lookup`, restores `''`). Same four round trips and the same typed errors as `InTenantTx` (shared transaction cycle `runTx`); `set_config(..., false)` stays forbidden in both doors. Overhead recorded in `docs/architecture/capacity.md` (#198, #194).
+
 ## [0.5.1] - 2026-11-18
 
 ### Changed
