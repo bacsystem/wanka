@@ -1,6 +1,6 @@
 # ADR 0011: Perder la membresía termina la sesión en esa empresa, no la sesión del usuario
 
-- Estado: aceptado (2026-11-18: el dueño eligió la opción (a) y aprobó el merge del PR #185)
+- Estado: aceptado (2026-11-18: el dueño eligió la opción 4, «Desligar la sesión en su sitio», en la pregunta 3 del PR #181; en el PR #185 eligió además la subdecisión (a), que con una sola empresa activa restante igual muestra `/seleccionar-empresa`, y aprobó el merge)
 - Fecha: 2026-11-18
 - Modifica: [ADR 0004](0004-in-house-auth.md), solo en lo que lista «Qué reemplaza del ADR 0004». El resto del ADR 0004 sigue vigente. Su texto no se reescribe ([README §9](../README.md)): ante una diferencia, manda este ADR.
 

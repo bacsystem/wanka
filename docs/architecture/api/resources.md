@@ -16,7 +16,8 @@ Ajustes de forma respecto a los mocks, comunes a todos los recursos:
 |---|---|---|---|
 | `POST /v1/auth/login` | `/login` | — | público, rate limit |
 | `POST /v1/auth/mfa/verify` | `/login` paso 2FA | — | challenge token |
-| `POST /v1/auth/mfa/totp/enroll`, `.../confirm` | `/perfil` | — | sesión |
+| `POST /v1/auth/mfa/totp/enroll`, `.../confirm` | `/perfil` (activar 2FA con la sesión ya iniciada) | — | sesión (clase `NoTenant`) |
+| `POST /v1/auth/mfa/enrollment/totp`, `.../confirm` | `/login`, enrolamiento obligatorio antes de tener sesión | — | `enrollmentToken` en el cuerpo, de un solo uso y solo para enrolar (clase `Public`); `confirm` crea la sesión |
 | `POST /v1/auth/refresh` | BFF | — | refresh token |
 | `POST /v1/auth/logout` | topbar | — | sesión |
 | `POST /v1/auth/password/forgot`, `.../reset` | `/login` recuperar | — | público, rate limit |

@@ -29,7 +29,7 @@ sequenceDiagram
     else sin TOTP y mfa_obligatorio
       A-->>W: 200 {status:"mfa_enrollment_required", enrollment_token} (TTL 10 min, solo sirve para enrolar)
       U->>W: escanea el QR y escribe el primer codigo
-      W->>A: POST /v1/auth/mfa/totp/enroll y /confirm {enrollment_token, code}
+      W->>A: POST /v1/auth/mfa/enrollment/totp y /confirm {enrollment_token, code}, rutas Public sin sesion (desde /perfil, con sesion, son /v1/auth/mfa/totp/enroll y /confirm)
       A->>DB: INSERT user_totp (secreto cifrado), codigos de recuperacion, INSERT sessions mfa_satisfied=true, mfa_method=totp
     else sin TOTP y ningun rol lo exige
       A->>DB: INSERT sessions (mfa_satisfied=true, mfa_method=none, tenant_id=null): la 2FA no se requeria, la sesion la cumple
