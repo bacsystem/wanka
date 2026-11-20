@@ -6,9 +6,11 @@ Backend de Wanka: un binario Go (`wanka`) con módulos hexagonales. Decisiones e
 
 Estado: kernel de la ola 0 completo (épica #154, release v0.19.0). Incluye la
 cadena `/v1` (sesión, tenant, entitlements, RBAC e idempotencia), la auditoría,
-los jobs, `pricing.Compute` y el contrato OpenAPI con su código generado. Todavía
-no hay módulos de negocio (empiezan en la ola 1) ni despliegue (Railway queda
-para más adelante).
+los jobs, `pricing.Compute` y el contrato OpenAPI con su código generado. La ola 1
+está en curso (release v0.20.0): el módulo de identidad (épica #3) ya tiene el DDL
+de identidad (#231, #232), el resolver de permisos con los roles base (#233), la
+lista de contraseñas filtradas (#238) y el login (#24, ADR 0014). Aún no hay
+despliegue (Railway queda para más adelante).
 
 ## Estructura
 
