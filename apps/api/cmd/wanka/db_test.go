@@ -119,8 +119,8 @@ func TestServeIsReadyAgainstARealDatabase(t *testing.T) {
 
 func toJSON(m map[string]any) string { b, _ := json.Marshal(m); return string(b) }
 
-// El worker con una base real levanta las cinco colas y se detiene limpio con SIGTERM.
-func TestWorkerStartsTheFiveQueuesAndStopsOnSIGTERM(t *testing.T) {
+// El worker con una base real levanta las colas y se detiene limpio con SIGTERM.
+func TestWorkerStartsTheQueuesAndStopsOnSIGTERM(t *testing.T) {
 	d := dbtest.New(t)
 	d.Migrate(context.Background(), t)
 	p := start(t, []string{"DATABASE_URL_WORKER=" + d.URL(dbtest.Worker), "JOBS_CONCURRENCY_REPORTS=1"}, "worker")
@@ -144,12 +144,12 @@ func TestWorkerStartsTheFiveQueuesAndStopsOnSIGTERM(t *testing.T) {
 			queues = append(queues, n)
 		}
 		rows.Close()
-		if len(queues) == 5 || time.Now().After(deadline) {
+		if len(queues) == 6 || time.Now().After(deadline) {
 			break
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
-	if strings.Join(queues, ",") != "cpe,maintenance,notifications,reports,webhooks" {
+	if strings.Join(queues, ",") != "cpe,einv_config,maintenance,notifications,reports,webhooks" {
 		t.Fatalf("queues started by the worker: %v", queues)
 	}
 	p.terminate(t)
