@@ -22,9 +22,9 @@ export interface paths {
          *     si la cuenta no existe, está bloqueada, cerrada, es de un usuario bloqueado o no tiene contraseña) y
          *     resultado. Contraseña mala, correo inexistente, cuenta bloqueada o cerrada, usuario bloqueado, sin
          *     contraseña y segundo paso cerrado tras 3 bloqueos: el mismo 401 invalid_credentials, con el mismo
-         *     cuerpo (la API nunca dice que la cuenta existe). El 5.º fallo de una ventana de 15 min bloquea la
-         *     cuenta 15 min y avisa por correo; con 10 bloqueos el ingreso con contraseña queda cerrado hasta
-         *     restablecerla. Una contraseña correcta devuelve el cobro. Con la contraseña correcta y ninguna
+         *     cuerpo (la API nunca dice que la cuenta existe). Cada 5.º fallo seguido bloquea la cuenta
+         *     15 min · 2^(n-1), hasta 24 h, y avisa por correo; con 100 fallos seguidos el ingreso con contraseña
+         *     queda cerrado hasta restablecerla (ADR 0014). Una contraseña correcta devuelve el cobro. Con la contraseña correcta y ninguna
          *     membresía activa: 403 tenant_access_denied, sin sesión. Con la contraseña correcta y el segundo paso
          *     bloqueado: 429 rate_limited con Retry-After hasta el fin del bloqueo. La rama
          *     mfa_enrollment_required responde 503 dependency_unavailable con Retry-After 60 hasta que #25 la

@@ -20,6 +20,7 @@ export type LoginErrorCode =
   | "overloaded"
   | "dependency_unavailable"
   | "validation_failed"
+  | "payload_too_large"
   | "malformed_request"
   | "forbidden_origin"
   | "unavailable";
@@ -30,10 +31,18 @@ export interface LoginError {
   retryAfterSeconds?: number;
 }
 
+/** Largo en caracteres (puntos de código), como lo mide la API (`utf8.RuneCountInString`) y JSON Schema; no en unidades UTF-16. */
+export function runeLength(value: string): number {
+  return [...value].length;
+}
+
 /** Validación del formulario (la misma del BFF y de la API: `LoginRequest`). Devuelve el campo que falla, o `null`. */
-export function validateLogin(email: string, password: string): "email" | "password" | null {
+export function validateLogin(email: string, password: string): "email" | "password" | "passwordTooLong" | null {
   const e = email.trim();
-  if (e.length < EMAIL_MIN || e.length > EMAIL_MAX || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) return "email";
-  if (password.length < 1 || password.length > PASSWORD_MAX) return "password";
+  const emailLength = runeLength(e);
+  if (emailLength < EMAIL_MIN || emailLength > EMAIL_MAX || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) return "email";
+  const passwordLength = runeLength(password);
+  if (passwordLength < 1) return "password";
+  if (passwordLength > PASSWORD_MAX) return "passwordTooLong";
   return null;
 }

@@ -55,45 +55,90 @@ describe("POST /api/auth/login (BFF)", () => {
     const res = await handleLogin(login({ email: "ana@empresa.pe", password: PASSWORD }));
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ status: "authenticated" });
-    const at = res.cookies.get("wanka_at");
-    const rt = res.cookies.get("wanka_rt");
+    const at = res.cookies.get("wk_at");
+    const rt = res.cookies.get("wk_rt");
     expect(at).toMatchObject({ value: AT, httpOnly: true, sameSite: "lax", path: "/" });
     expect(at?.maxAge).toBeGreaterThan(14 * 60);
     expect(at?.maxAge).toBeLessThanOrEqual(15 * 60);
-    expect(rt).toMatchObject({ value: RT, httpOnly: true, sameSite: "lax", path: "/api/auth", maxAge: 30 * 24 * 60 * 60 });
+    expect(rt).toMatchObject({ value: RT, httpOnly: true, sameSite: "lax", path: "/", maxAge: 30 * 24 * 60 * 60 });
+    expect(res.cookies.get("wk_at_exp")).toMatchObject({ value: expiresAt, httpOnly: true, sameSite: "lax", path: "/", maxAge: 30 * 24 * 60 * 60 });
     expect(res.headers.get("cache-control")).toBe("no-store");
+  });
+
+  it("cookies de sesión contra el contrato (ADR 0004, conventions §2), escritas a mano", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    fetchMock.mockResolvedValue(apiJson(200, { status: "authenticated", accessToken: AT, refreshToken: RT, expiresAt: new Date(Date.now() + 900_000).toISOString(), memberships: [] }));
+    const res = await handleLogin(login({ email: "a@b.pe", password: "x" }));
+    const expected = [
+      { name: "wk_at", path: "/", maxAgeMax: 900 },
+      { name: "wk_rt", path: "/", maxAgeMax: 2_592_000 },
+      { name: "wk_at_exp", path: "/", maxAgeMax: 2_592_000 },
+    ];
+    expect(res.cookies.getAll().filter((c) => c.value !== "").map((c) => c.name).sort()).toEqual(expected.map((e) => e.name).sort());
+    for (const e of expected) {
+      const c = res.cookies.get(e.name);
+      expect(c).toMatchObject({ httpOnly: true, secure: true, sameSite: "lax", path: e.path });
+      expect(c?.maxAge).toBeGreaterThan(e.maxAgeMax - 5);
+      expect(c?.maxAge).toBeLessThanOrEqual(e.maxAgeMax);
+    }
   });
 
   it("Secure en producción y no en local", async () => {
     const ok = () => apiJson(200, { status: "authenticated", accessToken: AT, refreshToken: RT, expiresAt: new Date(Date.now() + 60_000).toISOString(), memberships: [] });
     fetchMock.mockImplementation(async () => ok());
     vi.stubEnv("NODE_ENV", "production");
-    expect((await handleLogin(login({ email: "a@b.pe", password: "x" }))).cookies.get("wanka_at")?.secure).toBe(true);
+    expect((await handleLogin(login({ email: "a@b.pe", password: "x" }))).cookies.get("wk_at")?.secure).toBe(true);
     vi.stubEnv("NODE_ENV", "development");
-    expect((await handleLogin(login({ email: "a@b.pe", password: "x" }))).cookies.get("wanka_rt")?.secure).toBe(false);
+    expect((await handleLogin(login({ email: "a@b.pe", password: "x" }))).cookies.get("wk_rt")?.secure).toBe(false);
   });
 
   it("mfa_required: el desafío va en una cookie httpOnly de /api/auth y no hay cookies de sesión", async () => {
     fetchMock.mockResolvedValue(apiJson(200, { status: "mfa_required", challengeToken: CH, expiresAt: new Date(Date.now() + 300_000).toISOString() }));
     const res = await handleLogin(login({ email: "a@b.pe", password: "x" }));
     expect(await res.json()).toEqual({ status: "mfa_required" });
-    expect(res.cookies.get("wanka_ch")).toMatchObject({ value: CH, httpOnly: true, path: "/api/auth" });
-    expect(res.cookies.get("wanka_at")).toBeUndefined();
-    expect(res.cookies.get("wanka_rt")).toBeUndefined();
+    expect(res.cookies.get("wk_ch")).toMatchObject({ value: CH, httpOnly: true, path: "/api/auth" });
+    expect(res.cookies.get("wk_at")?.value).toBe("");
+    expect(res.cookies.get("wk_rt")?.value).toBe("");
   });
 
   it("mfa_enrollment_required: el token de enrolamiento va en su cookie", async () => {
     fetchMock.mockResolvedValue(apiJson(200, { status: "mfa_enrollment_required", enrollmentToken: EN, expiresAt: new Date(Date.now() + 600_000).toISOString(), emailCodeSent: true }));
     const res = await handleLogin(login({ email: "a@b.pe", password: "x" }));
     expect(await res.json()).toEqual({ status: "mfa_enrollment_required" });
-    expect(res.cookies.get("wanka_en")).toMatchObject({ value: EN, httpOnly: true, path: "/api/auth" });
+    expect(res.cookies.get("wk_en")).toMatchObject({ value: EN, httpOnly: true, path: "/api/auth" });
+  });
+
+  describe("estado anterior", () => {
+    const stale = { cookie: "wk_at=a; wk_rt=b; wk_at_exp=c; wk_ch=d; wk_en=e" };
+    const cleared = (res: Response) => res.headers.getSetCookie().filter((c) => /Max-Age=0|Expires=Thu, 01 Jan 1970/.test(c)).map((c) => c.split("=")[0]);
+
+    it("mfa_required borra la sesión anterior y el enrolamiento", async () => {
+      fetchMock.mockResolvedValue(apiJson(200, { status: "mfa_required", challengeToken: CH, expiresAt: new Date(Date.now() + 300_000).toISOString() }));
+      const res = await handleLogin(login({ email: "a@b.pe", password: "x" }, stale));
+      expect(cleared(res).sort()).toEqual(["wk_at", "wk_at_exp", "wk_en", "wk_rt"]);
+    });
+    it("authenticated borra el desafío y el enrolamiento", async () => {
+      fetchMock.mockResolvedValue(apiJson(200, { status: "authenticated", accessToken: AT, refreshToken: RT, expiresAt: new Date(Date.now() + 900_000).toISOString(), memberships: [] }));
+      const res = await handleLogin(login({ email: "a@b.pe", password: "x" }, stale));
+      expect(cleared(res).sort()).toEqual(["wk_ch", "wk_en"]);
+    });
+    it.each([401, 403])("un %i borra todo el estado anterior", async (status) => {
+      fetchMock.mockResolvedValue(apiJson(status, { code: "x" }));
+      const res = await handleLogin(login({ email: "a@b.pe", password: "x" }, stale));
+      expect(cleared(res).sort()).toEqual(["wk_at", "wk_at_exp", "wk_ch", "wk_en", "wk_rt"]);
+    });
+    it("un 503 no cierra la sesión que ya había", async () => {
+      fetchMock.mockResolvedValue(apiJson(503, { code: "overloaded" }, { "Retry-After": "1" }));
+      expect(cleared(await handleLogin(login({ email: "a@b.pe", password: "x" }, stale)))).toEqual([]);
+    });
   });
 
   it("un token con forma inválida no se guarda: 502", async () => {
     fetchMock.mockResolvedValue(apiJson(200, { status: "authenticated", accessToken: "x", refreshToken: RT, expiresAt: "2030-01-01T00:00:00Z", memberships: [] }));
     const res = await handleLogin(login({ email: "a@b.pe", password: "x" }));
     expect(res.status).toBe(502);
-    expect(res.cookies.get("wanka_at")).toBeUndefined();
+    expect(res.cookies.get("wk_at")).toBeUndefined();
+    expect(res.cookies.get("wk_rt")).toBeUndefined();
   });
 
   describe("errores de la API", () => {
@@ -111,7 +156,8 @@ describe("POST /api/auth/login (BFF)", () => {
       const res = await handleLogin(login({ email: "a@b.pe", password: "x" }));
       expect(res.status).toBe(want);
       expect(await res.json()).toEqual(wantBody);
-      expect(res.cookies.getAll()).toEqual([]);
+      // Solo borrados (valor vacío) de un estado anterior: ningún token nuevo.
+      expect(res.cookies.getAll().filter((c) => c.value !== "")).toEqual([]);
       expect(res.headers.has("www-authenticate")).toBe(false);
     });
 
@@ -151,6 +197,60 @@ describe("POST /api/auth/login (BFF)", () => {
       const res = await handleLogin(login(body));
       expect(res.status).toBe(422);
       expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    describe("tope del cuerpo (4096 bytes)", () => {
+      const raw = (body: BodyInit, headers: Record<string, string> = {}) =>
+        new Request("http://localhost:3000/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", host: "localhost:3000", origin: "http://localhost:3000", ...headers },
+          body,
+          // @ts-expect-error Node exige duplex con un cuerpo en stream.
+          duplex: "half",
+        });
+
+      it("un Content-Length declarado sobre el tope: 413 sin leer el cuerpo", async () => {
+        const stream = new ReadableStream();
+        const res = await handleLogin(raw(stream, { "Content-Length": "5000" }));
+        expect(res.status).toBe(413);
+        expect(stream.locked).toBe(false);
+        expect(fetchMock).not.toHaveBeenCalled();
+      });
+
+      it("sin Content-Length (chunked): corta al pasar el tope y cancela la lectura", async () => {
+        let sent = 0;
+        let cancelled = false;
+        const stream = new ReadableStream<Uint8Array>({
+          pull(controller) {
+            sent += 1024;
+            controller.enqueue(new Uint8Array(1024).fill(32));
+          },
+          cancel() {
+            cancelled = true;
+          },
+        });
+        const res = await handleLogin(raw(stream));
+        expect(res.status).toBe(413);
+        expect(cancelled).toBe(true);
+        expect(sent).toBeLessThan(4096 * 4);
+      });
+
+      it("un Content-Length falso (menor que el real) no evita el tope", async () => {
+        const res = await handleLogin(raw("x".repeat(5000), { "Content-Length": "10" }));
+        expect(res.status).toBe(413);
+      });
+
+      it("se cuenta en bytes: 2100 «ñ» son 2100 caracteres pero 4200 bytes", async () => {
+        const body = JSON.stringify({ email: "a@b.pe", password: "ñ".repeat(2100) });
+        expect(body.length).toBeLessThan(4096);
+        expect((await handleLogin(login(body))).status).toBe(413);
+      });
+
+      it("un cuerpo válido justo bajo el tope pasa", async () => {
+        fetchMock.mockResolvedValue(apiJson(401, { code: "invalid_credentials" }));
+        const res = await handleLogin(login({ email: "a@b.pe", password: "x".repeat(128) }));
+        expect(res.status).toBe(401);
+      });
     });
 
     it("origen ajeno: 403 sin llamar a la API", async () => {

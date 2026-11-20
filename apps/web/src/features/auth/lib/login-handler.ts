@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { callApi } from "@/lib/bff/api-client";
-import { CHALLENGE_COOKIE, ENROLLMENT_COOKIE, isToken, setSessionCookies, setStepCookie } from "@/lib/bff/session-cookies";
+import { CHALLENGE_COOKIE, ENROLLMENT_COOKIE, clearSessionCookies, clearStepCookies, isToken, setSessionCookies, setStepCookie } from "@/lib/bff/session-cookies";
 import type { components } from "@/lib/api/schema";
 import { validateLogin, type ApiLoginResponse, type LoginError, type LoginOutcome } from "./login-contract";
 
@@ -47,12 +47,40 @@ export function isSameOrigin(req: Request): boolean {
   return site === null || site === "same-origin" || site === "none";
 }
 
+/** Cuerpo de la petición como texto, contando BYTES mientras llega; `"too_large"` en cuanto pasa el tope (cancela la lectura). */
+export async function readBodyLimited(req: Request, maxBytes: number): Promise<string | "too_large"> {
+  const declared = req.headers.get("content-length");
+  if (declared !== null && /^\d+$/.test(declared) && Number(declared) > maxBytes) return "too_large";
+  if (!req.body) return "";
+  const reader = req.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > maxBytes) {
+      await reader.cancel().catch(() => undefined);
+      return "too_large";
+    }
+    chunks.push(value);
+  }
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new TextDecoder().decode(bytes);
+}
+
 async function readCredentials(req: Request): Promise<LoginRequest | NextResponse> {
   if (!req.headers.get("content-type")?.toLowerCase().startsWith("application/json")) return fail(400, { code: "malformed_request" });
+  const text = await readBodyLimited(req, MAX_BODY_BYTES).catch(() => null);
+  if (text === "too_large") return fail(413, { code: "payload_too_large" });
+  if (text === null) return fail(400, { code: "malformed_request" });
   let raw: unknown;
   try {
-    const text = await req.text();
-    if (text.length > MAX_BODY_BYTES) return fail(400, { code: "malformed_request" });
     raw = JSON.parse(text);
   } catch {
     return fail(400, { code: "malformed_request" });
@@ -76,14 +104,21 @@ async function problemCode(res: Response): Promise<string | undefined> {
   }
 }
 
+/** Un login que no abre sesión no deja vivo el estado de uno anterior (sesión ni pasos pendientes) en ese navegador. */
+function withoutPreviousState(res: NextResponse): NextResponse {
+  clearSessionCookies(res);
+  clearStepCookies(res);
+  return res;
+}
+
 /** Qué contesta el navegador a un error de la API. Nunca copia el cuerpo de la API (podría traer detalle interno). */
 async function mapApiError(res: Response): Promise<NextResponse> {
   const retry = parseRetryAfter(res.headers.get("retry-after"));
   switch (res.status) {
     case 401:
-      return fail(401, { code: "invalid_credentials" });
+      return withoutPreviousState(fail(401, { code: "invalid_credentials" }));
     case 403:
-      return fail(403, { code: "tenant_access_denied" });
+      return withoutPreviousState(fail(403, { code: "tenant_access_denied" }));
     case 400:
     case 422:
       // El BFF ya validó: que la API lo rechace es un desajuste de contrato, no un error del usuario.
@@ -128,18 +163,23 @@ export async function handleLogin(req: Request): Promise<NextResponse> {
     case "authenticated": {
       if (!isToken("access", data.accessToken) || !isToken("refresh", data.refreshToken)) return fail(502, { code: "unavailable" });
       const res = respond({ status: "authenticated" }, 200);
+      clearStepCookies(res);
       setSessionCookies(res, data);
       return res;
     }
     case "mfa_required": {
       if (!isToken("challenge", data.challengeToken)) return fail(502, { code: "unavailable" });
       const res = respond({ status: "mfa_required" }, 200);
+      clearSessionCookies(res);
+      clearStepCookies(res, CHALLENGE_COOKIE);
       setStepCookie(res, CHALLENGE_COOKIE, data.challengeToken, data.expiresAt);
       return res;
     }
     case "mfa_enrollment_required": {
       if (!isToken("enrollment", data.enrollmentToken)) return fail(502, { code: "unavailable" });
       const res = respond({ status: "mfa_enrollment_required" }, 200);
+      clearSessionCookies(res);
+      clearStepCookies(res, ENROLLMENT_COOKIE);
       setStepCookie(res, ENROLLMENT_COOKIE, data.enrollmentToken, data.expiresAt);
       return res;
     }

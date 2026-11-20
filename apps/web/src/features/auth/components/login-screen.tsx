@@ -51,7 +51,8 @@ export function LoginScreen() {
 
   const invalid = validateLogin(email, password);
   const emailError = touched.email && invalid === "email" ? LOGIN_TEXT.emailInvalid : undefined;
-  const passwordError = touched.password && invalid === "password" ? LOGIN_TEXT.passwordRequired : undefined;
+  const passwordError =
+    touched.password && invalid === "password" ? LOGIN_TEXT.passwordRequired : touched.password && invalid === "passwordTooLong" ? LOGIN_TEXT.passwordTooLong : undefined;
   const remaining = waitUntil === null ? 0 : Math.max(0, Math.ceil((waitUntil - now) / 1000));
   const waiting = remaining > 0;
 

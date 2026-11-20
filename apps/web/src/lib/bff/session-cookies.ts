@@ -1,18 +1,22 @@
 import type { NextResponse } from "next/server";
 
 /**
- * Cookies de sesión del BFF. Los tokens viven solo aquí: `httpOnly` (el JavaScript del navegador no los lee), `Secure`
- * fuera de local y `SameSite=Lax`. Nunca en `localStorage`. El refresh no se envía a toda la app, solo a `/api/auth`
- * (lo usará el refresh de #234).
+ * Cookies de sesión del BFF (ADR 0004 y conventions.md §2): `wk_at`, `wk_rt` y `wk_at_exp`, todas `httpOnly`, `Secure`
+ * fuera de local, `SameSite=Lax` y `Path=/`, porque `proxy.ts` las necesita en cualquier ruta para refrescar antes del
+ * render (#234). Nunca en `localStorage`. `wk_at_exp` guarda el vencimiento del acceso (RFC 3339) y vive tanto como el
+ * refresh, para que el proxy sepa cuándo refrescar aunque `wk_at` ya haya vencido.
  */
-export const ACCESS_COOKIE = "wanka_at";
-export const REFRESH_COOKIE = "wanka_rt";
-/** Token del segundo paso pendiente (`mfa_required`, 5 min): lo canjea la verificación de #25. */
-export const CHALLENGE_COOKIE = "wanka_ch";
-/** Token del enrolamiento obligatorio de 2FA (`mfa_enrollment_required`): lo usa #25. */
-export const ENROLLMENT_COOKIE = "wanka_en";
+export const ACCESS_COOKIE = "wk_at";
+export const REFRESH_COOKIE = "wk_rt";
+export const ACCESS_EXP_COOKIE = "wk_at_exp";
+/** Token del segundo paso pendiente (`mfa_required`, 5 min): lo canjea la verificación de #25. Solo para `/api/auth`. */
+export const CHALLENGE_COOKIE = "wk_ch";
+/** Token del enrolamiento obligatorio de 2FA (`mfa_enrollment_required`): lo usa #25. Solo para `/api/auth`. */
+export const ENROLLMENT_COOKIE = "wk_en";
 
 export const AUTH_COOKIE_PATH = "/api/auth";
+const SESSION_COOKIES = [ACCESS_COOKIE, REFRESH_COOKIE, ACCESS_EXP_COOKIE] as const;
+const STEP_COOKIES = [CHALLENGE_COOKIE, ENROLLMENT_COOKIE] as const;
 const REFRESH_MAX_AGE_S = 30 * 24 * 60 * 60;
 const DEFAULT_ACCESS_MAX_AGE_S = 15 * 60;
 
@@ -49,7 +53,18 @@ export function secondsUntil(expiresAt: unknown, now: number = Date.now()): numb
 /** Pone el par de tokens de una sesión sin empresa (`authenticated`). */
 export function setSessionCookies(res: NextResponse, tokens: { accessToken: string; refreshToken: string; expiresAt: string }): void {
   res.cookies.set(ACCESS_COOKIE, tokens.accessToken, baseOptions("/", secondsUntil(tokens.expiresAt)));
-  res.cookies.set(REFRESH_COOKIE, tokens.refreshToken, baseOptions(AUTH_COOKIE_PATH, REFRESH_MAX_AGE_S));
+  res.cookies.set(REFRESH_COOKIE, tokens.refreshToken, baseOptions("/", REFRESH_MAX_AGE_S));
+  res.cookies.set(ACCESS_EXP_COOKIE, tokens.expiresAt, baseOptions("/", REFRESH_MAX_AGE_S));
+}
+
+/** Borra las cookies de una sesión anterior (las tres de sesión). */
+export function clearSessionCookies(res: NextResponse): void {
+  for (const name of SESSION_COOKIES) res.cookies.delete({ name, path: "/" });
+}
+
+/** Borra los tokens de paso intermedio de un login anterior (desafío y enrolamiento), salvo `keep`. */
+export function clearStepCookies(res: NextResponse, keep?: (typeof STEP_COOKIES)[number]): void {
+  for (const name of STEP_COOKIES) if (name !== keep) res.cookies.delete({ name, path: AUTH_COOKIE_PATH });
 }
 
 /** Pone un token de paso intermedio (desafío o enrolamiento de 2FA), solo para las rutas `/api/auth`. */

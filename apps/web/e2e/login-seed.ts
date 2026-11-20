@@ -28,7 +28,7 @@ export function seedSql(password: string): string {
       const status = kind === "nomembership" ? "suspendido" : "activo";
       rows.push(`
 INSERT INTO iam.users (id, email, password_hash) VALUES (gen_random_uuid(), '${email}', '${hash}')
-  ON CONFLICT (email) DO UPDATE SET password_hash = EXCLUDED.password_hash, failed_logins = 0, locked_until = NULL,
+  ON CONFLICT (email) DO UPDATE SET password_hash = EXCLUDED.password_hash, failed_logins = 0, login_failure_streak = 0, locked_until = NULL,
     login_lockouts = 0, login_window_started_at = NULL, mfa_failed_attempts = 0, mfa_locked_until = NULL, mfa_lockouts = 0;
 INSERT INTO iam.memberships (id, tenant_id, user_id, role_id, status, all_sites)
   SELECT gen_random_uuid(), t.id, u.id, r.id, '${status}', true

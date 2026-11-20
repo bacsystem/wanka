@@ -24,10 +24,10 @@ test("valid credentials land on the empty shell, with the tokens only in httpOnl
   await expect(page.getByRole("navigation", { name: "Menú principal" }).or(page.getByRole("button", { name: "Más" })).first()).toBeVisible();
 
   const cookies = await context.cookies();
-  const access = cookies.find((c) => c.name === "wanka_at");
-  const refresh = cookies.find((c) => c.name === "wanka_rt");
+  const access = cookies.find((c) => c.name === "wk_at");
+  const refresh = cookies.find((c) => c.name === "wk_rt");
   expect(access).toMatchObject({ httpOnly: true, sameSite: "Lax", path: "/" });
-  expect(refresh).toMatchObject({ httpOnly: true, sameSite: "Lax", path: "/api/auth" });
+  expect(refresh).toMatchObject({ httpOnly: true, sameSite: "Lax", path: "/" });
   expect(access?.value).toMatch(/^wk_at_[A-Za-z0-9_-]{43}$/);
   // El JavaScript de la página no ve los tokens: ni en document.cookie ni en el almacenamiento.
   const visible = await page.evaluate(() => JSON.stringify([document.cookie, { ...localStorage }, { ...sessionStorage }]));
@@ -38,7 +38,7 @@ test("wrong password: one generic message, no redirect, no cookies", async ({ pa
   await fillAndSubmit(page, e2eEmail("bad", testInfo.project.name), "no-es-la-clave");
   await expect(page.getByRole("alert").filter({ hasText: "Correo o contraseña" })).toHaveText("Correo o contraseña incorrectos.");
   await expect(page).toHaveURL(/\/login$/);
-  expect((await context.cookies()).filter((c) => c.name.startsWith("wanka_"))).toEqual([]);
+  expect((await context.cookies()).filter((c) => c.name.startsWith("wk_"))).toEqual([]);
 });
 
 test("an unknown email gets the same message as a wrong password", async ({ page }, testInfo) => {
@@ -50,15 +50,15 @@ test("correct password but no active company: access denied message, no session"
   await fillAndSubmit(page, e2eEmail("nomembership", testInfo.project.name), password());
   await expect(page.getByRole("alert").filter({ hasText: "Tu cuenta no tiene acceso" })).toContainText("a ninguna empresa");
   await expect(page).toHaveURL(/\/login$/);
-  expect((await context.cookies()).filter((c) => c.name.startsWith("wanka_"))).toEqual([]);
+  expect((await context.cookies()).filter((c) => c.name.startsWith("wk_"))).toEqual([]);
 });
 
 test("a user with two-step verification sees the coming-soon screen, without session cookies", async ({ page, context }, testInfo) => {
   await fillAndSubmit(page, e2eEmail("mfa", testInfo.project.name), password());
   await expect(page.getByRole("heading", { name: "Verificación en dos pasos" })).toBeVisible();
   const names = (await context.cookies()).map((c) => c.name);
-  expect(names).toContain("wanka_ch");
-  expect(names).not.toContain("wanka_at");
+  expect(names).toContain("wk_ch");
+  expect(names).not.toContain("wk_at");
 });
 
 test("an invalid email is caught in the form, before calling the API", async ({ page }) => {
