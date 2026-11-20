@@ -137,7 +137,8 @@ Herramienta: **goose** (`github.com/pressly/goose/v3`), migraciones SQL en `apps
     - `id uuid` PK;
     - `kind text NOT NULL` (`new_account`, `existing_account` u `over_limit`): todos los caminos escriben una fila, para que no se distingan;
     - `email text NOT NULL`, normalizado como `iam.users.email`, sin `UNIQUE`, con índice `(email, created_at)` para los topes por correo;
-    - `token_hash bytea UNIQUE` (`sha256` del `wk_su_`; lo pone el job `iam.signup_mail`, solo con `new_account`);
+    - `token_hash bytea UNIQUE` (`sha256` del `wk_su_`; lo pone el job `iam.signup_mail`, solo con `new_account`, y lo **reemplaza** en cada reintento mientras la solicitud no esté consumida, lo que invalida el anterior);
+    - `notice_sent_at timestamptz` (solo `existing_account`: marca del aviso «ya tienes cuenta», que se envía como mucho una vez por correo cada 24 h);
     - `password_hash text` (PHC argon2id; solo con `new_account`);
     - `full_name`, `ruc`, `legal_name`, `trade_name` e `industry`, con los `CHECK` de sus columnas de destino;
     - `expires_at timestamptz NOT NULL`, como mucho `created_at` más 24 h, con índice para la limpieza (§5);
@@ -147,8 +148,8 @@ Herramienta: **goose** (`github.com/pressly/goose/v3`), migraciones SQL en `apps
   - **`CHECK` de `iam.signup_requests`:**
     - `(consumed_at IS NULL) = (tenant_id IS NULL)`: una solicitud consumida siempre sabe qué empresa creó, y una viva nunca tiene empresa;
     - `consumed_at IS NULL OR password_hash IS NULL`: al consumir se borra el hash, así la copia no sobrevive a la cuenta, que guarda el suyo en `iam.users`;
-    - `kind = 'new_account' OR (password_hash IS NULL AND token_hash IS NULL AND consumed_at IS NULL)`.
-  - **Trigger** como `iam.guard_user_token_writes()`. En el `INSERT` fija `created_at`. Hace irreversibles `consumed_at` y `tenant_id`, deja que `token_hash` se fije una sola vez (de nulo a un valor) y deja que `password_hash` solo pase a nulo.
+    - `kind = 'new_account' OR (password_hash IS NULL AND token_hash IS NULL AND consumed_at IS NULL)` y `kind = 'existing_account' OR notice_sent_at IS NULL`.
+  - **Trigger** como `iam.guard_user_token_writes()`. En el `INSERT` fija `created_at`. Hace irreversibles `consumed_at` y `tenant_id`, deja cambiar `token_hash` solo mientras `consumed_at` es nulo, deja que `notice_sent_at` se fije una sola vez y deja que `password_hash` solo pase a nulo.
   - **El job `iam.signup_mail`** lleva solo el id de la fila. Grants en el [ADR 0001](../adr/0001-multitenancy-rls.md), nota del 2026-11-20 (alta).
   - **`ops.signup_idempotency_keys`**, sin RLS ni `tenant_id`, como `ops.exchange_rates`, y con la forma de `ops.idempotency_keys` sin tenant ni principal:
     - `key text` PK (`CHECK length(key) BETWEEN 1 AND 64`, como `ops.idempotency_keys`);
