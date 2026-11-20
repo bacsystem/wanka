@@ -120,7 +120,7 @@ Modelo y reglas en [`data/data-model.md`](data/data-model.md): `tenant_id` y RLS
 | [0010](adr/0010-frontend-khipu-migration.md) | Migración total del frontend al design system khipu | propuesto |
 | [0011](adr/0011-membership-loss-keeps-user-session.md) | Perder la membresía desliga la sesión de esa empresa (a `/seleccionar-empresa`), no la revoca; modifica 0004 | aceptado |
 | [0012](adr/0012-maintenance-without-tenant.md) | Mantenimiento sin tenant en tablas con RLS: políticas `purge_*` de `wanka_worker` acotadas por antigüedad; modifica 0001 | aceptado (2026-11-19, decisión del dueño) |
-| [0014](adr/0014-login-lockout-doubling.md) | Bloqueo creciente del login (15 min que se duplican hasta 24 h), sin cierre permanente; se reinicia solo con un ingreso correcto o un cambio o restablecimiento de contraseña; modifica 0004 | aceptado (2026-11-20, decisión del dueño) |
+| [0014](adr/0014-login-lockout-doubling.md) | Bloqueo creciente del login (15 min que se duplican hasta 24 h), y cierre del ingreso con contraseña a los 100 fallos seguidos (`login_failure_streak`) hasta restablecerla o cambiarla; se reinicia solo con un ingreso correcto o un cambio o restablecimiento de contraseña; modifica 0004 | aceptado (2026-11-20, decisión del dueño; nota del mismo día: techo en 100) |
 | [0013](adr/0013-khipu-company-config-sync.md) | Datos de la empresa, locales y series frente a Khipu: razón social de solo lectura, logo de 200 KB, sincronización de anexos y series, exclusividad y conflicto, RUC ya presente en Khipu; complementa 0003 y 0008 | aceptado (2026-11-19, decisión del dueño; buzón de Wanka por tenant) |
 
 **Proceso de los ADR, desde que este PR se mergea:**

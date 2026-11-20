@@ -1,6 +1,6 @@
 # ADR 0014: Bloqueo creciente del login, sin cierre permanente
 
-- Estado: aceptado (2026-11-20, decisión del dueño; el architect fija el reinicio y los bordes)
+- Estado: aceptado (2026-11-20, decisión del dueño; el architect fija el reinicio y los bordes). **Corregido el mismo día** por una segunda decisión del dueño, que agrega un techo de 100 fallos seguidos: ver la nota al final. Ante una diferencia, manda la nota.
 - Fecha: 2026-11-20
 - Modifica: [ADR 0004](0004-in-house-auth.md), solo el «Techo absoluto» de la viñeta «Bloqueo progresivo» de su nota del 2026-11-19 y la mención del «ingreso cerrado» en «Qué ve quien llega bloqueado». El resto de esa nota sigue vigente: el orden semáforo → cobro → hash, la ventana fija de 15 min, `failed_logins` de 0 a 5, la devolución del cobro con la contraseña correcta, la respuesta `401` genérica y el aviso por el outbox. Ante una diferencia, manda este ADR ([README §9](../README.md)).
 
@@ -49,3 +49,22 @@ Bloqueo creciente con la opción 1.
     - la 2FA obligatoria en los roles con más privilegios.
   - Un titular que nunca vuelve a entrar sigue sufriendo bloqueos de 24 h mientras alguien pruebe. Es lo pedido: nunca queda cerrado.
 - **Qué la haría cambiar:** que la medición de los avisos muestre ataques sostenidos contra cuentas sin 2FA. En ese caso se volvería a un techo, por ejemplo exigir el restablecimiento al llegar a 100 fallos seguidos, como pide NIST, con un ADR nuevo.
+
+## Nota del 2026-11-20: techo en 100 fallos seguidos (decisión del dueño, «creciente + techo en 100»)
+
+Cambia la decisión de arriba en un punto: **sí** hay cierre, a los 100 fallos seguidos. El bloqueo creciente se mantiene igual: 15 min que se duplican hasta 24 h, con un aviso en cada bloqueo. Con esto se cumple NIST SP 800-63B §5.2.2, y desaparece la «consecuencia mala» de arriba, que dejaba la cuenta sin techo absoluto.
+
+**El contador: columna nueva `iam.users.login_failure_streak`.** Es `smallint NOT NULL DEFAULT 0`, con `CHECK BETWEEN 0 AND 100`, y llega con una migración nueva en el PR #251, sin editar la de #231.
+- Se descartó derivarlo de `login_lockouts` (5 × bloqueos + `failed_logins`) porque **no es correcto**. `failed_logins` vive en la ventana fija de 15 min y vuelve a 1 cuando la ventana vence. Un atacante que prueba 4 contraseñas por ventana nunca provoca un bloqueo, así que ni el bloqueo ni un contador derivado ven esos fallos: son 384 intentos por día, sin aviso y sin techo.
+- La columna cuenta **todo** fallo, con cualquier espaciado.
+- Solo la ponen en 0 una contraseña correcta (al devolver el cobro), `password/reset` y `password/change`. No la reinician ni la ventana ni los bloqueos.
+
+**Qué dispara el bloqueo.** Por lo mismo, el bloqueo se dispara por la racha y no por la ventana: cada 5 fallos seguidos hay un bloqueo, con cualquier espaciado. La ventana de 15 min y `failed_logins` siguen sirviendo para lo que ya hacían en el cobro: acotar los intentos en vuelo (5 por ventana) y descartar un cobro colgado.
+
+**Cifras.**
+- **Cuánto le cuesta a un atacante cerrar una cuenta.** 100 fallos son 20 bloqueos. Los bloqueos 1 a 7 suman 15 min + 30 min + 1 h + 2 h + 4 h + 8 h + 16 h = 31 h 45 min. Los bloqueos 8 a 19, de 24 h cada uno, suman 12 días. El 20.º es el cierre. En total son unos **13,3 días: unas 2 semanas**, siempre que pruebe en cuanto vence cada bloqueo.
+- **Avisos que recibe el titular antes del cierre.** **19 avisos de bloqueo** (uno por bloqueo, del 1 al 19) y después **un aviso de cierre**. En total son 20 correos en unas 2 semanas, y el primero llega en los primeros minutos del ataque.
+- **Cuántas contraseñas prueba el atacante.** 100 como máximo por cada contraseña que tenga la cuenta. Las cuotas por IP de `conventions.md` §7 solo bajan el ritmo.
+- **La salida es #26** (restablecer la contraseña desde «Olvidé mi contraseña», que exige el buzón) o #30 (cambiarla con una sesión abierta). Las dos ponen la racha en 0. Como el segundo paso, el cierre solo lo puede provocar quien insiste durante 2 semanas, y el titular lo ve venir por los avisos.
+
+**Qué ve quien llega cerrado:** lo mismo que con un bloqueo, `401 invalid_credentials` con el mismo cuerpo y tiempo que una contraseña mala, sin cobrar el intento.
