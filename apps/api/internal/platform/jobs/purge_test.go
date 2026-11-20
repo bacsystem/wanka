@@ -165,6 +165,8 @@ func TestPurgeExpiredIdentityRowsKeepsTheRetentionWindow(t *testing.T) {
 	seedIdentityRows(ctx, t, d, "mid", 3, MFAEnrollmentRetention+time.Hour) // fuera solo de la de enrolamientos
 	seedIdentityRows(ctx, t, d, "new", 2, MFAEnrollmentRetention-time.Hour) // dentro de ambas
 	seedIdentityRows(ctx, t, d, "live", 2, -10*time.Minute)                 // aún vigentes
+	seedIdentityRows(ctx, t, d, "edge", 1, UserTokenRetention-time.Minute)  // 1 min antes del borde de 7 días: se queda
+	seedIdentityRows(ctx, t, d, "past", 1, UserTokenRetention+time.Minute)  // 1 min después: se va
 	worker := openPool(t, d, dbtest.Worker, 3)
 
 	// Lote de 2: 5 filas viejas = 3 transacciones; una sola tanda no las borraría todas.

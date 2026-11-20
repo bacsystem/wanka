@@ -241,7 +241,7 @@ func TestUserTOTP(t *testing.T) {
 		wantState(t, execErr(app, `UPDATE iam.user_totp SET recovery_codes_hash = ARRAY[$1::text] WHERE user_id = $2`, bad, u), "23514", fmt.Sprintf("recovery code %q", bad))
 	}
 	wantState(t, execErr(app, `UPDATE iam.user_totp SET recovery_codes_hash = ARRAY[$1::text, 'plain'] WHERE user_id = $2`, good, u), "23514", "one bad code among good ones")
-	for _, ok := range []string{"{}", "{" + good + "}", "{" + good + ",v12:" + strings.Repeat("a_-", 14) + "ab}"} {
+	for _, ok := range []string{"{}", "{" + good + "}", "{" + good + ",v12:" + strings.Repeat("a_-", 13) + "abcd}"} {
 		if err := execErr(app, `UPDATE iam.user_totp SET recovery_codes_hash = $1::text[] WHERE user_id = $2`, ok, u); err != nil {
 			t.Errorf("well-formed recovery codes %q rejected: %v", ok, err)
 		}
