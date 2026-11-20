@@ -115,3 +115,30 @@ Precisa la decisión para las historias #24 a #30; no la cambia ([README §9](..
 - **IP del usuario.** La API la lee de `X-Client-Ip`, que pone el BFF, solo si `API_TRUST_CLIENT_IP=true` (`api/conventions.md` §3, con la fuente exacta en el BFF); sin ella, las cuotas por IP serían una sola cuota global, la del BFF.
 - **Permisos de los roles base** (revisión del PR #230). «Al aprovisionar se copian plantillas» se mantiene para el **rol**: cada empresa recibe su fila de `iam.roles` por plantilla (nombre, `requires_mfa`, `template_code`), así que los roles siguen siendo por tenant y la empresa puede crear propios. Lo que no se copia son los **permisos** de un rol base: el resolver los lee de `iam.role_template_permissions` por `template_code` ([data-model §6](../data/data-model.md)). Motivo: copiarlos obligaría a que cada permiso nuevo del catálogo se agregue a los roles base de todas las empresas con una migración que recorre tenants, y el migrador, dueño con `FORCE ROW LEVEL SECURITY`, no escribe sin tenant; con la referencia, la migración que agrega el permiso a la plantilla basta. Las plantillas por rubro de este ADR son más filas de `iam.role_templates` (por ejemplo `cajero_restaurante`). Consecuencia: un rol base no se puede editar (un trigger de `iam.roles` lo impone, ADR 0001, nota del 2026-11-19); quien necesite otra combinación crea un rol propio. No cambia la decisión de RBAC por tenant; si un cliente necesitara editar los roles base, se volvería a copiar con un ADR nuevo.
 - **Nadie otorga lo que no tiene** (revisión del PR #230). Asignar un rol a una membresía (invitación o `PATCH /v1/users/{id}`) y crear o editar un rol propio exigen que el actor tenga **todos** los permisos de ese rol; el rol `dueno` solo lo asigna o lo quita un dueño, una membresía con rol `dueno` solo la cambia, suspende o borra otro dueño (un administrador no toca a un dueño aunque haya dos; re-revisión del PR #230), y nadie cambia el rol, las sedes ni el estado de su propia membresía. Siempre queda al menos un dueño activo: el cambio que lo dejaría sin ninguno responde `409 conflict` (lock del rol `dueno` del tenant antes que las membresías). Así `identidad.support_access:approve` y `empresas.einvoicing:update`, que la plantilla `administrador` no tiene, quedan solo en el dueño de verdad ([`api/resources.md`](../api/resources.md), identidad). Un rechazo es `403 forbidden` con el primer `permission` que falta y queda en auditoría.
+
+## Nota del 2026-11-20 (architect, PR #251: parámetros de argon2id medidos)
+
+La decisión sigue siendo la misma: argon2id con semáforo. Esta nota reemplaza el valor inicial `t = 3`, que el texto marcaba «a medir», por el medido ([README §9](../README.md)).
+
+- **Parámetros: m = 64 MiB, t = 2, p = 2** (formato PHC: los hashes con `t = 3`, si los hubiera, se re-hashean sin cortes en el siguiente ingreso correcto).
+- **Medición** de #24, con `TestLoginLoad`: `GOMAXPROCS=2`, PostgreSQL real, una cuenta por usuario virtual.
+
+  | Parámetros | Un hash solo | Tope en 2 núcleos | A 20 req/s |
+  |---|---|---|---|
+  | `t = 3` | ~70 ms | ~10 ingresos/s | 49 % de `503` y p95 de 611 ms: no cumple |
+  | `t = 2` | ~44 ms | ~22,8 ingresos/s | p95 de 65 ms sin `503`; de 25 a 40 req/s, p95 de 335 a 346 ms y de 10 a 43 % de `503 overloaded` rápidos, porque la espera acotada del semáforo funciona |
+
+  La máquina de medición es compartida y más rápida que el supuesto de 150 ms por hash: estas cifras son un **techo**. Se vuelven a medir en el hardware de Railway antes de producción.
+- **Contra las referencias:**
+  - **OWASP** (Password Storage Cheat Sheet) fija como mínimo para argon2id m = 19 MiB, t = 2 y p = 1, o sus equivalentes con más memoria y menos pasadas (por ejemplo, m = 46 MiB y t = 1). m = 64 MiB y t = 2 lo supera en memoria con las mismas pasadas.
+  - **RFC 9106** §4 recomienda, como segunda opción para entornos con poca memoria, m = 64 MiB y t = 3. t = 2 queda una pasada por debajo de esa recomendación, que no es un mínimo, y se compensa con el bloqueo por cuenta y las cuotas de §7.
+  - **NIST SP 800-63B** §5.1.1.2 no fija parámetros: pide una función de derivación con costo y sal, y argon2id lo cumple.
+
+  **Confirmado.**
+- **Réplicas de `api`** (supuesto, hasta medir en Railway):
+  - **20 logins/s (R1):** una réplica de 2 vCPU llega justo, así que van **2** para tener alta disponibilidad y que una sola aguante si la otra cae o se despliega.
+  - **50 logins/s:** entre **3 y 5**, según el tiempo real del hash en esa plataforma.
+  - El pool de base no crece con las réplicas: se reparte (`capacity.md`).
+- **Qué la haría cambiar:**
+  - Si en Railway el hash con t = 2 pasa de unos 90 ms, se agregan núcleos o réplicas; no se baja de los mínimos de OWASP.
+  - Si sobra CPU, se sube t (o m) con el re-hash del formato PHC.

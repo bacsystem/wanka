@@ -312,3 +312,16 @@ Alinea este ADR con `migrations/20261120100000_iam_global_identity.sql` (#231) y
   - **Grants que da la historia de la purga** (en las migraciones reales `wanka_definer` no tiene ninguno de estos; sin ellos el trigger da `42501` al leer `org.tenants` y la purga no borra nada): `SELECT` sobre `org.tenants` (el trigger y la función leen `status` y `closed_at`), y `SELECT, DELETE` sobre `iam.role_permissions`, `iam.membership_sites`, `iam.memberships` e `iam.roles` (el `SELECT` lo exige el `WHERE` de cada `DELETE`), además de los de las demás tablas que borre. Orden de borrado por las FK: `iam.role_permissions` e `iam.membership_sites` antes que `iam.memberships`, y estas antes que `iam.roles`.
   - **`closed_at` inmutable.** La condición de los 5 años se apoya en `closed_at`, y hoy `wanka_platform` la puede escribir (`platform_rw`). Se fija: `closed_at` se pone una sola vez, al pasar a `cerrada`, y después no cambia ni vuelve a `NULL`. Lo impone un trigger `BEFORE UPDATE` de `org.tenants`, sin `SECURITY DEFINER` y con `42501` para todo rol que no sea superusuario. Lo agrega la historia de la purga o la de cierre de empresa, la que llegue primero, con su mutación en `rls-check`.
   - **Pruebas en `rls-check`.** Un caso de purga de una empresa cerrada hace más de 5 años, que pasa. Un caso con una empresa `activa`, y otro con una cerrada hace menos de 5 años, en los que el `DELETE` del definer del único dueño da `42501`. Y una mutación por cada trigger sin la condición.
+
+## Nota del 2026-11-20 (architect, PR #251: grant del aviso de bloqueo del login)
+
+La matriz suma una celda: `wanka_worker` recibe `SELECT (id, email)` sobre `iam.users`, que aplica la migración `20261120130000_identity_login_lockout_notice.sql` de #24. No hay política, rol ni función definer nuevos.
+
+- **Para qué.** El job del outbox que avisa de un bloqueo del login (ADR 0004, nota del 2026-11-19) lleva en sus argumentos solo `user_id` y `locked_until`: la tabla de jobs (`ops.river_job`) no guarda datos personales. Para saber a quién escribir, lee el correo al ejecutarse. `id` lo exige el `WHERE` y `email` es el destinatario.
+- **Por qué es el mínimo.**
+  - Es un grant por columna: sin `password_hash`, sin los contadores, sin `phone` ni `full_name`, sin `UPDATE`.
+  - Leer el correo al ejecutarse evita además mandar el aviso a una dirección vieja si el usuario cambió de correo entre el bloqueo y el envío.
+  - Se descartó poner el correo en los argumentos del job, porque dejaría un dato personal en una tabla que conserva los jobs completados 7 días.
+  - Se descartó una función `SECURITY DEFINER`, porque agregaría una puerta más para el mismo dato.
+- **Si más adelante hace falta otra columna** (por ejemplo, el nombre para el saludo), va como un grant nuevo con su propia nota fechada. No se amplía a la tabla completa.
+- **Lo prueba `rls-check`** en el PR #251: un `SELECT` de `id` y `email` como `wanka_worker` pasa, y uno de `password_hash` da `42501`.
