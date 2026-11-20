@@ -30,6 +30,7 @@ describe("LoginScreen", () => {
     fill("ana", "secreta");
     submit();
     expect(await screen.findByText(/Ingresa un correo válido/)).toBeInTheDocument();
+    expect(screen.getByLabelText("Correo electrónico")).toHaveAttribute("aria-invalid", "true");
     expect(fetchMock).not.toHaveBeenCalled();
   });
 

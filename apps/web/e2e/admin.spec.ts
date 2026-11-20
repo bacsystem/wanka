@@ -15,7 +15,8 @@ const screens: { path: string; heading: RegExp }[] = [
 ];
 
 for (const s of screens) {
-  test(`admin: renders ${s.path} without console errors or overflow`, async ({ page }) => {
+  // Consola /admin: pantalla mock inaccesible (404) hasta que su historia la habilite; entonces se reactiva.
+  test.skip(`admin: renders ${s.path} without console errors or overflow`, async ({ page }) => {
     const errors: string[] = [];
     page.on("console", (m) => m.type() === "error" && errors.push(m.text()));
     page.on("pageerror", (e) => errors.push(e.message));
@@ -26,7 +27,8 @@ for (const s of screens) {
   });
 }
 
-test("admin login: SSO → 2FA → dashboard; console is themed and separate from the tenant app", async ({ page }, testInfo) => {
+// Consola /admin: pantalla mock inaccesible (404) hasta que su historia la habilite; entonces se reactiva.
+test.skip("admin login: SSO → 2FA → dashboard; console is themed and separate from the tenant app", async ({ page }, testInfo) => {
   await page.goto("/admin/login");
   await expect(page.getByRole("heading", { name: "Ingreso a la consola" })).toBeVisible();
   await page.getByRole("button", { name: /Continuar con Google Workspace/ }).click();
@@ -44,7 +46,8 @@ test("admin login: SSO → 2FA → dashboard; console is themed and separate fro
   await expect(page.getByRole("heading", { level: 1, name: /Mi perfil y seguridad/ })).toBeVisible();
 });
 
-test("admin 404: unknown /admin/* URL shows the console 404, not the tenant one", async ({ page }) => {
+// Consola /admin: pantalla mock inaccesible (404) hasta que su historia la habilite; entonces se reactiva.
+test.skip("admin 404: unknown /admin/* URL shows the console 404, not the tenant one", async ({ page }) => {
   const response = await page.goto("/admin/no-existe");
   // The console has no loading.js, so the body is not streamed and Next answers a real 404
   // (the tenant app streams behind its loading.js and keeps answering 200; out of scope here).
@@ -69,7 +72,8 @@ test("tenant 404 is unchanged for unknown URLs outside /admin", async ({ page })
   await expect(page.getByRole("link", { name: "Ir al inicio" })).toBeVisible();
 });
 
-test("admin tenants: filters, suspend toggle, alta drawer and detail", async ({ page }) => {
+// Consola /admin: pantalla mock inaccesible (404) hasta que su historia la habilite; entonces se reactiva.
+test.skip("admin tenants: filters, suspend toggle, alta drawer and detail", async ({ page }) => {
   await page.goto("/admin/empresas");
   await page.waitForLoadState("networkidle");
   await page.getByRole("button", { name: /Cuota CPE > 90%/ }).click();

@@ -148,6 +148,7 @@ export function LoginScreen() {
                     autoFocus
                     value={email}
                     invalido={emailError !== undefined}
+                    aria-invalid={emailError !== undefined ? true : undefined}
                     aria-describedby={emailError ? "email-error" : undefined}
                     onChange={(e) => setEmail(e.target.value)}
                     onBlur={() => setTouched((t) => ({ ...t, email: true }))}

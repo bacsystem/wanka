@@ -1,10 +1,11 @@
 import { isEnabledPath, type Feature, enabledFeatures } from "./navigation";
 
 /**
- * Áreas que NO dependen de la lista de habilitadas: el flujo de ingreso (`/login` ya es real, #24; el resto sigue mock hasta #27) y la consola de
- * administración del SaaS, que sigue su propio camino. Cada ruta cubre su prefijo (`/login`, `/login/x`).
+ * Áreas que NO dependen de la lista de habilitadas: solo el ingreso real (`/login`, #24). Cada ruta cubre su prefijo
+ * (`/login`, `/login/x`). Las pantallas mock vuelven cuando su historia las habilita: `/seleccionar-empresa` (#27, #235),
+ * `/onboarding` (#31) y la consola `/admin` (su historia); hasta entonces responden 404.
  */
-export const OPEN_AREAS: readonly string[] = ["/login", "/seleccionar-empresa", "/onboarding", "/admin"];
+export const OPEN_AREAS: readonly string[] = ["/login"];
 
 /**
  * Prefijos de route handlers del BFF (`/api/...`). Cada historia que agrega una agrega aquí su prefijo (login: #24). Cualquier otro `/api/*` responde 404.
