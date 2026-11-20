@@ -10,6 +10,8 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/jackc/pgx/v5/pgconn"
+
 	"github.com/bacsystem/wanka/apps/api/internal/identidad"
 	"github.com/bacsystem/wanka/apps/api/internal/identidad/adapters/argon2"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/config"
@@ -26,7 +28,10 @@ const (
 // errNotLocal: dev-seed se niega fuera de local aunque alguien apunte la URL a otra base.
 var errNotLocal = errors.New("dev-seed only runs locally: set WANKA_ENV=local and point DATABASE_URL_SEED at a loopback database")
 
-// checkLocal exige WANKA_ENV=local y una base en la propia máquina.
+// checkLocal exige WANKA_ENV=local y que TODO destino que pgx usaría (host principal y alternos) sea la propia máquina:
+// IP de loopback, socket Unix o un nombre cuyas direcciones resueltas sean todas de loopback. Se valida la
+// configuración que pgx arma (pgconn.ParseConfig), no solo el host de la URL: ?host=, hosts separados por comas y
+// service/passfile (que traen el host de un archivo) cambiarían el destino real.
 func checkLocal(getenv func(string) string, databaseURL string) error {
 	if getenv(envWankaEnv) != "local" {
 		return errNotLocal
@@ -35,13 +40,49 @@ func checkLocal(getenv func(string) string, databaseURL string) error {
 	if err != nil {
 		return errNotLocal
 	}
-	host := u.Hostname()
-	if host != "localhost" && !strings.HasPrefix(host, "/") {
-		if ip := net.ParseIP(host); ip == nil || !ip.IsLoopback() {
+	for k := range u.Query() {
+		switch strings.ToLower(k) {
+		case "service", "passfile", "hostaddr":
+			return errNotLocal
+		}
+	}
+	cfg, err := pgconn.ParseConfig(databaseURL)
+	if err != nil {
+		return errNotLocal
+	}
+	hosts := []string{cfg.Host}
+	for _, fb := range cfg.Fallbacks {
+		hosts = append(hosts, fb.Host)
+	}
+	for _, h := range hosts {
+		if !isLocalHost(h) {
 			return errNotLocal
 		}
 	}
 	return nil
+}
+
+// isLocalHost: socket Unix, IP de loopback o nombre que resuelve solo a loopback.
+func isLocalHost(h string) bool {
+	if strings.HasPrefix(h, "/") {
+		return true
+	}
+	if ip := net.ParseIP(h); ip != nil {
+		return ip.IsLoopback()
+	}
+	if h == "" {
+		return false
+	}
+	ips, err := net.LookupIP(h)
+	if err != nil || len(ips) == 0 {
+		return false
+	}
+	for _, ip := range ips {
+		if !ip.IsLoopback() {
+			return false
+		}
+	}
+	return true
 }
 
 // devSeed siembra la empresa de prueba y sus usuarios (identidad.DevSeed) e imprime la tabla de acceso.

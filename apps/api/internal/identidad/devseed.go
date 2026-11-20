@@ -68,13 +68,17 @@ func DevSeed(ctx context.Context, pool *db.Pool, hashParams argon2.Params, passw
 		if err != nil {
 			return fmt.Errorf("tenant: %w", err)
 		}
+		// Una empresa suspendida o cerrada en pruebas anteriores vuelve a estar activa.
+		if _, err := tx.Exec(ctx, `UPDATE org.tenants SET status = 'activa', closed_at = NULL, updated_at = now() WHERE id = $1`, tenantID); err != nil {
+			return fmt.Errorf("tenant status: %w", err)
+		}
 		for _, r := range DevRoles {
 			var id pgtype.UUID
 			// Repone contraseña y desbloqueo: la semilla sirve también para dejar el entorno como nuevo.
 			err := tx.QueryRow(ctx, `INSERT INTO iam.users (id, email, full_name, password_hash, email_verified, password_changed_at)
 				VALUES (gen_random_uuid(), $1, $2, $3, true, now())
 				ON CONFLICT (email) DO UPDATE SET password_hash = EXCLUDED.password_hash, status = 'activo', email_verified = true,
-					failed_logins = 0, login_window_started_at = NULL, locked_until = NULL, login_lockouts = 0,
+					failed_logins = 0, login_failure_streak = 0, login_window_started_at = NULL, locked_until = NULL, login_lockouts = 0,
 					mfa_failed_attempts = 0, mfa_locked_until = NULL, mfa_lockouts = 0, updated_at = now()
 				RETURNING id`, r+"@"+DevEmailDomain, "Demo "+r, hashes[r]).Scan(&id)
 			if err != nil {

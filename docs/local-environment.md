@@ -67,6 +67,8 @@ El único volumen de este entorno es `wanka-local-pgdata` (nombre fijo). El serv
 | vendedor | `vendedor@demo.local` | 200 |
 | almacenero | `almacenero@demo.local` | 200 |
 
+`make seed` escribe como el **superusuario** del PostgreSQL local (`DATABASE_URL_SEED`, que solo fija el Makefile): ningún rol de servicio puede crear empresas ni usuarios globales, y el superusuario se salta la RLS (incluida `FORCE`). Por eso `wanka dev-seed` solo corre con `WANKA_ENV=local` y con todos los hosts de la URL en loopback o socket Unix. Al resembrar, cada usuario queda sin bloqueos ni racha de fallos, y la empresa y las membresías, activas.
+
 Pasos:
 
 1. `CONFIRM=1 make reset && make up && make seed` (la semilla se puede repetir: repone contraseñas y desbloqueos).
@@ -74,3 +76,5 @@ Pasos:
 3. Abrí `http://localhost:3400` y comprobá que el shell vacío carga.
 4. `curl http://127.0.0.1:58080/readyz` debe devolver `{"status":"ready"}`; con `docker compose -p wanka-local stop postgres` debe dar 503 sin matar la API.
 5. `make down` al terminar.
+
+Nota: `make reset` solo detiene la API y la web cuyo pid está en el `.local/` de ese árbol de trabajo; si levantaste la API desde otro worktree, detenela allí.
