@@ -308,6 +308,36 @@ func TestLostBindIs403TenantAccessDeniedAndNothingIsCached(t *testing.T) {
 	}
 }
 
+// #233: un resolver que dice «membresía perdida» (ErrMembershipLost, también envuelto) -> 403
+// tenant_access_denied: el handler no corre, no se revoca la sesión, no se audita como permiso
+// faltante ni se cachea nada, y no se guarda ninguna versión.
+func TestMembershipLostFromTheResolverIs403TenantAccessDenied(t *testing.T) {
+	for name, err := range map[string]error{
+		"bare":    auth.ErrMembershipLost,
+		"wrapped": fmt.Errorf("resolving permissions: %w", auth.ErrMembershipLost),
+	} {
+		t.Run(name, func(t *testing.T) {
+			e := newEnv(t, returns(bound()), nil)
+			e.perms.set(func(context.Context, auth.Session) (auth.Authz, error) { return auth.Authz{}, err })
+			rec := e.get("/v1/items", bearer(token(1)))
+			mustProblem(t, rec, 403, "tenant_access_denied")
+			if rec.Header().Get("Retry-After") != "" || rec.Header().Get("WWW-Authenticate") != "" {
+				t.Fatalf("headers = %v", rec.Header())
+			}
+			if e.hits("tenant") != 0 {
+				t.Fatal("the handler ran for a lost membership")
+			}
+			if len(e.res.revoked()) != 0 || len(e.res.bound()) != 0 || len(e.denials.recorded()) != 0 {
+				t.Fatalf("revoked %v, bound %v, denials %v; want none of them", e.res.revoked(), e.res.bound(), e.denials.recorded())
+			}
+			e.get("/v1/items", bearer(token(1)))
+			if n := e.perms.resolves(); n != 2 {
+				t.Fatalf("resolves = %d, want 2: a lost membership must not be cached", n)
+			}
+		})
+	}
+}
+
 // Criterio 5: rol con requires_mfa y mfa_method none -> revoca y 403 mfa_required.
 func TestRoleRequiringMFARevokesTheSession(t *testing.T) {
 	for _, tc := range []struct {
@@ -455,7 +485,7 @@ var (
 	// impersonada read_only: las acciones read del catálogo menos las excluidas.
 	readOnlyAllowed = []permission.Code{
 		"agenda.appointments:read", "auditoria.events:read", "catalogo.categories:read", "catalogo.items:read",
-		"catalogo.prices:read", "clientes.customers:read", "compras.documents:read", "compras.orders:read",
+		"catalogo.costs:read", "catalogo.prices:read", "clientes.customers:read", "compras.documents:read", "compras.orders:read",
 		"compras.suppliers:read", "empresas.config:read", "empresas.einvoicing:read", "empresas.series:read",
 		"empresas.sites:read", "facturacion.cpe:read", "facturacion.gre:read", "finanzas.cash:read",
 		"finanzas.payables:read", "finanzas.receivables:read", "integraciones.config:read",

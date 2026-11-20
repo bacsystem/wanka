@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/netip"
@@ -34,17 +35,26 @@ type Authz struct {
 	Sites    []pgtype.UUID
 }
 
+// ErrMembershipLost lo devuelve un PermissionResolver cuando la membresía de la
+// sesión ya no da acceso: no existe, no es del usuario ni de la empresa de la
+// sesión, o no está activa (invitado, suspendido). Pasa cuando cambia entre la
+// búsqueda de la sesión y la resolución. El paso responde 403
+// tenant_access_denied sin revocar la sesión (ADR 0011); la siguiente petición
+// la desliga la búsqueda de sesión.
+var ErrMembershipLost = errors.New("membership no longer grants access")
+
 // PermissionResolver es el puerto de rol y permisos de una membresía. El
-// adaptador de PostgreSQL llega con identidad (#29); el paso se prueba con un doble.
+// adaptador de PostgreSQL es identidad.NewPermissionResolver (#233); el paso se prueba con un doble.
 type PermissionResolver interface {
 	// Resolve lee, para la membresía de s y con su Actor, la versión actual, el
-	// rol (requires_mfa), los permisos y las sedes. Los errores de la base se
-	// devuelven tipados (db.ErrOverloaded, db.ErrUnavailable...).
+	// rol (requires_mfa), los permisos y las sedes. Una membresía que ya no da
+	// acceso es ErrMembershipLost. Los errores de la base se devuelven tipados
+	// (db.ErrOverloaded, db.ErrUnavailable...).
 	Resolve(ctx context.Context, s Session) (Authz, error)
 }
 
-// DenyAllPermissions es el resolver que se cablea mientras no exista el de
-// identidad: ningún permiso y sin 2FA exigida. Cerrar es negar la petición, no
+// DenyAllPermissions es el resolver que niega todo; serve ya no lo cablea (usa
+// identidad.NewPermissionResolver) y quedó para las pruebas: ningún permiso y sin 2FA exigida. Cerrar es negar la petición, no
 // destruir estado: por eso no devuelve RequiresMFA, que revocaría sesiones.
 type DenyAllPermissions struct{}
 
@@ -324,6 +334,11 @@ func (r *Routes) deny(w http.ResponseWriter, hr *http.Request, s Session, patter
 // authzFailed responde cuando no se pudieron resolver los permisos: la petición
 // nunca pasa sin ellos.
 func (r *Routes) authzFailed(w http.ResponseWriter, hr, lr *http.Request, err error) {
+	if errors.Is(err, ErrMembershipLost) {
+		r.outcome(hr, "tenant_access_denied")
+		httpx.WriteProblem(w, hr, "tenant_access_denied", "membership is no longer active")
+		return
+	}
 	r.outcome(hr, "error")
 	switch {
 	case httpx.WriteDBError(w, lr, err):

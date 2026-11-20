@@ -101,8 +101,8 @@ func TestServeListenerInvalidatesTheServiceTheRoutesRead(t *testing.T) {
 		return resp.StatusCode, p.Code
 	}
 	// Caliente la caché. Los entitlements dejan pasar (el módulo ventas está en el plan) y
-	// decide el paso de permisos con el resolver que cablea serve (DenyAllPermissions hasta #29):
-	// 403 forbidden, y no module_not_enabled.
+	// decide el paso de permisos con el resolver de PostgreSQL que cablea serve (#233; el rol
+	// sembrado no tiene permisos): 403 forbidden, y no module_not_enabled.
 	if code, problem := get(); code != 403 || problem != "forbidden" {
 		t.Fatalf("GET /v1/items = %d %s, want 403 forbidden", code, problem)
 	}

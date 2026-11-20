@@ -34,6 +34,9 @@ components:
   apigen: { in: internal/apigen/** }
   # Prueba de contrato del spec (openapi/contract_test.go): lee las tablas de los paquetes generados.
   openapi_contract: { in: openapi }
+  # Fachada del módulo de identidad (ADR 0002): el resolver de permisos de PostgreSQL y la siembra de los roles base.
+  # Solo cmd la cablea; los demás módulos la importan por su paquete raíz, nunca por internal/identidad/**.
+  identidad: { in: internal/identidad }
   main: { in: cmd/** }
   migrations: { in: migrations }
   bootstrap: { in: bootstrap }
@@ -71,8 +74,12 @@ deps:
     canUse: [oapiruntime]
   openapi_contract:
     mayDependOn: [apigen, platform, platform_db]
+  identidad:
+    # identidad: sus pruebas externas (paquete identidad_test) importan la fachada.
+    mayDependOn: [identidad, platform, platform_db]
+    canUse: [pgx]
   main:
-    mayDependOn: [apigen, platform, platform_pg, platform_mailer_stub, platform_db, platform_jobs, migrations]
+    mayDependOn: [apigen, identidad, platform, platform_pg, platform_mailer_stub, platform_db, platform_jobs, migrations]
     canUse: [pgx]
 exclude:
   - testdata

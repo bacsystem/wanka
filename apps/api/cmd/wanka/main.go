@@ -16,6 +16,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/bacsystem/wanka/apps/api/internal/identidad"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/audit"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/auth"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/auth/pgsession"
@@ -274,7 +275,7 @@ func mountPlane(plane string, rt *httpx.Router, pool *db.Pool, w wiring) (sweepe
 		return nil, nil, nil
 	}
 	ent := entitlements.New(pool, w.entitlements)
-	routes, err := auth.NewRoutes(rt, pgsession.New(pool), ent, auth.DenyAllPermissions{}, audit.NewWriter(pool), w.auth)
+	routes, err := auth.NewRoutes(rt, pgsession.New(pool), ent, identidad.NewPermissionResolver(pool), audit.NewWriter(pool), w.auth)
 	if err != nil {
 		return nil, nil, fmt.Errorf("mounting the session chain: %w", err)
 	}

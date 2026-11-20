@@ -14,6 +14,7 @@ para más adelante).
 
 ```
 cmd/wanka/            main: serve, worker, migrate up
+internal/identidad/    módulo de identidad (fachada): resolver de permisos de PostgreSQL (`NewPermissionResolver`) y `SeedTenantRoles`, la siembra de los roles base que llama el alta (#31);
 internal/platform/    kernel: config, logging, httpx, auth (+ auth/pgsession, el resolver de sesión), metrics, clock, db (+ db/dbtest para tests), entitlements, permission, jobs en uso;
                       fx (tipo de cambio: ops.exchange_rates) en uso;
                       money, idgen (paquetes vacíos por ahora)
