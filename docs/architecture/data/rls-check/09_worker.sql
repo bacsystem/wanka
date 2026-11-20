@@ -183,6 +183,7 @@ SELECT test.expect_error('TRUNCATE iam.role_template_permissions', '42501', 'wan
 SELECT test.expect_error($$UPDATE iam.roles SET name = 'x'$$, '42501', 'wanka_worker no escribe iam.roles');
 SELECT test.expect_error($$DELETE FROM iam.roles$$, '42501', 'wanka_worker no borra iam.roles');
 SELECT test.expect_error($$DELETE FROM iam.memberships$$, '42501', 'wanka_worker no borra iam.memberships');
+SELECT test.expect_error('SELECT count(*) FROM iam.membership_sites', '42501', 'wanka_worker no lee iam.membership_sites');
 \echo '== K1f. (wanka_worker) iam.users (#24): solo id y email, para el aviso del bloqueo; nunca la contrasena ni los contadores =='
 SELECT test.assert((SELECT count(*) FROM iam.users WHERE email = 'cajero@a.pe') = 1, 'wanka_worker lee el correo de un usuario por id/email');
 SELECT test.expect_error('SELECT password_hash FROM iam.users', '42501', 'wanka_worker no lee password_hash');

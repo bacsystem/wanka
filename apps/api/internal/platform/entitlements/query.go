@@ -61,9 +61,12 @@ SELECT t.status,
                    FROM platform.feature_flags f
                    LEFT JOIN platform.tenant_flag_overrides fo
                           ON fo.tenant_id = app.current_tenant() AND fo.flag_key = f.key), '[]'::jsonb),
-       (SELECT jsonb_build_object('users', u.active_users, 'cpe_per_month', u.cpe_issued)
-          FROM platform.tenant_usage u
-         WHERE u.tenant_id = app.current_tenant() AND u.period = $1)
+       COALESCE((SELECT jsonb_build_object('users', u.active_users, 'cpe_per_month', u.cpe_issued,
+                                           'sites', (SELECT count(*) FROM org.sites s WHERE s.tenant_id = app.current_tenant() AND s.active))
+                   FROM platform.tenant_usage u
+                  WHERE u.tenant_id = app.current_tenant() AND u.period = $1),
+                jsonb_build_object('users', 0, 'cpe_per_month', 0,
+                                   'sites', (SELECT count(*) FROM org.sites s WHERE s.tenant_id = app.current_tenant() AND s.active)))
   FROM org.tenants t
   LEFT JOIN sub ON true
   LEFT JOIN platform.plans p ON p.id = sub.plan_id
@@ -132,7 +135,7 @@ func build(tenant pgtype.UUID, tenantStatus string, subStatus *string, limitsJSO
 		Modules:  []string{},
 		Flags:    []string{},
 		Limits:   map[string]int64{},
-		Usage:    map[string]int64{LimitUsers: 0, LimitCPEPerMonth: 0},
+		Usage:    map[string]int64{LimitUsers: 0, LimitCPEPerMonth: 0, LimitSites: 0},
 		Status:   StatusNoPlan,
 		ReadOnly: tenantStatus == "cerrada",
 	}

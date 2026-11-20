@@ -20,6 +20,7 @@ const (
 	QueueNotifications = "notifications"
 	QueueReports       = "reports"
 	QueueMaintenance   = "maintenance"
+	QueueEinvConfig    = "einv_config"
 )
 
 // DefaultConcurrency es la concurrencia por réplica de cada cola; las variables
@@ -30,6 +31,7 @@ var DefaultConcurrency = map[string]int{
 	QueueNotifications: 10,
 	QueueReports:       2,
 	QueueMaintenance:   2,
+	QueueEinvConfig:    5,
 }
 
 // DefaultMaxAttempts es el máximo de intentos de un job (el primero cuenta).
@@ -167,3 +169,27 @@ func (j Job[A]) InTenantTx(ctx context.Context, fn func(pgx.Tx) error) error {
 	}
 	return err
 }
+
+// CompanySyncArgs son los argumentos del job de sincronización de datos de la empresa con Khipu (ADR 0013).
+type CompanySyncArgs struct {
+	TenantID pgtype.UUID `json:"tenant_id"`
+}
+
+func (CompanySyncArgs) Kind() string          { return "company_sync" }
+func (a CompanySyncArgs) Tenant() pgtype.UUID { return a.TenantID }
+
+// SeriesReconcileArgs son los argumentos del job de conciliación de series con Khipu.
+type SeriesReconcileArgs struct {
+	TenantID pgtype.UUID `json:"tenant_id"`
+}
+
+func (SeriesReconcileArgs) Kind() string          { return "series_reconcile" }
+func (a SeriesReconcileArgs) Tenant() pgtype.UUID { return a.TenantID }
+
+// EmpresasActivationSLACheckArgs son los argumentos del job de verificación de SLA de activación (#31).
+type EmpresasActivationSLACheckArgs struct {
+	TenantID pgtype.UUID `json:"tenant_id"`
+}
+
+func (EmpresasActivationSLACheckArgs) Kind() string          { return "empresas_activation_sla_check" }
+func (a EmpresasActivationSLACheckArgs) Tenant() pgtype.UUID { return a.TenantID }

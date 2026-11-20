@@ -611,6 +611,12 @@ func TestTableGrantsMatchTheADR0001Matrix(t *testing.T) {
 		"wanka_definer|iam.role_template_permissions": "SELECT",
 		"wanka_app|org.sites":                         "SELECT",
 		"wanka_app|org.cash_registers":                "SELECT",
+		"wanka_worker|org.sites":                      "SELECT",
+		"wanka_worker|org.cash_registers":             "SELECT",
+		"wanka_app|org.tenant_settings":               "SELECT",
+		"wanka_worker|org.tenant_settings":            "SELECT",
+		"wanka_app|org.document_series":               "SELECT",
+		"wanka_worker|org.document_series":            "SELECT",
 		"wanka_app|iam.list_my_memberships":           "SELECT",
 		// Identidad global de la ola 1 (#231): el UPDATE y el SELECT por columna se prueban en iam_identity_test.go.
 		"wanka_app|iam.user_totp":          "INSERT,SELECT,UPDATE",

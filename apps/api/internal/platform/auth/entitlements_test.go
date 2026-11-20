@@ -497,7 +497,7 @@ func TestRouteSpecIsValidatedAtRegistration(t *testing.T) {
 		{"NoModule on Public", "POST /v1/auth/login", auth.Public, none, true},
 		{"empty spec on Public", "POST /v1/auth/login", auth.Public, auth.Spec{}, false},
 		{"a module on Public", "POST /v1/auth/login", auth.Public, auth.Spec{Module: "ventas", Permission: auth.NoPermission}, false},
-		{"sites has no usage measurement yet", "POST /v1/sites", auth.Tenant, auth.Spec{Module: "empresas", Permission: "ventas.pos:read", Limit: entitlements.LimitSites}, false},
+		{"sites limit is known and allowed", "POST /v1/sites", auth.Tenant, auth.Spec{Module: "empresas", Permission: "ventas.pos:read", Limit: entitlements.LimitSites}, true},
 		{"a known limit", "POST /v1/users", auth.Tenant, auth.Spec{Module: "identidad", Permission: "ventas.pos:read", Limit: entitlements.LimitUsers}, true},
 		{"an unknown limit", "POST /v1/users", auth.Tenant, auth.Spec{Module: "identidad", Permission: "ventas.pos:read", Limit: "seats"}, false},
 		{"a limit on a NoTenant route", "GET /v1/me", auth.NoTenant, auth.Spec{Module: auth.NoModule, Permission: auth.NoPermission, Limit: entitlements.LimitUsers}, false},

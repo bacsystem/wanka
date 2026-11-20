@@ -527,11 +527,23 @@ func TestSitesAndCashRegistersGrantsAreByColumn(t *testing.T) {
 		if queryOne[bool](t, admin, `SELECT has_table_privilege('wanka_app', $1, 'DELETE')`, tbl) {
 			t.Errorf("wanka_app can DELETE %s", tbl)
 		}
-		for _, role := range []string{"wanka_worker", "wanka_webhooks", "wanka_platform"} {
+		for _, role := range []string{"wanka_webhooks", "wanka_platform"} {
 			if queryOne[bool](t, admin, `SELECT has_any_column_privilege($1, $2, 'SELECT,INSERT,UPDATE')`, role, tbl) {
 				t.Errorf("%s has access to %s", role, tbl)
 			}
 		}
+	}
+	if !queryOne[bool](t, admin, `SELECT has_table_privilege('wanka_worker', 'org.sites', 'SELECT')`) {
+		t.Error("wanka_worker must have SELECT on org.sites (F3, ADR 0001, ADR 0013)")
+	}
+	if !queryOne[bool](t, admin, `SELECT has_table_privilege('wanka_worker', 'org.cash_registers', 'SELECT')`) {
+		t.Error("wanka_worker must have SELECT on org.cash_registers (F3, ADR 0001)")
+	}
+	if !queryOne[bool](t, admin, `SELECT has_column_privilege('wanka_worker', 'org.sites', 'provider_synced_version', 'UPDATE')`) {
+		t.Error("wanka_worker must have UPDATE on org.sites.provider_synced_version (F3, ADR 0013)")
+	}
+	if queryOne[bool](t, admin, `SELECT has_column_privilege('wanka_worker', 'org.sites', 'name', 'UPDATE')`) {
+		t.Error("wanka_worker must NOT have UPDATE on org.sites.name")
 	}
 }
 

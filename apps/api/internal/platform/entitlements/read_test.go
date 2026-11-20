@@ -313,3 +313,17 @@ func TestDisablingAModuleKeepsTheDataAndReenablingRecoversIt(t *testing.T) {
 		t.Error("reenabling the module did not recover it")
 	}
 }
+
+// Las sedes en uso se cuentan directamente de org.sites (activas del tenant).
+func TestSitesUsageIsCountedFromActiveSites(t *testing.T) {
+	e := newEnv(t)
+	tenant := e.tenant("activa")
+	plan := e.plan("basic", `{"users": 5, "sites": 2, "cpe_per_month": 300}`, "ventas")
+	e.subscribe(tenant, plan, "activa")
+	e.exec(`INSERT INTO org.sites (id, tenant_id, code, name, active) VALUES (gen_random_uuid(), $1, '0001', 'Principal', true), (gen_random_uuid(), $1, '0002', 'Sucursal', true), (gen_random_uuid(), $1, '0003', 'Cerrada', false)`, tenant)
+	s := e.service(entitlements.Options{})
+	got := mustFor(t, s, tenant)
+	if got.Usage[entitlements.LimitSites] != 2 {
+		t.Errorf("Usage[sites] = %d, want 2", got.Usage[entitlements.LimitSites])
+	}
+}
