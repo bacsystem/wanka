@@ -22,7 +22,7 @@ Entorno (los valores no se versionan): `LOAD_ADMIN_URL` (superusuario, base `pos
 `wanka_app`), `TOKENS_FILE`, `OUT`, y para `fail.sh` `CONTAINER`.
 
 ```sh
-docker run -d --name wanka-load-pg -e POSTGRES_PASSWORD=$SUPERUSER_PW -p 127.0.0.1:55433:5432 postgres:16-alpine
+docker run -d --name wanka-load-pg --tmpfs /var/lib/postgresql/data -e POSTGRES_PASSWORD=$SUPERUSER_PW -p 127.0.0.1:55433:5432 postgres:16-alpine
 cd apps/api
 go run ./testdata/loadtest/session seed
 OUT=/tmp/run1 sh testdata/loadtest/session/run.sh              # RATES="50 100 200 300 500 700 1000" DUR=30s

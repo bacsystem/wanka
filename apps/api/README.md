@@ -49,6 +49,8 @@ Cada test crea y borra su propia base, así que los paquetes no se pisan.
 
 ## Base de datos local
 
+Para levantar todo (PostgreSQL, roles, migraciones, API y web) con un comando: `make up`; ver [docs/local-environment.md](../../docs/local-environment.md). A mano:
+
 ```sh
 docker run -d --name wanka-pg -e POSTGRES_PASSWORD=<superusuario> -e POSTGRES_DB=wanka \
   -p 127.0.0.1:55432:5432 postgres:16-alpine

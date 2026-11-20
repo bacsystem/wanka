@@ -1,0 +1,47 @@
+# Entorno local de Wanka (solo desarrollo; el despliegue no entra, ver ADR 0007).
+# Nombre de proyecto propio: `docker compose down -v` solo toca lo de este archivo.
+# Las claves vienen de .env.local (lo genera `make env`); aquí no hay valores secretos.
+name: wanka-local
+
+services:
+  postgres:
+    image: postgres:16-alpine@sha256:1758b87430847848ff5a71cbdd898c7a21e469166c3e25244940f05ea97800ad
+    container_name: wanka-local-pg
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_SUPERUSER_PASSWORD:?corré make env}
+      POSTGRES_DB: wanka
+    ports:
+      # Solo loopback; 55432 no choca con wanka-shared-pg (55400) ni con rls-check.
+      - "127.0.0.1:${WANKA_PG_PORT:-55432}:5432"
+    volumes:
+      - wanka-local-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d wanka"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+
+  # Una sola vez (perfil `tools`, lo lanza `make roles`): bootstrap de roles y claves.
+  roles:
+    image: postgres:16-alpine@sha256:1758b87430847848ff5a71cbdd898c7a21e469166c3e25244940f05ea97800ad
+    profiles: ["tools"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGPASSWORD: ${POSTGRES_SUPERUSER_PASSWORD:?corré make env}
+      WANKA_ROLE_PASSWORD: ${WANKA_ROLE_PASSWORD:?corré make env}
+    volumes:
+      - ./apps/api/bootstrap:/bootstrap:ro
+      - ./scripts/local-roles.sh:/local-roles.sh:ro
+    # La imagen declara VOLUME en el directorio de datos; tmpfs evita un volumen anónimo por corrida.
+    tmpfs:
+      - /var/lib/postgresql/data
+    entrypoint: ["sh", "/local-roles.sh"]
+
+volumes:
+  # Nombre fijo (sin prefijo del proyecto): el único volumen de Wanka local.
+  wanka-local-pgdata:
+    name: wanka-local-pgdata
