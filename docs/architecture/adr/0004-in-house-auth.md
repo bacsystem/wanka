@@ -120,7 +120,7 @@ Precisa la decisión para las historias #24 a #30; no la cambia ([README §9](..
 
 La decisión sigue siendo la misma: argon2id con semáforo. Esta nota reemplaza el valor inicial `t = 3`, que el texto marcaba «a medir», por el medido ([README §9](../README.md)).
 
-- **Parámetros: m = 64 MiB, t = 2, p = 2** (formato PHC: los hashes con `t = 3`, si los hubiera, se re-hashean sin cortes en el siguiente ingreso correcto).
+- **Parámetros: m = 64 MiB, t = 2, p = 2** (formato PHC: los hashes con `t = 3`, si los hubiera, se re-hashean sin cortes en el siguiente ingreso correcto). **Precisión (2026-11-20, PR #251):** hoy ningún flujo escribe hashes con otros parámetros, así que el re-hash en el ingreso correcto **todavía no aplica** y #24 no lo implementa. Lo implementa la historia que cambie los parámetros por primera vez, o #30 si llega antes. Funciona así: tras un ingreso correcto, si el PHC guardado tiene otros parámetros, se calcula el hash nuevo fuera de la transacción, con el semáforo, y se guarda con un `UPDATE … WHERE id = $1 AND password_hash = $anterior`, para no pisar un cambio concurrente. Si falla, no afecta el ingreso.
 - **Medición** de #24, con `TestLoginLoad`: `GOMAXPROCS=2`, PostgreSQL real, una cuenta por usuario virtual.
 
   | Parámetros | Un hash solo | Tope en 2 núcleos | A 20 req/s |
