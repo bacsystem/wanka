@@ -156,6 +156,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/document-series/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Consulta el estado y correlativo de una serie de documentos
+         * @description Devuelve el estado de la serie, su último número asignado, local, caja,
+         *     tipo de comprobante, si está activa y su estado de sincronización con el
+         *     proveedor (Khipu).
+         */
+        get: operations["getDocumentSeries"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/sales": {
         parameters: {
             query?: never;
@@ -402,6 +424,34 @@ export interface components {
             /** @description true si la empresa está cerrada: todo método distinto de GET y HEAD da 403 tenant_read_only. */
             readOnly: boolean;
             version: string;
+        };
+        DocumentSeries: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            siteId: string;
+            /** Format: uuid */
+            cashRegisterId?: string | null;
+            /** @description Tipo de documento (01, 03, 07, 08, 09, PRO, etc.) */
+            docType: string;
+            /** @description Código de la serie (ej. F001, B001, PR01) */
+            series: string;
+            /**
+             * Format: int64
+             * @description Último número correlativo emitido en esta serie
+             */
+            lastNumber: number;
+            /** @description Si la serie está habilitada para numerar */
+            active: boolean;
+            /**
+             * @description Estado de sincronización de la serie con Khipu
+             * @enum {string}
+             */
+            providerStatus: "not_applicable" | "pending" | "synced" | "conflict";
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
         };
         /** @enum {string} */
         Currency: "PEN" | "USD";
@@ -685,6 +735,37 @@ export interface operations {
             };
             401: components["responses"]["Problem"];
             403: components["responses"]["Problem"];
+            429: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
+        };
+    };
+    getDocumentSeries: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Se conserva si cumple el patrón; si falta o no lo cumple, la API lo reemplaza por uno propio y nunca responde 400 por esta cabecera (conventions.md §3). */
+                "X-Request-Id"?: components["parameters"]["RequestId"];
+            };
+            path: {
+                /** @description ID de la serie de documentos */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Estado y numeración de la serie */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentSeries"];
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
             429: components["responses"]["Problem"];
             503: components["responses"]["Problem"];
         };
