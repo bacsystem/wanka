@@ -33,7 +33,7 @@ const (
 // seedIdentity siembra, como superusuario, el escenario que usan casi todos los casos:
 //   - u1 es miembro activo de A (solo la sede A1) y de B (todas las sedes); u2 está invitado en A; u3 suspendido en A;
 //   - A tiene dos sedes (A1 con dos cajas, A2 con una); B tiene una sede con una caja;
-//   - plantillas: dueno exige 2FA, cajero no.
+//   - plantillas: las siembra la migración 20261120120000 (dueno exige 2FA, cajero no).
 func seedIdentity(ctx context.Context, t *testing.T, d *dbtest.DB) *pgx.Conn {
 	t.Helper()
 	admin := d.Admin(ctx, t)
@@ -42,7 +42,6 @@ func seedIdentity(ctx context.Context, t *testing.T, d *dbtest.DB) *pgx.Conn {
 		`INSERT INTO org.tenants (id, ruc, legal_name, trade_name, industry) VALUES
 		   ('` + tenA + `', '20100000001', 'Razon A SAC', 'Comercial A', 'retail'),
 		   ('` + tenB + `', '20100000002', 'Razon B SAC', NULL, 'veterinaria')`,
-		`INSERT INTO iam.role_templates (code, name, requires_mfa) VALUES ('dueno', 'Dueño', true), ('cajero', 'Cajero', false)`,
 		`INSERT INTO iam.roles (id, tenant_id, name, requires_mfa) VALUES ('` + roleA + `', '` + tenA + `', 'Supervisor', false),
 		   ('` + roleB + `', '` + tenB + `', 'Supervisor', false)`,
 		`INSERT INTO org.sites (id, tenant_id, code, name) VALUES ('` + siteA1 + `', '` + tenA + `', 'S1', 'Sede 1'),
@@ -146,13 +145,11 @@ func TestIdentityMigrationShape(t *testing.T) {
 			t.Errorf("%s: tenant_isolation policies = %d, want 1", tbl, n)
 		}
 	}
-	// Las plantillas son un catálogo global sin RLS y nacen vacías (las siembra #233).
+	// Las plantillas son un catálogo global sin RLS; la migración 20261120120000 (#233) las siembra y su contenido lo
+	// prueba internal/identidad.
 	for _, tbl := range []string{"iam.role_templates", "iam.role_template_permissions"} {
 		if queryOne[bool](t, admin, `SELECT relrowsecurity FROM pg_class WHERE oid = $1::regclass`, tbl) {
 			t.Errorf("%s must not have RLS", tbl)
-		}
-		if n := queryOne[int](t, admin, `SELECT count(*) FROM `+tbl); n != 0 {
-			t.Errorf("%s has %d rows, want it empty until #233", tbl, n)
 		}
 	}
 	// Defaults y nulabilidad.
@@ -463,7 +460,7 @@ func TestRoleTemplatesAreReadOnlyForEveryApplicationRole(t *testing.T) {
 	ctx := context.Background()
 	d := migrated(t)
 	admin := seedIdentity(ctx, t, d)
-	if _, err := admin.Exec(ctx, `INSERT INTO iam.role_template_permissions VALUES ('cajero', 'ventas.pos:read')`); err != nil {
+	if _, err := admin.Exec(ctx, `INSERT INTO iam.role_template_permissions VALUES ('cajero', 'ventas.pos:read') ON CONFLICT DO NOTHING`); err != nil {
 		t.Fatal(err)
 	}
 	for _, role := range []string{dbtest.App, dbtest.Worker, dbtest.Webhooks, dbtest.Platform} {
