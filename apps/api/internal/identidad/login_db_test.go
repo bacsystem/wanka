@@ -419,6 +419,13 @@ func TestFailureStreakLadder(t *testing.T) {
 			if got := e.notices(); got != wantNotices {
 				t.Fatalf("%d notices queued, want %d", got, wantNotices)
 			}
+			var hasUntil bool
+			if wantNotices == 1 {
+				e.scan(`SELECT args ? 'locked_until' FROM ops.river_job WHERE kind = 'identidad.login_lockout_notice'`, nil, &hasUntil)
+				if hasUntil == tc.closed {
+					t.Fatalf("job args carry locked_until = %v, want %v (only the lockout notice has an end)", hasUntil, !tc.closed)
+				}
+			}
 			if tc.closed {
 				var closed bool
 				e.scan(`SELECT (args->>'closed')::boolean FROM ops.river_job WHERE kind = 'identidad.login_lockout_notice'`, nil, &closed)

@@ -2,6 +2,7 @@ package app_test
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"strconv"
 	"strings"
@@ -30,7 +31,9 @@ func (s *sink) Send(_ context.Context, m mailer.Message) error {
 	return s.err
 }
 
-var jobArgs = app.LockoutNoticeArgs{UserID: "7f0c0f4e-1111-4222-8333-444455556666", LockedUntil: time.Date(2026, 11, 19, 21, 30, 0, 0, time.UTC)}
+var lockedUntil = time.Date(2026, 11, 19, 21, 30, 0, 0, time.UTC)
+
+var jobArgs = app.LockoutNoticeArgs{UserID: "7f0c0f4e-1111-4222-8333-444455556666", LockedUntil: &lockedUntil}
 
 func isCancel(err error) bool { return err != nil && strings.HasPrefix(err.Error(), "job cancelled") }
 
@@ -56,7 +59,7 @@ func TestLockoutNoticeSendsAMailWithoutLinksOrSecrets(t *testing.T) {
 	if !strings.Contains(m.TextBody, "16:30") {
 		t.Errorf("body = %q, want the unlock time in Lima (16:30)", m.TextBody)
 	}
-	if m.IdempotencyKey != "login-lockout:7f0c0f4e-1111-4222-8333-444455556666:"+strconv.FormatInt(jobArgs.LockedUntil.Unix(), 10) {
+	if m.IdempotencyKey != "login-lockout:7f0c0f4e-1111-4222-8333-444455556666:"+strconv.FormatInt(lockedUntil.Unix(), 10) {
 		t.Errorf("IdempotencyKey = %q: a retry of the same lock must reuse it", m.IdempotencyKey)
 	}
 }
@@ -89,5 +92,25 @@ func TestLockoutNoticeArgsCarryNoPersonalData(t *testing.T) {
 	var _ jobs.Args = app.LockoutNoticeArgs{}
 	if (app.LockoutNoticeArgs{}).Kind() != "identidad.login_lockout_notice" {
 		t.Fatal("the Kind changed: it is stored in every job row")
+	}
+}
+
+// El aviso de cierre no lleva locked_until (no tiene fin de bloqueo); el de bloqueo sí.
+func TestLockoutNoticeArgsJSON(t *testing.T) {
+	closed, _ := json.Marshal(app.LockoutNoticeArgs{UserID: "u", Closed: true})
+	if strings.Contains(string(closed), "locked_until") || strings.Contains(string(closed), "0001") || !strings.Contains(string(closed), `"closed":true`) {
+		t.Fatalf("closing notice args = %s", closed)
+	}
+	locked, _ := json.Marshal(jobArgs)
+	if !strings.Contains(string(locked), `"locked_until":"2026-11-19T21:30:00Z"`) || strings.Contains(string(locked), "closed") {
+		t.Fatalf("lockout notice args = %s", locked)
+	}
+}
+
+func TestClosingNoticeHasItsOwnMailAndIdempotencyKey(t *testing.T) {
+	s := &sink{}
+	err := app.LockoutNotice(dir{email: "ana@x.pe"}, s)(context.Background(), jobs.Job[app.LockoutNoticeArgs]{Args: app.LockoutNoticeArgs{UserID: "u1", Closed: true}})
+	if err != nil || len(s.sent) != 1 || s.sent[0].IdempotencyKey != "login-closed:u1" || !strings.Contains(s.sent[0].TextBody, "100") {
+		t.Fatalf("err = %v, sent = %+v", err, s.sent)
 	}
 }

@@ -16,8 +16,8 @@ const LockoutNoticeKind = "identidad.login_lockout_notice"
 // LockoutNoticeArgs son los argumentos del aviso: solo el usuario y el fin del bloqueo, sin correo ni
 // secretos (la tabla de jobs se ve desde la consola). El job es único por los dos campos.
 type LockoutNoticeArgs struct {
-	UserID      string    `json:"user_id"`
-	LockedUntil time.Time `json:"locked_until"`
+	UserID      string     `json:"user_id"`
+	LockedUntil *time.Time `json:"locked_until,omitempty"`
 	// Closed: el aviso es el del cierre del ingreso con contraseña (100 fallos seguidos), sin fin de bloqueo.
 	Closed bool `json:"closed,omitempty"`
 }
@@ -48,14 +48,18 @@ func LockoutNotice(dir EmailDirectory, m mailer.Mailer) func(ctx context.Context
 		if err != nil {
 			return fmt.Errorf("reading the recipient: %w", err)
 		}
+		var until time.Time
+		if job.Args.LockedUntil != nil {
+			until = *job.Args.LockedUntil
+		}
 		msg := mailer.Message{
 			To:      to,
 			Subject: "Bloqueamos temporalmente el ingreso a tu cuenta de Wanka",
 			TextBody: "Hubo varios intentos fallidos de iniciar sesión en tu cuenta. Por seguridad, bloqueamos el ingreso hasta el " +
-				job.Args.LockedUntil.In(lima).Format("02/01/2006 15:04") + " (hora de Lima).\n\nSi no fuiste tú, alguien tiene tu contraseña: restablécela desde la pantalla de ingreso de Wanka.\n\n" +
+				until.In(lima).Format("02/01/2006 15:04") + " (hora de Lima).\n\nSi no fuiste tú, alguien tiene tu contraseña: restablécela desde la pantalla de ingreso de Wanka.\n\n" +
 				"Wanka nunca te pedirá tu contraseña por teléfono, WhatsApp ni chat.\n",
 			Tags:           []string{"login_lockout"},
-			IdempotencyKey: fmt.Sprintf("login-lockout:%s:%d", job.Args.UserID, job.Args.LockedUntil.Unix()),
+			IdempotencyKey: fmt.Sprintf("login-lockout:%s:%d", job.Args.UserID, until.Unix()),
 		}
 		if job.Args.Closed {
 			msg.Subject = "Cerramos el ingreso con contraseña a tu cuenta de Wanka"
