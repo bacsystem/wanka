@@ -324,4 +324,4 @@ La matriz suma una celda: `wanka_worker` recibe `SELECT (id, email)` sobre `iam.
   - Se descartó poner el correo en los argumentos del job, porque dejaría un dato personal en una tabla que conserva los jobs completados 7 días.
   - Se descartó una función `SECURITY DEFINER`, porque agregaría una puerta más para el mismo dato.
 - **Si más adelante hace falta otra columna** (por ejemplo, el nombre para el saludo), va como un grant nuevo con su propia nota fechada. No se amplía a la tabla completa.
-- **Lo prueba `rls-check`** en el PR #251: un `SELECT` de `id` y `email` como `wanka_worker` pasa, y uno de `password_hash` da `42501`.
+- **Lo prueba `rls-check`** en el PR #251 (caso `K1f` de `09_worker.sql`): `wanka_worker` lee `email` y un `SELECT` de `password_hash` da `42501`.
