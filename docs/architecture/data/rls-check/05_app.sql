@@ -385,6 +385,8 @@ SELECT test.assert((SELECT confirmed_at IS NOT NULL AND last_used_step = 5700000
 SELECT test.expect_error($$INSERT INTO iam.user_totp (user_id, secret_enc) VALUES ('eeeeeeee-0000-0000-0000-000000000002', '\x02')$$, '23505', 'a lo sumo una fila TOTP por usuario');
 SELECT test.expect_error($$INSERT INTO iam.user_totp (user_id, secret_enc) VALUES (gen_random_uuid(), '\x02')$$, '23503', 'user_totp.user_id es FK a iam.users');
 SELECT test.expect_error($$UPDATE iam.user_totp SET recovery_codes_hash = ARRAY['ABCD-EFGH']$$, '23514', 'un codigo de recuperacion en claro no entra');
+SELECT test.expect_error($$UPDATE iam.user_totp SET recovery_codes_hash = ARRAY['v1:' || repeat('A', 42) || '=']$$, '23514', 'el relleno = no entra');
+SELECT test.expect_error($$UPDATE iam.user_totp SET recovery_codes_hash = ARRAY['v1:' || repeat('A', 43), '']$$, '23514', 'un elemento vacio no entra');
 SELECT test.expect_error($$UPDATE iam.user_totp SET recovery_codes_hash = ARRAY['v1:aa']$$, '23514', 'un codigo de recuperacion que no es un HMAC de 43 caracteres no entra');
 SELECT test.expect_error($$UPDATE iam.user_totp SET recovery_codes_hash = ARRAY['v1:' || repeat('A', 43) || ',' || 'v1:' || repeat('B', 43)]$$, '23514', 'un elemento con coma no entra');
 UPDATE iam.user_totp SET recovery_codes_hash = '{}';

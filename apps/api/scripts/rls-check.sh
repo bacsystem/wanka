@@ -111,6 +111,7 @@ for m in "naive_session_lookup|wanka_app" \
          "user_token_guard_trusts_consumed_at|wanka_app" \
          "drop_user_tokens_ttl_check|wanka_app" \
          "drop_totp_recovery_format_check|wanka_app" \
+         "weaken_recovery_codes_function|wanka_app" \
          "drop_user_tokens_membership_check|wanka_app" \
          "drop_user_tokens_new_email_check|wanka_app" \
          "grant_app_partition_select|wanka_app"; do

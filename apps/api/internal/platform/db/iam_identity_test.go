@@ -237,9 +237,10 @@ func TestUserTOTP(t *testing.T) {
 	wantState(t, execErr(app, `UPDATE iam.user_totp SET recovery_codes_hash = ARRAY['v1:aa', NULL] WHERE user_id = $1`, u), "23514", "no NULL recovery code")
 	good := "v1:" + strings.Repeat("A", 43)
 	for _, bad := range []string{"ABCD-EFGH", "v1:aa", "v0:" + strings.Repeat("A", 43), "V1:" + strings.Repeat("A", 43), "v1:" + strings.Repeat("A", 42),
-		"v1:" + strings.Repeat("A", 44), "v1:" + strings.Repeat("+", 43), good + "\n", good + "," + good} {
+		"v1:" + strings.Repeat("A", 44), "v1:" + strings.Repeat("+", 43), "v1:" + strings.Repeat("A", 42) + "=", "", good + "\n", good + "," + good} {
 		wantState(t, execErr(app, `UPDATE iam.user_totp SET recovery_codes_hash = ARRAY[$1::text] WHERE user_id = $2`, bad, u), "23514", fmt.Sprintf("recovery code %q", bad))
 	}
+	wantState(t, execErr(app, `UPDATE iam.user_totp SET recovery_codes_hash = ARRAY[$1::text, '']  WHERE user_id = $2`, good, u), "23514", "an empty element")
 	wantState(t, execErr(app, `UPDATE iam.user_totp SET recovery_codes_hash = ARRAY[$1::text, 'plain'] WHERE user_id = $2`, good, u), "23514", "one bad code among good ones")
 	for _, ok := range []string{"{}", "{" + good + "}", "{" + good + ",v12:" + strings.Repeat("a_-", 13) + "abcd}"} {
 		if err := execErr(app, `UPDATE iam.user_totp SET recovery_codes_hash = $1::text[] WHERE user_id = $2`, ok, u); err != nil {

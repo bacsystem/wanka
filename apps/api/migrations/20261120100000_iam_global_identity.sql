@@ -30,6 +30,21 @@ ALTER TABLE iam.users
   ADD COLUMN mfa_locked_until timestamptz,
   ADD COLUMN mfa_lockouts smallint NOT NULL DEFAULT 0 CONSTRAINT users_mfa_lockouts_range CHECK (mfa_lockouts BETWEEN 0 AND 3);
 
+-- Formato de los códigos de recuperación fijado por el contrato (PR #230): cada elemento es «vN:» + HMAC-SHA256 en base64url
+-- sin relleno (43 caracteres). Ningún código en claro, ningún NULL ni elemento vacío entra; el arreglo vacío es válido. Un CHECK
+-- no admite subconsultas, de ahí la función. Sin SECURITY DEFINER; el CHECK exige EXECUTE al rol que escribe, por eso solo
+-- wanka_app (el único que escribe iam.user_totp) lo recibe.
+-- +goose StatementBegin
+CREATE FUNCTION iam.valid_recovery_codes(codes text[]) RETURNS boolean
+  LANGUAGE sql IMMUTABLE STRICT
+  SET search_path = pg_catalog, pg_temp
+AS $$
+  SELECT NOT EXISTS (SELECT 1 FROM unnest(codes) AS c WHERE c IS NULL OR c !~ '^v[1-9][0-9]*:[A-Za-z0-9_-]{43}$')
+$$;
+-- +goose StatementEnd
+REVOKE ALL ON FUNCTION iam.valid_recovery_codes(text[]) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION iam.valid_recovery_codes(text[]) TO wanka_app;
+
 -- Segundo factor TOTP: a lo sumo una fila por usuario (la PK es la FK). confirmed_at NULL = sin 2FA activa.
 CREATE TABLE iam.user_totp (
   user_id uuid PRIMARY KEY REFERENCES iam.users,
@@ -38,14 +53,9 @@ CREATE TABLE iam.user_totp (
   last_used_step bigint,                      -- último paso TOTP aceptado: rechaza el código reutilizado
   -- Un elemento por código: «vN:» + HMAC-SHA256 con la clave derivada de la versión N de TOTP_ENC_KEY (ADR 0004, nota del
   -- 2026-11-19; er-01); se quita el usado. Arreglo vacío = sin códigos. El prefijo de versión es lo que permite rotar la clave.
-  recovery_codes_hash text[] NOT NULL DEFAULT '{}'
-    CONSTRAINT user_totp_recovery_codes_no_null CHECK (array_position(recovery_codes_hash, NULL) IS NULL)
-    -- Formato fijado por el contrato (PR #230): «vN:» + HMAC-SHA256 en base64url sin relleno (43 caracteres). Ningún código en
-    -- claro entra. La segunda mitad rechaza un elemento que traiga una coma dentro (rompería la regex sobre el arreglo unido).
-    CONSTRAINT user_totp_recovery_codes_format CHECK (
-      array_to_string(recovery_codes_hash, ',') ~ '^(v[1-9][0-9]*:[A-Za-z0-9_-]{43}(,|$))*$'
-      AND cardinality(recovery_codes_hash) = cardinality(string_to_array(array_to_string(recovery_codes_hash, ','), ',')))
+  recovery_codes_hash text[] NOT NULL DEFAULT '{}' CONSTRAINT user_totp_recovery_codes_format CHECK (iam.valid_recovery_codes(recovery_codes_hash))
 );
+GRANT SELECT, INSERT, UPDATE ON iam.user_totp TO wanka_app;
 
 -- Enrolamiento obligatorio del login con emailCode (#25, data-model §6): una fila por enrollmentToken. Pasó de #25 a esta
 -- historia para que #24 y #26 la usen sin esperar al 2FA. Los intentos son del usuario (columnas mfa_* de arriba), no del token.
@@ -175,7 +185,6 @@ CREATE TRIGGER user_tokens_guard_writes BEFORE INSERT OR UPDATE ON iam.user_toke
   FOR EACH ROW EXECUTE FUNCTION iam.guard_user_token_writes();
 
 -- GRANT del ADR 0001 (matriz y nota del 2026-11-19), y nada más. wanka_webhooks, wanka_platform y wanka_definer no reciben nada.
-GRANT SELECT, INSERT, UPDATE ON iam.user_totp TO wanka_app;
 -- Enrolamiento: la app no mueve user_id, token_hash, expires_at ni created_at, ni borra; el worker solo limpia.
 GRANT SELECT, INSERT ON iam.mfa_enrollments TO wanka_app;
 GRANT UPDATE (email_code_hmac, email_sends, email_sent_at, totp_secret_enc, consumed_at) ON iam.mfa_enrollments TO wanka_app;
