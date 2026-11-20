@@ -38,6 +38,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - `docs/delivery-process.md`: the GitHub board (Project, issues, epics, status docs) is updated when each change happens, with a table of what changes on each event and which built-in Project workflows do it automatically.
 - `CLAUDE.md`: team rule that state docs and the board stay current, checked with the `docs-sync` skill (bacsystem/skills), and that status answers come from `gh`; the two Mermaid rules merged into one to stay under the 22 000 B budget.
 
+### Fixed
+- `apps/api`: `TestListMyMembershipsUnder50ms` (#232) failed now and then in CI (p95 50.09 ms against 50 ms) because it took one pass of 200 queries. It now warms up, keeps one query in flight (the connection count) and compares the median of the p95 of 3 repetitions against the same 50 ms bound, logging each repetition (#260).
+
 ## [0.19.0] - 2026-11-19
 
 ### Added
