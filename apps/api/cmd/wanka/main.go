@@ -54,6 +54,8 @@ type wiring struct {
 	entitlements entitlements.Options
 	// wrapSweeper, si no es nil, envuelve o reemplaza el barredor (solo los tests).
 	wrapSweeper func(sweeper) sweeper
+	// identidad son las opciones del módulo de identidad; vacías toman los valores del contrato.
+	identidad identidad.Options
 	// mount, si no es nil, registra rutas en el registrador del plano tenant
 	// (solo los tests; los módulos llegan con sus historias).
 	mount func(*auth.Routes)
@@ -159,9 +161,9 @@ func run(ctx context.Context, args []string, getenv func(string) string, stdout,
 	}
 	log := logging.New(stdout, cfg.LogLevel).With("command", sub)
 
+	var mail mailer.Mailer
 	if sub != "migrate" {
-		// Aún ningún módulo lo consume; cuando lleguen, reciben el puerto aquí.
-		_ = newMailer(log, cfg)
+		mail = newMailer(log, cfg)
 	}
 
 	switch sub {
@@ -170,7 +172,7 @@ func run(ctx context.Context, args []string, getenv func(string) string, stdout,
 	case "migrate":
 		err = migrate(ctx, log, cfg)
 	default:
-		err = worker(ctx, log, cfg, svc, getenv)
+		err = worker(ctx, log, cfg, svc, getenv, mail)
 	}
 	if err != nil {
 		log.Error("terminated with error", "err", err.Error())
@@ -224,6 +226,8 @@ func serve(ctx context.Context, log *slog.Logger, cfg config.Config, svc config.
 	// mounts plataforma, ADR 0002).
 	rt := httpx.NewMux(ready)
 	w.entitlements.Logger = log
+	w.auth.TrustClientIP = cfg.TrustClientIP
+	w.identidad.Log = log
 	sw, ls, err := mountPlane(plane, rt, pool, w)
 	if err != nil {
 		return err
@@ -310,6 +314,9 @@ func mountPlane(plane string, rt *httpx.Router, pool *db.Pool, w wiring) (sweepe
 	if err != nil {
 		return nil, nil, fmt.Errorf("mounting the session chain: %w", err)
 	}
+	if err := identidad.Mount(routes, pool, w.identidad); err != nil {
+		return nil, nil, fmt.Errorf("mounting identidad: %w", err)
+	}
 	if w.mount != nil {
 		w.mount(routes)
 	}
@@ -366,7 +373,7 @@ func migrate(ctx context.Context, log *slog.Logger, cfg config.Config) error {
 // señal de parada, espera a los jobs en curso hasta JOBS_SHUTDOWN_TIMEOUT. Registra
 // los jobs de mantenimiento del kernel; los handlers de cada módulo se registran
 // aquí cuando llegan sus historias.
-func worker(ctx context.Context, log *slog.Logger, cfg config.Config, svc config.Service, getenv func(string) string) error {
+func worker(ctx context.Context, log *slog.Logger, cfg config.Config, svc config.Service, getenv func(string) string, mail mailer.Mailer) error {
 	jcfg, err := jobs.ConfigFromEnv(getenv)
 	if err != nil {
 		return fmt.Errorf("job configuration: %w", err)
@@ -382,6 +389,9 @@ func worker(ctx context.Context, log *slog.Logger, cfg config.Config, svc config
 	}
 	clk := clock.System{}
 	if err := registerKernelJobs(reg, pool, clk, log); err != nil {
+		return err
+	}
+	if err := identidad.RegisterJobs(reg, pool, mail); err != nil {
 		return err
 	}
 	// Al arrancar se aseguran las particiones sin esperar al ciclo del periódico (River lo reinicia con

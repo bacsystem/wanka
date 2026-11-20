@@ -18,6 +18,7 @@ internal/identidad/    módulo de identidad (fachada): resolver de permisos de P
 internal/platform/    kernel: config, passwordpolicy (lista de contraseñas filtradas, #238), logging, httpx, auth (+ auth/pgsession, el resolver de sesión), metrics, clock, db (+ db/dbtest para tests), entitlements, permission, jobs en uso;
                       fx (tipo de cambio: ops.exchange_rates) en uso;
                       money, idgen (paquetes vacíos por ahora)
+internal/identidad/   módulo de identidad (ola 1): login hoy; fachada + domain, app, adapters (argon2, postgres, httpapi)
 bootstrap/roles.sql   bootstrap de roles: lo corre el superusuario con psql, fuera de goose
 migrations/           goose, SQL con timestamp, embebido en el binario, solo hacia adelante
 openapi/              contrato OpenAPI 3.1 partido por módulo (ver «Servidor generado»)
@@ -409,6 +410,41 @@ constante en `catalog.go` y en `all`, a cargo de identidad. `go test ./internal/
 la lista `read | read_all | create | update | void | export | import | approve | send | retry`, si una migración siembra un código
 que `resources.md` no lista o si la correspondencia de historias o el ADR 0004 nombran un permiso que no existe.
 
+## Identidad: login (`internal/identidad`)
+
+Primer módulo de la ola 1 (story #24, parte backend). Fachada `identidad` (`Mount`,
+`RegisterJobs`) y capas internas `domain` (correo y topes), `app` (el caso de uso, el
+semáforo del hash y el job del aviso), `adapters/argon2`, `adapters/postgres` y
+`adapters/httpapi`. `mountPlane` lo monta con `identidad.Mount`; el worker registra
+`identidad.RegisterJobs`.
+
+`POST /v1/auth/login` (clase `Public`) sigue el orden del ADR 0004 (nota del 2026-11-19):
+cuerpo y esquema (400/422), cuotas (5/min por IP+email y 30/min por IP, en memoria por
+réplica; la IP es la de `X-Client-Ip` solo con `API_TRUST_CLIENT_IP=true`), semáforo del
+hash (`GOMAXPROCS` cupos, 2 x núcleos en cola y 300 ms; sin cupo `503 overloaded` y no se
+cobró nada), cobro del intento (un `UPDATE` con `RETURNING`, ventana fija de 15 min), hash
+(ficticio, con el mismo semáforo, si no hay cuenta que cobrar) y resultado en una sola
+transacción con `iam.users FOR UPDATE`. El hash nunca corre dentro de una transacción.
+Contraseña mala, correo inexistente, cuenta bloqueada o cerrada, usuario bloqueado, sin
+`password_hash` y segundo paso cerrado dan el mismo `401 invalid_credentials`.
+
+- **Bloqueo** (ADR 0014): `iam.users.login_failure_streak` cuenta todo fallo seguido, con cualquier espaciado; cada 5
+  hay un bloqueo de 15 min que se duplica hasta 24 h (`locked_until`, `login_lockouts = min(n, 10)`, `failed_logins = 0`) y se
+  encola el job `identidad.login_lockout_notice` (cola `notifications`, único por usuario y fin del bloqueo; solo `user_id`
+  y `locked_until` en los argumentos). Con 100 el ingreso con contraseña queda cerrado hasta restablecer o cambiar la
+  contraseña (#26, #30) y se encola el aviso de cierre. La ventana de 15 min y `failed_logins` solo acotan los intentos en
+  vuelo. Una contraseña correcta pone en 0 la racha, `failed_logins` y `login_lockouts`.
+- **Respuestas 200**: `authenticated` (acceso 15 min, refresh 30 días, `mfa_method = 'none'`, sin
+  empresa), `mfa_required` (con TOTP confirmado; sesión a medio login con `challengeToken`, 5 min) y,
+  para quien debe enrolar el segundo factor, `503 dependency_unavailable` con `Retry-After: 60` hasta #25.
+- **Aviso**: el worker lee el correo con `GRANT SELECT (id, email) ON iam.users TO wanka_worker`
+  (migración `20261120130000`) y lo manda por el puerto `Mailer`; en R1 el adaptador es el stub y
+  no sale ningún correo real.
+- **argon2id**: `m = 65536 KiB (64 MiB), t = 2, p = 2` (`argon2.Default`; el ADR 0004 decía t = 3 y dejaba ajustarlo con la medición de #24). Cada hash guarda sus parámetros,
+  así que cambiarlos no encierra a nadie. Se mide con la prueba de carga (no corre en la suite):
+  `WANKA_LOAD=1 GOMAXPROCS=2 go test ./internal/identidad -run TestLoginLoad -v -count=1` (con
+  `WANKA_LOAD_M`, `WANKA_LOAD_T` y `WANKA_LOAD_P` para otros parámetros).
+
 ## Variables de entorno
 
 Solo nombres; los valores no se versionan (no hay `.env` en el repo).
@@ -432,6 +468,7 @@ rol y no lee las de los demás.
 | `LOG_LEVEL` | no (`info`) | `debug`, `info`, `warn` o `error` |
 | `MAILER` | no (`stub`) | Adaptador de correo: `stub` (no envía; guarda en memoria y registra destinatario enmascarado y asunto) o `none` (rechaza todo envío). Otro valor impide arrancar |
 | `APP_ENV` | no (`production`) | `production`, `staging` o `development`. Sin la variable se asume producción. En `production` y `staging`, `MAILER=stub` o `none` arrancan con un `WARN` hasta que exista un adaptador real. Otro valor impide arrancar |
+| `API_TRUST_CLIENT_IP` | no (`false`) | `true` o `false`. Con `true` la API toma la IP del cliente de la cabecera `X-Client-Ip` (cuotas por IP de las rutas `Public`, `iam.sessions.ip`, auditoría); solo donde el BFF es el único cliente que alcanza la API por la red privada (ADR 0007). Con `false` la cabecera se ignora y la IP es la del socket. Otro valor impide arrancar |
 
 Solo para tests: `WANKA_TEST_ADMIN_URL` (URL del superusuario de una base de
 pruebas) y `WANKA_TEST_ROLE_PASSWORD` (clave común de los cinco roles LOGIN en

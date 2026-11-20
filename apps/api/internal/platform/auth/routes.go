@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/netip"
 	"slices"
 	"strings"
 	"time"
@@ -70,6 +71,8 @@ type Options struct {
 	TenantLimiter  httpx.LimiterConfig
 	Clock          clock.Clock
 	LookupTimeout  time.Duration
+	// TrustClientIP es API_TRUST_CLIENT_IP: lee la IP de X-Client-Ip (ClientIP). Falso por defecto.
+	TrustClientIP bool
 }
 
 // Routes es el registrador de rutas /v1: arma la cadena sesión -> limitadores ->
@@ -91,6 +94,7 @@ type Routes struct {
 	session       *httpx.Limiter
 	tenant        *httpx.Limiter
 	timeout       time.Duration
+	trustIP       bool
 }
 
 // NewRoutes valida las opciones y devuelve el registrador sobre rt. perms
@@ -119,7 +123,7 @@ func NewRoutes(rt *httpx.Router, resolver SessionResolver, ent EntitlementSource
 	return &Routes{rt: rt, resolver: resolver, ent: ent, perms: perms, denials: denials, cache: newAuthzCache(o.Clock),
 		impersonation: map[ImpersonationScope]map[permission.Code]struct{}{
 			ScopeReadOnly: impersonationSet(ScopeReadOnly), ScopeFull: impersonationSet(ScopeFull)},
-		session: sl, tenant: tl, timeout: o.LookupTimeout}, nil
+		session: sl, tenant: tl, timeout: o.LookupTimeout, trustIP: o.TrustClientIP}, nil
 }
 
 func withDefaults(c httpx.LimiterConfig, name string, burst int, refill time.Duration, maxKeys int, key httpx.KeyFunc, clk clock.Clock) httpx.LimiterConfig {
@@ -154,6 +158,10 @@ func tenantKey(r *http.Request) (string, bool) {
 	}
 	return s.Actor.TenantID.String(), true
 }
+
+// ClientIP es la IP del cliente de la petición según API_TRUST_CLIENT_IP (ClientIP). Para los handlers de rutas
+// Public, que no pasan por el paso de sesión.
+func (r *Routes) ClientIP(req *http.Request) netip.Addr { return ClientIP(req, r.trustIP) }
 
 // Sweep elimina los buckets llenos de los dos limitadores y devuelve cuántos.
 // Quien arranca el servidor lo llama cada cierto tiempo (#196).
@@ -198,15 +206,21 @@ func (r *Routes) Handle(pattern string, class RouteClass, spec Spec, h http.Hand
 	checkRoute(pattern, class)
 	checkSpec(pattern, class, spec)
 	r.registered = append(r.registered, RouteInfo{Pattern: pattern, Class: class, Spec: spec})
+	var pre []httpx.RouteOption
+	if _, path, _ := strings.Cut(pattern, " "); authPath(path) {
+		// El contrato lo manda en toda ruta /v1/auth/* (conventions.md §3) y lo pone el router, no cada ruta:
+		// va primero, antes de la sesión, para que ninguna ejecute nada con una clave de idempotencia.
+		pre = append(pre, httpx.Use(httpx.RejectIdempotencyKey))
+	}
 	if class == Public {
-		r.rt.HandleV1(pattern, h, opts...)
+		r.rt.HandleV1(pattern, h, append(pre, opts...)...)
 		return
 	}
 	mws := []httpx.Middleware{r.sessionStep(class == Tenant), r.session.Middleware()}
 	if class == Tenant {
 		mws = append(mws, r.tenant.Middleware(), r.entitlementsStep(pattern, spec), r.authzStep(pattern, spec))
 	}
-	r.rt.HandleV1(pattern, h, append([]httpx.RouteOption{httpx.Use(mws...)}, opts...)...)
+	r.rt.HandleV1(pattern, h, append(append(pre, httpx.Use(mws...)), opts...)...)
 }
 
 // RouteInfo es una ruta registrada con su clase y lo que declara en el spec.
@@ -255,8 +269,7 @@ func (r *Routes) sessionStep(needTenant bool) httpx.Middleware {
 				httpx.WriteProblem(w, req, "tenant_access_denied", detail)
 				return
 			}
-			// La ip queda vacía por ahora (clientIP); este es el punto donde la lee la auditoría.
-			ctx := audit.WithClientIP(WithSession(req.Context(), s), clientIP(req))
+			ctx := audit.WithClientIP(WithSession(req.Context(), s), ClientIP(req, r.trustIP))
 			next.ServeHTTP(w, req.WithContext(ctx))
 		})
 	}

@@ -62,7 +62,8 @@ func TestIdentityTablesHaveExactlyTheContractColumns(t *testing.T) {
 			"email_verified": "boolean not null", "password_changed_at": tstz + " null",
 			"failed_logins": "smallint not null", "login_window_started_at": tstz + " null", "reset_mfa_failures": "smallint not null",
 			"locked_until": tstz + " null", "login_lockouts": "smallint not null",
-			"mfa_failed_attempts": "smallint not null", "mfa_locked_until": tstz + " null", "mfa_lockouts": "smallint not null",
+			"login_failure_streak": "smallint not null",
+			"mfa_failed_attempts":  "smallint not null", "mfa_locked_until": tstz + " null", "mfa_lockouts": "smallint not null",
 		},
 		"user_totp": {
 			"user_id": "uuid not null", "secret_enc": "bytea not null", "confirmed_at": tstz + " null",
@@ -204,6 +205,7 @@ func TestUserProfileAndCounterRanges(t *testing.T) {
 		{"failed_logins", 0, true}, {"failed_logins", 5, true}, {"failed_logins", 6, false}, {"failed_logins", -1, false},
 		{"reset_mfa_failures", 10, true}, {"reset_mfa_failures", 11, false}, {"reset_mfa_failures", -1, false},
 		{"login_lockouts", 10, true}, {"login_lockouts", 11, false}, {"login_lockouts", -1, false},
+		{"login_failure_streak", 100, true}, {"login_failure_streak", 101, false}, {"login_failure_streak", -1, false},
 		{"mfa_failed_attempts", 4, true}, {"mfa_failed_attempts", 5, false}, {"mfa_failed_attempts", -1, false},
 		{"mfa_lockouts", 3, true}, {"mfa_lockouts", 4, false}, {"mfa_lockouts", -1, false},
 		{"password_hash", nil, true}, {"password_hash", "$argon2id$v=19$m=65536,t=3,p=2$c2FsdA$aGFzaA", true},
