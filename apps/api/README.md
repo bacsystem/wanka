@@ -14,7 +14,7 @@ para más adelante).
 
 ```
 cmd/wanka/            main: serve, worker, migrate up
-internal/platform/    kernel: config, logging, httpx, auth (+ auth/pgsession, el resolver de sesión), metrics, clock, db (+ db/dbtest para tests), entitlements, permission, jobs en uso;
+internal/platform/    kernel: config, passwordpolicy (lista de contraseñas filtradas, #238), logging, httpx, auth (+ auth/pgsession, el resolver de sesión), metrics, clock, db (+ db/dbtest para tests), entitlements, permission, jobs en uso;
                       fx (tipo de cambio: ops.exchange_rates) en uso;
                       money, idgen (paquetes vacíos por ahora)
 bootstrap/roles.sql   bootstrap de roles: lo corre el superusuario con psql, fuera de goose
@@ -25,6 +25,7 @@ testdata/archlint/    ejemplo de la regla entre módulos para go-arch-lint
 scripts/archlint.sh   corre go-arch-lint y demuestra que una importación prohibida (y un pgxpool fuera de internal/platform/db) falla
 scripts/openapi-check.sh     Redocly lint y oasdiff breaking contra la base (versiones fijadas en el script)
 scripts/migrations-check.sh  check de migraciones solo hacia adelante y sus casos malos
+scripts/breachedgen/         genera internal/platform/passwordpolicy/breached.bin (lista de contraseñas filtradas); ver docs/architecture/data/breached-passwords.md
 ```
 
 ## Compilar y probar
