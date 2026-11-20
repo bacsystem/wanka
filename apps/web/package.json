@@ -10,7 +10,8 @@
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "gen:api": "openapi-typescript ../api/openapi/openapi.yaml -o src/lib/api/schema.d.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
@@ -39,6 +40,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.3.5",
     "jsdom": "^30.0.1",
+    "openapi-typescript": "7.13.0",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^5.0.0"

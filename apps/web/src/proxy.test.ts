@@ -7,7 +7,7 @@ function call(path: string) {
 }
 
 describe("proxy", () => {
-  it.each(["/ventas", "/clientes", "/configuracion/usuarios", "/inventario/stock", "/ventas/comprobantes/F001-00000001", "/inventario/recepcion/g.1", "/catalogo/variantes/s.k", "/clientes/abc.def", "/clientes/a.b/historia", "/ventas.txt", "/api/x", "/api/v1/ventas"])(
+  it.each(["/ventas", "/clientes", "/configuracion/usuarios", "/inventario/stock", "/ventas/comprobantes/F001-00000001", "/inventario/recepcion/g.1", "/catalogo/variantes/s.k", "/clientes/abc.def", "/clientes/a.b/historia", "/ventas.txt", "/api/x", "/api/v1/ventas", "/api/auth/refresh", "/api/auth/logout"])(
     "%s se reescribe al 404",
     (path) => {
       const res = call(path);
@@ -16,7 +16,7 @@ describe("proxy", () => {
     },
   );
 
-  it.each(["/", "/login", "/seleccionar-empresa", "/admin/empresas"])("%s sigue su camino", (path) => {
+  it.each(["/", "/login", "/seleccionar-empresa", "/admin/empresas", "/api/auth/login"])("%s sigue su camino", (path) => {
     const res = call(path);
     expect(res.status).toBe(200);
     expect(res.headers.get("x-middleware-rewrite")).toBeNull();

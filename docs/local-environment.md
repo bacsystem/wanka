@@ -65,3 +65,7 @@ Cuando estén el login (#24) y la semilla (`make seed`):
 5. `make down` al terminar.
 
 Hoy (sin login ni semilla) se puede comprobar `make up`, las rutas de salud, el shell vacío y `make test-api`.
+
+## E2E del login (#24)
+
+`pnpm --filter web test:e2e login` corre contra la API real: si `WANKA_API_URL` (por defecto `http://127.0.0.1:58080`) responde en `/readyz`, `e2e/global-setup.ts` siembra por `docker exec wanka-local-pg psql` (se cambia con `E2E_DB_CONTAINER`) una empresa y, por proyecto de Playwright, cuatro usuarios (`e2e-{ok,bad,nomembership,mfa}-{desktop,tablet,mobile}@e2e.wanka.test`) con una contraseña aleatoria de esa corrida; no hay credenciales en el repositorio. Sin la API, los specs se saltan. Hasta que exista `make seed`, esto es lo único que crea usuarios.

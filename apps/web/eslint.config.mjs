@@ -98,6 +98,8 @@ const eslintConfig = defineConfig([
     "playwright-report/**",
     "test-results/**",
     "blob-report/**",
+    // Generado por `pnpm gen:api` desde apps/api/openapi/ (lo guarda lib/api/schema.test.ts).
+    "src/lib/api/schema.d.ts",
   ]),
 ]);
 
