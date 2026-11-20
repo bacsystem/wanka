@@ -19,7 +19,7 @@ cleanup() { docker rm -fv "$N" >/dev/null 2>&1; }
 cleanup
 trap cleanup EXIT INT TERM
 docker run -d --name "$N" --tmpfs /var/lib/postgresql/data -e POSTGRES_PASSWORD=x -e POSTGRES_DB=wanka -e POSTGRES_HOST_AUTH_METHOD=trust \
-  -v "$D":/sql:ro -v "$M":/migrations:ro postgres:16-alpine >/dev/null || exit 2
+  -v "$D":/sql:ro -v "$M":/migrations:ro postgres:16-alpine@sha256:1758b87430847848ff5a71cbdd898c7a21e469166c3e25244940f05ea97800ad >/dev/null || exit 2
 for i in $(seq 1 30); do docker exec "$N" pg_isready -U postgres -d wanka -h 127.0.0.1 >/dev/null 2>&1 && break; sleep 1; done
 P="docker exec $N psql -h 127.0.0.1 -d wanka -X -q -v VERBOSITY=terse"
 step() { label=$1; shift; echo "### $label"; "$@" || { echo "FAILED at: $label"; cleanup; exit 1; }; }

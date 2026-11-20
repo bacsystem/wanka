@@ -5,7 +5,7 @@ name: wanka-local
 
 services:
   postgres:
-    image: postgres:16-alpine
+    image: postgres:16-alpine@sha256:1758b87430847848ff5a71cbdd898c7a21e469166c3e25244940f05ea97800ad
     container_name: wanka-local-pg
     environment:
       POSTGRES_USER: postgres
@@ -25,7 +25,7 @@ services:
 
   # Una sola vez (perfil `tools`, lo lanza `make roles`): bootstrap de roles y claves.
   roles:
-    image: postgres:16-alpine
+    image: postgres:16-alpine@sha256:1758b87430847848ff5a71cbdd898c7a21e469166c3e25244940f05ea97800ad
     profiles: ["tools"]
     depends_on:
       postgres:

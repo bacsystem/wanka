@@ -41,7 +41,7 @@ up: env ## PostgreSQL + roles + migraciones + API + web (en segundo plano)
 
 # Se invoca de nuevo para que make relea .env.local si `env` lo acaba de crear
 _up:
-	$(DC) up -d --wait postgres
+	@$(DC) up -d --wait postgres
 	@$(MAKE) --no-print-directory roles migrate
 	@mkdir -p $(STATE)
 	@$(MAKE) --no-print-directory _start-api _start-web
@@ -80,8 +80,9 @@ reset: _stop-procs ## Borra contenedor, volumen de datos y estado local (pide co
 	rm -f .local/api.log .local/web.log .local/wanka
 
 roles: env ## Bootstrap de roles y claves locales (idempotente)
-	$(DC) up -d --wait postgres
-	$(DC) --profile tools run --rm roles
+	@$(DC) up -d --wait postgres
+	@docker exec -e PGPASSWORD="$$POSTGRES_SUPERUSER_PASSWORD" wanka-local-pg psql -h 127.0.0.1 -U postgres -d wanka -Atc 'select 1' >/dev/null 2>&1 || { echo "La clave de $(ENV_FILE) no coincide con el volumen wanka-local-pgdata (creado con otra clave). Corre: make reset, y luego make up" >&2; exit 1; }
+	@$(DC) --profile tools run --rm roles
 
 migrate: env ## Aplica las migraciones (wanka migrate up)
 	@cd apps/api && DATABASE_URL_MIGRATOR=$(MIGRATOR_URL) go run ./cmd/wanka migrate up
@@ -92,7 +93,7 @@ seed: ## Empresa y usuarios de prueba (pendiente de #24)
 	else echo "make seed: todavia no existe 'wanka dev-seed'; se completa con #24 (hasher de contrasenas del login)." >&2; exit 1; fi
 
 api: env ## API en primer plano (go run), para depurar
-	cd apps/api && $(API_ENV) go run ./cmd/wanka serve --plane=tenant
+	@cd apps/api && $(API_ENV) go run ./cmd/wanka serve --plane=tenant
 
 web: env ## Web en primer plano (pnpm dev)
 	WANKA_API_URL=http://127.0.0.1:$(WANKA_API_PORT) pnpm --filter web exec next dev -p $(WANKA_WEB_PORT)

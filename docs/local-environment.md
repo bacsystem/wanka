@@ -40,13 +40,19 @@ La API no va en un contenedor: `go build` local evita mantener una imagen y reut
 
 El único volumen de este entorno es `wanka-local-pgdata` (nombre fijo). El servicio `roles` y `rls-check` usan `tmpfs` para el directorio de datos, así que no dejan volúmenes anónimos. `make prune-volumes` limpia los que dejaron versiones anteriores.
 
+## Pruebas sueltas
+
+- Una prueba unitaria: `pnpm --filter web exec vitest run src/lib/format.test.ts`.
+- Un proyecto E2E: `pnpm --filter web exec playwright test --project=mobile -g "sidebar"`.
+- Primera corrida de E2E: `pnpm --filter web exec playwright install chromium`.
+
 ## Claves
 
 `make env` (lo llama `make up`) copia `.env.example` a `.env.local` y reemplaza los `CHANGE_ME` por valores aleatorios. `.env.local` y `.local/` están en `.gitignore`: nunca se versionan. Todos los roles de base comparten la misma clave local; no uses estas claves fuera de tu máquina.
 
 ## Resetear
 
-`make reset` y luego `make up`. Solo toca el proyecto `wanka-local`; los demás contenedores del equipo no se tocan. Si cambiás `WANKA_PG_PORT` o las claves después del primer `make up`, hacé `make reset` (la clave queda guardada en el volumen).
+`make reset` y luego `make up`. Solo toca el proyecto `wanka-local`; los demás contenedores del equipo no se tocan. Si cambiás `WANKA_PG_PORT` o las claves después del primer `make up`, hacé `make reset` (la clave queda guardada en el volumen; `make up` lo detecta y lo dice).
 
 ## Prueba de punta a punta
 
