@@ -144,9 +144,11 @@ func (u *userTx) LockAccount(ctx context.Context, streak int) (bool, error) {
 		return false, fmt.Errorf("locking the account: %w", err)
 	}
 	// El aviso va en la misma transacción: si el bloqueo se revierte, no hay aviso. Único por usuario y fin del bloqueo.
-	args := app.LockoutNoticeArgs{UserID: u.id, LockedUntil: until.Time.UTC(), Closed: lo.Closed}
-	if lo.Closed {
-		args.LockedUntil = time.Time{}
+	// El cierre no tiene fin de bloqueo: sin locked_until, único por usuario (closed) mientras el aviso esté en curso.
+	args := app.LockoutNoticeArgs{UserID: u.id, Closed: lo.Closed}
+	if !lo.Closed {
+		t := until.Time.UTC()
+		args.LockedUntil = &t
 	}
 	if err := u.enq.InsertTx(ctx, u.tx, args, jobs.WithQueue(jobs.QueueNotifications), jobs.WithUnique()); err != nil {
 		return false, fmt.Errorf("enqueueing the lockout notice: %w", err)
