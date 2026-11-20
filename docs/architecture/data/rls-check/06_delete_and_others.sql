@@ -5,9 +5,10 @@ SELECT test.assert((SELECT count(*) FROM iam.memberships) = 0 AND (SELECT count(
 -- (como wanka_migrator) borrar la membresía del cajero
 BEGIN;
 SELECT set_config('app.tenant_id','aaaaaaaa-0000-0000-0000-000000000001', true);
--- iam.guard_membership_deletes solo deja borrar una invitada (#232): el duenio la deja invitada antes, como una anulada.
-UPDATE iam.memberships SET status = 'invitado' WHERE id = '3e000000-0000-0000-0000-0000000000c1';
+-- iam.guard_membership_deletes solo deja borrar una invitada (#232), tampoco al duenio: lo apaga solo dentro de esta transaccion.
+ALTER TABLE iam.memberships DISABLE TRIGGER memberships_guard_deletes;
 DELETE FROM iam.memberships WHERE id = '3e000000-0000-0000-0000-0000000000c1';
+ALTER TABLE iam.memberships ENABLE TRIGGER memberships_guard_deletes;
 COMMIT;
 -- (como wanka_migrator) FORCE ROW LEVEL SECURITY tambien en audit.events: el duenio sin tenant fijado ve 0 eventos aunque haya (#173).
 SELECT test.assert((SELECT count(*) FROM audit.events) = 0, 'FORCE RLS: el duenio sin tenant ve 0 eventos de audit.events');

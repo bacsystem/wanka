@@ -423,6 +423,8 @@ SELECT test.expect_error($$INSERT INTO iam.role_permissions VALUES ('aaaaaaaa-00
   '23505', 'role_permissions: la PK es (tenant, rol, permiso)');
 SELECT test.expect_error($$INSERT INTO iam.role_permissions VALUES ('bbbbbbbb-0000-0000-0000-000000000002','b0000000-0000-0000-0000-0000000000b1','ventas.pos:create')$$,
   '42501', 'role_permissions: la RLS rechaza una fila de otra empresa');
+SELECT test.expect_error($$INSERT INTO iam.role_permissions VALUES ('aaaaaaaa-0000-0000-0000-000000000001','a0000000-0000-0000-0000-0000000000a3','ventas.pos:read')$$,
+  '42501', 'role_permissions: un rol system no tiene filas propias (sus permisos salen de la plantilla)');
 INSERT INTO iam.role_permissions VALUES ('aaaaaaaa-0000-0000-0000-000000000001','a0000000-0000-0000-0000-0000000000a2','ventas.pos:create');
 SELECT test.assert((SELECT count(*) FROM iam.role_permissions) = 2, 'role_permissions: inserta un permiso de un rol propio');
 SELECT test.expect_error($$INSERT INTO iam.membership_sites VALUES ('aaaaaaaa-0000-0000-0000-000000000001','3e000000-0000-0000-0000-0000000000c1','b5000000-0000-0000-0000-0000000000b1')$$,
@@ -480,6 +482,8 @@ SELECT test.expect_error($$UPDATE iam.roles SET template_code = 'dueno', system 
 SELECT test.expect_error($$UPDATE iam.roles SET system = false, template_code = NULL WHERE name = 'Dueno'$$, '42501', 'R4c: un rol base no pasa a propio');
 SELECT test.expect_error($$UPDATE iam.roles SET template_code = 'cajero' WHERE name = 'Dueno'$$, '42501', 'R4d: un rol base no cambia de plantilla');
 SELECT test.expect_error($$UPDATE iam.roles SET name = 'Jefe' WHERE name = 'Dueno'$$, '42501', 'R4e: no se renombra un rol system');
+SELECT test.expect_error($$UPDATE iam.roles SET id = gen_random_uuid() WHERE name = 'Dueno'$$, '42501', 'R4h: un rol system no cambia de id');
+SELECT test.expect_error($$UPDATE iam.roles SET created_at = '2000-01-01' WHERE name = 'Dueno'$$, '42501', 'R4h: un rol system no cambia created_at');
 SELECT test.expect_error($$UPDATE iam.roles SET requires_mfa = false WHERE name = 'Dueno'$$, '42501', 'R4f: requires_mfa de un rol system no baja de su plantilla');
 -- En A: el trigger (BEFORE) lo rechaza antes que el indice unico de la plantilla, que sin el daria 23505.
 SELECT test.expect_error($$INSERT INTO iam.roles (id, tenant_id, name, system, template_code, requires_mfa) VALUES (gen_random_uuid(), 'aaaaaaaa-0000-0000-0000-000000000001', 'Dueno 2', true, 'dueno', false)$$,
@@ -511,11 +515,17 @@ SELECT set_config('app.tenant_id','aaaaaaaa-0000-0000-0000-000000000001', true);
 SELECT test.expect_error($$DELETE FROM iam.memberships WHERE id = '3e000000-0000-0000-0000-0000000000c1'$$, '42501', 'R5a: no se borra una membresia activa');
 UPDATE iam.memberships SET status = 'suspendido' WHERE id = '3e000000-0000-0000-0000-0000000000e1';
 SELECT test.expect_error($$DELETE FROM iam.memberships WHERE id = '3e000000-0000-0000-0000-0000000000e1'$$, '42501', 'R5b: no se borra una membresia suspendida');
-UPDATE iam.memberships SET status = 'invitado' WHERE id = '3e000000-0000-0000-0000-0000000000e1';
-INSERT INTO iam.membership_sites VALUES ('aaaaaaaa-0000-0000-0000-000000000001', '3e000000-0000-0000-0000-0000000000e1', 'a5000000-0000-0000-0000-0000000000a1');
-DELETE FROM iam.memberships WHERE id = '3e000000-0000-0000-0000-0000000000e1';
-SELECT test.assert((SELECT count(*) FROM iam.memberships WHERE id = '3e000000-0000-0000-0000-0000000000e1') = 0
-                   AND (SELECT count(*) FROM iam.membership_sites WHERE membership_id = '3e000000-0000-0000-0000-0000000000e1') = 0,
+-- R5d: una membresia que dejo de ser invitada no vuelve a serlo (si no, activo/suspendido -> invitado -> DELETE saltaria la guarda).
+SELECT test.expect_error($$UPDATE iam.memberships SET status = 'invitado' WHERE id = '3e000000-0000-0000-0000-0000000000e1'$$, '42501', 'R5d: suspendido no vuelve a invitado');
+SELECT test.expect_error($$UPDATE iam.memberships SET status = 'invitado' WHERE id = '3e000000-0000-0000-0000-0000000000c1'$$, '42501', 'R5d: activo no vuelve a invitado');
+-- R5c: una invitacion que nunca dejo de serlo se anula, con sus sedes.
+INSERT INTO iam.users (id, email) VALUES ('eeeeeeee-0000-0000-0000-0000000000f1', 'invitado@a.pe');
+INSERT INTO iam.memberships (id, tenant_id, user_id, role_id, all_sites, status)
+  VALUES ('3e000000-0000-0000-0000-0000000000f1', 'aaaaaaaa-0000-0000-0000-000000000001', 'eeeeeeee-0000-0000-0000-0000000000f1', 'a0000000-0000-0000-0000-0000000000a2', false, 'invitado');
+INSERT INTO iam.membership_sites VALUES ('aaaaaaaa-0000-0000-0000-000000000001', '3e000000-0000-0000-0000-0000000000f1', 'a5000000-0000-0000-0000-0000000000a1');
+DELETE FROM iam.memberships WHERE id = '3e000000-0000-0000-0000-0000000000f1';
+SELECT test.assert((SELECT count(*) FROM iam.memberships WHERE id = '3e000000-0000-0000-0000-0000000000f1') = 0
+                   AND (SELECT count(*) FROM iam.membership_sites WHERE membership_id = '3e000000-0000-0000-0000-0000000000f1') = 0,
                    'R5c: una invitacion se anula, con sus sedes');
 DELETE FROM iam.membership_sites WHERE membership_id = '3e000000-0000-0000-0000-0000000000c1';
 ROLLBACK;

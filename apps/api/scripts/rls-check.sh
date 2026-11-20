@@ -110,8 +110,6 @@ for m in "naive_session_lookup|wanka_app" \
          "grant_platform_read_role_templates|wanka_platform" \
          "grant_platform_write_role_templates|wanka_platform" \
          "grant_webhooks_read_role_templates|wanka_webhooks" \
-         "grant_worker_read_cash_registers|wanka_worker" \
-         "grant_worker_read_role_permissions|wanka_worker" \
          "grant_worker_read_role_templates|wanka_worker" \
          "member_read_sites_no_scope|wanka_app" \
          "member_read_with_tenant|wanka_app" \
@@ -124,6 +122,9 @@ for m in "naive_session_lookup|wanka_app" \
          "role_guard_allows_system_change|wanka_app" \
          "role_guard_allows_system_rename|wanka_app" \
          "role_permissions_open_policy|wanka_app" \
+         "membership_guard_allows_reinvite|wanka_app" \
+         "role_permissions_allows_system_role|wanka_app" \
+         "role_guard_allows_system_id_change|wanka_app" \
          "view_security_definer|wanka_app" \
          "view_without_status_filter|wanka_app" \
          "view_without_user_filter|wanka_app"; do

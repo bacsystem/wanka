@@ -120,6 +120,10 @@ CREATE POLICY member_read ON iam.roles FOR SELECT USING (
   tenant_id = app.current_tenant()
   OR (app.current_tenant() IS NULL AND id IN (SELECT role_id FROM iam.memberships
             WHERE user_id = app.current_user_id() AND status IN ('invitado','activo'))));
+-- OJO (revisión del PR #245): PostgreSQL comprueba los privilegios de TODA la política con el rol que consulta, aunque la rama
+-- por usuario no se ejecute. Quien lea o borre sedes necesita SELECT en iam.memberships e iam.membership_sites, y quien lea
+-- cajas, además SELECT en org.sites. Hoy solo wanka_app lee sedes y cajas; el GRANT para wanka_worker (sincronización con
+-- Khipu, #33) y wanka_definer (purga de empresa cerrada, #246) lo agrega la historia que los haga leer, no esta.
 CREATE POLICY member_read ON org.sites FOR SELECT USING (
   tenant_id = app.current_tenant()
   OR (app.current_tenant() IS NULL AND EXISTS (SELECT 1 FROM iam.memberships m
@@ -160,6 +164,11 @@ BEGIN
     IF OLD.system AND NEW.name IS DISTINCT FROM OLD.name THEN
       RAISE EXCEPTION 'a system role is not renamed' USING ERRCODE = 'insufficient_privilege';
     END IF;
+    -- Un rol base no se edita en nada más que requires_mfa (subirlo), version y updated_at: ni id ni created_at.
+    IF OLD.system AND pg_catalog.to_jsonb(NEW) - 'requires_mfa' - 'version' - 'updated_at'
+                      <> pg_catalog.to_jsonb(OLD) - 'requires_mfa' - 'version' - 'updated_at' THEN
+      RAISE EXCEPTION 'a system role is only edited in requires_mfa' USING ERRCODE = 'insufficient_privilege';
+    END IF;
   END IF;
   -- INSERT o UPDATE de un rol base: requires_mfa no queda por debajo del de su plantilla (subirlo sí se puede).
   IF NEW.template_code IS NOT NULL THEN
@@ -191,6 +200,42 @@ END $$;
 -- +goose StatementEnd
 CREATE TRIGGER memberships_guard_deletes BEFORE DELETE ON iam.memberships
   FOR EACH ROW EXECUTE FUNCTION iam.guard_membership_deletes();
+
+-- wanka_app tiene UPDATE de fila completa en iam.memberships: sin esta guarda, activo/suspendido -> invitado -> DELETE
+-- saltaría la de arriba (revisión del PR #245). Una membresía que dejó de ser invitada no vuelve a serlo.
+-- +goose StatementBegin
+CREATE FUNCTION iam.guard_membership_updates() RETURNS trigger
+  LANGUAGE plpgsql
+  SET search_path = pg_catalog, pg_temp
+AS $$
+BEGIN
+  IF NEW.status = 'invitado' AND OLD.status <> 'invitado'
+     AND NOT coalesce((SELECT r.rolsuper FROM pg_catalog.pg_roles r WHERE r.rolname = current_user), false) THEN
+    RAISE EXCEPTION 'a membership never goes back to invited' USING ERRCODE = 'insufficient_privilege';
+  END IF;
+  RETURN NEW;
+END $$;
+-- +goose StatementEnd
+CREATE TRIGGER memberships_guard_status BEFORE UPDATE OF status ON iam.memberships
+  FOR EACH ROW EXECUTE FUNCTION iam.guard_membership_updates();
+
+-- Un rol base (system) no tiene filas en iam.role_permissions: sus permisos salen de su plantilla (data-model §6). Un bug de
+-- la app no le agrega permisos propios a un rol base (revisión del PR #245).
+-- +goose StatementBegin
+CREATE FUNCTION iam.guard_role_permission_writes() RETURNS trigger
+  LANGUAGE plpgsql
+  SET search_path = pg_catalog, pg_temp
+AS $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM iam.roles r WHERE r.tenant_id = NEW.tenant_id AND r.id = NEW.role_id AND r.system)
+     AND NOT coalesce((SELECT r.rolsuper FROM pg_catalog.pg_roles r WHERE r.rolname = current_user), false) THEN
+    RAISE EXCEPTION 'a system role takes its permissions from its template' USING ERRCODE = 'insufficient_privilege';
+  END IF;
+  RETURN NEW;
+END $$;
+-- +goose StatementEnd
+CREATE TRIGGER role_permissions_guard_writes BEFORE INSERT ON iam.role_permissions
+  FOR EACH ROW EXECUTE FUNCTION iam.guard_role_permission_writes();
 
 -- ===== Vista de membresías propias (ADR 0001, «Caminos que no tienen un tenant fijado», 1) =====
 -- security_invoker: corre con los permisos y la RLS de quien llama, no es SECURITY DEFINER. Filtra por app.user_id de la

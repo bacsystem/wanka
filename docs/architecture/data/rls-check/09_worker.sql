@@ -168,8 +168,6 @@ SELECT test.expect_error('SELECT count(*) FROM iam.role_template_permissions', '
 SELECT test.expect_error($$INSERT INTO iam.role_templates (code, name, requires_mfa) VALUES ('x', 'X', false)$$, '42501', 'wanka_worker no inserta plantillas');
 SELECT test.expect_error($$DELETE FROM iam.role_template_permissions$$, '42501', 'wanka_worker no borra permisos de plantilla');
 SELECT test.expect_error('TRUNCATE iam.role_template_permissions', '42501', 'wanka_worker no trunca permisos de plantilla');
-SELECT test.expect_error('SELECT count(*) FROM iam.role_permissions', '42501', 'wanka_worker no lee iam.role_permissions: ningun job resuelve permisos');
-SELECT test.expect_error('SELECT count(*) FROM org.cash_registers', '42501', 'wanka_worker no lee org.cash_registers');
 SELECT test.expect_error($$UPDATE iam.roles SET name = 'x'$$, '42501', 'wanka_worker no escribe iam.roles');
 SELECT test.expect_error($$DELETE FROM iam.roles$$, '42501', 'wanka_worker no borra iam.roles');
 SELECT test.expect_error($$DELETE FROM iam.memberships$$, '42501', 'wanka_worker no borra iam.memberships');

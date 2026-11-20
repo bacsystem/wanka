@@ -314,6 +314,8 @@ func TestGuardRoleWritesRejectsEachRuleForWankaApp(t *testing.T) {
 		{"change only the template of an own role", `UPDATE iam.roles SET template_code = 'cajero' WHERE id = '` + ownA + `'`},
 		{"change only system of an own role", `UPDATE iam.roles SET system = true WHERE id = '` + ownA + `'`},
 		{"move a system role to another template", `UPDATE iam.roles SET template_code = 'cajero' WHERE id = '` + sysDueno + `'`},
+		{"change the id of a system role", `UPDATE iam.roles SET id = gen_random_uuid() WHERE id = '` + sysDueno + `'`},
+		{"change created_at of a system role", `UPDATE iam.roles SET created_at = '2000-01-01' WHERE id = '` + sysDueno + `'`},
 		{"rename a system role", `UPDATE iam.roles SET name = 'Jefe' WHERE id = '` + sysDueno + `'`},
 		{"lower requires_mfa of a system role below its template", `UPDATE iam.roles SET requires_mfa = false WHERE id = '` + sysDueno + `'`},
 		{"insert a system role below the template requires_mfa", `INSERT INTO iam.roles (id, tenant_id, name, system, template_code, requires_mfa) VALUES (gen_random_uuid(), '` + tenB + `', 'Dueño', true, 'dueno', false)`},
@@ -384,12 +386,46 @@ func TestGuardMembershipDeletes(t *testing.T) {
 	if err := asApp(t, app, tenA, "", `DELETE FROM iam.memberships WHERE id = '`+memU2A+`'`); err != nil {
 		t.Fatalf("deleting an invited membership: %v", err)
 	}
+	// Volver a invitado para saltar la guarda del DELETE: activo y suspendido lo rechazan.
+	for _, id := range []string{memU1A, memU3A} {
+		wantState(t, asApp(t, app, tenA, "", `UPDATE iam.memberships SET status = 'invitado' WHERE id = '`+id+`'`), "42501", "re-invite "+id)
+	}
+	// Mutación: sin el trigger de estado, activo -> invitado -> DELETE borra una membresía activa.
+	if _, err := admin.Exec(ctx, `DROP TRIGGER memberships_guard_status ON iam.memberships`); err != nil {
+		t.Fatal(err)
+	}
+	if err := asApp(t, app, tenA, "", `UPDATE iam.memberships SET status = 'invitado' WHERE id = '`+memU1A+`'`); err != nil {
+		t.Errorf("without the status trigger the re-invite should pass: %v", err)
+	}
 	// Mutación: sin el trigger la activa se borra.
 	if _, err := admin.Exec(ctx, `DROP TRIGGER memberships_guard_deletes ON iam.memberships`); err != nil {
 		t.Fatal(err)
 	}
 	if err := asApp(t, app, tenA, "", `DELETE FROM iam.memberships WHERE id = '`+memU3A+`'`); err != nil {
 		t.Errorf("without the trigger the suspended membership should be deletable: %v", err)
+	}
+}
+
+func TestRolePermissionsRejectsSystemRoles(t *testing.T) {
+	ctx := context.Background()
+	d := migrated(t)
+	admin := seedIdentity(ctx, t, d)
+	const sysDueno = "c0000000-0000-0000-0000-000000000001"
+	if _, err := admin.Exec(ctx, `INSERT INTO iam.roles (id, tenant_id, name, system, template_code, requires_mfa) VALUES ('`+sysDueno+`', '`+tenA+`', 'Dueño', true, 'dueno', true)`); err != nil {
+		t.Fatal(err)
+	}
+	app := connectAs(t, d, dbtest.App)
+	ins := `INSERT INTO iam.role_permissions VALUES ('` + tenA + `', '` + sysDueno + `', 'identidad.users:read')`
+	wantState(t, asApp(t, app, tenA, "", ins), "42501", "permissions of a system role")
+	if err := asApp(t, app, tenA, "", `INSERT INTO iam.role_permissions VALUES ('`+tenA+`', '`+roleA+`', 'identidad.users:read')`); err != nil {
+		t.Errorf("an own role takes permissions: %v", err)
+	}
+	// Mutación: sin el trigger, el rol base recibe la fila.
+	if _, err := admin.Exec(ctx, `DROP TRIGGER role_permissions_guard_writes ON iam.role_permissions`); err != nil {
+		t.Fatal(err)
+	}
+	if err := asApp(t, app, tenA, "", ins); err != nil {
+		t.Errorf("without the trigger the insert should pass: %v", err)
 	}
 }
 
@@ -718,16 +754,14 @@ func TestListMyMembershipsUnder50ms(t *testing.T) {
 		t.Errorf("p95 = %v, want < 50ms", p95)
 	}
 
-	// EXPLAIN: el plan usa índices en las tablas grandes (ninguna búsqueda secuencial sobre cajas, sedes ni membresías).
+	// EXPLAIN con el planificador por defecto sobre datos con ANALYZE (lo que pide el criterio): sin búsquedas secuenciales sobre
+	// las tablas que crecen (sedes, cajas y alcance), y la búsqueda de membresías entra por el índice de user_id.
 	tx, err := app.Begin(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer tx.Rollback(ctx) //nolint:errcheck // solo lectura
 	setVars(t, tx, "", user)
-	if _, err := tx.Exec(ctx, `SET LOCAL enable_seqscan = off`); err != nil {
-		t.Fatal(err)
-	}
 	rows, err := tx.Query(ctx, `EXPLAIN SELECT membership_id, sites, cash_registers FROM iam.list_my_memberships`)
 	if err != nil {
 		t.Fatal(err)
@@ -742,11 +776,11 @@ func TestListMyMembershipsUnder50ms(t *testing.T) {
 		plan = append(plan, line)
 	}
 	text := strings.Join(plan, "\n")
-	// Con enable_seqscan = off solo queda un Seq Scan si la tabla no tiene ningún índice utilizable.
+	t.Logf("plan:\n%s", text)
 	if !strings.Contains(text, "memberships_user_id_idx") {
 		t.Errorf("the plan does not use memberships_user_id_idx:\n%s", text)
 	}
-	for _, tbl := range []string{"memberships", "sites", "cash_registers", "membership_sites", "roles"} {
+	for _, tbl := range []string{"sites", "cash_registers", "membership_sites"} {
 		if strings.Contains(text, "Seq Scan on "+tbl) {
 			t.Errorf("the plan scans %s sequentially:\n%s", tbl, text)
 		}
