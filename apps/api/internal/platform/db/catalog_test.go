@@ -64,13 +64,13 @@ const purgeQual24h = "((app.current_tenant() IS NULL) AND (created_at < (now() -
 // (a) más las políticas de limpieza del ADR 0012; incluye tablas que llegan en
 // olas siguientes, porque la lista es del ADR y la regla solo la consulta.
 var policyAllow = map[string]policyRule{
-	"iam.memberships:own_memberships": {cmds: []string{"SELECT"}, userIs: true, qual: qualOwnMemberships, reason: reasonNoTenantPaths},
+	"iam.memberships:own_memberships": {cmds: []string{"SELECT"}, roles: []string{"wanka_app"}, userIs: true, qual: qualOwnMemberships, reason: reasonNoTenantPaths},
 	// El ADR no escribe el USING de esta; la migración de #232 lo escribe con el mismo filtro de estado y aquí queda fijado.
-	"iam.membership_sites:own_memberships":    {cmds: []string{"SELECT"}, userIs: true, mustContain: []string{"status", "invitado", "activo"}, qual: qualMembershipSitesOwn, reason: reasonNoTenantPaths},
-	"org.tenants:member_read":                 {cmds: []string{"SELECT"}, userIs: true, qual: qualTenantsMemberRead, reason: reasonNoTenantPaths},
-	"iam.roles:member_read":                   {cmds: []string{"SELECT"}, userIs: true, qual: qualRolesMemberRead, reason: reasonNoTenantPaths},
-	"org.sites:member_read":                   {cmds: []string{"SELECT"}, userIs: true, qual: qualSitesMemberRead, reason: reasonNoTenantPaths},
-	"org.cash_registers:member_read":          {cmds: []string{"SELECT"}, userIs: true, qual: qualCashRegistersMemberRead, reason: reasonNoTenantPaths},
+	"iam.membership_sites:own_memberships":    {cmds: []string{"SELECT"}, roles: []string{"wanka_app"}, userIs: true, mustContain: []string{"status", "invitado", "activo"}, qual: qualMembershipSitesOwn, reason: reasonNoTenantPaths},
+	"org.tenants:member_read":                 {cmds: []string{"SELECT"}, roles: []string{"wanka_app"}, userIs: true, qual: qualTenantsMemberRead, reason: reasonNoTenantPaths},
+	"iam.roles:member_read":                   {cmds: []string{"SELECT"}, roles: []string{"wanka_app"}, userIs: true, qual: qualRolesMemberRead, reason: reasonNoTenantPaths},
+	"org.sites:member_read":                   {cmds: []string{"SELECT"}, roles: []string{"wanka_app"}, userIs: true, qual: qualSitesMemberRead, reason: reasonNoTenantPaths},
+	"org.cash_registers:member_read":          {cmds: []string{"SELECT"}, roles: []string{"wanka_app"}, userIs: true, qual: qualCashRegistersMemberRead, reason: reasonNoTenantPaths},
 	"org.tenants:platform_rw":                 {cmds: []string{"ALL", "SELECT", "UPDATE"}, roles: []string{"wanka_platform"}, qual: "true", reason: "ADR 0001, matriz de GRANT: única política que no es solo de lectura, limitada TO wanka_platform"},
 	"ops.idempotency_keys:purge_expired_read": {cmds: []string{"SELECT"}, roles: []string{"wanka_worker"}, userIs: true, qual: purgeQual24h, reason: "ADR 0012: limpieza sin tenant de wanka_worker, solo filas de más de 24 h"},
 	"ops.idempotency_keys:purge_expired":      {cmds: []string{"DELETE"}, roles: []string{"wanka_worker"}, userIs: true, qual: purgeQual24h, reason: "ADR 0012: limpieza sin tenant de wanka_worker, solo filas de más de 24 h"},
@@ -1160,26 +1160,26 @@ DROP POLICY IF EXISTS own_memberships ON iam.membership_sites;
 DROP POLICY IF EXISTS member_read ON org.sites;
 DROP POLICY IF EXISTS member_read ON org.cash_registers;
 DROP POLICY IF EXISTS own_memberships ON iam.memberships;
-CREATE POLICY own_memberships ON iam.memberships FOR SELECT USING (app.current_tenant() IS NULL AND user_id = app.current_user_id() AND status IN ('invitado','activo'));
-CREATE POLICY own_memberships ON iam.membership_sites FOR SELECT USING (
+CREATE POLICY own_memberships ON iam.memberships FOR SELECT TO wanka_app USING (app.current_tenant() IS NULL AND user_id = app.current_user_id() AND status IN ('invitado','activo'));
+CREATE POLICY own_memberships ON iam.membership_sites FOR SELECT TO wanka_app USING (
   app.current_tenant() IS NULL AND membership_id IN (SELECT id FROM iam.memberships
             WHERE user_id = app.current_user_id() AND status IN ('invitado','activo')));
 DROP POLICY IF EXISTS member_read ON org.tenants;
-CREATE POLICY member_read ON org.tenants FOR SELECT USING (id = app.current_tenant() OR (app.current_tenant() IS NULL AND id IN (SELECT tenant_id FROM iam.memberships WHERE user_id = app.current_user_id() AND status IN ('invitado','activo'))));
+CREATE POLICY member_read ON org.tenants FOR SELECT TO wanka_app USING (id = app.current_tenant() OR (app.current_tenant() IS NULL AND id IN (SELECT tenant_id FROM iam.memberships WHERE user_id = app.current_user_id() AND status IN ('invitado','activo'))));
 DROP POLICY IF EXISTS platform_rw ON org.tenants;
 CREATE POLICY platform_rw ON org.tenants TO wanka_platform USING (true) WITH CHECK (true);
 DROP POLICY IF EXISTS member_read ON iam.roles;
-CREATE POLICY member_read ON iam.roles FOR SELECT USING (
+CREATE POLICY member_read ON iam.roles FOR SELECT TO wanka_app USING (
   tenant_id = app.current_tenant()
   OR (app.current_tenant() IS NULL AND id IN (SELECT role_id FROM iam.memberships
             WHERE user_id = app.current_user_id() AND status IN ('invitado','activo'))));
-CREATE POLICY member_read ON org.sites FOR SELECT USING (
+CREATE POLICY member_read ON org.sites FOR SELECT TO wanka_app USING (
   tenant_id = app.current_tenant()
   OR (app.current_tenant() IS NULL AND EXISTS (SELECT 1 FROM iam.memberships m
              WHERE m.user_id = app.current_user_id() AND m.status = 'activo' AND m.tenant_id = sites.tenant_id
                AND (m.all_sites OR EXISTS (SELECT 1 FROM iam.membership_sites ms
                                            WHERE ms.membership_id = m.id AND ms.site_id = sites.id)))));
-CREATE POLICY member_read ON org.cash_registers FOR SELECT USING (
+CREATE POLICY member_read ON org.cash_registers FOR SELECT TO wanka_app USING (
   tenant_id = app.current_tenant()
   OR (app.current_tenant() IS NULL AND site_id IN (SELECT id FROM org.sites)));
 `

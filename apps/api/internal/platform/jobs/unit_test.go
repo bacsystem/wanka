@@ -60,7 +60,7 @@ func TestConfigFromEnv(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		want := map[string]int{"cpe": 20, "webhooks": 10, "notifications": 10, "reports": 2, "maintenance": 2}
+		want := map[string]int{"cpe": 20, "webhooks": 10, "notifications": 10, "reports": 2, "maintenance": 2, "einv_config": 5}
 		if len(cfg.Concurrency) != len(want) || cfg.ShutdownTimeout != 30*time.Second {
 			t.Fatalf("got %v, %s", cfg.Concurrency, cfg.ShutdownTimeout)
 		}

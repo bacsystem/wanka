@@ -151,7 +151,8 @@ for m in "naive_session_lookup|wanka_app" \
          "seed_owner_loses_a_permission|wanka_app" \
          "view_security_definer|wanka_app" \
          "view_without_status_filter|wanka_app" \
-         "view_without_user_filter|wanka_app"; do
+         "view_without_user_filter|wanka_app" \
+         "policies_user_branch_to_public|wanka_worker"; do
   name="${m%%|*}" step="${m#*|}"
   echo "== MUTATION=${name}: debe fallar en «${step}» =="
   if ! detected "$name" "$step"; then

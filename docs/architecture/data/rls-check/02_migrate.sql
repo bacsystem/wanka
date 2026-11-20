@@ -9,50 +9,15 @@ CREATE SCHEMA platform_fn;
 -- Las columnas de org.tenants (ruc, legal_name, trade_name, industry) vienen de la migracion de #232.
 -- iam.users (email, contadores), iam.user_totp, iam.mfa_enrollments y iam.user_tokens ya son de la migracion real 20261120100000 (#231).
 
--- org.sites y org.cash_registers (nucleo) vienen de la migracion de #232; el anexo SUNAT y la sincronizacion (ADR 0013) las agrega
--- empresas (#33), y aqui queda como referencia para los casos A12 y K5.
-ALTER TABLE org.sites ADD COLUMN sunat_annex text CHECK (sunat_annex ~ '^[0-9]{4}$'), ADD COLUMN version bigint NOT NULL DEFAULT 1,
-  ADD COLUMN provider_synced_version bigint;
--- Sincronizacion con Khipu (ADR 0013): solo wanka_worker marca lo sincronizado o en conflicto; wanka_app edita el resto.
-CREATE TABLE org.tenant_settings (tenant_id uuid PRIMARY KEY REFERENCES org.tenants, ubigeo text, fiscal_address text,
-  version bigint NOT NULL DEFAULT 1, provider_sync_seq bigint NOT NULL DEFAULT 0, provider_synced_version bigint);
-CREATE TABLE org.document_series (id uuid PRIMARY KEY, tenant_id uuid NOT NULL REFERENCES org.tenants, site_id uuid NOT NULL,
-  doc_type text NOT NULL CHECK (doc_type IN ('01','03','07','08','09','PRO','OC','Z','OT')), series text NOT NULL,
-  last_number bigint NOT NULL DEFAULT 0 CHECK (last_number >= 0), active boolean NOT NULL DEFAULT true,
-  provider_synced_at timestamptz, provider_conflict_at timestamptz,
-  UNIQUE (tenant_id, doc_type, series), FOREIGN KEY (tenant_id, site_id) REFERENCES org.sites (tenant_id, id),
-  CHECK (doc_type IN ('01','03','07','08','09') OR (provider_synced_at IS NULL AND provider_conflict_at IS NULL)));
--- El congelado es irreversible para todo rol y lo fija el servidor (ADR 0013): wanka_app puede ponerlo al rechazar una reactivacion.
-CREATE FUNCTION org.guard_series_conflict() RETURNS trigger LANGUAGE plpgsql SET search_path = pg_catalog, pg_temp AS $$
-BEGIN
-  IF OLD.provider_conflict_at IS NOT NULL AND NEW.provider_conflict_at IS DISTINCT FROM OLD.provider_conflict_at THEN
-    RAISE EXCEPTION 'a frozen series stays frozen' USING ERRCODE = '42501';
-  END IF;
-  IF OLD.provider_conflict_at IS NULL AND NEW.provider_conflict_at IS NOT NULL THEN
-    NEW.provider_conflict_at := now();
-  END IF;
-  RETURN NEW;
-END $$;
--- OF: solo corre si el UPDATE nombra la columna; NextNumber no la toca y no paga el trigger.
-CREATE TRIGGER document_series_guard_conflict BEFORE UPDATE OF provider_conflict_at ON org.document_series
-  FOR EACH ROW EXECUTE FUNCTION org.guard_series_conflict();
--- Arrendamiento por tenant de einv.company_sync (ADR 0013): solo lo escribe wanka_worker.
-CREATE TABLE einv.company_sync_state (tenant_id uuid PRIMARY KEY REFERENCES org.tenants, holder text, lease_until timestamptz,
-  synced_seq bigint NOT NULL DEFAULT 0);
+-- org.sites y org.cash_registers, org.tenant_settings, org.document_series y einv.company_sync_state ya vienen
+-- de las migraciones reales (20261120110000 y 20261120140000).
 CREATE TABLE ops.webhook_routes (route_id text PRIMARY KEY, tenant_id uuid NOT NULL, provider text NOT NULL, webhook_secret_enc bytea NOT NULL, revoked_at timestamptz);
 CREATE TABLE platform.impersonation_grants (id uuid PRIMARY KEY, platform_user_id uuid NOT NULL, tenant_id uuid NOT NULL, ticket_id uuid NOT NULL,
   scope text NOT NULL, reason text, status text NOT NULL, created_at timestamptz NOT NULL DEFAULT now(), approved_by uuid, approved_at timestamptz,
   consent_expires_at timestamptz, exchange_token_hash bytea UNIQUE, redeemed_at timestamptz, revoked_at timestamptz);
 CREATE TABLE platform.audit_events (id bigserial PRIMARY KEY, platform_user_id uuid, target_tenant_id uuid, action text NOT NULL);
 
--- RLS habilitado y FORZADO en las demas tablas de tenant (ADR 0001); iam.*, org.sites, org.cash_registers, org.tenants y
--- audit.events ya lo traen de las migraciones reales, con su tenant_isolation.
-DO $$ DECLARE t text; BEGIN
-  FOREACH t IN ARRAY ARRAY['org.tenant_settings','org.document_series','einv.company_sync_state'] LOOP
-    EXECUTE format('ALTER TABLE %s ENABLE ROW LEVEL SECURITY', t);
-    EXECUTE format('ALTER TABLE %s FORCE ROW LEVEL SECURITY', t);
-    EXECUTE format('CREATE POLICY tenant_isolation ON %s USING (tenant_id = app.current_tenant()) WITH CHECK (tenant_id = app.current_tenant())', t);
-  END LOOP; END $$;
+-- RLS habilitado y FORZADO con tenant_isolation ya viene de las migraciones reales (20261120140000).
 -- own_memberships, member_read (org.tenants, iam.roles, org.sites, org.cash_registers) y la vista iam.list_my_memberships ya
 -- vienen de la migracion de #232 (antes vivian solo aqui). platform_rw es de plataforma (ola 6) y sigue aqui.
 CREATE POLICY platform_rw ON org.tenants TO wanka_platform USING (true) WITH CHECK (true);
@@ -205,10 +170,9 @@ GRANT SELECT, INSERT, UPDATE ON org.tenants TO wanka_definer;
 GRANT SELECT, INSERT, DELETE ON org.sites TO wanka_definer;
 GRANT SELECT, DELETE ON org.cash_registers TO wanka_definer;
 GRANT DELETE ON iam.membership_sites TO wanka_definer;
--- La politica member_read de org.sites (ADR 0001) lee iam.membership_sites con los privilegios de quien consulta org.sites:
--- un rol que lee o borra sedes necesita SELECT ahi aunque no lea membresias (sin el, "permission denied for table
--- membership_sites"). Lo necesitan wanka_definer (purga, ola 6) y wanka_worker (sincronizacion con Khipu, ADR 0013 / #33).
-GRANT SELECT ON iam.membership_sites TO wanka_definer, wanka_worker;   -- ola 6 (purga de una empresa cerrada)
+-- La politica member_read de org.sites (ADR 0001) pasa TO wanka_app (20261120140000); wanka_worker ya no necesita SELECT en iam.membership_sites.
+-- Lo necesita solo wanka_definer (purga, ola 6).
+GRANT SELECT ON iam.membership_sites TO wanka_definer;   -- ola 6 (purga de una empresa cerrada)
 GRANT INSERT ON audit.events TO wanka_definer;   -- el esquema audit y sus GRANT para app y worker: migracion del kernel (#173)
 GRANT SELECT ON ops.webhook_routes TO wanka_definer;
 GRANT SELECT, INSERT, UPDATE ON platform.impersonation_grants TO wanka_definer;
