@@ -12,7 +12,8 @@ erDiagram
   SITES ||--o{ MEMBERSHIP_SITES : en
   USERS ||--o{ USER_TOTP : protege
   USERS ||--o{ SESSIONS : abre
-  USERS ||--o{ PASSWORD_RESETS : solicita
+  USERS ||--o{ USER_TOKENS : recibe
+  ROLE_TEMPLATES ||--o{ ROLES : origina
   USERS ||--o{ MFA_ENROLLMENTS : enrola
   SITES ||--o{ CASH_REGISTERS : tiene
   SITES ||--o{ DOCUMENT_SERIES : emite
@@ -76,13 +77,18 @@ erDiagram
   }
   USERS {
     uuid id PK
-    citext email UK "iam.users SIN RLS: identidad global, no de tenant"
-    text full_name
-    text password_hash "argon2id PHC"
+    text email UK "iam.users SIN RLS: identidad global, no de tenant; NOT NULL, CHECK email = lower(email), 3 a 254"
+    text full_name "null hasta aceptar la invitacion; 1 a 120"
+    text phone "nullable, CHECK formato con + opcional y 6 a 15 digitos"
+    text password_hash "argon2id PHC; null = no puede iniciar sesion"
     boolean email_verified
+    timestamptz password_changed_at
     text status "activo, bloqueado"
-    int failed_logins
-    timestamptz locked_until
+    smallint failed_logins "CHECK 0 a 5: intentos cobrados en la ventana de 15 min, tomado el semaforo del hash"
+    timestamptz login_window_started_at "inicio de la ventana fija de 15 min; solo se mueve al vencer"
+    smallint reset_mfa_failures "CHECK 0 a 10: codigos malos en password reset, acumulados; con 10 cerrado"
+    timestamptz locked_until "15 min tras 5 fallos"
+    smallint login_lockouts "bloqueos seguidos sin un ingreso correcto; CHECK 0 a 10, con 10 cerrado hasta restablecer"
     smallint mfa_failed_attempts "segundo paso: TOTP o emailCode malos, compartido con mfa/verify; CHECK 0 a 4, el 5o bloquea 15 min"
     timestamptz mfa_locked_until
     smallint mfa_lockouts "bloqueos desde el ultimo restablecimiento de contrasena, solo este lo pone a 0; CHECK 0 a 3, con 3 cerrado"
@@ -91,8 +97,9 @@ erDiagram
   USER_TOTP {
     uuid user_id PK, FK
     bytea secret_enc "cifrado AES-GCM, clave en env"
-    timestamptz confirmed_at
-    text recovery_codes_hash "array de hashes"
+    timestamptz confirmed_at "null mientras el enrolamiento desde perfil esta pendiente"
+    bigint last_used_step "ultimo paso TOTP aceptado: rechaza el codigo reutilizado"
+    text recovery_codes_hash "array de vN:HMAC-SHA256 en base64url (43 car.) con clave derivada de la version N de TOTP_ENC_KEY; se quita el usado"
   }
   SESSIONS {
     uuid id PK "iam.sessions SIN RLS: se busca por hash antes de conocer el tenant"
@@ -129,19 +136,30 @@ erDiagram
     timestamptz consumed_at "confirm correcto, bloqueo o restablecimiento; irreversible (trigger guard_mfa_enrollment_writes)"
     timestamptz created_at "lo fija el servidor en el INSERT (trigger)"
   }
-  PASSWORD_RESETS {
-    uuid id PK
-    uuid user_id FK
-    bytea token_hash UK
-    timestamptz expires_at "15 min"
-    timestamptz used_at
+  USER_TOKENS {
+    uuid id PK "iam.user_tokens SIN RLS: tokens de un uso por correo (reemplaza a password_resets)"
+    uuid user_id FK "indice user_id+purpose+created_at"
+    text purpose "password_reset, invitation, email_change"
+    bytea token_hash UK "sha256 del token completo: wk_pr_, wk_iv_ o wk_ec_"
+    uuid membership_id "solo invitation, sin FK ni tenant_id: el tenant se lee con own_memberships"
+    text new_email "solo email_change"
+    timestamptz expires_at "15 min, 7 dias o 24 h segun purpose; indice para limpieza"
+    timestamptz consumed_at "irreversible (trigger)"
+    timestamptz created_at "lo fija el servidor (trigger)"
+  }
+  ROLE_TEMPLATES {
+    text code PK "iam.role_templates SIN RLS: catalogo global de los 6 roles base; con iam.role_template_permissions"
+    text name
+    boolean requires_mfa
   }
   ROLES {
     uuid id PK
     uuid tenant_id FK "RLS: tenant_isolation + member_read (solo el rol de las membresias propias, solo sin tenant fijado); plantillas copiadas al provisionar"
-    text name "UK tenant_id+name"
-    boolean system
-    boolean requires_mfa "true en propietario, administrador, contador"
+    text name "UK tenant_id+name y tenant_id+lower(name)"
+    boolean system "rol base: no se borra ni se edita; CHECK system = template_code NOT NULL"
+    text template_code FK "permisos del rol base: los de su plantilla, sin filas en role_permissions; UK tenant_id+template_code; trigger guard_role_writes"
+    boolean requires_mfa "true en dueno, administrador, contador; sube, no baja bajo la plantilla"
+    bigint version "If-Match"
   }
   PERMISSIONS {
     text code PK "iam.permissions SIN RLS: catalogo global; modulo.recurso:accion"
