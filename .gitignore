@@ -33,3 +33,6 @@ design/
 /apps/api/*.out
 /apps/api/coverage.*
 /apps/api/wanka
+
+# entorno local (make up)
+.local/

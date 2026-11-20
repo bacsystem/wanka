@@ -52,7 +52,7 @@ pnpm test                # vitest run (unit, jsdom)
 pnpm test:e2e            # playwright (desktop 1440 / tablet 1024 / mobile Pixel 7); starts its own dev server on :3100
 ```
 
-Single tests: `pnpm --filter web exec vitest run src/lib/format.test.ts` · `pnpm --filter web exec playwright test --project=mobile -g "sidebar"`. First E2E run: `pnpm --filter web exec playwright install chromium`.
+Whole local stack: `make up` (PostgreSQL, migrations, API, web). Single tests, first E2E run and URLs: `docs/local-environment.md`.
 
 Note: `next dev` re-writes `apps/web/AGENTS.md`, which points to the Next 16 docs in `node_modules/next/dist/docs/`: check them, not memory.
 
