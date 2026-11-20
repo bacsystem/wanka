@@ -13,8 +13,8 @@ SELECT test.expect_error($$UPDATE iam.memberships SET status = 'activo'$$, '4250
 SELECT test.assert((SELECT count(*) FROM iam.memberships) = 0 AND (SELECT count(*) FROM org.tenants) = 0, 'worker sin tenant: 0 filas (RLS)');
 BEGIN;
 SELECT set_config('app.tenant_id','aaaaaaaa-0000-0000-0000-000000000001', true);
-SELECT test.assert((SELECT count(*) FROM iam.memberships) = 1 AND (SELECT count(*) FROM iam.roles) = 2 AND (SELECT count(*) FROM org.tenants) = 1,
-                   'worker con tenant A: lee sus roles y su empresa (solo la membresia del propietario: la del cajero ya se borro)');
+SELECT test.assert((SELECT count(*) FROM iam.memberships) = 2 AND (SELECT count(*) FROM iam.roles) = 3 AND (SELECT count(*) FROM org.tenants) = 1,
+                   'worker con tenant A: lee sus roles y su empresa (las membresias del propietario y de multi: la del cajero ya se borro)');
 COMMIT;
 DO $$ DECLARE n int; BEGIN DELETE FROM iam.sessions; GET DIAGNOSTICS n = ROW_COUNT; PERFORM test.assert(n > 0, 'wanka_worker borra sesiones'); RAISE EXCEPTION 'rollback' USING ERRCODE = 'P0001'; EXCEPTION WHEN SQLSTATE 'P0001' THEN NULL; END $$;
 \echo '== K1c. (wanka_worker) tablas de River: todo el DML de la cola, sin river_migration =='
@@ -162,3 +162,14 @@ SELECT test.expect_error($$UPDATE org.sites SET sunat_annex = '0002'$$, '42501',
 SELECT test.expect_error($$UPDATE org.tenant_settings SET fiscal_address = 'x'$$, '42501', 'wanka_worker no edita los datos fiscales');
 SELECT test.expect_error($$UPDATE org.document_series SET provider_synced_at = now() WHERE doc_type = 'PRO'$$, '23514', 'una serie interna nunca se sincroniza con Khipu');
 ROLLBACK;
+\echo '== R11. (wanka_worker) nada sobre las plantillas ni sobre los permisos y el alcance de los roles (#232, ADR 0001, nota del 2026-11-19) =='
+SELECT test.expect_error('SELECT count(*) FROM iam.role_templates', '42501', 'wanka_worker no lee iam.role_templates');
+SELECT test.expect_error('SELECT count(*) FROM iam.role_template_permissions', '42501', 'wanka_worker no lee iam.role_template_permissions');
+SELECT test.expect_error($$INSERT INTO iam.role_templates (code, name, requires_mfa) VALUES ('x', 'X', false)$$, '42501', 'wanka_worker no inserta plantillas');
+SELECT test.expect_error($$DELETE FROM iam.role_template_permissions$$, '42501', 'wanka_worker no borra permisos de plantilla');
+SELECT test.expect_error('TRUNCATE iam.role_template_permissions', '42501', 'wanka_worker no trunca permisos de plantilla');
+SELECT test.expect_error('SELECT count(*) FROM iam.role_permissions', '42501', 'wanka_worker no lee iam.role_permissions: ningun job resuelve permisos');
+SELECT test.expect_error('SELECT count(*) FROM org.cash_registers', '42501', 'wanka_worker no lee org.cash_registers');
+SELECT test.expect_error($$UPDATE iam.roles SET name = 'x'$$, '42501', 'wanka_worker no escribe iam.roles');
+SELECT test.expect_error($$DELETE FROM iam.roles$$, '42501', 'wanka_worker no borra iam.roles');
+SELECT test.expect_error($$DELETE FROM iam.memberships$$, '42501', 'wanka_worker no borra iam.memberships');

@@ -96,7 +96,37 @@ for m in "naive_session_lookup|wanka_app" \
          "drop_audit_impersonator_check|wanka_app" \
          "ensure_partitions_to_public|wanka_app" \
          "ensure_partitions_no_search_path|wanka_worker" \
-         "grant_app_partition_select|wanka_app"; do
+         "grant_app_partition_select|wanka_app" \
+         "disable_rls_cash_registers|wanka_app" \
+         "drop_membership_guard_trigger|wanka_app" \
+         "drop_role_guard_trigger|wanka_app" \
+         "drop_roles_lower_name_unique|wanka_app" \
+         "drop_roles_system_check|wanka_app" \
+         "drop_roles_template_unique|wanka_app" \
+         "grant_app_delete_cash_registers|wanka_app" \
+         "grant_app_delete_sites|wanka_app" \
+         "grant_app_write_role_template_permissions|wanka_app" \
+         "grant_app_write_role_templates|wanka_app" \
+         "grant_platform_read_role_templates|wanka_platform" \
+         "grant_platform_write_role_templates|wanka_platform" \
+         "grant_webhooks_read_role_templates|wanka_webhooks" \
+         "grant_worker_read_cash_registers|wanka_worker" \
+         "grant_worker_read_role_permissions|wanka_worker" \
+         "grant_worker_read_role_templates|wanka_worker" \
+         "member_read_sites_no_scope|wanka_app" \
+         "member_read_with_tenant|wanka_app" \
+         "membership_sites_own_open|wanka_app" \
+         "revoke_app_read_role_templates|wanka_app" \
+         "revoke_definer_read_role_templates|wanka_app" \
+         "role_guard_allows_delete_system|wanka_app" \
+         "role_guard_allows_low_mfa_insert|wanka_app" \
+         "role_guard_allows_mfa_downgrade|wanka_app" \
+         "role_guard_allows_system_change|wanka_app" \
+         "role_guard_allows_system_rename|wanka_app" \
+         "role_permissions_open_policy|wanka_app" \
+         "view_security_definer|wanka_app" \
+         "view_without_status_filter|wanka_app" \
+         "view_without_user_filter|wanka_app"; do
   name="${m%%|*}" step="${m#*|}"
   echo "== MUTATION=${name}: debe fallar en «${step}» =="
   if ! detected "$name" "$step"; then
