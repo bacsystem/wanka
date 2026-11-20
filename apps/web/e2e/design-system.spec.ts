@@ -9,7 +9,7 @@ const token = (page: Page, name: string) =>
   page.evaluate((n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim(), name);
 
 test.describe("StatGrid mobile scroller", () => {
-  // `/inventario/stock` (#42) y la consola `/admin` son pantallas mock inaccesibles (404) hasta que su historia las habilite; entonces se reactiva.
+  // `/inventario/stock` (#42) y la consola `/admin` (#84) son pantallas mock inaccesibles (404) hasta que su historia las habilite; entonces se reactiva.
   for (const path of ["/inventario/stock", "/admin"]) {
     const run = test.skip;
     run(`${path}: KPI cards keep 176 px and the container scrolls`, async ({ page }, testInfo) => {
@@ -43,7 +43,7 @@ test.describe("palette", () => {
     expect(await token(page, "--acento")).toBe(OCEANO);
   });
 
-  // Consola /admin: inaccesible (404) hasta su historia.
+  // Consola /admin: inaccesible (404) hasta la historia #84.
   test.skip("the admin console uses the design system indigo palette and the derived tokens follow it", async ({ page }) => {
     await page.addInitScript(() => localStorage.setItem("khipu-paleta", "oceano"));
     await page.goto("/admin");
@@ -56,7 +56,7 @@ test.describe("palette", () => {
     expect(await page.evaluate(() => localStorage.getItem("khipu-paleta"))).toBe("oceano");
   });
 
-  // Consola /admin: inaccesible (404) hasta su historia.
+  // Consola /admin: inaccesible (404) hasta la historia #84.
   test.skip("leaving the console gives the user's palette back (full page load)", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name === "mobile", "the link to the tenant app is hidden on mobile");
     await page.addInitScript(() => localStorage.setItem("khipu-paleta", "oceano"));
@@ -91,7 +91,7 @@ test.skip("the mobile 'Nueva venta' FAB has its elevation (shadow-lg)", async ({
 });
 
 test.describe("admin console palette", () => {
-  // Consola /admin: inaccesible (404) hasta su historia.
+  // Consola /admin: inaccesible (404) hasta la historia #84.
   test.skip("navigating between the tenant app and the console raises no console error", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name === "mobile", "the link to the tenant app is hidden on mobile");
     const errors: string[] = [];
@@ -107,7 +107,7 @@ test.describe("admin console palette", () => {
     expect(errors).toEqual([]);
   });
 
-  // Consola /admin: inaccesible (404) hasta su historia.
+  // Consola /admin: inaccesible (404) hasta la historia #84.
   test.skip("the appearance menu offers the palette in the tenant app but not in the console", async ({ page }) => {
     await page.goto("/");
     await openUserMenu(page);
@@ -131,7 +131,7 @@ test.describe("no flash of the wrong palette on a hard load", () => {
     { path: "/", expected: "coral" },
   ];
   for (const { path, expected } of cases) {
-    // /admin y /admin/login: consola inaccesible (404) hasta su historia; el caso "/" sigue activo.
+    // /admin y /admin/login: consola inaccesible (404) hasta la historia #84; el caso "/" sigue activo.
     (path === "/" ? test : test.skip)(`${path}: every painted frame uses ${expected} (saved palette: coral)`, async ({ page }) => {
       await page.addInitScript(() => {
         localStorage.setItem("khipu-paleta", "coral");

@@ -18,7 +18,6 @@ export const AUTH_COOKIE_PATH = "/api/auth";
 const SESSION_COOKIES = [ACCESS_COOKIE, REFRESH_COOKIE, ACCESS_EXP_COOKIE] as const;
 const STEP_COOKIES = [CHALLENGE_COOKIE, ENROLLMENT_COOKIE] as const;
 const REFRESH_MAX_AGE_S = 30 * 24 * 60 * 60;
-const DEFAULT_ACCESS_MAX_AGE_S = 15 * 60;
 
 const TOKEN_PATTERNS = {
   access: /^wk_at_[A-Za-z0-9_-]{43}$/,
@@ -43,16 +42,23 @@ function baseOptions(path: string, maxAge: number) {
   };
 }
 
-/** Segundos hasta `expiresAt` (RFC 3339); si no se puede leer, los 15 min del acceso. Nunca menos de 1. */
-export function secondsUntil(expiresAt: unknown, now: number = Date.now()): number {
+/** TTL máximo de cada token (conventions.md §2): la cookie nunca vive más que el token. */
+const MAX_TTL_S = { access: 15 * 60, challenge: 5 * 60, enrollment: 10 * 60 } as const;
+
+/**
+ * Segundos de vida de la cookie de un token: hasta `expiresAt` (RFC 3339), sin pasar del TTL del token. `null` si
+ * `expiresAt` falta, no se puede leer o ya venció: entonces NO se guarda la cookie (no hay un valor por defecto).
+ */
+export function cookieTtl(kind: keyof typeof MAX_TTL_S, expiresAt: unknown, now: number = Date.now()): number | null {
   const at = typeof expiresAt === "string" ? Date.parse(expiresAt) : Number.NaN;
-  if (Number.isNaN(at)) return DEFAULT_ACCESS_MAX_AGE_S;
-  return Math.max(1, Math.floor((at - now) / 1000));
+  if (Number.isNaN(at)) return null;
+  const seconds = Math.floor((at - now) / 1000);
+  return seconds >= 1 ? Math.min(seconds, MAX_TTL_S[kind]) : null;
 }
 
-/** Pone el par de tokens de una sesión sin empresa (`authenticated`). */
-export function setSessionCookies(res: NextResponse, tokens: { accessToken: string; refreshToken: string; expiresAt: string }): void {
-  res.cookies.set(ACCESS_COOKIE, tokens.accessToken, baseOptions("/", secondsUntil(tokens.expiresAt)));
+/** Pone el par de tokens de una sesión sin empresa (`authenticated`). `accessTtl` sale de `cookieTtl("access", …)`. */
+export function setSessionCookies(res: NextResponse, tokens: { accessToken: string; refreshToken: string; expiresAt: string }, accessTtl: number): void {
+  res.cookies.set(ACCESS_COOKIE, tokens.accessToken, baseOptions("/", accessTtl));
   res.cookies.set(REFRESH_COOKIE, tokens.refreshToken, baseOptions("/", REFRESH_MAX_AGE_S));
   res.cookies.set(ACCESS_EXP_COOKIE, tokens.expiresAt, baseOptions("/", REFRESH_MAX_AGE_S));
 }
@@ -67,7 +73,7 @@ export function clearStepCookies(res: NextResponse, keep?: (typeof STEP_COOKIES)
   for (const name of STEP_COOKIES) if (name !== keep) res.cookies.delete({ name, path: AUTH_COOKIE_PATH });
 }
 
-/** Pone un token de paso intermedio (desafío o enrolamiento de 2FA), solo para las rutas `/api/auth`. */
-export function setStepCookie(res: NextResponse, name: typeof CHALLENGE_COOKIE | typeof ENROLLMENT_COOKIE, token: string, expiresAt: string): void {
-  res.cookies.set(name, token, baseOptions(AUTH_COOKIE_PATH, secondsUntil(expiresAt)));
+/** Pone un token de paso intermedio (desafío o enrolamiento de 2FA), solo para las rutas `/api/auth`. `ttl` sale de `cookieTtl`. */
+export function setStepCookie(res: NextResponse, name: (typeof STEP_COOKIES)[number], token: string, ttl: number): void {
+  res.cookies.set(name, token, baseOptions(AUTH_COOKIE_PATH, ttl));
 }

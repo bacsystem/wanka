@@ -75,17 +75,27 @@ describe("LoginScreen", () => {
   });
 
   it("503 con Retry-After: pide esperar y mantiene el botón deshabilitado hasta que pasa", async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
+    // Solo se falsean el reloj y los intervalos: el paso del tiempo es el que el test avanza, y `waitFor` sigue con timers reales.
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval", "Date"] });
+    vi.setSystemTime(new Date("2026-11-20T10:00:00Z"));
     fetchMock.mockResolvedValue(json(503, { code: "overloaded", retryAfterSeconds: 3 }));
     render(<LoginScreen />);
     fill("ana@empresa.pe", "secreta");
     submit();
-    expect(await screen.findByRole("alert")).toHaveTextContent("Inténtalo de nuevo en 3 segundos");
+    // Deja correr la promesa del fetch y los efectos de React sin mover el reloj.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("Inténtalo de nuevo en 3 segundos"));
     expect(screen.getByRole("button", { name: "Ingresar" })).toBeDisabled();
     await act(async () => {
-      vi.advanceTimersByTime(3600);
+      await vi.advanceTimersByTimeAsync(2000);
     });
-    expect(screen.getByRole("button", { name: "Ingresar" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Ingresar" })).toBeDisabled();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1500);
+    });
+    await waitFor(() => expect(screen.getByRole("button", { name: "Ingresar" })).toBeEnabled());
   });
 
   it("respuesta ilegible o red caída: servicio no disponible", async () => {

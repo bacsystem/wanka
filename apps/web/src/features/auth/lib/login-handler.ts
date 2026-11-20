@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { callApi } from "@/lib/bff/api-client";
-import { CHALLENGE_COOKIE, ENROLLMENT_COOKIE, clearSessionCookies, clearStepCookies, isToken, setSessionCookies, setStepCookie } from "@/lib/bff/session-cookies";
+import { CHALLENGE_COOKIE, ENROLLMENT_COOKIE, clearSessionCookies, clearStepCookies, cookieTtl, isToken, setSessionCookies, setStepCookie } from "@/lib/bff/session-cookies";
 import type { components } from "@/lib/api/schema";
 import { validateLogin, type ApiLoginResponse, type LoginError, type LoginOutcome } from "./login-contract";
 
@@ -162,25 +162,31 @@ export async function handleLogin(req: Request): Promise<NextResponse> {
   switch (data.status) {
     case "authenticated": {
       if (!isToken("access", data.accessToken) || !isToken("refresh", data.refreshToken)) return fail(502, { code: "unavailable" });
+      const ttl = cookieTtl("access", data.expiresAt);
+      if (ttl === null) return fail(502, { code: "unavailable" });
       const res = respond({ status: "authenticated" }, 200);
       clearStepCookies(res);
-      setSessionCookies(res, data);
+      setSessionCookies(res, data, ttl);
       return res;
     }
     case "mfa_required": {
       if (!isToken("challenge", data.challengeToken)) return fail(502, { code: "unavailable" });
+      const ttl = cookieTtl("challenge", data.expiresAt);
+      if (ttl === null) return fail(502, { code: "unavailable" });
       const res = respond({ status: "mfa_required" }, 200);
       clearSessionCookies(res);
       clearStepCookies(res, CHALLENGE_COOKIE);
-      setStepCookie(res, CHALLENGE_COOKIE, data.challengeToken, data.expiresAt);
+      setStepCookie(res, CHALLENGE_COOKIE, data.challengeToken, ttl);
       return res;
     }
     case "mfa_enrollment_required": {
       if (!isToken("enrollment", data.enrollmentToken)) return fail(502, { code: "unavailable" });
+      const ttl = cookieTtl("enrollment", data.expiresAt);
+      if (ttl === null) return fail(502, { code: "unavailable" });
       const res = respond({ status: "mfa_enrollment_required" }, 200);
       clearSessionCookies(res);
       clearStepCookies(res, ENROLLMENT_COOKIE);
-      setStepCookie(res, ENROLLMENT_COOKIE, data.enrollmentToken, data.expiresAt);
+      setStepCookie(res, ENROLLMENT_COOKIE, data.enrollmentToken, ttl);
       return res;
     }
     default:

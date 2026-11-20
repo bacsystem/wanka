@@ -133,6 +133,35 @@ describe("POST /api/auth/login (BFF)", () => {
     });
   });
 
+  describe("expiresAt ausente, inválido o vencido: no se guarda la cookie y se vuelve a /login (502)", () => {
+    const past = new Date(Date.now() - 60_000).toISOString();
+    const bodies: [string, Record<string, unknown>][] = [
+      ["authenticated", { status: "authenticated", accessToken: AT, refreshToken: RT, memberships: [] }],
+      ["mfa_required", { status: "mfa_required", challengeToken: CH }],
+      ["mfa_enrollment_required", { status: "mfa_enrollment_required", enrollmentToken: EN, emailCodeSent: true }],
+    ];
+    const variants: [string, Record<string, unknown>][] = [["ausente", {}], ["inválido", { expiresAt: "mañana" }], ["vencido", { expiresAt: past }]];
+    for (const [status, body] of bodies) {
+      it.each(variants)(`${status}: expiresAt %s`, async (_n, extra) => {
+        fetchMock.mockResolvedValue(apiJson(200, { ...body, ...extra }));
+        const res = await handleLogin(login({ email: "a@b.pe", password: "x" }));
+        expect(res.status).toBe(502);
+        expect(await res.json()).toEqual({ code: "unavailable" });
+        expect(res.cookies.getAll()).toEqual([]);
+      });
+    }
+  });
+
+  it("la vida de la cookie no supera el TTL del token aunque expiresAt diga más", async () => {
+    const far = new Date(Date.now() + 86_400_000).toISOString();
+    fetchMock.mockResolvedValueOnce(apiJson(200, { status: "mfa_required", challengeToken: CH, expiresAt: far }));
+    expect((await handleLogin(login({ email: "a@b.pe", password: "x" }))).cookies.get("wk_ch")?.maxAge).toBe(300);
+    fetchMock.mockResolvedValueOnce(apiJson(200, { status: "mfa_enrollment_required", enrollmentToken: EN, expiresAt: far, emailCodeSent: true }));
+    expect((await handleLogin(login({ email: "a@b.pe", password: "x" }))).cookies.get("wk_en")?.maxAge).toBe(600);
+    fetchMock.mockResolvedValueOnce(apiJson(200, { status: "authenticated", accessToken: AT, refreshToken: RT, expiresAt: far, memberships: [] }));
+    expect((await handleLogin(login({ email: "a@b.pe", password: "x" }))).cookies.get("wk_at")?.maxAge).toBe(900);
+  });
+
   it("un token con forma inválida no se guarda: 502", async () => {
     fetchMock.mockResolvedValue(apiJson(200, { status: "authenticated", accessToken: "x", refreshToken: RT, expiresAt: "2030-01-01T00:00:00Z", memberships: [] }));
     const res = await handleLogin(login({ email: "a@b.pe", password: "x" }));
