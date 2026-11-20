@@ -328,22 +328,40 @@ La matriz suma una celda: `wanka_worker` recibe `SELECT (id, email)` sobre `iam.
 
 ## Nota del 2026-11-20 (architect, alta por autoservicio de #31; decisiones del dueño en #4)
 
-La matriz de «Roles de base de datos y permisos» suma tres filas y una función `SECURITY DEFINER` a la lista. No hay política ni rol nuevos. Contrato en [`api/conventions.md`](../api/conventions.md) §3, «Alta por autoservicio»; tablas en [data-model §6](../data/data-model.md). Lo aplica #31, con sus casos y mutaciones en `rls-check`.
+Esta nota se corrigió en la revisión del PR #256. La matriz de «Roles de base de datos y permisos» suma tres objetos, amplía la fila de `org.tenants`, crea un esquema y suma una función `SECURITY DEFINER` a la lista. No hay política ni rol nuevos. El contrato está en [`api/conventions.md`](../api/conventions.md) §3, «Alta por autoservicio», y las tablas en [data-model §6](../data/data-model.md). Lo aplica #31, con sus casos y mutaciones de `rls-check` contra las **migraciones reales**, no contra el esquema reducido de `02_migrate.sql`, donde `platform_fn` y los `USAGE` ya existen y ocultarían lo que falta.
 
 | Objeto | `wanka_app` | `wanka_worker` | `wanka_definer` | `wanka_webhooks`, `wanka_platform` |
 |---|---|---|---|---|
-| `iam.signup_requests` (sin RLS: identidad global, sin `tenant_id`) | `SELECT`, `INSERT` y `UPDATE` **solo** de `consumed_at` y `tenant_id` (un trigger los hace irreversibles y fija `created_at`) | `DELETE` y `SELECT (id, expires_at)`, nunca el hash ni los datos | — | — |
-| `ops.signup_idempotency_keys` (sin RLS: clave global, sin `tenant_id`) | `SELECT` e `INSERT` (sin `UPDATE`: una respuesta guardada no cambia) | `DELETE` y `SELECT (key, created_at)` | — | — |
-| `org.tenants` (fila que ya existe) | además del `SELECT`, `INSERT (id, ruc, legal_name, trade_name, industry)`: `status` y `closed_at` quedan con su valor por defecto (`trial`, nulo), y `tenant_isolation` exige que `id` sea el tenant de la transacción | — | ver la función | — |
+| `iam.signup_requests` (sin RLS, identidad global, sin `tenant_id`) | `SELECT`, `INSERT (id, kind, email, password_hash, full_name, ruc, legal_name, trade_name, industry, expires_at)` y `UPDATE (consumed_at, tenant_id, password_hash)`; `created_at` lo fija el trigger, que hace irreversibles `consumed_at` y `tenant_id` y solo deja pasar `password_hash` a nulo. Para el `SELECT … FOR UPDATE` de la confirmación alcanza ese `UPDATE` por columna | job `iam.signup_mail`: `SELECT (id, kind, email, created_at)` y `UPDATE (token_hash)`, que el trigger deja fijar una sola vez. Limpieza: `DELETE` y `SELECT (expires_at, consumed_at)`. Nunca `password_hash` ni los demás datos | — | — |
+| `ops.signup_idempotency_keys` (sin RLS, clave global, sin `tenant_id`) | los mismos grants que `ops.idempotency_keys`: `SELECT`, `INSERT (key, request_hash)` y `UPDATE (status_code, response, response_headers)`; `created_at` lo pone el servidor, así que una clave no escapa de la limpieza | `DELETE` y `SELECT (created_at)` | — | — |
+| `org.tenants` (fila que ya existe) | además del `SELECT`: `INSERT (id, ruc, legal_name, trade_name, industry)` para #31 (`status` y `closed_at` quedan con su valor por defecto, `trial` y nulo, y `tenant_isolation` exige que `id` sea el tenant de la transacción); y `UPDATE (trade_name, updated_at)` para #32. **No** `UPDATE (industry)`: el cambio de rubro lo decide el PO (#32, AC12), porque los módulos no los escribe `wanka_app` | — | `SELECT` (ver la función) | — |
+| Esquema `platform_fn` (no existe en las migraciones reales; solo en `rls-check/02_migrate.sql`) | `USAGE` | — | dueño de la función, no del esquema | — |
 
 **`platform_fn.start_self_service_trial(p_tenant uuid)`**
 - **Forma.** `SECURITY DEFINER`, dueño `wanka_definer`, `SET search_path = pg_catalog, pg_temp`, nombres cualificados, `EXECUTE` **solo** para `wanka_app` (`REVOKE ALL … FROM PUBLIC`). Se agrega a la lista de funciones definer de este ADR y a la lista blanca de la prueba de catálogo por su firma exacta.
-- **Qué hace.**
-  - Fija y restaura `app.tenant_id` con el patrón de «Funciones `SECURITY DEFINER`».
-  - Falla con `42501` si `p_tenant` no es el `app.current_tenant()` de quien llama, si la empresa no está en `trial`, si su `created_at` no es de esta misma transacción (`created_at = now()`) o si ya tiene una suscripción.
-  - Inserta en `platform.subscriptions` la suscripción `trial` del plan `prueba`: el plan lo fija la función por código y no es un argumento, así que `wanka_app` no puede elegirlo. `period_start` es hoy en Lima y `period_end`, 30 días después.
-  - Inserta el override `rubro.<industry>` en `platform.tenant_module_overrides`, con `industry` leído de `org.tenants`.
-  - Escribe su fila en `audit.events` con `actor_type = system` y `action = self_service_trial`.
+- **Guardas.** Fija y restaura `app.tenant_id` con el patrón de «Funciones `SECURITY DEFINER`». Falla con `42501` si:
+  - `p_tenant` no es el `app.current_tenant()` de quien llama;
+  - la empresa no está en `trial`;
+  - su `created_at` no es de esta transacción (`created_at = now()`);
+  - ya tiene una suscripción;
+  - **`industry` es nulo**.
+
+  Falla con `55000` (`object_not_in_prerequisite_state`, un error de configuración) si el plan `prueba` no existe o no está activo.
+- **Qué inserta.**
+  - En `platform.subscriptions`, la suscripción `trial` del plan `prueba`. El plan lo fija la función por código y no es un argumento.
+  - `period_start` es hoy en Lima y `period_end` es `period_start + 29`: el último día con escritura, inclusive, así que son 30 días (data-model §6).
+  - El override `rubro.<industry>` en `platform.tenant_module_overrides`.
+  - Su fila en `audit.events`, con `actor_type = system` y `action = self_service_trial`.
 - **Por qué una función.** Un `INSERT` de `wanka_app` en `platform.subscriptions` le dejaría darse cualquier plan. Reusar `platform_fn.provision_tenant` (camino 5), que recibe el plan y crea todo, abriría más de lo necesario. Lo demás del alta lo hace `wanka_app` en `InTenantTx` con el tenant nuevo.
-- **Grants de `wanka_definer`.** `SELECT` de `org.tenants` y `platform.plans`, `SELECT` e `INSERT` de `platform.subscriptions` y `platform.tenant_module_overrides`, e `INSERT` de `audit.events`, que ya tiene. Nada más.
-- **Mutaciones de `rls-check`.** Una por cada guarda: sin `search_path`, con `EXECUTE` para `PUBLIC`, con un tenant ajeno, con una empresa ya suscrita, con una empresa creada en otra transacción y con el plan como argumento.
+- **Qué crea y qué otorga la migración de #31** (las migraciones reales hoy solo le dan a `wanka_definer` `USAGE` sobre `iam` y `org`, `kernel_iam_org_core.sql`):
+  - `CREATE SCHEMA platform_fn`, con dueño `wanka_migrator`, y `GRANT USAGE ON SCHEMA platform_fn TO wanka_app`. `wanka_definer` recibe `CREATE` sobre el esquema solo durante el `ALTER FUNCTION … OWNER`, como en el kernel.
+  - Para `wanka_definer`: `USAGE` sobre `app`, `platform` y `audit`; `EXECUTE` de `app.current_tenant()`, si no lo tiene ya por `PUBLIC`; `SELECT` de `org.tenants` y `platform.plans`; `SELECT` e `INSERT` de `platform.subscriptions` y `platform.tenant_module_overrides`; e `INSERT` de `audit.events`, que hoy solo tienen `wanka_app` y `wanka_worker`. Nada más.
+- **Mutaciones de `rls-check`.** Una por cada guarda:
+  - sin `search_path`;
+  - con `EXECUTE` para `PUBLIC`;
+  - con un tenant ajeno;
+  - con una empresa ya suscrita;
+  - con una empresa creada en otra transacción;
+  - con `industry` nulo;
+  - sin el plan `prueba`;
+  - con el plan como argumento.

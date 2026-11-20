@@ -150,13 +150,14 @@ erDiagram
     timestamptz created_at "lo fija el servidor (trigger)"
   }
   SIGNUP_REQUESTS {
-    uuid id PK "iam.signup_requests SIN RLS: alta por autoservicio pendiente de confirmar (issue 31)"
-    text email "normalizado; hasta 3 vivas por correo, indice email+created_at"
-    bytea token_hash UK "sha256 del wk_su_ completo"
-    text password_hash "argon2id PHC; nunca en claro"
+    uuid id PK "iam.signup_requests SIN RLS: una fila por alta con formato valido, en todos los caminos (issue 31)"
+    text kind "new_account, existing_account u over_limit"
+    text email "normalizado; topes por correo, indice email+created_at"
+    bytea token_hash UK "sha256 del wk_su_; lo fija una vez el job iam.signup_mail, solo new_account"
+    text password_hash "argon2id PHC, solo new_account; pasa a null al consumir"
     text ruc "y legal_name, trade_name, industry, full_name con los CHECK de destino"
     timestamptz expires_at "24 h como maximo; indice para limpieza"
-    timestamptz consumed_at "irreversible (trigger)"
+    timestamptz consumed_at "irreversible (trigger); CHECK consumed_at null = tenant_id null"
     uuid tenant_id "empresa creada al confirmar, sin FK; repite el 201 de un reintento"
     timestamptz created_at "lo fija el servidor (trigger)"
   }
