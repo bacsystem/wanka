@@ -457,8 +457,8 @@ func TestCoreTablesConstraints(t *testing.T) {
 	if err := exec(`INSERT INTO org.tenants (id, status, closed_at) VALUES (gen_random_uuid(), 'cerrada', now())`); err != nil {
 		t.Errorf("closed tenant with closed_at rejected: %v", err)
 	}
-	wantState(t, exec(`INSERT INTO iam.users (id, status) VALUES (gen_random_uuid(), 'x')`), "23514", "user status")
-	if err := exec(`INSERT INTO iam.users (id) VALUES ('b0000000-0000-0000-0000-000000000001')`); err != nil {
+	wantState(t, exec(`INSERT INTO iam.users (id, email, status) VALUES (gen_random_uuid(), 'x@test.pe', 'x')`), "23514", "user status")
+	if err := exec(`INSERT INTO iam.users (id, email) VALUES ('b0000000-0000-0000-0000-000000000001', 'b1@test.pe')`); err != nil {
 		t.Fatal(err)
 	}
 	if got := queryOne[string](t, admin, `SELECT status FROM iam.users`); got != "activo" {
@@ -611,6 +611,12 @@ func TestTableGrantsMatchTheADR0001Matrix(t *testing.T) {
 		"wanka_app|iam.permissions":      "SELECT",
 		"wanka_worker|iam.permissions":   "SELECT",
 		"wanka_platform|iam.permissions": "SELECT",
+		// Identidad global de la ola 1 (#231): el UPDATE y el SELECT por columna se prueban en iam_identity_test.go.
+		"wanka_app|iam.user_totp":          "INSERT,SELECT,UPDATE",
+		"wanka_app|iam.mfa_enrollments":    "INSERT,SELECT",
+		"wanka_app|iam.user_tokens":        "INSERT,SELECT",
+		"wanka_worker|iam.mfa_enrollments": "DELETE",
+		"wanka_worker|iam.user_tokens":     "DELETE",
 	}
 	rows, err := admin.Query(ctx, `
 		SELECT grantee, table_schema || '.' || table_name, string_agg(privilege_type, ',' ORDER BY privilege_type)
@@ -693,7 +699,7 @@ func TestSessionLookupUsesUniqueIndexesWith100kSessions(t *testing.T) {
 	admin := d.Admin(ctx, t)
 	// Membresías de sobra para que el planificador no prefiera recorrer una tabla de una fila.
 	if _, err := admin.Exec(ctx, `
-		WITH u AS (INSERT INTO iam.users (id) SELECT gen_random_uuid() FROM generate_series(1, 20000) RETURNING id)
+		WITH u AS (INSERT INTO iam.users (id, email) SELECT i, i::text || '@seed.test' FROM (SELECT gen_random_uuid() AS i FROM generate_series(1, 20000)) g RETURNING id)
 		INSERT INTO iam.memberships (id, tenant_id, user_id, role_id, status) SELECT gen_random_uuid(), $1, u.id, $2, 'activo' FROM u`,
 		s.TenantID, s.RoleID); err != nil {
 		t.Fatal(err)
