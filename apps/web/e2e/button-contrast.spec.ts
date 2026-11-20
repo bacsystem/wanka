@@ -43,16 +43,18 @@ function contrast(a: Rgba, b: Rgba) {
   return (hi + 0.05) / (lo + 0.05);
 }
 
-const BUTTONS = [
-  { route: "/ventas/nueva", name: /^Agregar / },
-  { route: "/ventas/proformas", name: /Facturar 1-clic/ },
-  { route: "/salon", name: /Abrir mesa/, tenant: "t_004" },
+// `story`: pantalla mock inaccesible (404) hasta que esa historia la habilite; entonces se reactiva.
+const BUTTONS: { route: string; name: RegExp; tenant?: string; story?: string }[] = [
+  { route: "/ventas/nueva", name: /^Agregar /, story: "#48" },
+  { route: "/ventas/proformas", name: /Facturar 1-clic/, story: "#54" },
+  { route: "/salon", name: /Abrir mesa/, tenant: "t_004", story: "#113" },
   { route: "/admin", name: /Ver incidentes/ },
 ];
 
 for (const theme of ["light", "dark"] as const) {
-  for (const { route, name, tenant } of BUTTONS) {
-    test(`${theme}: ${name} on ${route} has WCAG contrast >= 4.5`, async ({ page, context }, testInfo) => {
+  for (const { route, name, tenant, story } of BUTTONS) {
+    const run = story ? test.skip : test;
+    run(`${theme}: ${name} on ${route} has WCAG contrast >= 4.5`, async ({ page, context }, testInfo) => {
       test.skip(testInfo.project.name !== "desktop", "desktop only");
       await page.emulateMedia({ colorScheme: theme });
       await page.addInitScript((t) => localStorage.setItem("theme", t), theme);
@@ -77,8 +79,9 @@ const MODES = [
   { name: "dark tintado", theme: "dark", oscuro: "tintado" },
 ] as const;
 
+// Pantalla mock inaccesible (404) hasta que #113 (salón y mesas) la habilite; entonces se reactiva.
 for (const mode of MODES) {
-  test(`${mode.name}: every /salon table status dot has WCAG contrast >= 4.5`, async ({ page, context }, testInfo) => {
+  test.skip(`${mode.name}: every /salon table status dot has WCAG contrast >= 4.5`, async ({ page, context }, testInfo) => {
     test.skip(testInfo.project.name !== "desktop", "desktop only");
     await page.emulateMedia({ colorScheme: mode.theme });
     await page.addInitScript((t) => localStorage.setItem("theme", t), mode.theme);

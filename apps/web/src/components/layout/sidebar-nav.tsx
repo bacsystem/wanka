@@ -1,6 +1,6 @@
 "use client";
 
-import { getNavigation, isActivePath, navSectionLabel, type NavSection } from "@/config/navigation";
+import { getNavigation, isActivePath, navSectionLabel, type NavSection } from "@/config/legacy-navigation";
 import { SidebarSections } from "./shell-parts";
 import { useTenant } from "./tenant-context";
 

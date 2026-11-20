@@ -1,171 +1,48 @@
-import {
-  ArrowsLeftRightIcon,
-  BankIcon,
-  BedIcon,
-  BriefcaseIcon,
-  BuildingsIcon,
-  CalendarBlankIcon,
-  ChartBarIcon,
-  ChecksIcon,
-  ClipboardTextIcon,
-  CoinsIcon,
-  CookingPotIcon,
-  CubeIcon,
-  FileTextIcon,
-  ForkKnifeIcon,
-  GearSixIcon,
-  MopedIcon,
-  PackageIcon,
-  PawPrintIcon,
-  PlugsConnectedIcon,
-  PlusCircleIcon,
-  ReceiptIcon,
-  ScissorsIcon,
-  ShieldCheckIcon,
-  ShoppingBagIcon,
-  ShoppingCartIcon,
-  SquaresFourIcon,
-  StackIcon,
-  TagIcon,
-  TruckIcon,
-  UsersIcon,
-  WalletIcon,
-  WarehouseIcon,
-} from "@phosphor-icons/react/ssr";
+import { SquaresFourIcon } from "@phosphor-icons/react/ssr";
 import type { IconoComponente } from "@/lib/iconos";
-import type { Industry } from "@/types/domain";
 
-export interface NavItem {
+/** Una funcionalidad habilitada: terminada de punta a punta contra la API real. */
+export interface Feature {
+  /** Código estable de la funcionalidad (no se muestra). */
+  code: string;
   label: string;
+  /** Ruta base. `/` solo coincide exacta; el resto, también con sus subrutas (`/clientes` → `/clientes/123`). */
   href: string;
   icon: IconoComponente;
-  children?: NavItem[];
-  /** Sidebar section; defaults to "core". */
-  section?: NavSection;
+  /** Grupo del sidebar; por defecto, `core`. */
+  section?: FeatureSection;
 }
-export type NavSection = "core" | "operaciones";
-export const navSectionLabel: Record<NavSection, string> = { core: "Módulos core", operaciones: "Operaciones" };
+export type FeatureSection = "core" | "operaciones";
+export const featureSectionLabel: Record<FeatureSection, string> = { core: "Módulos core", operaciones: "Operaciones" };
 
-/** Single source of truth for app navigation (sidebar, bottom nav, breadcrumbs). */
-export const navigation: NavItem[] = [
-  { label: "Inicio", href: "/", icon: SquaresFourIcon },
-  {
-    label: "Ventas",
-    href: "/ventas",
-    icon: ShoppingCartIcon,
-    children: [
-      { label: "Nueva venta (POS)", href: "/ventas/nueva", icon: PlusCircleIcon },
-      { label: "Comprobantes", href: "/ventas/comprobantes", icon: ReceiptIcon },
-      { label: "Cotizaciones y proformas", href: "/ventas/proformas", icon: FileTextIcon },
-      { label: "Guías de remisión", href: "/ventas/guias", icon: TruckIcon },
-    ],
-  },
-  { label: "Clientes", href: "/clientes", icon: UsersIcon },
-  { label: "Agenda", href: "/agenda", icon: CalendarBlankIcon },
-  {
-    label: "Catálogo",
-    section: "operaciones",
-    href: "/catalogo",
-    icon: PackageIcon,
-    children: [
-      { label: "Productos", href: "/catalogo/productos", icon: CubeIcon },
-      { label: "Servicios", href: "/catalogo/servicios", icon: BriefcaseIcon },
-      { label: "Categorías", href: "/catalogo/categorias", icon: TagIcon },
-    ],
-  },
-  {
-    label: "Inventario",
-    section: "operaciones",
-    href: "/inventario",
-    icon: WarehouseIcon,
-    children: [
-      { label: "Stock por almacén", href: "/inventario/stock", icon: StackIcon },
-      { label: "Almacenes", href: "/inventario/almacenes", icon: BuildingsIcon },
-      { label: "Movimientos", href: "/inventario/movimientos", icon: ArrowsLeftRightIcon },
-      { label: "Kardex", href: "/inventario/kardex", icon: ClipboardTextIcon },
-    ],
-  },
-  {
-    label: "Compras",
-    section: "operaciones",
-    href: "/compras",
-    icon: ShoppingBagIcon,
-    children: [
-      { label: "Registro de compras (SIRE)", href: "/compras", icon: ClipboardTextIcon },
-      { label: "Proveedores", href: "/compras/proveedores", icon: BuildingsIcon },
-      { label: "Órdenes de compra", href: "/compras/ordenes", icon: ChecksIcon },
-    ],
-  },
-  {
-    label: "Finanzas",
-    section: "operaciones",
-    href: "/finanzas",
-    icon: BankIcon,
-    children: [
-      { label: "Cuentas por cobrar", href: "/finanzas/cuentas-por-cobrar", icon: WalletIcon },
-      { label: "Cuentas por pagar", href: "/finanzas/cuentas-por-pagar", icon: BankIcon },
-      { label: "Caja y arqueo", href: "/finanzas/caja", icon: CoinsIcon },
-      { label: "Historial de turnos", href: "/finanzas/caja/historial", icon: ClipboardTextIcon },
-    ],
-  },
-  {
-    label: "Reportes",
-    section: "operaciones",
-    href: "/reportes",
-    icon: ChartBarIcon,
-    children: [
-      { label: "Gestión comercial", href: "/reportes/gestion", icon: ChartBarIcon },
-      { label: "Tributarios SUNAT", href: "/reportes", icon: BankIcon },
-      { label: "Liquidación PDT 621", href: "/reportes/liquidacion", icon: ChecksIcon },
-    ],
-  },
-  {
-    label: "Configuración",
-    section: "operaciones",
-    href: "/configuracion",
-    icon: GearSixIcon,
-    children: [
-      { label: "SUNAT y certificado", href: "/configuracion/sunat", icon: ShieldCheckIcon },
-      { label: "Usuarios y roles", href: "/configuracion/usuarios", icon: UsersIcon },
-      { label: "Integraciones", href: "/configuracion/integraciones", icon: PlugsConnectedIcon },
-      { label: "Auditoría", href: "/configuracion/auditoria", icon: ClipboardTextIcon },
-    ],
-  },
+/**
+ * Lista de funcionalidades habilitadas: ÚNICA fuente del sidebar, la barra inferior, la paleta Ctrl+K y las rutas.
+ * Lo que no está aquí no se muestra y su URL responde 404 (`proxy.ts`).
+ *
+ * Para habilitar una funcionalidad, la historia que la entrega (pantalla sobre el design system, conectada a la API
+ * real) agrega su entrada a esta lista. Nunca se comenta código para ocultar algo.
+ * Las pantallas mock anteriores siguen en `features/*` como referencia y su navegación en `legacy-navigation.ts`.
+ */
+export const enabledFeatures: readonly Feature[] = [
+  { code: "home", label: "Inicio", href: "/", icon: SquaresFourIcon },
 ];
 
-/** Industry-specific variations over the base navigation. */
-export function getNavigation(industry: Industry): NavItem[] {
-  const base = navigation.filter((i) => i.href !== "/agenda");
-  const insertAfter = (items: NavItem[], href: string, ...extra: NavItem[]) => { const i = items.findIndex((x) => x.href === href); return [...items.slice(0, i + 1), ...extra, ...items.slice(i + 1)]; };
-  switch (industry) {
-    case "odontologia":
-      return insertAfter(base, "/clientes", { label: "Agenda", href: "/agenda", icon: CalendarBlankIcon });
-    case "veterinaria":
-      return insertAfter(base.map((i) => (i.href === "/clientes" ? { ...i, label: "Propietarios" } : i)), "/clientes",
-        { label: "Mascotas", href: "/mascotas", icon: PawPrintIcon },
-        { label: "Agenda", href: "/agenda", icon: CalendarBlankIcon },
-        { label: "Hospitalización", href: "/hospitalizacion", icon: BedIcon },
-        { label: "Grooming", href: "/grooming", icon: ScissorsIcon });
-    case "restaurante":
-      return insertAfter(base, "/",
-        { label: "Salón y mesas", href: "/salon", icon: ForkKnifeIcon },
-        { label: "Comandas / cocina", href: "/salon/cocina", icon: CookingPotIcon },
-        { label: "Delivery", href: "/salon/delivery", icon: MopedIcon },
-        { label: "Reservas", href: "/salon/reservas", icon: CalendarBlankIcon });
-    default:
-      return base;
-  }
+/** Si `pathname` pertenece a alguna funcionalidad de `features`. */
+export function isEnabledPath(pathname: string, features: readonly Feature[] = enabledFeatures): boolean {
+  return features.some((f) => (f.href === "/" ? pathname === "/" : pathname === f.href || pathname.startsWith(`${f.href}/`)));
 }
 
-/** Items shown in the mobile bottom navigation; the rest go under "Más". */
-export function getBottomNavHrefs(industry: Industry) {
-  if (industry === "restaurante") return ["/", "/salon", "/salon/cocina", "/ventas"];
-  if (industry === "veterinaria") return ["/", "/ventas", "/mascotas", "/agenda"];
-  return ["/", "/ventas", "/clientes", "/inventario"];
+/** La funcionalidad más específica (prefijo más largo) que contiene `pathname`. */
+export function featureForPath(pathname: string, features: readonly Feature[] = enabledFeatures): Feature | undefined {
+  return features
+    .filter((f) => isEnabledPath(pathname, [f]))
+    .sort((a, b) => b.href.length - a.href.length)[0];
 }
-export const bottomNavHrefs = getBottomNavHrefs("odontologia");
 
-export function isActivePath(pathname: string, href: string) {
-  if (href === "/") return pathname === "/";
-  return pathname === href || pathname.startsWith(`${href}/`);
+/** Máximo de entradas propias de la barra inferior (sin «Más»), el tope de `BarraInferior`. */
+export const BOTTOM_BAR_LIMIT = 4;
+
+/** Entradas de la barra inferior: las primeras habilitadas; el resto queda en «Más». */
+export function bottomBarFeatures(features: readonly Feature[] = enabledFeatures): Feature[] {
+  return features.slice(0, BOTTOM_BAR_LIMIT);
 }

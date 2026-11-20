@@ -1,7 +1,20 @@
 "use client";
 
-import { ErrorState } from "@/components/shared/states";
+import { Alerta } from "khipu-design-system/feedback/alerta";
+import { Button } from "khipu-design-system/ui/button";
 
-export default function Error({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
-  return <div className="flex flex-1 items-center justify-center"><ErrorState detail={`${error.message}${error.digest ? `\ndigest: ${error.digest}` : ""}`} onRetry={reset} /></div>;
+export default function Error({ reset }: { error: Error & { digest?: string }; reset: () => void }) {
+  return (
+    <Alerta
+      tono="error"
+      titulo="No pudimos cargar la página"
+      accion={
+        <Button variant="outline" onClick={reset}>
+          Reintentar
+        </Button>
+      }
+    >
+      Inténtalo de nuevo en unos segundos.
+    </Alerta>
+  );
 }
