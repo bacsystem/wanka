@@ -339,11 +339,34 @@ func (r *Routes) authzFailed(w http.ResponseWriter, hr, lr *http.Request, err er
 	}
 }
 
-// clientIP es la ip del cliente para la auditoría. Hoy es vacía: la API solo la
-// llama el BFF por la red privada (ADR 0007) y RemoteAddr sería el del BFF, así
-// que guardarlo sería inventar el dato. Cuando el contrato fije una cabecera de
-// confianza del BFF (conventions §3), se lee aquí.
-func clientIP(*http.Request) netip.Addr { return netip.Addr{} }
+// HeaderClientIP es la cabecera con la IP del navegador que pone el BFF (conventions.md §3).
+const HeaderClientIP = "X-Client-Ip"
+
+// ClientIP es la IP del cliente para las cuotas, la auditoría y iam.sessions.ip
+// (conventions.md §3). Con trustHeader (API_TRUST_CLIENT_IP=true: el BFF es el
+// único cliente que alcanza la API) lee X-Client-Ip, que debe aparecer una sola
+// vez y ser una dirección IPv4 o IPv6 literal, sin puerto, zona ni lista;
+// ausente, repetida o inválida devuelve la dirección vacía («desconocida»), que
+// no regala cuota: todas las desconocidas comparten un solo bucket. Sin
+// trustHeader ignora la cabecera y usa la IP del socket (la del BFF).
+func ClientIP(r *http.Request, trustHeader bool) netip.Addr {
+	if !trustHeader {
+		ap, err := netip.ParseAddrPort(r.RemoteAddr)
+		if err != nil {
+			return netip.Addr{}
+		}
+		return ap.Addr().Unmap()
+	}
+	vals := r.Header.Values(HeaderClientIP)
+	if len(vals) != 1 {
+		return netip.Addr{}
+	}
+	a, err := netip.ParseAddr(vals[0])
+	if err != nil || a.Zone() != "" {
+		return netip.Addr{}
+	}
+	return a.Unmap()
+}
 
 // siteScope es el alcance de sedes de la membresía; CheckSite lo lee.
 type siteScope struct {

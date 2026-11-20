@@ -5,9 +5,11 @@
 package auth
 
 import (
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"strings"
 )
 
@@ -75,3 +77,43 @@ func validBody(body string) bool {
 	}
 	return true
 }
+
+// Prefijos de los tokens que emite el login (conventions.md §2). El de acceso es
+// accessPrefix.
+const (
+	refreshPrefix   = "wk_rt_"
+	challengePrefix = "wk_ch_"
+)
+
+// IssuedToken es un token recién emitido: el valor en claro, que se entrega una
+// sola vez al cliente, y el hash que es lo único que se guarda.
+type IssuedToken struct {
+	Value string
+	Hash  TokenHash
+}
+
+// String no deja el token en un log ni en un mensaje de error por descuido.
+func (IssuedToken) String() string { return "IssuedToken{redacted}" }
+
+// GoString: ver String.
+func (IssuedToken) GoString() string { return "IssuedToken{redacted}" }
+
+// newToken emite prefix más 32 bytes del CSPRNG en base64url sin relleno; el
+// hash es el sha256 del token completo, con el prefijo (conventions.md §2).
+func newToken(prefix string) (IssuedToken, error) {
+	var raw [tokenBytes]byte
+	if _, err := rand.Read(raw[:]); err != nil {
+		return IssuedToken{}, fmt.Errorf("reading random bytes for a token: %w", err)
+	}
+	v := prefix + base64.RawURLEncoding.EncodeToString(raw[:])
+	return IssuedToken{Value: v, Hash: sha256.Sum256([]byte(v))}, nil
+}
+
+// NewAccessToken emite un token de acceso (wk_at_).
+func NewAccessToken() (IssuedToken, error) { return newToken(accessPrefix) }
+
+// NewRefreshToken emite un token de refresh (wk_rt_).
+func NewRefreshToken() (IssuedToken, error) { return newToken(refreshPrefix) }
+
+// NewChallengeToken emite el token de paso del segundo factor (wk_ch_).
+func NewChallengeToken() (IssuedToken, error) { return newToken(challengePrefix) }

@@ -9,12 +9,14 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
 
 	externalRef0 "github.com/bacsystem/wanka/apps/api/internal/apigen/components"
 	"github.com/oapi-codegen/runtime"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
 // Defines values for EntitlementsStatus.
@@ -41,6 +43,36 @@ func (e EntitlementsStatus) Valid() bool {
 	case EntitlementsStatusSuspendida:
 		return true
 	case EntitlementsStatusTrial:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for LoginAuthenticatedStatus.
+const (
+	LoginAuthenticatedStatusAuthenticated LoginAuthenticatedStatus = "authenticated"
+)
+
+// Valid indicates whether the value is a known member of the LoginAuthenticatedStatus enum.
+func (e LoginAuthenticatedStatus) Valid() bool {
+	switch e {
+	case LoginAuthenticatedStatusAuthenticated:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for LoginMfaRequiredStatus.
+const (
+	LoginMfaRequiredStatusMfaRequired LoginMfaRequiredStatus = "mfa_required"
+)
+
+// Valid indicates whether the value is a known member of the LoginMfaRequiredStatus enum.
+func (e LoginMfaRequiredStatus) Valid() bool {
+	switch e {
+	case LoginMfaRequiredStatusMfaRequired:
 		return true
 	default:
 		return false
@@ -93,6 +125,88 @@ type Entitlements struct {
 // EntitlementsStatus defines model for Entitlements.Status.
 type EntitlementsStatus string
 
+// LoginAuthenticated Sesión sin empresa elegida (mfa_method none); el BFF pone las cookies y decide el siguiente paso con memberships.
+type LoginAuthenticated struct {
+	AccessToken string `json:"accessToken"`
+
+	// ExpiresAt Vencimiento del accessToken (15 min)
+	ExpiresAt time.Time `json:"expiresAt"`
+
+	// Memberships Solo membresías activas (ADR 0011).
+	Memberships  []MembershipSummary      `json:"memberships"`
+	RefreshToken string                   `json:"refreshToken"`
+	Status       LoginAuthenticatedStatus `json:"status"`
+}
+
+// LoginAuthenticatedStatus defines model for LoginAuthenticated.Status.
+type LoginAuthenticatedStatus string
+
+// LoginMfaRequired El usuario tiene TOTP confirmado. No trae tokens de acceso; el challengeToken se canjea en POST /v1/auth/mfa/verify (#25).
+type LoginMfaRequired struct {
+	ChallengeToken string `json:"challengeToken"`
+
+	// ExpiresAt Vencimiento del challengeToken (5 min).
+	ExpiresAt time.Time              `json:"expiresAt"`
+	Status    LoginMfaRequiredStatus `json:"status"`
+}
+
+// LoginMfaRequiredStatus defines model for LoginMfaRequired.Status.
+type LoginMfaRequiredStatus string
+
+// LoginRequest defines model for LoginRequest.
+type LoginRequest struct {
+	// Email Se normaliza (TrimSpace y ToLower) antes de buscarlo; la longitud se mide ya normalizado.
+	Email string `json:"email"`
+
+	// Password Hasta 128 caracteres. La política de contraseña nueva se aplica al definirla, no al ingresar.
+	Password string `json:"password"`
+}
+
+// LoginResponse Resultado del login; el discriminador es status.
+type LoginResponse struct {
+	union json.RawMessage
+}
+
+// MembershipSummary Una membresía activa del usuario (la forma la fija el comentario de
+type MembershipSummary struct {
+	// BlockedReason Solo con selectable falso. Enum abierto: tenant_suspended.
+	BlockedReason *string            `json:"blockedReason,omitempty"`
+	MembershipId  openapi_types.UUID `json:"membershipId"`
+
+	// ReadOnly Verdadero si la empresa está cerrada.
+	ReadOnly bool `json:"readOnly"`
+	Role     struct {
+		Id          openapi_types.UUID `json:"id"`
+		Name        string             `json:"name"`
+		RequiresMfa bool               `json:"requiresMfa"`
+	} `json:"role"`
+
+	// Selectable Falso si la empresa está suspendida.
+	Selectable bool `json:"selectable"`
+
+	// Sites Solo sedes y cajas activas dentro del alcance de la membresía.
+	Sites []struct {
+		CashRegisters []struct {
+			Code string             `json:"code"`
+			Id   openapi_types.UUID `json:"id"`
+		} `json:"cashRegisters"`
+		Id   openapi_types.UUID `json:"id"`
+		Name string             `json:"name"`
+	} `json:"sites"`
+	Tenant struct {
+		Id openapi_types.UUID `json:"id"`
+
+		// Industry Enum abierto; vacío hasta que #31 lo complete.
+		Industry string `json:"industry"`
+
+		// Name Nombre comercial o, si falta, la razón social; vacío hasta que #31 la complete.
+		Name string `json:"name"`
+
+		// Status Enum abierto: trial, activa, suspendida, cerrada.
+		Status string `json:"status"`
+	} `json:"tenant"`
+}
+
 // MfaEmailCodeResent defines model for MfaEmailCodeResent.
 type MfaEmailCodeResent struct {
 	// ResendAvailableAt Desde cuándo se puede pedir otro envío (60 s después de este).
@@ -121,8 +235,8 @@ type MfaEnrollmentConfirmed struct {
 	// ExpiresAt Vencimiento del accessToken.
 	ExpiresAt time.Time `json:"expiresAt"`
 
-	// Memberships Misma forma que GET /v1/me/memberships; se fija en
-	Memberships []map[string]interface{} `json:"memberships"`
+	// Memberships Misma forma que GET /v1/me/memberships.
+	Memberships []MembershipSummary `json:"memberships"`
 
 	// RecoveryCodes Los 10 códigos de recuperación; se muestran esta única vez (ADR 0004).
 	RecoveryCodes []string `json:"recoveryCodes"`
@@ -167,6 +281,12 @@ type MfaTotpSecret struct {
 // TotpCode Código TOTP de 6 dígitos (RFC 6238, 30 s, ventana ±1).
 type TotpCode = string
 
+// LoginParams defines parameters for Login.
+type LoginParams struct {
+	// XRequestId Se conserva si cumple el patrón; si falta o no lo cumple, la API lo reemplaza por uno propio y nunca responde 400 por esta cabecera (conventions.md §3).
+	XRequestId *externalRef0.RequestId `json:"X-Request-Id,omitempty"`
+}
+
 // ResendMfaEnrollmentEmailCodeParams defines parameters for ResendMfaEnrollmentEmailCode.
 type ResendMfaEnrollmentEmailCodeParams struct {
 	// XRequestId Se conserva si cumple el patrón; si falta o no lo cumple, la API lo reemplaza por uno propio y nunca responde 400 por esta cabecera (conventions.md §3).
@@ -184,6 +304,9 @@ type ConfirmMfaEnrollmentParams struct {
 	// XRequestId Se conserva si cumple el patrón; si falta o no lo cumple, la API lo reemplaza por uno propio y nunca responde 400 por esta cabecera (conventions.md §3).
 	XRequestId *externalRef0.RequestId `json:"X-Request-Id,omitempty"`
 }
+
+// LoginJSONRequestBody defines body for Login for application/json ContentType.
+type LoginJSONRequestBody = LoginRequest
 
 // ResendMfaEnrollmentEmailCodeJSONRequestBody defines body for ResendMfaEnrollmentEmailCode for application/json ContentType.
 type ResendMfaEnrollmentEmailCodeJSONRequestBody = MfaEnrollmentTokenRequest
@@ -207,6 +330,13 @@ type OperationMeta struct {
 
 // Operations son las operaciones del archivo de paths de este paquete.
 var Operations = []OperationMeta{
+	{
+		Method: "POST", Path: "/v1/auth/login", ID: "login",
+		Tags:             []string{"identidad"},
+		Ext:              map[string]any{"x-module": "none", "x-permission": "none"},
+		SecurityDeclared: true,
+		Security:         []string{},
+	},
 	{
 		Method: "POST", Path: "/v1/auth/mfa/enrollment/email-code/resend", ID: "resendMfaEnrollmentEmailCode",
 		Tags:             []string{"identidad"},
@@ -237,8 +367,148 @@ var Operations = []OperationMeta{
 	},
 }
 
+// AsLoginAuthenticated returns the union data inside the LoginResponse as a LoginAuthenticated
+func (t LoginResponse) AsLoginAuthenticated() (LoginAuthenticated, error) {
+	var body LoginAuthenticated
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromLoginAuthenticated overwrites any union data inside the LoginResponse as the provided LoginAuthenticated
+func (t *LoginResponse) FromLoginAuthenticated(v LoginAuthenticated) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"status":"authenticated"}`))
+	t.union = b
+	return err
+}
+
+// MergeLoginAuthenticated performs a merge with any union data inside the LoginResponse, using the provided LoginAuthenticated
+func (t *LoginResponse) MergeLoginAuthenticated(v LoginAuthenticated) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"status":"authenticated"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsLoginMfaRequired returns the union data inside the LoginResponse as a LoginMfaRequired
+func (t LoginResponse) AsLoginMfaRequired() (LoginMfaRequired, error) {
+	var body LoginMfaRequired
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromLoginMfaRequired overwrites any union data inside the LoginResponse as the provided LoginMfaRequired
+func (t *LoginResponse) FromLoginMfaRequired(v LoginMfaRequired) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"status":"mfa_required"}`))
+	t.union = b
+	return err
+}
+
+// MergeLoginMfaRequired performs a merge with any union data inside the LoginResponse, using the provided LoginMfaRequired
+func (t *LoginResponse) MergeLoginMfaRequired(v LoginMfaRequired) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"status":"mfa_required"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsMfaEnrollmentRequired returns the union data inside the LoginResponse as a MfaEnrollmentRequired
+func (t LoginResponse) AsMfaEnrollmentRequired() (MfaEnrollmentRequired, error) {
+	var body MfaEnrollmentRequired
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromMfaEnrollmentRequired overwrites any union data inside the LoginResponse as the provided MfaEnrollmentRequired
+func (t *LoginResponse) FromMfaEnrollmentRequired(v MfaEnrollmentRequired) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"status":"mfa_enrollment_required"}`))
+	t.union = b
+	return err
+}
+
+// MergeMfaEnrollmentRequired performs a merge with any union data inside the LoginResponse, using the provided MfaEnrollmentRequired
+func (t *LoginResponse) MergeMfaEnrollmentRequired(v MfaEnrollmentRequired) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	b, err = runtime.JSONMerge(b, []byte(`{"status":"mfa_enrollment_required"}`))
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t LoginResponse) Discriminator() (string, error) {
+	var discriminator struct {
+		Discriminator string `json:"status"`
+	}
+	err := json.Unmarshal(t.union, &discriminator)
+	return discriminator.Discriminator, err
+}
+
+func (t LoginResponse) ValueByDiscriminator() (interface{}, error) {
+	discriminator, err := t.Discriminator()
+	if err != nil {
+		return nil, err
+	}
+	switch discriminator {
+	case "authenticated":
+		return t.AsLoginAuthenticated()
+	case "mfa_enrollment_required":
+		return t.AsMfaEnrollmentRequired()
+	case "mfa_required":
+		return t.AsLoginMfaRequired()
+	default:
+		return nil, errors.New("unknown discriminator value: " + discriminator)
+	}
+}
+
+func (t LoginResponse) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *LoginResponse) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// Login Inicia sesión con correo y contraseña
+	// (POST /v1/auth/login)
+	Login(w http.ResponseWriter, r *http.Request, params LoginParams)
 	// ResendMfaEnrollmentEmailCode Manda un emailCode nuevo al correo del usuario del enrollmentToken
 	// (POST /v1/auth/mfa/enrollment/email-code/resend)
 	ResendMfaEnrollmentEmailCode(w http.ResponseWriter, r *http.Request, params ResendMfaEnrollmentEmailCodeParams)
@@ -261,6 +531,47 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// Login operation middleware
+func (siw *ServerInterfaceWrapper) Login(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params LoginParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "X-Request-Id" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("X-Request-Id")]; found {
+		var XRequestId externalRef0.RequestId
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "X-Request-Id", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "X-Request-Id", valueList[0], &XRequestId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "X-Request-Id", Err: err})
+			return
+		}
+
+		params.XRequestId = &XRequestId
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.Login(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
 
 // ResendMfaEnrollmentEmailCode operation middleware
 func (siw *ServerInterfaceWrapper) ResendMfaEnrollmentEmailCode(w http.ResponseWriter, r *http.Request) {
@@ -519,12 +830,130 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 		ErrorHandlerFunc:   options.ErrorHandlerFunc,
 	}
 
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/v1/auth/login", wrapper.Login)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/v1/auth/mfa/enrollment/totp", wrapper.StartMfaEnrollment)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/v1/auth/mfa/enrollment/totp/confirm", wrapper.ConfirmMfaEnrollment)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/v1/auth/mfa/enrollment/email-code/resend", wrapper.ResendMfaEnrollmentEmailCode)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/me/entitlements", wrapper.GetMyEntitlements)
 
 	return m
+}
+
+type LoginRequestObject struct {
+	Params LoginParams
+	Body   *LoginJSONRequestBody
+}
+
+type LoginResponseObject interface {
+	VisitLoginResponse(w http.ResponseWriter) error
+}
+
+type Login200JSONResponse LoginResponse
+
+func (t Login200JSONResponse) MarshalJSON() ([]byte, error) {
+	return LoginResponse(t).MarshalJSON()
+}
+
+func (t *Login200JSONResponse) UnmarshalJSON(b []byte) error {
+	return (*LoginResponse)(t).UnmarshalJSON(b)
+}
+
+func (response Login200JSONResponse) VisitLoginResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type Login400ApplicationProblemPlusJSONResponse struct {
+	externalRef0.ProblemApplicationProblemPlusJSONResponse
+}
+
+func (response Login400ApplicationProblemPlusJSONResponse) VisitLoginResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type Login401ApplicationProblemPlusJSONResponse externalRef0.Problem
+
+func (response Login401ApplicationProblemPlusJSONResponse) VisitLoginResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type Login403ApplicationProblemPlusJSONResponse externalRef0.Problem
+
+func (response Login403ApplicationProblemPlusJSONResponse) VisitLoginResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type Login422ApplicationProblemPlusJSONResponse externalRef0.Problem
+
+func (response Login422ApplicationProblemPlusJSONResponse) VisitLoginResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type Login429ApplicationProblemPlusJSONResponse externalRef0.Problem
+
+func (response Login429ApplicationProblemPlusJSONResponse) VisitLoginResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(429)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type Login503ApplicationProblemPlusJSONResponse externalRef0.Problem
+
+func (response Login503ApplicationProblemPlusJSONResponse) VisitLoginResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
 }
 
 type ResendMfaEnrollmentEmailCodeRequestObject struct {
@@ -907,6 +1336,9 @@ func (response GetMyEntitlements503ApplicationProblemPlusJSONResponse) VisitGetM
 
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
+	// Login Inicia sesión con correo y contraseña
+	// (POST /v1/auth/login)
+	Login(ctx context.Context, request LoginRequestObject) (LoginResponseObject, error)
 	// ResendMfaEnrollmentEmailCode Manda un emailCode nuevo al correo del usuario del enrollmentToken
 	// (POST /v1/auth/mfa/enrollment/email-code/resend)
 	ResendMfaEnrollmentEmailCode(ctx context.Context, request ResendMfaEnrollmentEmailCodeRequestObject) (ResendMfaEnrollmentEmailCodeResponseObject, error)
@@ -958,6 +1390,39 @@ type strictHandler struct {
 	ssi         StrictServerInterface
 	middlewares []StrictMiddlewareFunc
 	options     StrictHTTPServerOptions
+}
+
+// Login operation middleware
+func (sh *strictHandler) Login(w http.ResponseWriter, r *http.Request, params LoginParams) {
+	var request LoginRequestObject
+
+	request.Params = params
+
+	var body LoginJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.Login(ctx, request.(LoginRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "Login")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(LoginResponseObject); ok {
+		if err := validResponse.VisitLoginResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
 }
 
 // ResendMfaEnrollmentEmailCode operation middleware

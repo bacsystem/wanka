@@ -176,3 +176,22 @@ func TestInvalidMailerOrEnvironmentNamesVariableNotValue(t *testing.T) {
 		}
 	}
 }
+
+func TestTrustClientIP(t *testing.T) {
+	for _, tc := range []struct {
+		value string
+		want  bool
+		bad   bool
+	}{{"", false, false}, {"false", false, false}, {"true", true, false}, {"TRUE", true, false}, {"1", false, true}, {"yes-S3CRET", false, true}} {
+		cfg, err := config.Load(env(map[string]string{"DATABASE_URL_APP": "x", "API_TRUST_CLIENT_IP": tc.value}), config.API)
+		if tc.bad {
+			if err == nil || !strings.Contains(err.Error(), "API_TRUST_CLIENT_IP") || strings.Contains(err.Error(), "S3CRET") {
+				t.Errorf("%q: error = %v, want one that names the variable and not the value", tc.value, err)
+			}
+			continue
+		}
+		if err != nil || cfg.TrustClientIP != tc.want {
+			t.Errorf("%q: TrustClientIP = %v, err = %v, want %v", tc.value, cfg.TrustClientIP, err, tc.want)
+		}
+	}
+}

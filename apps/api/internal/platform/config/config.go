@@ -19,6 +19,8 @@ const (
 	EnvDBPoolMax = "DB_POOL_MAX_CONNS"
 	EnvMailer    = "MAILER"
 	EnvAppEnv    = "APP_ENV"
+	// EnvTrustClientIP: la API lee la IP del cliente de X-Client-Ip (api/conventions.md §3).
+	EnvTrustClientIP = "API_TRUST_CLIENT_IP"
 )
 
 // Valores de MAILER: el adaptador de correo. El proveedor real llega con
@@ -64,6 +66,8 @@ type Config struct {
 	// Production es true (también para staging) salvo APP_ENV=development: sin la variable se asume
 	// producción, para que un olvido avise de más y nunca de menos.
 	Production bool
+	// TrustClientIP es API_TRUST_CLIENT_IP (false por defecto): solo donde el BFF es el único cliente que alcanza la API.
+	TrustClientIP bool
 }
 
 // String hides the secret so a Config printed by mistake leaks nothing.
@@ -123,6 +127,13 @@ func Load(getenv func(string) string, svc Service) (Config, error) {
 		cfg.Production = false
 	default:
 		errs = append(errs, fmt.Errorf("environment variable %s must be one of production, staging, development", EnvAppEnv))
+	}
+	switch strings.ToLower(getenv(EnvTrustClientIP)) {
+	case "", "false":
+	case "true":
+		cfg.TrustClientIP = true
+	default:
+		errs = append(errs, fmt.Errorf("environment variable %s must be one of true, false", EnvTrustClientIP))
 	}
 	if err := errors.Join(errs...); err != nil {
 		return Config{}, err
