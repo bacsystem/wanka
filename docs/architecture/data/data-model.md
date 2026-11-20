@@ -141,7 +141,7 @@ Herramienta: **goose** (`github.com/pressly/goose/v3`), migraciones SQL en `apps
     - `notice_sent_at timestamptz` (solo `existing_account`: marca del aviso «ya tienes cuenta», que se envía como mucho una vez por correo cada 24 h);
     - `password_hash text` (PHC argon2id; solo con `new_account`);
     - `full_name`, `ruc`, `legal_name`, `trade_name` e `industry`, con los `CHECK` de sus columnas de destino;
-    - `expires_at timestamptz NOT NULL`, como mucho `created_at` más 24 h, con índice para la limpieza (§5);
+    - `expires_at timestamptz NOT NULL`, **exactamente** `created_at` más 24 h en todos los `kind` (lo fija el trigger, no quien inserta), con índice para la limpieza (§5). Así una fila `existing_account` vive lo mismo que la ventana del aviso, y la limpieza no puede borrar antes de tiempo la marca `notice_sent_at` que cierra esa ventana;
     - `consumed_at timestamptz`;
     - `tenant_id uuid`, la empresa que creó la confirmación, sin FK (como `iam.sessions`);
     - `created_at`.
@@ -165,6 +165,19 @@ Herramienta: **goose** (`github.com/pressly/goose/v3`), migraciones SQL en `apps
     - el override `rubro.<industry>` en `platform.tenant_module_overrides`.
 
     La prueba **vence** cuando `period_end` es anterior a hoy en Lima. Desde ahí la empresa queda en solo lectura (`403 tenant_read_only`, [ADR 0005](../adr/0005-industry-modules-feature-flags.md), nota del 2026-11-20) hasta que una historia de cobros del SaaS la active.
+- **Espacios de advisory locks** (architect, 2026-11-20, revisión del PR #256). Este es el registro: una clave nueva se agrega aquí en el mismo PR que la usa.
+  - **Forma de una clave** (`bigint`). La usan:
+    - goose, con su propio id;
+    - `dbtest` (`bootstrapLockID = 7162162`, solo en pruebas);
+    - `audit.ensure_partitions` (`hashtext('audit.ensure_partitions')`).
+  - **Forma de dos claves** (`int4, int4`): el primer número es el **espacio** y el segundo, el objeto (por ejemplo, `hashtext(…)`). En PostgreSQL las dos formas no se pisan, porque `pg_locks` las separa en `objsubid` 1 y 2. Todo lock nuevo de la aplicación usa la forma de dos claves con un espacio de esta tabla, y nunca la de una clave.
+
+  | Espacio | Para qué | Segunda clave | Historia |
+  |---|---|---|---|
+  | 1 | `wanka einvoicing activate`: dos activaciones del mismo tenant (ADR 0003) | `hashtext(tenant_id::text)` | #9 / #55 |
+  | 2 | Tope de usuarios del plan en las invitaciones, y tope de sedes en `POST /v1/sites` | `hashtext(tenant_id::text)` | #28, #33 |
+  | 3 | Aviso «ya tienes cuenta» del alta, uno por correo en 24 h (`iam.signup_mail`) | `hashtext(lower(email))` | #31 |
+
 - Prueba en CI que bloquea el merge: consulta a `pg_catalog` que falla si alguna tabla con columna `tenant_id` no tiene `relrowsecurity` y `relforcerowsecurity` y al menos una política, salvo las de una lista blanca explícita en el test, cada una con su motivo (hoy solo `iam.sessions`: identidad global sin RLS, ADR 0001; ampliarla es un PR de arquitectura, #164); otra que falla si una FK no tiene índice.
 - `lock_timeout = '5s'` y `statement_timeout = '5min'` en la sesión del migrador, para que una migración que espera un lock no congele la producción. Una sentencia que necesite más (backfill) va en lotes o en un job, no en una migración. La tabla de versiones de goose es `goose.goose_db_version` (esquema creado por el bootstrap, dueño `wanka_migrator`).
 
