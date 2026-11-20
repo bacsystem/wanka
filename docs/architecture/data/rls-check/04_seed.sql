@@ -33,6 +33,43 @@ INSERT INTO iam.users (id, email) VALUES ('eeeeeeee-0000-0000-0000-000000000003'
 INSERT INTO iam.memberships (id, tenant_id, user_id, role_id, status)
   VALUES ('3e000000-0000-0000-0000-0000000000d1','bbbbbbbb-0000-0000-0000-000000000002','eeeeeeee-0000-0000-0000-000000000003','b0000000-0000-0000-0000-0000000000b1','suspendido');
 COMMIT;
+-- Identidad de la ola 1, F2 (#232): plantillas (catalogo global; solo el duenio las escribe), un rol base, sedes, cajas y el alcance
+-- de las membresias. El cajero solo opera en la sede 0000; 'multi' es miembro de A y de B (prueba de dos tenants).
+INSERT INTO iam.role_templates (code, name, requires_mfa) VALUES ('dueno', 'Dueno', true), ('cajero', 'Cajero', false);
+INSERT INTO iam.role_template_permissions VALUES ('cajero', 'ventas.pos:read');
+BEGIN;
+SELECT set_config('app.tenant_id','aaaaaaaa-0000-0000-0000-000000000001', true);
+INSERT INTO iam.roles (id, tenant_id, name, system, template_code, requires_mfa)
+  VALUES ('a0000000-0000-0000-0000-0000000000a3','aaaaaaaa-0000-0000-0000-000000000001','Dueno', true, 'dueno', true);
+INSERT INTO org.sites (id, tenant_id, code, name) VALUES ('a5000000-0000-0000-0000-0000000000a2','aaaaaaaa-0000-0000-0000-000000000001','S2','Sede 2');
+INSERT INTO org.cash_registers (id, tenant_id, site_id, code) VALUES
+  ('ca000000-0000-0000-0000-0000000000a1','aaaaaaaa-0000-0000-0000-000000000001','a5000000-0000-0000-0000-0000000000a1','CAJA-01'),
+  ('ca000000-0000-0000-0000-0000000000a2','aaaaaaaa-0000-0000-0000-000000000001','a5000000-0000-0000-0000-0000000000a1','CAJA-02'),
+  ('ca000000-0000-0000-0000-0000000000a3','aaaaaaaa-0000-0000-0000-000000000001','a5000000-0000-0000-0000-0000000000a2','CAJA-03');
+INSERT INTO iam.role_permissions VALUES ('aaaaaaaa-0000-0000-0000-000000000001','a0000000-0000-0000-0000-0000000000a2','ventas.pos:read');
+INSERT INTO iam.users (id, email) VALUES ('eeeeeeee-0000-0000-0000-00000000000a','multi@ab.pe');
+INSERT INTO iam.memberships (id, tenant_id, user_id, role_id, status)
+  VALUES ('3e000000-0000-0000-0000-0000000000e1','aaaaaaaa-0000-0000-0000-000000000001','eeeeeeee-0000-0000-0000-00000000000a','a0000000-0000-0000-0000-0000000000a2','activo');
+COMMIT;
+BEGIN;
+SELECT set_config('app.tenant_id','bbbbbbbb-0000-0000-0000-000000000002', true);
+INSERT INTO org.cash_registers (id, tenant_id, site_id, code) VALUES ('cb000000-0000-0000-0000-0000000000b1','bbbbbbbb-0000-0000-0000-000000000002','b5000000-0000-0000-0000-0000000000b1','CAJA-01');
+INSERT INTO iam.role_permissions VALUES ('bbbbbbbb-0000-0000-0000-000000000002','b0000000-0000-0000-0000-0000000000b1','ventas.pos:read');
+INSERT INTO iam.memberships (id, tenant_id, user_id, role_id, status)
+  VALUES ('3e000000-0000-0000-0000-0000000000e2','bbbbbbbb-0000-0000-0000-000000000002','eeeeeeee-0000-0000-0000-00000000000a','b0000000-0000-0000-0000-0000000000b1','activo');
+COMMIT;
+-- El cajero solo opera en la sede 0000 (all_sites = false); la otra sede de A no es de su alcance.
+BEGIN;
+SELECT set_config('app.tenant_id','aaaaaaaa-0000-0000-0000-000000000001', true);
+UPDATE iam.memberships SET all_sites = false WHERE id = '3e000000-0000-0000-0000-0000000000c1';
+INSERT INTO iam.membership_sites VALUES ('aaaaaaaa-0000-0000-0000-000000000001','3e000000-0000-0000-0000-0000000000c1','a5000000-0000-0000-0000-0000000000a1');
+COMMIT;
+-- El ex miembro de B (suspendido) tenia alcance parcial: su fila de iam.membership_sites no debe leerse sin tenant.
+BEGIN;
+SELECT set_config('app.tenant_id','bbbbbbbb-0000-0000-0000-000000000002', true);
+UPDATE iam.memberships SET all_sites = false WHERE id = '3e000000-0000-0000-0000-0000000000d1';
+INSERT INTO iam.membership_sites VALUES ('bbbbbbbb-0000-0000-0000-000000000002','3e000000-0000-0000-0000-0000000000d1','b5000000-0000-0000-0000-0000000000b1');
+COMMIT;
 INSERT INTO ops.webhook_routes VALUES ('r-0123456789abcdef', 'aaaaaaaa-0000-0000-0000-000000000001', 'khipu', '\xdeadbeef', NULL);
 INSERT INTO ops.exchange_rates VALUES ('2026-11-19', 'USD', 3.7, 3.8, 'official');
 -- ops.idempotency_keys (issue #177): claves de A y B, vencidas (mas de 24 h) y vigentes. created_at explicito: lo puede fijar el

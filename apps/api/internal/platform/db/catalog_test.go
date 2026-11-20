@@ -65,8 +65,8 @@ const purgeQual24h = "((app.current_tenant() IS NULL) AND (created_at < (now() -
 // olas siguientes, porque la lista es del ADR y la regla solo la consulta.
 var policyAllow = map[string]policyRule{
 	"iam.memberships:own_memberships": {cmds: []string{"SELECT"}, userIs: true, qual: qualOwnMemberships, reason: reasonNoTenantPaths},
-	// El USING de esta todavía no está escrito en el ADR; la historia que la cree le aplicará el mismo filtro de estado.
-	"iam.membership_sites:own_memberships":    {cmds: []string{"SELECT"}, userIs: true, mustContain: []string{"status", "invitado", "activo"}, reason: reasonNoTenantPaths},
+	// El ADR no escribe el USING de esta; la migración de #232 lo escribe con el mismo filtro de estado y aquí queda fijado.
+	"iam.membership_sites:own_memberships":    {cmds: []string{"SELECT"}, userIs: true, mustContain: []string{"status", "invitado", "activo"}, qual: qualMembershipSitesOwn, reason: reasonNoTenantPaths},
 	"org.tenants:member_read":                 {cmds: []string{"SELECT"}, userIs: true, qual: qualTenantsMemberRead, reason: reasonNoTenantPaths},
 	"iam.roles:member_read":                   {cmds: []string{"SELECT"}, userIs: true, qual: qualRolesMemberRead, reason: reasonNoTenantPaths},
 	"org.sites:member_read":                   {cmds: []string{"SELECT"}, userIs: true, qual: qualSitesMemberRead, reason: reasonNoTenantPaths},
@@ -82,6 +82,10 @@ const reasonNoTenantPaths = "ADR 0001, «Caminos que no tienen un tenant fijado�
 // PostgreSQL 16 los deparsa en pg_policies.qual. Cambiar uno es cambiar el ADR.
 const (
 	qualOwnMemberships = `((app.current_tenant() IS NULL) AND (user_id = app.current_user_id()) AND (status = ANY (ARRAY['invitado'::text, 'activo'::text])))`
+
+	qualMembershipSitesOwn = `((app.current_tenant() IS NULL) AND (membership_id IN ( SELECT memberships.id
+	   FROM iam.memberships
+	  WHERE ((memberships.user_id = app.current_user_id()) AND (memberships.status = ANY (ARRAY['invitado'::text, 'activo'::text]))))))`
 
 	qualTenantsMemberRead = `((id = app.current_tenant()) OR ((app.current_tenant() IS NULL) AND (id IN ( SELECT memberships.tenant_id
 	   FROM iam.memberships
@@ -986,10 +990,8 @@ func TestCatalogRulesCatchMutations(t *testing.T) {
 			     OR (app.current_tenant() IS NULL AND id IN (SELECT tenant_id FROM iam.memberships WHERE user_id = app.current_user_id())));`,
 			want: []string{"org.tenants: policy member_read does not match the canonical expression"}},
 		{name: "own_memberships of membership_sites without the state filter", rule: "extra-policies-are-whitelisted",
-			up: `CREATE TABLE iam.membership_sites (id uuid PRIMARY KEY, tenant_id uuid NOT NULL REFERENCES org.tenants, user_id uuid, UNIQUE (tenant_id, id));
-			   ALTER TABLE iam.membership_sites ENABLE ROW LEVEL SECURITY; ALTER TABLE iam.membership_sites FORCE ROW LEVEL SECURITY;
-			   CREATE POLICY tenant_isolation ON iam.membership_sites USING (tenant_id = app.current_tenant()) WITH CHECK (tenant_id = app.current_tenant());
-			   CREATE POLICY own_memberships ON iam.membership_sites FOR SELECT USING (app.current_tenant() IS NULL AND user_id = app.current_user_id());`,
+			up: `DROP POLICY own_memberships ON iam.membership_sites;
+			   CREATE POLICY own_memberships ON iam.membership_sites FOR SELECT USING (app.current_tenant() IS NULL AND membership_id IS NOT NULL);`,
 			want: []string{`iam.membership_sites: policy own_memberships must contain "status"`}},
 
 		// Particiones (H1): una consulta directa a la partición no pasa por la política de la madre.
@@ -1149,30 +1151,19 @@ func TestCatalogAcceptsPartitionsThatAreSafe(t *testing.T) {
 	}
 }
 
-// El SQL del ADR 0001 («Caminos que no tienen un tenant fijado», 1; #187), tal cual, sobre tablas que cumplen el resto de reglas.
+// El SQL del ADR 0001 («Caminos que no tienen un tenant fijado», 1; #187), tal cual; el de own_memberships de
+// iam.membership_sites lo escribe #232 porque el ADR no lo tiene.
 const adrPoliciesSQL = `
-CREATE TABLE org.sites (id uuid PRIMARY KEY, tenant_id uuid NOT NULL REFERENCES org.tenants, UNIQUE (tenant_id, id));
-CREATE TABLE org.cash_registers (id uuid PRIMARY KEY, tenant_id uuid NOT NULL REFERENCES org.tenants, site_id uuid NOT NULL,
-  FOREIGN KEY (tenant_id, site_id) REFERENCES org.sites (tenant_id, id));
-CREATE TABLE iam.membership_sites (id uuid PRIMARY KEY, tenant_id uuid NOT NULL REFERENCES org.tenants, membership_id uuid NOT NULL,
-  site_id uuid NOT NULL, user_id uuid NOT NULL, UNIQUE (tenant_id, id),
-  FOREIGN KEY (tenant_id, membership_id) REFERENCES iam.memberships (tenant_id, id),
-  FOREIGN KEY (tenant_id, site_id) REFERENCES org.sites (tenant_id, id));
-ALTER TABLE iam.memberships ADD COLUMN IF NOT EXISTS all_sites boolean NOT NULL DEFAULT false;
-CREATE INDEX cash_registers_site_idx ON org.cash_registers (tenant_id, site_id);
-CREATE INDEX membership_sites_membership_idx ON iam.membership_sites (tenant_id, membership_id);
-CREATE INDEX membership_sites_site_idx ON iam.membership_sites (tenant_id, site_id);
-ALTER TABLE org.sites ENABLE ROW LEVEL SECURITY; ALTER TABLE org.sites FORCE ROW LEVEL SECURITY;
-ALTER TABLE org.cash_registers ENABLE ROW LEVEL SECURITY; ALTER TABLE org.cash_registers FORCE ROW LEVEL SECURITY;
-ALTER TABLE iam.membership_sites ENABLE ROW LEVEL SECURITY; ALTER TABLE iam.membership_sites FORCE ROW LEVEL SECURITY;
-CREATE POLICY tenant_isolation ON org.sites USING (tenant_id = app.current_tenant()) WITH CHECK (tenant_id = app.current_tenant());
-CREATE POLICY tenant_isolation ON org.cash_registers USING (tenant_id = app.current_tenant()) WITH CHECK (tenant_id = app.current_tenant());
-CREATE POLICY tenant_isolation ON iam.membership_sites USING (tenant_id = app.current_tenant()) WITH CHECK (tenant_id = app.current_tenant());
-
+-- Las tablas y las políticas ya vienen de la migración de #232 (identidad, F2); aquí se reescriben con el texto del ADR
+-- para que la prueba compare las constantes contra el ADR y no contra la migración.
+DROP POLICY IF EXISTS own_memberships ON iam.membership_sites;
+DROP POLICY IF EXISTS member_read ON org.sites;
+DROP POLICY IF EXISTS member_read ON org.cash_registers;
 DROP POLICY IF EXISTS own_memberships ON iam.memberships;
 CREATE POLICY own_memberships ON iam.memberships FOR SELECT USING (app.current_tenant() IS NULL AND user_id = app.current_user_id() AND status IN ('invitado','activo'));
-CREATE POLICY own_memberships ON iam.membership_sites FOR SELECT USING (app.current_tenant() IS NULL AND user_id = app.current_user_id()
-  AND membership_id IN (SELECT id FROM iam.memberships WHERE status IN ('invitado','activo')));
+CREATE POLICY own_memberships ON iam.membership_sites FOR SELECT USING (
+  app.current_tenant() IS NULL AND membership_id IN (SELECT id FROM iam.memberships
+            WHERE user_id = app.current_user_id() AND status IN ('invitado','activo')));
 DROP POLICY IF EXISTS member_read ON org.tenants;
 CREATE POLICY member_read ON org.tenants FOR SELECT USING (id = app.current_tenant() OR (app.current_tenant() IS NULL AND id IN (SELECT tenant_id FROM iam.memberships WHERE user_id = app.current_user_id() AND status IN ('invitado','activo'))));
 DROP POLICY IF EXISTS platform_rw ON org.tenants;

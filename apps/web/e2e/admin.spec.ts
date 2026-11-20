@@ -63,10 +63,10 @@ test("admin 404: unknown /admin/* URL shows the console 404, not the tenant one"
 
 test("tenant 404 is unchanged for unknown URLs outside /admin", async ({ page }) => {
   await page.goto("/no-existe");
-  await expect(page.getByRole("heading", { name: "No encontramos esta página" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Página no encontrada" })).toBeVisible();
   await expect(page.getByRole("heading", { name: /de la consola/ })).toHaveCount(0);
   await expect(page.locator("html")).not.toHaveAttribute("data-paleta", "indigo");
-  await expect(page.getByText("Ir al panel", { exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Ir al inicio" })).toBeVisible();
 });
 
 test("admin tenants: filters, suspend toggle, alta drawer and detail", async ({ page }) => {
@@ -85,7 +85,8 @@ test("admin tenants: filters, suspend toggle, alta drawer and detail", async ({ 
   await expect(page.getByText(/Impersonando/)).toBeVisible();
 });
 
-test("data table: columns menu hides a column and reset restores it", async ({ page }, testInfo) => {
+// Pantalla mock inaccesible hasta que la historia #52 la rehaga sobre el DS, la conecte a la API y la habilite; entonces se reactiva.
+test.skip("data table: columns menu hides a column and reset restores it", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name === "mobile");
   await page.goto("/ventas/comprobantes");
   await page.waitForLoadState("networkidle");

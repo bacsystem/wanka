@@ -42,6 +42,10 @@ const RESTRICTED_PATTERNS = {
   shared: [
     { regex: "^(@/components/|(\\.\\./)+(components/)?)shared(/|$)", message: `components/shared is a temporary adapter layer: use the ${DS} component. / components/shared es una capa temporal: usa el componente de ${DS}.` },
   ],
+  // The local shell (sidebar, topbar, bottom nav, AppShell) is legacy: new code uses the DS nav/* components via components/shell.
+  layout: [
+    { regex: "^(@/components/|(\\.\\./)+(components/)?)layout(/|$)", message: `The local shell is legacy: use the ${DS} nav/* components (see components/shell). / El shell local es legado: usa los componentes nav/* de ${DS} (ver components/shell).` },
+  ],
 };
 
 /**
@@ -75,6 +79,7 @@ const eslintConfig = defineConfig([
   // Local UI folders may import each other; the other bans still apply (baselined).
   restrictedImports({ files: ["src/components/ui/**"], skip: ["ui"] }),
   restrictedImports({ files: ["src/components/shared/**"], skip: ["shared"] }),
+  restrictedImports({ files: ["src/components/layout/**"], skip: ["layout"] }),
   // next-themes belongs to the providers only.
   restrictedImports({ files: ["src/components/providers/**"], skip: ["themes"] }),
   // E2E specs must take test/expect from ./fixtures (hydration gate), never from @playwright/test.

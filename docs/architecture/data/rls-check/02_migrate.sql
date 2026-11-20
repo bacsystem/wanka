@@ -6,86 +6,13 @@
 \set ON_ERROR_STOP on
 CREATE SCHEMA platform_fn;
 
--- Columnas que la migracion del kernel deja a identidad y a empresas (expandir, data-model §6); las usan las funciones de abajo.
-ALTER TABLE org.tenants ADD COLUMN ruc text UNIQUE NOT NULL, ADD COLUMN name text NOT NULL;
-ALTER TABLE iam.users ADD COLUMN email text UNIQUE NOT NULL;
--- Enrolamiento obligatorio del login con emailCode (#25, data-model §6): contador de segundo paso del usuario y una fila por
--- enrollmentToken. Sin tenant_id, asi que sin RLS (identidad global, como iam.users e iam.sessions).
-ALTER TABLE iam.users ADD COLUMN mfa_failed_attempts smallint NOT NULL DEFAULT 0
-    CONSTRAINT users_mfa_failed_attempts_range CHECK (mfa_failed_attempts BETWEEN 0 AND 4),
-  ADD COLUMN mfa_locked_until timestamptz,
-  ADD COLUMN mfa_lockouts smallint NOT NULL DEFAULT 0
-    CONSTRAINT users_mfa_lockouts_range CHECK (mfa_lockouts BETWEEN 0 AND 3);  -- 3: segundo paso cerrado hasta restablecer la contrasena
-CREATE TABLE iam.mfa_enrollments (
-  id uuid PRIMARY KEY,
-  user_id uuid NOT NULL REFERENCES iam.users,
-  token_hash bytea NOT NULL UNIQUE CONSTRAINT mfa_enrollments_token_hash_len CHECK (octet_length(token_hash) = 32),
-  email_code_hmac bytea NOT NULL CONSTRAINT mfa_enrollments_code_hmac_len CHECK (octet_length(email_code_hmac) = 32),
-  email_sends smallint NOT NULL DEFAULT 1 CONSTRAINT mfa_enrollments_sends_range CHECK (email_sends BETWEEN 1 AND 3),
-  email_sent_at timestamptz NOT NULL DEFAULT now(),
-  totp_secret_enc bytea,
-  expires_at timestamptz NOT NULL,
-  consumed_at timestamptz,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  CONSTRAINT mfa_enrollments_ttl CHECK (expires_at > created_at AND expires_at <= created_at + interval '10 minutes'),
-  CONSTRAINT mfa_enrollments_consumed_after CHECK (consumed_at IS NULL OR consumed_at >= created_at)
-);
-CREATE INDEX mfa_enrollments_user_created_idx ON iam.mfa_enrollments (user_id, created_at);  -- FK y tope de correos por hora
-CREATE INDEX mfa_enrollments_expires_at_idx ON iam.mfa_enrollments (expires_at);             -- limpieza (data-model §5)
--- Equivalente de iam.guard_session_writes() (revision del PR #203): los GRANT por columna no bastan, porque el INSERT es
--- de fila completa y consumed_at esta en el UPDATE. Sin SECURITY DEFINER (corre con el rol que escribe); solo un
--- superusuario (las semillas de prueba) lo salta. Todo rechazo es 42501.
-CREATE FUNCTION iam.guard_mfa_enrollment_writes() RETURNS trigger
-  LANGUAGE plpgsql
-  SET search_path = pg_catalog, pg_temp
-AS $$
-BEGIN
-  IF coalesce((SELECT r.rolsuper FROM pg_catalog.pg_roles r WHERE r.rolname = current_user), false) THEN
-    RETURN NEW;
-  END IF;
-  IF TG_OP = 'INSERT' THEN
-    NEW.created_at := pg_catalog.now();      -- la fija el servidor: el CHECK del TTL se mide contra el reloj real
-    NEW.email_sent_at := pg_catalog.now();
-    NEW.email_sends := 1;
-    NEW.consumed_at := NULL;
-    RETURN NEW;
-  END IF;
-  IF OLD.consumed_at IS NOT NULL THEN
-    -- Un token consumido no se reabre ni cambia; consumir otra vez es un no-op que conserva el instante viejo.
-    IF NEW.consumed_at IS NULL THEN
-      RAISE EXCEPTION 'a consumed enrollment stays consumed' USING ERRCODE = 'insufficient_privilege';
-    END IF;
-    NEW.consumed_at := OLD.consumed_at;
-    IF pg_catalog.to_jsonb(NEW) <> pg_catalog.to_jsonb(OLD) THEN
-      RAISE EXCEPTION 'a consumed enrollment cannot change' USING ERRCODE = 'insufficient_privilege';
-    END IF;
-    RETURN NEW;
-  END IF;
-  IF NEW.consumed_at IS NOT NULL THEN
-    NEW.consumed_at := pg_catalog.now();     -- lo fija el servidor
-  END IF;
-  IF NEW.email_sends < OLD.email_sends THEN
-    RAISE EXCEPTION 'email_sends never decreases' USING ERRCODE = 'insufficient_privilege';
-  END IF;
-  IF OLD.totp_secret_enc IS NOT NULL AND NEW.totp_secret_enc IS DISTINCT FROM OLD.totp_secret_enc THEN
-    RAISE EXCEPTION 'the pending TOTP secret does not rotate' USING ERRCODE = 'insufficient_privilege';
-  END IF;
-  IF NEW.email_code_hmac IS DISTINCT FROM OLD.email_code_hmac AND NEW.email_sends <> OLD.email_sends + 1 THEN
-    RAISE EXCEPTION 'a new email code is a new send' USING ERRCODE = 'insufficient_privilege';
-  END IF;
-  IF NEW.email_sends > OLD.email_sends THEN
-    NEW.email_sent_at := pg_catalog.now();   -- los 60 s entre envios no dependen de lo que escriba la app
-  ELSE
-    NEW.email_sent_at := OLD.email_sent_at;
-  END IF;
-  RETURN NEW;
-END $$;
-CREATE TRIGGER mfa_enrollments_guard_writes BEFORE INSERT OR UPDATE ON iam.mfa_enrollments
-  FOR EACH ROW EXECUTE FUNCTION iam.guard_mfa_enrollment_writes();
+-- Las columnas de org.tenants (ruc, legal_name, trade_name, industry) vienen de la migracion de #232.
+-- iam.users (email, contadores), iam.user_totp, iam.mfa_enrollments y iam.user_tokens ya son de la migracion real 20261120100000 (#231).
 
-CREATE TABLE org.sites (id uuid PRIMARY KEY, tenant_id uuid NOT NULL REFERENCES org.tenants, name text NOT NULL, UNIQUE (tenant_id, id),
-  sunat_annex text CHECK (sunat_annex ~ '^[0-9]{4}$'), active boolean NOT NULL DEFAULT true, version bigint NOT NULL DEFAULT 1,
-  provider_synced_version bigint);
+-- org.sites y org.cash_registers (nucleo) vienen de la migracion de #232; el anexo SUNAT y la sincronizacion (ADR 0013) las agrega
+-- empresas (#33), y aqui queda como referencia para los casos A12 y K5.
+ALTER TABLE org.sites ADD COLUMN sunat_annex text CHECK (sunat_annex ~ '^[0-9]{4}$'), ADD COLUMN version bigint NOT NULL DEFAULT 1,
+  ADD COLUMN provider_synced_version bigint;
 -- Sincronizacion con Khipu (ADR 0013): solo wanka_worker marca lo sincronizado o en conflicto; wanka_app edita el resto.
 CREATE TABLE org.tenant_settings (tenant_id uuid PRIMARY KEY REFERENCES org.tenants, ubigeo text, fiscal_address text,
   version bigint NOT NULL DEFAULT 1, provider_sync_seq bigint NOT NULL DEFAULT 0, provider_synced_version bigint);
@@ -118,30 +45,17 @@ CREATE TABLE platform.impersonation_grants (id uuid PRIMARY KEY, platform_user_i
   consent_expires_at timestamptz, exchange_token_hash bytea UNIQUE, redeemed_at timestamptz, revoked_at timestamptz);
 CREATE TABLE platform.audit_events (id bigserial PRIMARY KEY, platform_user_id uuid, target_tenant_id uuid, action text NOT NULL);
 
--- RLS habilitado y FORZADO en las demas tablas de tenant (ADR 0001); iam.roles, iam.memberships, org.tenants y audit.events
--- ya lo traen de la migracion del kernel, con su tenant_isolation.
+-- RLS habilitado y FORZADO en las demas tablas de tenant (ADR 0001); iam.*, org.sites, org.cash_registers, org.tenants y
+-- audit.events ya lo traen de las migraciones reales, con su tenant_isolation.
 DO $$ DECLARE t text; BEGIN
-  FOREACH t IN ARRAY ARRAY['org.sites','org.tenant_settings','org.document_series','einv.company_sync_state'] LOOP
+  FOREACH t IN ARRAY ARRAY['org.tenant_settings','org.document_series','einv.company_sync_state'] LOOP
     EXECUTE format('ALTER TABLE %s ENABLE ROW LEVEL SECURITY', t);
     EXECUTE format('ALTER TABLE %s FORCE ROW LEVEL SECURITY', t);
     EXECUTE format('CREATE POLICY tenant_isolation ON %s USING (tenant_id = app.current_tenant()) WITH CHECK (tenant_id = app.current_tenant())', t);
   END LOOP; END $$;
--- Solo las membresias invitado/activo dan lectura sin tenant (ADR 0001, issue #187): una suspendida no ve ni su empresa.
-CREATE POLICY member_read ON org.tenants FOR SELECT USING (app.current_tenant() IS NULL AND id IN
-  (SELECT tenant_id FROM iam.memberships WHERE user_id = app.current_user_id() AND status IN ('invitado','activo')));
+-- own_memberships, member_read (org.tenants, iam.roles, org.sites, org.cash_registers) y la vista iam.list_my_memberships ya
+-- vienen de la migracion de #232 (antes vivian solo aqui). platform_rw es de plataforma (ola 6) y sigue aqui.
 CREATE POLICY platform_rw ON org.tenants TO wanka_platform USING (true) WITH CHECK (true);
-CREATE POLICY own_memberships ON iam.memberships FOR SELECT USING (app.current_tenant() IS NULL AND user_id = app.current_user_id()
-  AND status IN ('invitado','activo'));
-CREATE POLICY member_read ON iam.roles FOR SELECT USING (app.current_tenant() IS NULL AND id IN
-  (SELECT role_id FROM iam.memberships WHERE user_id = app.current_user_id() AND status IN ('invitado','activo')));
-CREATE POLICY member_read ON org.sites FOR SELECT USING (app.current_tenant() IS NULL AND EXISTS
-  (SELECT 1 FROM iam.memberships m WHERE m.user_id = app.current_user_id() AND m.status = 'activo' AND m.tenant_id = sites.tenant_id AND m.all_sites));
-
--- Vista security_invoker (no es SECURITY DEFINER): corre con los permisos y RLS de quien llama
-CREATE VIEW iam.list_my_memberships WITH (security_invoker = true) AS
-  SELECT t.name AS tenant, r.name AS role, r.requires_mfa, s.name AS site, m.status
-    FROM iam.memberships m JOIN org.tenants t ON t.id = m.tenant_id JOIN iam.roles r ON r.id = m.role_id
-    LEFT JOIN org.sites s ON s.tenant_id = m.tenant_id AND m.all_sites;
 
 -- ===== Funciones SECURITY DEFINER: dueño wanka_definer (NOLOGIN, NOBYPASSRLS, no es dueño de tablas) =====
 -- Patrón para las que tocan tablas con RLS sin tenant fijado por el llamador: guardan el valor del llamador,
@@ -210,8 +124,8 @@ AS $$
 DECLARE prev text := current_setting('app.tenant_id', true);
 BEGIN
   PERFORM set_config('app.tenant_id', p_tenant::text, true);
-  INSERT INTO org.tenants (id, ruc, name) VALUES (p_tenant, p_ruc, p_name);
-  INSERT INTO org.sites (id, tenant_id, name) VALUES (p_site, p_tenant, 'Sede principal');
+  INSERT INTO org.tenants (id, ruc, legal_name) VALUES (p_tenant, p_ruc, p_name);
+  INSERT INTO org.sites (id, tenant_id, code, name) VALUES (p_site, p_tenant, '0000', 'Sede principal');
   INSERT INTO iam.roles (id, tenant_id, name, requires_mfa) VALUES (p_role, p_tenant, 'Propietario', true);
   INSERT INTO iam.users (id, email) VALUES (p_owner, p_owner_email) ON CONFLICT (email) DO NOTHING;
   INSERT INTO iam.memberships (id, tenant_id, user_id, role_id, status) VALUES (gen_random_uuid(), p_tenant, p_owner, p_role, 'invitado');
@@ -254,6 +168,8 @@ AS $$
 DECLARE n int; prev text := current_setting('app.tenant_id', true);
 BEGIN
   PERFORM set_config('app.tenant_id', p_tenant::text, true);
+  DELETE FROM iam.membership_sites WHERE tenant_id = p_tenant;   -- las cajas y el alcance de las membresias, antes que su sede (FK compuesta)
+  DELETE FROM org.cash_registers WHERE tenant_id = p_tenant;
   DELETE FROM org.sites WHERE tenant_id = p_tenant;
   GET DIAGNOSTICS n = ROW_COUNT;
   PERFORM set_config('app.tenant_id', coalesce(prev, ''), true);
@@ -287,6 +203,12 @@ GRANT INSERT ON iam.memberships, iam.users, iam.roles TO wanka_definer;
 GRANT SELECT ON iam.users, iam.roles TO wanka_definer;
 GRANT SELECT, INSERT, UPDATE ON org.tenants TO wanka_definer;
 GRANT SELECT, INSERT, DELETE ON org.sites TO wanka_definer;
+GRANT SELECT, DELETE ON org.cash_registers TO wanka_definer;
+GRANT DELETE ON iam.membership_sites TO wanka_definer;
+-- La politica member_read de org.sites (ADR 0001) lee iam.membership_sites con los privilegios de quien consulta org.sites:
+-- un rol que lee o borra sedes necesita SELECT ahi aunque no lea membresias (sin el, "permission denied for table
+-- membership_sites"). Lo necesitan wanka_definer (purga, ola 6) y wanka_worker (sincronizacion con Khipu, ADR 0013 / #33).
+GRANT SELECT ON iam.membership_sites TO wanka_definer, wanka_worker;   -- ola 6 (purga de una empresa cerrada)
 GRANT INSERT ON audit.events TO wanka_definer;   -- el esquema audit y sus GRANT para app y worker: migracion del kernel (#173)
 GRANT SELECT ON ops.webhook_routes TO wanka_definer;
 GRANT SELECT, INSERT, UPDATE ON platform.impersonation_grants TO wanka_definer;
@@ -306,12 +228,6 @@ GRANT UPDATE (provider_synced_version) ON org.sites, org.tenant_settings TO wank
 GRANT UPDATE (provider_synced_at, provider_conflict_at) ON org.document_series TO wanka_worker;
 GRANT USAGE ON SCHEMA einv TO wanka_app, wanka_worker;
 GRANT SELECT, INSERT, UPDATE ON einv.company_sync_state TO wanka_worker;
-GRANT SELECT ON iam.list_my_memberships TO wanka_app;
--- iam.mfa_enrollments (#25): la app no mueve user_id, token_hash, expires_at ni created_at, ni borra; el worker solo limpia.
-GRANT SELECT, INSERT ON iam.mfa_enrollments TO wanka_app;
-GRANT UPDATE (email_code_hmac, email_sends, email_sent_at, totp_secret_enc, consumed_at) ON iam.mfa_enrollments TO wanka_app;
-GRANT DELETE ON iam.mfa_enrollments TO wanka_worker;
-GRANT SELECT (id, expires_at) ON iam.mfa_enrollments TO wanka_worker;
 GRANT EXECUTE ON FUNCTION iam.list_support_requests(), iam.decide_impersonation(uuid,boolean),
   iam.redeem_impersonation(bytea,uuid,bytea) TO wanka_app;
 GRANT USAGE ON SCHEMA ops TO wanka_webhooks;
