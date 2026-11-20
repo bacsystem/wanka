@@ -6,6 +6,11 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"github.com/bacsystem/wanka/apps/api/internal/identidad/app"
+	jobsapi "github.com/bacsystem/wanka/apps/api/internal/platform/jobs"
+	"github.com/bacsystem/wanka/apps/api/internal/platform/mailer/stub"
+	"io"
+	"log/slog"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -638,3 +643,54 @@ func TestUserAgentIsTruncatedToValidUTF8Within512Bytes(t *testing.T) {
 }
 
 var _ = context.Background
+
+// Cerrar, restablecer y volver a cerrar: dos avisos de cierre distintos y dos correos (la unicidad del job y la llave de
+// idempotencia del correo llevan el instante de cada cierre).
+func TestSecondClosingAfterAResetQueuesAndSendsASecondNotice(t *testing.T) {
+	e := newEnv(t, envOpts{})
+	uid := e.addUser("ana@x.pe", goodPassword)
+	for i := range 2 {
+		e.setUser(uid, "login_failure_streak = 99, failed_logins = 0, login_window_started_at = NULL, locked_until = NULL")
+		if res := e.login("ana@x.pe", "nope"); res.Code != 401 {
+			t.Fatalf("closing %d: status = %d", i+1, res.Code)
+		}
+		if u := e.user(uid); u.streak != 100 {
+			t.Fatalf("closing %d: streak = %d", i+1, u.streak)
+		}
+		e.setUser(uid, "login_failure_streak = 0, login_lockouts = 0") // el restablecimiento (#26) pone la racha en 0
+	}
+	rows, err := e.admin.Query(context.Background(), `SELECT args FROM ops.river_job WHERE kind = 'identidad.login_lockout_notice' ORDER BY id`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	var jobs []app.LockoutNoticeArgs
+	for rows.Next() {
+		var raw []byte
+		if err := rows.Scan(&raw); err != nil {
+			t.Fatal(err)
+		}
+		var a app.LockoutNoticeArgs
+		if err := json.Unmarshal(raw, &a); err != nil {
+			t.Fatal(err)
+		}
+		jobs = append(jobs, a)
+	}
+	if len(jobs) != 2 || !jobs[0].Closed || jobs[0].ClosedAt == nil || jobs[1].ClosedAt == nil || jobs[0].ClosedAt.Equal(*jobs[1].ClosedAt) {
+		t.Fatalf("jobs = %+v, want two closing notices with different instants", jobs)
+	}
+	m := stub.New(slog.New(slog.NewTextHandler(io.Discard, nil)), 10)
+	for _, j := range jobs {
+		err := app.LockoutNotice(emailDir{"ana@x.pe"}, m)(context.Background(), jobsapi.Job[app.LockoutNoticeArgs]{Args: j})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	if got := len(m.Sent()); got != 2 {
+		t.Fatalf("%d emails sent, want 2: the second closing was deduplicated", got)
+	}
+}
+
+type emailDir struct{ email string }
+
+func (d emailDir) EmailOf(context.Context, string) (string, error) { return d.email, nil }
