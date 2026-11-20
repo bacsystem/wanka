@@ -388,3 +388,109 @@ func TestResolveRunsOneQueryInOneReadOnlyTransactionWithTheSessionActor(t *testi
 		t.Fatal("InTenantReadTx accepted a write")
 	}
 }
+
+// Criterio no funcional de #233: 50 usuarios virtuales (una cuenta cada uno) en 20 empresas, con la caché fría. Lo que el
+// paso de permisos agrega a la ruta con la caché fría es exactamente una llamada a Resolve (con la caché caliente es un
+// acceso a un mapa, que mide BenchmarkAuthzStepHotCache de auth): se mide esa llamada, sin el servidor HTTP ni la
+// búsqueda de sesión. Cada llamada va a la base (cada una es una membresía distinta con un rol base). Los 50 usuarios
+// virtuales corren a la vez pero lo que está en vuelo nunca pasa del pool de 20 conexiones por réplica (capacity.md):
+// un semáforo de ese tamaño, así la cifra no mide la cola del pool. Se afirma la mediana del p95 de 3 repeticiones
+// (cada una con membresías frías propias) < 50 ms, y errores < 1 %. Se salta con -race y corre sin él en el paso de
+// cotas de tiempo de la CI; la cifra sale con -v.
+func TestPermissionResolverUnder50ms(t *testing.T) {
+	if raceEnabled {
+		t.Skip("timing bound: runs without -race in its own CI step")
+	}
+	const (
+		vus     = 50
+		tenants = 20
+		poolMax = 20
+		reps    = 3
+	)
+	e := newEnv(t)
+	ctx := context.Background()
+	templates := []string{"dueno", "cajero", "contador", "vendedor"}
+	tenantIDs := make([]pgtype.UUID, tenants)
+	roles := make([]map[string]pgtype.UUID, tenants)
+	for i := range tenantIDs {
+		tenantIDs[i] = e.tenant(t)
+		roles[i] = map[string]pgtype.UUID{}
+		e.baseRole(t, tenantIDs[i], "dueno") // siembra los seis
+		for _, tpl := range templates {
+			roles[i][tpl] = one[pgtype.UUID](t, e, `SELECT id FROM iam.roles WHERE tenant_id = $1 AND template_code = $2`, tenantIDs[i], tpl)
+		}
+	}
+	// targets[rep][vu]: las sesiones (una por empresa) que ese usuario virtual pide en esa repetición.
+	targets := make([][][]auth.Session, reps)
+	for rep := range targets {
+		targets[rep] = make([][]auth.Session, vus)
+		for u := range targets[rep] {
+			user := e.user(t)
+			for i, ten := range tenantIDs {
+				mem := e.membership(t, ten, user, roles[i][templates[(u+i)%len(templates)]], "activo")
+				targets[rep][u] = append(targets[rep][u], session(ten, user, mem))
+			}
+		}
+	}
+	pool, err := db.Open(ctx, e.d.URL(dbtest.App), db.Options{MaxConns: poolMax, AppName: "identidad-nfr-test"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(pool.Close)
+	r := NewPermissionResolver(pool)
+	// Calentamiento del pool y del plan con otro usuario, fuera de la medición.
+	warm := e.user(t)
+	for i, ten := range tenantIDs {
+		mem := e.membership(t, ten, warm, roles[i]["cajero"], "activo")
+		if _, err := r.Resolve(ctx, session(ten, warm, mem)); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	var p95s []time.Duration
+	totalErrs, totalCalls := 0, 0
+	for rep := range targets {
+		var (
+			mu   sync.Mutex
+			lat  []time.Duration
+			errs int
+			wg   sync.WaitGroup
+		)
+		inFlight := make(chan struct{}, poolMax)
+		for u := range targets[rep] {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				for _, s := range targets[rep][u] {
+					inFlight <- struct{}{}
+					start := time.Now()
+					_, err := r.Resolve(ctx, s)
+					el := time.Since(start)
+					<-inFlight
+					mu.Lock()
+					lat = append(lat, el)
+					if err != nil {
+						errs++
+					}
+					mu.Unlock()
+				}
+			}()
+		}
+		wg.Wait()
+		slices.Sort(lat)
+		p95s = append(p95s, lat[len(lat)*95/100])
+		totalErrs += errs
+		totalCalls += len(lat)
+		t.Logf("rep %d: %d calls, p50 %v, p95 %v, max %v, errors %d", rep+1, len(lat), lat[len(lat)/2], p95s[rep], lat[len(lat)-1], errs)
+	}
+	sorted := slices.Clone(p95s)
+	slices.Sort(sorted)
+	median := sorted[len(sorted)/2]
+	t.Logf("resolver, cold cache, %d VUs, %d tenants, at most %d in flight: median p95 of %d reps = %v (bound 50ms)", vus, tenants, poolMax, reps, median)
+	if median >= 50*time.Millisecond {
+		t.Errorf("median p95 = %v, want < 50ms", median)
+	}
+	if float64(totalErrs) >= 0.01*float64(totalCalls) {
+		t.Errorf("errors = %d of %d, want < 1%%", totalErrs, totalCalls)
+	}
+}

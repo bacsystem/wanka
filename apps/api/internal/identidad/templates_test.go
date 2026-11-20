@@ -384,3 +384,32 @@ func TestDocumentTemplateCodesAreInTheCatalog(t *testing.T) {
 		}
 	}
 }
+
+// Solo el dueño tiene lo que un administrador no puede asignar: ninguna otra plantilla, hoy ni mañana, trae
+// identidad.support_access:approve ni empresas.einvoicing:update (lista escrita a mano).
+func TestOnlyTheOwnerTemplateHasTheTwoOwnerOnlyPermissions(t *testing.T) {
+	ctx := context.Background()
+	_, admin := migratedAdmin(t)
+	meta, perms := dbTemplates(ctx, t, admin)
+	ownerOnly := []string{"identidad.support_access:approve", "empresas.einvoicing:update"}
+	checked := 0
+	for w := range meta {
+		if w.code == "dueno" {
+			continue
+		}
+		checked++
+		for _, c := range ownerOnly {
+			if slices.Contains(perms[w.code], c) {
+				t.Errorf("template %s has %s", w.code, c)
+			}
+		}
+	}
+	if checked != 5 {
+		t.Errorf("checked %d templates besides dueno, want 5", checked)
+	}
+	for _, c := range ownerOnly {
+		if !slices.Contains(perms["dueno"], c) {
+			t.Errorf("dueno lacks %s", c)
+		}
+	}
+}

@@ -338,6 +338,32 @@ func TestMembershipLostFromTheResolverIs403TenantAccessDenied(t *testing.T) {
 	}
 }
 
+// Plazo propio de la resolución vencido con la petición viva: 503 dependency_unavailable, no un 200 vacío
+// (el contexto del plazo ya está vencido y WriteDBError no escribe con él), y el handler no corre.
+func TestResolverTimeoutIs503DependencyUnavailable(t *testing.T) {
+	for name, fail := range map[string]func(ctx context.Context) error{
+		"ctx deadline": func(ctx context.Context) error {
+			<-ctx.Done()
+			return fmt.Errorf("resolving permissions: %w", ctx.Err())
+		},
+		"typed db error": func(ctx context.Context) error {
+			<-ctx.Done()
+			return fmt.Errorf("resolving permissions: %w", db.ErrStatementTimeout)
+		},
+		"unavailable now": func(context.Context) error { return fmt.Errorf("resolving permissions: %w", db.ErrUnavailable) },
+	} {
+		t.Run(name, func(t *testing.T) {
+			e := newEnv(t, returns(bound()), func(o *auth.Options) { o.LookupTimeout = 20 * time.Millisecond })
+			e.perms.set(func(ctx context.Context, _ auth.Session) (auth.Authz, error) { return auth.Authz{}, fail(ctx) })
+			rec := e.get("/v1/items", bearer(token(1)))
+			mustProblem(t, rec, 503, "dependency_unavailable")
+			if e.hits("tenant") != 0 {
+				t.Fatal("the handler ran without permissions")
+			}
+		})
+	}
+}
+
 // Criterio 5: rol con requires_mfa y mfa_method none -> revoca y 403 mfa_required.
 func TestRoleRequiringMFARevokesTheSession(t *testing.T) {
 	for _, tc := range []struct {

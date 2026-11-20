@@ -259,17 +259,16 @@ func (r *Routes) memberAllowed(w http.ResponseWriter, hr *http.Request, s Sessio
 	}
 	ctx, cancel := context.WithTimeout(httpx.WithPhase(hr.Context(), httpx.PhaseAuthz), r.timeout)
 	defer cancel()
-	lr := hr.WithContext(ctx)
 	rec := httpx.Metrics(hr.Context())
 	az, cached, err := r.lookupAuthz(ctx, s, rec)
 	if err != nil {
-		r.authzFailed(w, hr, lr, err)
+		r.authzFailed(w, hr, err)
 		return siteScope{}, false
 	}
 	if !s.SessionAuthzVersion.Valid || s.SessionAuthzVersion.Int64 != az.Version {
 		bound, err := r.resolver.BindVersion(ctx, s.ID, s.MembershipID, az.Version)
 		if err != nil {
-			r.authzFailed(w, hr, lr, err)
+			r.authzFailed(w, hr, err)
 			return siteScope{}, false
 		}
 		if !bound {
@@ -333,7 +332,12 @@ func (r *Routes) deny(w http.ResponseWriter, hr *http.Request, s Session, patter
 
 // authzFailed responde cuando no se pudieron resolver los permisos: la petición
 // nunca pasa sin ellos.
-func (r *Routes) authzFailed(w http.ResponseWriter, hr, lr *http.Request, err error) {
+//
+// Responde con la petición hr y no con la del plazo propio de la resolución: ese
+// contexto ya venció cuando el plazo es lo que falló, y WriteDBError no escribe
+// nada con un contexto vencido (daría un 200 vacío).
+func (r *Routes) authzFailed(w http.ResponseWriter, hr *http.Request, err error) {
+	lr := hr.WithContext(httpx.WithPhase(hr.Context(), httpx.PhaseAuthz))
 	if errors.Is(err, ErrMembershipLost) {
 		r.outcome(hr, "tenant_access_denied")
 		httpx.WriteProblem(w, hr, "tenant_access_denied", "membership is no longer active")

@@ -1,6 +1,6 @@
 //go:build race
 
-package main
+package identidad
 
 // raceEnabled indica si los tests corren con -race: el detector multiplica el
 // tiempo de cada operación, así que las cotas de tiempo no significan nada.
