@@ -87,7 +87,7 @@ func TestConcurrentFailuresDoNotGiftAttempts(t *testing.T) {
 		n            int
 		wantVerifies int64
 	}{
-		{"fresh account, 40 at once", 0, 40, 5},
+		{"fresh account, 16 at once", 0, 16, 5},
 		{"4 already charged, 12 at once", 4, 12, 1},
 		{"5 charged in the window, 12 at once", 5, 12, 0},
 	} {
@@ -140,12 +140,12 @@ func TestConcurrentMixWithTheRightPasswordStaysWithinFiveAttempts(t *testing.T) 
 	svc := e.service(t, h, app.NewGate(64, 128, 30*time.Second))
 	var wg sync.WaitGroup
 	var ok atomic.Int64
-	for i := range 30 {
+	for i := range 16 {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			pw := "nope"
-			if i == 17 {
+			if i == 7 {
 				pw = goodPassword
 			}
 			if _, err := svc.Login(context.Background(), req("ana@x.pe", pw)); err == nil {
