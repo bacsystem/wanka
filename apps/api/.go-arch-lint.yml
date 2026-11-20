@@ -91,10 +91,10 @@ deps:
     canUse: [pgx, xcrypto]
   empresas:
     mayDependOn: [empresas, empresas_inner, apigen, platform, platform_db, platform_jobs, platform_pg]
-    canUse: [pgx]
+    canUse: [pgx, oapiruntime]
   empresas_inner:
     mayDependOn: [empresas_inner, apigen, platform, platform_db, platform_jobs]
-    canUse: [pgx]
+    canUse: [pgx, oapiruntime]
   tool_breachedgen:
     mayDependOn: [platform]
   main:

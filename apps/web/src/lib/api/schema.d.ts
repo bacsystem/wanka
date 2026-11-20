@@ -156,6 +156,112 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/sites": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lista los locales de la empresa
+         * @description Devuelve todos los locales o sedes de la empresa autenticada.
+         */
+        get: operations["listSites"];
+        put?: never;
+        /**
+         * Crea un nuevo local
+         * @description Crea una sede o local en la empresa. El anexo SUNAT es opcional (4 dígitos);
+         *     si se incluye, se registra en Khipu en segundo plano si la facturación está activa.
+         */
+        post: operations["createSite"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sites/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Consulta un local por ID */
+        get: operations["getSite"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Actualiza un local
+         * @description Edita nombre, dirección, anexo SUNAT o estado activo de un local.
+         *     Si se desactiva (active: false), se inactivan en cascada sus cajas y series en Wanka.
+         *     El anexo SUNAT no puede modificarse si el local tiene series sincronizadas con Khipu.
+         */
+        patch: operations["updateSite"];
+        trace?: never;
+    };
+    "/v1/cash-registers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lista las cajas registradoras de la empresa */
+        get: operations["listCashRegisters"];
+        put?: never;
+        /** Crea una caja registradora en un local */
+        post: operations["createCashRegister"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/cash-registers/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Consulta una caja registradora por ID */
+        get: operations["getCashRegister"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Actualiza una caja registradora */
+        patch: operations["updateCashRegister"];
+        trace?: never;
+    };
+    "/v1/document-series": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lista series de documentos */
+        get: operations["listDocumentSeries"];
+        put?: never;
+        /**
+         * Crea una nueva serie de documentos
+         * @description Crea una serie de comprobantes CPE o internos asignada a un local y opcionalmente a una caja.
+         *     Las series de CPE exigen que el local tenga anexo SUNAT registrado.
+         */
+        post: operations["createDocumentSeries"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/document-series/{id}": {
         parameters: {
             query?: never;
@@ -175,7 +281,13 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        /**
+         * Actualiza una serie de documentos
+         * @description Edita el estado activo, la caja asignada o el último correlativo.
+         *     El correlativo inicial solo puede editarse mientras la serie está en estado pending.
+         *     Reactivar una serie que Khipu tenga con correlativo mayor o en otro anexo congela la serie en conflicto.
+         */
+        patch: operations["updateDocumentSeries"];
         trace?: never;
     };
     "/v1/sales": {
@@ -425,6 +537,67 @@ export interface components {
             readOnly: boolean;
             version: string;
         };
+        Site: {
+            /** Format: uuid */
+            id: string;
+            /** @description Código del local en la empresa */
+            code: string;
+            /** @description Nombre o descripción del local */
+            name: string;
+            /** @description Código de 4 dígitos del anexo SUNAT (0000 para domicilio fiscal) */
+            sunatAnnex?: string | null;
+            /** @description Dirección física del local */
+            address?: string | null;
+            /** @description Si el local está activo */
+            active: boolean;
+            /**
+             * Format: int64
+             * @description Versión de control de concurrencia y sincronización
+             */
+            version: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        CreateSiteRequest: {
+            /** @description Código identificador del local */
+            code: string;
+            /** @description Nombre descriptivo del local */
+            name: string;
+            /** @description Código de anexo SUNAT (4 dígitos) */
+            sunatAnnex?: string | null;
+            /** @description Dirección física */
+            address?: string | null;
+        };
+        UpdateSiteRequest: {
+            name?: string;
+            address?: string | null;
+            sunatAnnex?: string | null;
+            active?: boolean;
+        };
+        CashRegister: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            siteId: string;
+            /** @description Código identificador de la caja en el local */
+            code: string;
+            active: boolean;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        CreateCashRegisterRequest: {
+            /** Format: uuid */
+            siteId: string;
+            code: string;
+        };
+        UpdateCashRegisterRequest: {
+            code?: string;
+            active?: boolean;
+        };
         DocumentSeries: {
             /** Format: uuid */
             id: string;
@@ -452,6 +625,29 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             updatedAt: string;
+        };
+        CreateDocumentSeriesRequest: {
+            /** Format: uuid */
+            siteId: string;
+            /** Format: uuid */
+            cashRegisterId?: string | null;
+            /** @enum {string} */
+            docType: "01" | "03" | "07" | "08" | "09" | "PRO" | "OC" | "Z" | "OT";
+            /** @description Código de 4 caracteres para CPE o 2-10 caracteres para internos */
+            series: string;
+            /**
+             * Format: int64
+             * @description Número inicial emitido (0 si la serie inicia desde cero)
+             * @default 0
+             */
+            initialNumber: number;
+        };
+        UpdateDocumentSeriesRequest: {
+            active?: boolean;
+            /** Format: uuid */
+            cashRegisterId?: string | null;
+            /** Format: int64 */
+            lastNumber?: number;
         };
         /** @enum {string} */
         Currency: "PEN" | "USD";
@@ -739,6 +935,336 @@ export interface operations {
             503: components["responses"]["Problem"];
         };
     };
+    listSites: {
+        parameters: {
+            query?: {
+                /** @description Filtrar por locales activos o inactivos */
+                active?: boolean;
+            };
+            header?: {
+                /** @description Se conserva si cumple el patrón; si falta o no lo cumple, la API lo reemplaza por uno propio y nunca responde 400 por esta cabecera (conventions.md §3). */
+                "X-Request-Id"?: components["parameters"]["RequestId"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Lista de locales */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Site"][];
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
+        };
+    };
+    createSite: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Se conserva si cumple el patrón; si falta o no lo cumple, la API lo reemplaza por uno propio y nunca responde 400 por esta cabecera (conventions.md §3). */
+                "X-Request-Id"?: components["parameters"]["RequestId"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateSiteRequest"];
+            };
+        };
+        responses: {
+            /** @description Local creado exitosamente */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Site"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
+        };
+    };
+    getSite: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Se conserva si cumple el patrón; si falta o no lo cumple, la API lo reemplaza por uno propio y nunca responde 400 por esta cabecera (conventions.md §3). */
+                "X-Request-Id"?: components["parameters"]["RequestId"];
+            };
+            path: {
+                /** @description ID del local */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Datos del local */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Site"];
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
+        };
+    };
+    updateSite: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Se conserva si cumple el patrón; si falta o no lo cumple, la API lo reemplaza por uno propio y nunca responde 400 por esta cabecera (conventions.md §3). */
+                "X-Request-Id"?: components["parameters"]["RequestId"];
+            };
+            path: {
+                /** @description ID del local */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateSiteRequest"];
+            };
+        };
+        responses: {
+            /** @description Local actualizado */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Site"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
+        };
+    };
+    listCashRegisters: {
+        parameters: {
+            query?: {
+                /** @description Filtrar por local */
+                siteId?: string;
+                /** @description Filtrar por activas o inactivas */
+                active?: boolean;
+            };
+            header?: {
+                /** @description Se conserva si cumple el patrón; si falta o no lo cumple, la API lo reemplaza por uno propio y nunca responde 400 por esta cabecera (conventions.md §3). */
+                "X-Request-Id"?: components["parameters"]["RequestId"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Lista de cajas */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CashRegister"][];
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
+        };
+    };
+    createCashRegister: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Se conserva si cumple el patrón; si falta o no lo cumple, la API lo reemplaza por uno propio y nunca responde 400 por esta cabecera (conventions.md §3). */
+                "X-Request-Id"?: components["parameters"]["RequestId"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateCashRegisterRequest"];
+            };
+        };
+        responses: {
+            /** @description Caja creada */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CashRegister"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
+        };
+    };
+    getCashRegister: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Se conserva si cumple el patrón; si falta o no lo cumple, la API lo reemplaza por uno propio y nunca responde 400 por esta cabecera (conventions.md §3). */
+                "X-Request-Id"?: components["parameters"]["RequestId"];
+            };
+            path: {
+                /** @description ID de la caja registradora */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Datos de la caja */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CashRegister"];
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
+        };
+    };
+    updateCashRegister: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Se conserva si cumple el patrón; si falta o no lo cumple, la API lo reemplaza por uno propio y nunca responde 400 por esta cabecera (conventions.md §3). */
+                "X-Request-Id"?: components["parameters"]["RequestId"];
+            };
+            path: {
+                /** @description ID de la caja registradora */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateCashRegisterRequest"];
+            };
+        };
+        responses: {
+            /** @description Caja actualizada */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CashRegister"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
+        };
+    };
+    listDocumentSeries: {
+        parameters: {
+            query?: {
+                /** @description Filtrar por local */
+                siteId?: string;
+                /** @description Filtrar por caja */
+                cashRegisterId?: string;
+                /** @description Filtrar por tipo de comprobante */
+                docType?: string;
+                /** @description Filtrar por activas o inactivas */
+                active?: boolean;
+            };
+            header?: {
+                /** @description Se conserva si cumple el patrón; si falta o no lo cumple, la API lo reemplaza por uno propio y nunca responde 400 por esta cabecera (conventions.md §3). */
+                "X-Request-Id"?: components["parameters"]["RequestId"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Lista de series */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentSeries"][];
+                };
+            };
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
+        };
+    };
+    createDocumentSeries: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Se conserva si cumple el patrón; si falta o no lo cumple, la API lo reemplaza por uno propio y nunca responde 400 por esta cabecera (conventions.md §3). */
+                "X-Request-Id"?: components["parameters"]["RequestId"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateDocumentSeriesRequest"];
+            };
+        };
+        responses: {
+            /** @description Serie creada exitosamente */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentSeries"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
+        };
+    };
     getDocumentSeries: {
         parameters: {
             query?: never;
@@ -767,6 +1293,43 @@ export interface operations {
             403: components["responses"]["Problem"];
             404: components["responses"]["Problem"];
             429: components["responses"]["Problem"];
+            503: components["responses"]["Problem"];
+        };
+    };
+    updateDocumentSeries: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Se conserva si cumple el patrón; si falta o no lo cumple, la API lo reemplaza por uno propio y nunca responde 400 por esta cabecera (conventions.md §3). */
+                "X-Request-Id"?: components["parameters"]["RequestId"];
+            };
+            path: {
+                /** @description ID de la serie de documentos */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateDocumentSeriesRequest"];
+            };
+        };
+        responses: {
+            /** @description Serie actualizada */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentSeries"];
+                };
+            };
+            400: components["responses"]["Problem"];
+            401: components["responses"]["Problem"];
+            403: components["responses"]["Problem"];
+            404: components["responses"]["Problem"];
+            409: components["responses"]["Problem"];
+            422: components["responses"]["Problem"];
             503: components["responses"]["Problem"];
         };
     };
