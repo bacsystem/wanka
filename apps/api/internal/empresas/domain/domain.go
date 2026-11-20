@@ -100,12 +100,12 @@ var (
 )
 
 var (
-	reFactura     = regexp.MustCompile(`^F[A-Z0-9]{3}$`)
-	reBoleta      = regexp.MustCompile(`^B[A-Z0-9]{3}$`)
-	reNotas       = regexp.MustCompile(`^[FB][A-Z0-9]{3}$`)
-	reGuia        = regexp.MustCompile(`^T[A-Z0-9]{3}$`)
-	reInterno     = regexp.MustCompile(`^[A-Z0-9]{2,10}$`)
-	reAnexoSunat  = regexp.MustCompile(`^[0-9]{4}$`)
+	reFactura    = regexp.MustCompile(`^F[A-Z0-9]{3}$`)
+	reBoleta     = regexp.MustCompile(`^B[A-Z0-9]{3}$`)
+	reNotas      = regexp.MustCompile(`^[FB][A-Z0-9]{3}$`)
+	reGuia       = regexp.MustCompile(`^T[A-Z0-9]{3}$`)
+	reInterno    = regexp.MustCompile(`^[A-Z0-9]{2,10}$`)
+	reAnexoSunat = regexp.MustCompile(`^[0-9]{4}$`)
 )
 
 // ValidateSeriesFormat valida el formato del código de la serie según su tipo de documento.
