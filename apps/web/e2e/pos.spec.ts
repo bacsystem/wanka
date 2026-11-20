@@ -1,6 +1,7 @@
 import { expect, test } from "./fixtures";
 
-test("POS adds items, computes IGV totals and emits a comprobante", async ({ page }, testInfo) => {
+// Pantalla mock inaccesible hasta que la historia #48 la rehaga sobre el DS, la conecte a la API y la habilite; entonces se reactiva.
+test.skip("POS adds items, computes IGV totals and emits a comprobante", async ({ page }, testInfo) => {
   await page.goto("/ventas/nueva");
   await expect(page.getByRole("heading", { level: 1, name: "Nueva venta" })).toBeVisible();
   // Tablet auto-collapses the sidebar right after hydration; wait so the layout is stable before clicking.
@@ -32,7 +33,8 @@ test("POS adds items, computes IGV totals and emits a comprobante", async ({ pag
   await expect(page.getByTestId(mobile ? "cart-total-mobile" : "cart-total")).toHaveText("S/ 0.00");
 });
 
-test("POS blocks a factura without RUC", async ({ page }, testInfo) => {
+// Pantalla mock inaccesible hasta que la historia #48 la rehaga sobre el DS, la conecte a la API y la habilite; entonces se reactiva.
+test.skip("POS blocks a factura without RUC", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop");
   await page.goto("/ventas/nueva");
   await page.getByRole("button", { name: "Agregar Consulta odontológica general" }).click();

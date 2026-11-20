@@ -72,5 +72,14 @@ export const test = base.extend({
   },
 });
 
+/**
+ * Abre el menú de usuario del shell. En móvil (≤767 px) no hay sidebar: el menú vive en el cajón de «Más» de la barra inferior.
+ */
+export async function openUserMenu(page: Page) {
+  const more = page.getByRole("button", { name: "Más" });
+  if (await more.isVisible()) await more.click();
+  await page.getByRole("button", { name: "Menú de usuario" }).filter({ visible: true }).click();
+}
+
 export { expect };
 export type { Locator, Page };

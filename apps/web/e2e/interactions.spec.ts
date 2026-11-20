@@ -1,11 +1,12 @@
-import { expect, test, type Page } from "./fixtures";
+import { expect, openUserMenu, test, type Page } from "./fixtures";
 
 /** Wait for hydration before the first interaction (client handlers are not attached on first paint). */
 async function settle(page: Page) {
   await page.waitForLoadState("networkidle");
 }
 
-test("comprobantes: search, type filter and bulk selection", async ({ page }) => {
+// Pantalla mock inaccesible hasta que la historia #52 la rehaga sobre el DS, la conecte a la API y la habilite; entonces se reactiva.
+test.skip("comprobantes: search, type filter and bulk selection", async ({ page }) => {
   await page.goto("/ventas/comprobantes");
   await settle(page);
   const search = page.getByRole("searchbox", { name: /Buscar por serie/ });
@@ -20,7 +21,8 @@ test("comprobantes: search, type filter and bulk selection", async ({ page }) =>
   await page.getByRole("button", { name: "Limpiar" }).click();
 });
 
-test("comprobantes: bulk actions bar appears when rows are selected (desktop)", async ({ page }, testInfo) => {
+// Pantalla mock inaccesible hasta que la historia #52 la rehaga sobre el DS, la conecte a la API y la habilite; entonces se reactiva.
+test.skip("comprobantes: bulk actions bar appears when rows are selected (desktop)", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name === "mobile");
   await page.goto("/ventas/comprobantes");
   await settle(page);
@@ -30,7 +32,8 @@ test("comprobantes: bulk actions bar appears when rows are selected (desktop)", 
   await expect(page.getByText("10 comprobantes reenviados a SUNAT")).toBeVisible();
 });
 
-test("comprobante detail opens from the list and shows CDR", async ({ page }) => {
+// Pantalla mock inaccesible hasta que la historia #52 la rehaga sobre el DS, la conecte a la API y la habilite; entonces se reactiva.
+test.skip("comprobante detail opens from the list and shows CDR", async ({ page }) => {
   await page.goto("/ventas/comprobantes");
   await settle(page);
   await page.getByRole("link", { name: "F001-00000842" }).first().click();
@@ -39,7 +42,8 @@ test("comprobante detail opens from the list and shows CDR", async ({ page }) =>
   await expect(page.getByText("Total a pagar:")).toBeVisible();
 });
 
-test("clientes: new customer drawer validates document length", async ({ page }) => {
+// Pantalla mock inaccesible hasta que la historia #34 la rehaga sobre el DS, la conecte a la API y la habilite; entonces se reactiva.
+test.skip("clientes: new customer drawer validates document length", async ({ page }) => {
   await page.goto("/clientes");
   await settle(page);
   await page.getByRole("button", { name: /Nuevo cliente/ }).click();
@@ -55,7 +59,8 @@ test("clientes: new customer drawer validates document length", async ({ page })
   await expect(dialog).toBeHidden();
 });
 
-test("cotizaciones: tabs filter and 1-click invoicing dialog computes detraction", async ({ page }) => {
+// Pantalla mock inaccesible hasta que la historia #53 la rehaga sobre el DS, la conecte a la API y la habilite; entonces se reactiva.
+test.skip("cotizaciones: tabs filter and 1-click invoicing dialog computes detraction", async ({ page }) => {
   await page.goto("/ventas/proformas");
   await settle(page);
   await page.getByRole("tab", { name: /Vencida/ }).click();
@@ -71,7 +76,8 @@ test("cotizaciones: tabs filter and 1-click invoicing dialog computes detraction
   await expect(page.getByText(/Factura F001-00000843 emitida/)).toBeVisible();
 });
 
-test("stock: warehouse and state filters narrow the table", async ({ page }) => {
+// Pantalla mock inaccesible hasta que la historia #42 la rehaga sobre el DS, la conecte a la API y la habilite; entonces se reactiva.
+test.skip("stock: warehouse and state filters narrow the table", async ({ page }) => {
   await page.goto("/inventario/stock");
   await settle(page);
   await page.getByRole("combobox", { name: "Estado de stock" }).click();
@@ -84,7 +90,8 @@ test("stock: warehouse and state filters narrow the table", async ({ page }) => 
   await expect(page.getByText(/Transferencia despachada/)).toBeVisible();
 });
 
-test("caja: cash count drives the difference and gates the closing", async ({ page }) => {
+// Pantalla mock inaccesible hasta que la historia #66 la rehaga sobre el DS, la conecte a la API y la habilite; entonces se reactiva.
+test.skip("caja: cash count drives the difference and gates the closing", async ({ page }) => {
   await page.goto("/finanzas/caja");
   await settle(page);
   const close = page.getByRole("button", { name: /Z-Report/ });
@@ -98,7 +105,8 @@ test("caja: cash count drives the difference and gates the closing", async ({ pa
   await expect(close).toBeEnabled();
 });
 
-test("cuentas por cobrar: register payment dialog", async ({ page }) => {
+// Pantalla mock inaccesible hasta que la historia #69 la rehaga sobre el DS, la conecte a la API y la habilite; entonces se reactiva.
+test.skip("cuentas por cobrar: register payment dialog", async ({ page }) => {
   await page.goto("/finanzas/cuentas-por-cobrar");
   await settle(page);
   await page.getByRole("button", { name: "Abonar" }).first().click();
@@ -108,7 +116,8 @@ test("cuentas por cobrar: register payment dialog", async ({ page }) => {
   await expect(page.getByText(/Abono de S\/ 2,800.00 registrado/)).toBeVisible();
 });
 
-test("usuarios: permission matrix toggles and resets", async ({ page }) => {
+// Pantalla mock inaccesible hasta que la historia #28 la rehaga sobre el DS, la conecte a la API y la habilite; entonces se reactiva.
+test.skip("usuarios: permission matrix toggles and resets", async ({ page }) => {
   await page.goto("/configuracion/usuarios");
   await settle(page);
   await page.getByRole("tab", { name: /Roles y matriz/ }).click();
@@ -122,7 +131,8 @@ test("usuarios: permission matrix toggles and resets", async ({ page }) => {
   await expect(page.getByRole("checkbox", { name: "Caja y arqueo: Ver" })).toBeDisabled();
 });
 
-test("agenda: selecting an appointment shows its detail", async ({ page }, testInfo) => {
+// Pantalla mock inaccesible hasta que la historia #75 la rehaga sobre el DS, la conecte a la API y la habilite; entonces se reactiva.
+test.skip("agenda: selecting an appointment shows its detail", async ({ page }, testInfo) => {
   await page.goto("/agenda");
   await settle(page);
   if (testInfo.project.name !== "desktop") {
@@ -140,26 +150,25 @@ test("agenda: selecting an appointment shows its detail", async ({ page }, testI
 test("theme toggle switches to dark and back", async ({ page }) => {
   await page.goto("/");
   await settle(page);
-  await page.getByRole("button", { name: "Cambiar tema" }).click();
-  await page.getByRole("menuitemradio", { name: "Oscuro" }).click();
+  await openUserMenu(page);
+  await page.getByRole("radio", { name: "Oscuro" }).click();
   await expect(page.locator("html")).toHaveClass(/dark/);
-  await page.getByRole("button", { name: "Cambiar tema" }).click();
-  await page.getByRole("menuitemradio", { name: "Claro" }).click();
+  await page.getByRole("radio", { name: "Claro" }).click();
   await expect(page.locator("html")).not.toHaveClass(/dark/);
 });
 
-test("mobile: 'Más' sheet lists remaining modules", async ({ page }, testInfo) => {
+test("mobile: 'Más' drawer lists only the enabled features", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "mobile");
   await page.goto("/");
   await settle(page);
   await page.getByRole("button", { name: "Más" }).click();
-  const sheet = page.getByRole("dialog");
-  await expect(sheet.getByRole("link", { name: "Tributarios SUNAT" })).toBeVisible();
-  await sheet.getByRole("link", { name: "Caja y arqueo" }).click();
-  await expect(page).toHaveURL(/\/finanzas\/caja$/);
+  const drawer = page.getByRole("dialog");
+  await expect(drawer.getByRole("link", { name: "Inicio" })).toBeVisible();
+  await expect(drawer.getByRole("link", { name: "Tributarios SUNAT" })).toHaveCount(0);
 });
 
-test("catálogo: tabs route to sub-paths and the 3-step drawer computes IGV", async ({ page }) => {
+// Pantalla mock inaccesible hasta que la historia #37 la rehaga sobre el DS, la conecte a la API y la habilite; entonces se reactiva.
+test.skip("catálogo: tabs route to sub-paths and the 3-step drawer computes IGV", async ({ page }) => {
   await page.goto("/catalogo");
   await settle(page);
   await page.getByRole("tab", { name: /Productos \(kardex\)/ }).click();
@@ -174,7 +183,8 @@ test("catálogo: tabs route to sub-paths and the 3-step drawer computes IGV", as
   await expect(page.getByText("Ítem guardado en el catálogo")).toBeVisible();
 });
 
-test("movimientos: SUNAT operation filter and movement drawer", async ({ page }) => {
+// Pantalla mock inaccesible hasta que la historia #43 la rehaga sobre el DS, la conecte a la API y la habilite; entonces se reactiva.
+test.skip("movimientos: SUNAT operation filter and movement drawer", async ({ page }) => {
   await page.goto("/inventario/movimientos");
   await settle(page);
   await page.getByRole("combobox", { name: "Operación SUNAT" }).click();
@@ -187,7 +197,8 @@ test("movimientos: SUNAT operation filter and movement drawer", async ({ page })
   await expect(page.getByText(/aplicado al kardex/)).toBeVisible();
 });
 
-test("almacenes: site filter narrows the warehouse cards", async ({ page }) => {
+// Pantalla mock inaccesible hasta que la historia #41 la rehaga sobre el DS, la conecte a la API y la habilite; entonces se reactiva.
+test.skip("almacenes: site filter narrows the warehouse cards", async ({ page }) => {
   await page.goto("/inventario/almacenes");
   await settle(page);
   await page.getByRole("combobox", { name: "Sede" }).click();
@@ -196,7 +207,8 @@ test("almacenes: site filter narrows the warehouse cards", async ({ page }) => {
   await expect(page.getByRole("heading", { name: /Almacén Central de Farmacia/ })).toHaveCount(0);
 });
 
-test("compras: tabs navigate to proveedores and órdenes; new supplier drawer opens", async ({ page }) => {
+// Pantalla mock inaccesible hasta que la historia #63 la rehaga sobre el DS, la conecte a la API y la habilite; entonces se reactiva.
+test.skip("compras: tabs navigate to proveedores and órdenes; new supplier drawer opens", async ({ page }) => {
   await page.goto("/compras");
   await settle(page);
   await page.getByRole("navigation", { name: "Secciones de compras" }).getByRole("link", { name: /Proveedores/ }).click();
@@ -209,7 +221,8 @@ test("compras: tabs navigate to proveedores and órdenes; new supplier drawer op
   await expect(page.getByText("OC-2026-0091").filter({ visible: true }).first()).toBeVisible();
 });
 
-test("kardex: filters rows and switches to the physical-only (12.1) layout", async ({ page }) => {
+// Pantalla mock inaccesible hasta que la historia #45 la rehaga sobre el DS, la conecte a la API y la habilite; entonces se reactiva.
+test.skip("kardex: filters rows and switches to the physical-only (12.1) layout", async ({ page }) => {
   await page.goto("/inventario/kardex");
   await settle(page);
   await expect(page.getByText("F001-08492")).toBeVisible();
@@ -220,8 +233,8 @@ test("kardex: filters rows and switches to the physical-only (12.1) layout", asy
   await expect(page.getByRole("columnheader", { name: "C. ponderado" })).toHaveCount(0);
 });
 
-test("user menu opens with profile and logout", async ({ page }) => {
+test("user menu opens with logout", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "Menú de usuario" }).click();
+  await openUserMenu(page);
   await expect(page.getByRole("menuitem", { name: /Cerrar sesión/ })).toBeVisible();
 });

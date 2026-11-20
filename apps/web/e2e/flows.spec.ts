@@ -1,6 +1,6 @@
 import { expect, test } from "./fixtures";
 
-test("login → 2FA → company selection → dashboard with the chosen tenant", async ({ page }) => {
+test("login → 2FA → company selection → shell with the chosen tenant", async ({ page }) => {
   await page.goto("/login");
   await page.getByLabel("Contraseña", { exact: true }).fill("secreto123");
   await page.getByRole("button", { name: /Ingresar a Wanka/ }).click();
@@ -11,11 +11,15 @@ test("login → 2FA → company selection → dashboard with the chosen tenant",
   await page.getByRole("button", { name: /Veterinaria San Borja/ }).click();
   await page.getByRole("button", { name: /Continuar al panel principal/ }).click();
   await expect(page).toHaveURL(/\/$/);
-  await expect(page.getByRole("button", { name: /Empresa actual: Veterinaria San Borja/ })).toBeVisible();
-  // switch back from the topbar
-  await page.getByRole("button", { name: /Empresa actual/ }).click();
-  await page.getByRole("menuitem", { name: /Clínica Dental Sonrisa/ }).click();
-  await expect(page.getByRole("button", { name: /Empresa actual: Clínica Dental Sonrisa/ })).toBeVisible();
+  // En móvil el selector de empresa vive en el cajón de «Más».
+  const more = page.getByRole("button", { name: "Más" });
+  if (await more.isVisible()) await more.click();
+  const selector = page.getByRole("combobox", { name: "Cambiar de empresa" }).filter({ visible: true });
+  await expect(selector).toContainText("Veterinaria San Borja");
+  // switch back from the sidebar selector
+  await selector.click();
+  await page.getByRole("option", { name: /Clínica Dental Sonrisa/ }).click();
+  await expect(selector).toContainText("Clínica Dental Sonrisa");
 });
 
 test("login validates credentials and recover flow shows confirmation", async ({ page }) => {
@@ -36,7 +40,8 @@ test("onboarding: industry choice swaps the module list and steps advance", asyn
   await expect(page.getByRole("heading", { name: /Certificado digital y Clave SOL/ })).toBeVisible();
 });
 
-test("customer file: tabs and link to the clinical record with an interactive odontogram", async ({ page }) => {
+// Pantalla mock inaccesible hasta que la historia #34 la rehaga sobre el DS, la conecte a la API y la habilite; entonces se reactiva.
+test.skip("customer file: tabs and link to the clinical record with an interactive odontogram", async ({ page }) => {
   await page.goto("/clientes/u2");
   await page.getByRole("tab", { name: /Cuenta corriente/ }).click();
   await expect(page.getByText("Pago POS Izipay")).toBeVisible();
@@ -48,7 +53,8 @@ test("customer file: tabs and link to the clinical record with an interactive od
   await expect(page.getByText(/Pieza seleccionada:/)).toContainText("11");
 });
 
-test("quote detail: editing a line updates totals and emitting marks it invoiced", async ({ page }) => {
+// Pantalla mock inaccesible hasta que la historia #53 la rehaga sobre el DS, la conecte a la API y la habilite; entonces se reactiva.
+test.skip("quote detail: editing a line updates totals and emitting marks it invoiced", async ({ page }) => {
   await page.goto("/ventas/proformas/COT-2026-00128");
   await expect(page.getByText("Importe total cotizado")).toBeVisible();
   await expect(page.locator("dd", { hasText: /S\/ 13,153\.46/ }).first()).toBeVisible();
@@ -59,7 +65,8 @@ test("quote detail: editing a line updates totals and emitting marks it invoiced
   await expect(page.getByText(/Facturada · F001-00000843/)).toBeVisible();
 });
 
-test("credit note wizard: partial devolution recomputes and emits", async ({ page }) => {
+// Pantalla mock inaccesible hasta que la historia #52 la rehaga sobre el DS, la conecte a la API y la habilite; entonces se reactiva.
+test.skip("credit note wizard: partial devolution recomputes and emits", async ({ page }) => {
   await page.goto("/ventas/comprobantes/F001-00000842");
   await page.getByRole("button", { name: /Emitir nota de crédito/ }).click();
   await expect(page).toHaveURL(/nota-credito$/);
@@ -73,7 +80,8 @@ test("credit note wizard: partial devolution recomputes and emits", async ({ pag
   await expect(page.getByText(/Nota de crédito FC01-00000105 emitida/)).toBeVisible();
 });
 
-test("void dialog requires a motive", async ({ page }) => {
+// Pantalla mock inaccesible hasta que la historia #52 la rehaga sobre el DS, la conecte a la API y la habilite; entonces se reactiva.
+test.skip("void dialog requires a motive", async ({ page }) => {
   await page.goto("/ventas/comprobantes/B001-00004291");
   await page.getByRole("button", { name: "Anular / comunicar baja", exact: true }).click();
   const dialog = page.getByRole("dialog");
@@ -83,7 +91,8 @@ test("void dialog requires a motive", async ({ page }) => {
   await expect(page.getByText(/Resumen de bajas enviado/)).toBeVisible();
 });
 
-test("reception: received quantity drives missing count; physical count drives the adjustment", async ({ page }) => {
+// Pantalla mock inaccesible hasta que la historia #46 / #65 la rehaga sobre el DS, la conecte a la API y la habilite; entonces se reactiva.
+test.skip("reception: received quantity drives missing count; physical count drives the adjustment", async ({ page }) => {
   await page.goto("/inventario/recepcion/T001-000428");
   await expect(page.getByTestId("missing")).toHaveText("1");
   await page.getByLabel("Recibido MAT-0104").filter({ visible: true }).fill("18");
@@ -94,22 +103,19 @@ test("reception: received quantity drives missing count; physical count drives t
   await expect(page.getByTestId("count-diff")).toHaveText("− S/ 120.00");
 });
 
-test("command palette searches and navigates; notifications open", async ({ page }, testInfo) => {
+test("command palette searches the enabled features and navigates", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === "mobile", "the search shortcut is for keyboards");
   await page.goto("/");
-  await page.waitForLoadState("networkidle");
   await page.keyboard.press("Control+k");
   const dialog = page.getByRole("dialog");
-  await expect(dialog.getByRole("textbox", { name: "Buscar" })).toBeVisible();
-  await dialog.getByRole("textbox", { name: "Buscar" }).fill("alpamayo");
-  await dialog.getByRole("option", { name: /Factura F001-00000842/ }).click();
-  await expect(page).toHaveURL(/comprobantes\/F001-00000842$/);
-  if (testInfo.project.name !== "mobile") {
-    await page.getByRole("button", { name: /Notificaciones/ }).click();
-    await expect(page.getByText(/Nota de crédito FC01-00000104 observada/)).toBeVisible();
-  }
+  await dialog.getByRole("textbox", { name: "Ir a una funcionalidad…" }).fill("inicio");
+  await dialog.getByRole("option", { name: /Inicio/ }).click();
+  await expect(page).toHaveURL(/\/$/);
+  await expect(dialog).toBeHidden();
 });
 
-test("agenda hands the patient and procedure to the POS", async ({ page }, testInfo) => {
+// Pantalla mock inaccesible hasta que la historia #75 la rehaga sobre el DS, la conecte a la API y la habilite; entonces se reactiva.
+test.skip("agenda hands the patient and procedure to the POS", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop");
   await page.goto("/agenda");
   await page.waitForLoadState("networkidle");
