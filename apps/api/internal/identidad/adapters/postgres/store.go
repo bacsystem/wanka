@@ -47,7 +47,7 @@ WHERE email = $1 AND status = 'activo' AND password_hash IS NOT NULL
   AND (locked_until IS NULL OR locked_until <= now())
   AND login_lockouts < $4
   AND (failed_logins < $3 OR login_window_started_at <= now() - make_interval(secs => $2))
-RETURNING id::text, password_hash`
+RETURNING id::text, password_hash, failed_logins`
 
 // ChargeAttempt implementa app.Store.
 func (s *Store) ChargeAttempt(ctx context.Context, email string) (app.Account, bool, error) {
@@ -55,7 +55,7 @@ func (s *Store) ChargeAttempt(ctx context.Context, email string) (app.Account, b
 	found := false
 	err := s.pool.InNoTenantTx(ctx, db.NoTenantScope{}, func(tx pgx.Tx) error {
 		err := tx.QueryRow(ctx, chargeSQL, email, domain.Window.Seconds(), domain.MaxAttempts, domain.MaxLockouts).
-			Scan(&acct.ID, &acct.PasswordHash)
+			Scan(&acct.ID, &acct.PasswordHash, &acct.FailedLogins)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil
 		}

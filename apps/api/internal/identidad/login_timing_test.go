@@ -10,6 +10,7 @@ import (
 	"github.com/bacsystem/wanka/apps/api/internal/identidad/adapters/argon2"
 )
 
+// Informativo (la garantía es TestEveryPlain401OpensTheSameNumberOfTransactions y el piso de tiempo de app.WithFloor).
 // Mismo orden de tiempo para correo inexistente, bloqueado, cerrado y sin password_hash: el hash ficticio gasta lo
 // mismo que uno real. Mide tiempo, así que no corre con -race (la CI lo corre aparte, sin él).
 func TestEnumerationTimingIsOfTheSameOrder(t *testing.T) {
@@ -59,7 +60,7 @@ func TestEnumerationTimingIsOfTheSameOrder(t *testing.T) {
 		got := median(tc.email, tc.pw)
 		ratio := float64(got) / float64(base)
 		t.Logf("%-18s median %v (%.2fx the wrong-password case, %v)", tc.name, got, ratio, base)
-		if ratio < 0.6 || ratio > 1.6 {
+		if ratio < 0.85 || ratio > 1.2 {
 			t.Errorf("%s: %v against %v for a wrong password (%.2fx): the response time tells the cases apart", tc.name, got, base, ratio)
 		}
 	}

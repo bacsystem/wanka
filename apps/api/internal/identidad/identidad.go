@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log/slog"
 	"runtime"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -42,6 +43,8 @@ type Options struct {
 	EmailLimiter httpx.LimiterConfig
 	IPLimiter    httpx.LimiterConfig
 	Log          *slog.Logger
+	// LoginFloor es el piso de tiempo de todo 401 del login; cero lo mide: lo que tarda un hash más 15 ms.
+	LoginFloor time.Duration
 }
 
 // Mount registra las rutas de identidad en routes. pool puede ser nil solo en los tests de cableado, que no
@@ -72,7 +75,10 @@ func Mount(routes *auth.Routes, pool *db.Pool, o Options) error {
 			return err
 		}
 	}
-	svc := app.NewService(postgres.New(pool, enq), hasher, app.NewGate(o.GateSize, o.GateQueue, o.GateWait), o.Log)
+	if o.LoginFloor == 0 {
+		o.LoginFloor = measureFloor(hasher)
+	}
+	svc := app.NewService(postgres.New(pool, enq), hasher, app.NewGate(o.GateSize, o.GateQueue, o.GateWait), o.Log, app.WithFloor(o.LoginFloor))
 	login, err := httpapi.NewLogin(svc, httpapi.Options{ClientIP: routes.ClientIP, Clock: o.Clock, Log: o.Log,
 		EmailLimiter: o.EmailLimiter, IPLimiter: o.IPLimiter})
 	if err != nil {
@@ -95,4 +101,17 @@ type noEnqueuer struct{}
 
 func (noEnqueuer) InsertTx(context.Context, pgx.Tx, jobs.Args, ...jobs.Option) error {
 	return errors.New("identidad: no job enqueuer: the module was mounted without a database")
+}
+
+// measureFloor mide tres hashes ficticios y devuelve la mediana más 15 ms: un piso por encima de lo que tarda el
+// camino más lento de un 401 sin carga (hash más las transacciones), para que todos salgan a la vez.
+func measureFloor(h *argon2.Hasher) time.Duration {
+	var d [3]time.Duration
+	for i := range d {
+		s := time.Now()
+		h.Dummy("calibration")
+		d[i] = time.Since(s)
+	}
+	slices.Sort(d[:])
+	return d[1] + 15*time.Millisecond
 }

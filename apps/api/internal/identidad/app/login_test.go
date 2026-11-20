@@ -26,6 +26,7 @@ type fakeStore struct {
 	mems     []app.Membership
 	totp     bool
 	charged  int
+	txs      int // transacciones abiertas: el cobro y cada InUserTx
 	cleared  int
 	locked   int
 	sessions []app.NewSession
@@ -36,10 +37,12 @@ func (f *fakeStore) ChargeAttempt(context.Context, string) (app.Account, bool, e
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.charged++
+	f.txs++
 	return f.acct, f.found, nil
 }
 
 func (f *fakeStore) InUserTx(_ context.Context, _ string, fn func(app.UserTx) error) error {
+	f.txs++
 	f.inTx.Store(true)
 	defer f.inTx.Store(false)
 	return fn(f)
@@ -244,6 +247,7 @@ func TestLoginWrongPasswordLocksOnTheFifthChargedFailureOnly(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			st := goodStore()
 			tc.edit(&st.state)
+			st.acct.FailedLogins = st.state.FailedLogins
 			_, err := newSvc(st, &fakeHasher{store: st, ok: false}, nil).Login(context.Background(), req)
 			if !errors.Is(err, app.ErrInvalidCredentials) {
 				t.Fatalf("err = %v", err)
@@ -261,6 +265,65 @@ func TestLoginUnreadableStoredHashIsAWrongPassword(t *testing.T) {
 	_, err := newSvc(st, h, nil).Login(context.Background(), req)
 	if !errors.Is(err, app.ErrInvalidCredentials) || len(st.sessions) != 0 {
 		t.Fatalf("err = %v, sessions = %d", err, len(st.sessions))
+	}
+	// Un hash ilegible no puede responder sin hashear: eso lo distinguiría por tiempo.
+	if h.dummies.Load() != 1 {
+		t.Fatalf("dummies = %d, want 1", h.dummies.Load())
+	}
+}
+
+// El tiempo no revela la cuenta: todo 401 que no es el 5.º fallo usa el mismo número de transacciones que el correo
+// inexistente (el cobro). Determinista; no depende del reloj del runner.
+func TestEveryPlain401OpensTheSameNumberOfTransactions(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		st   func() *fakeStore
+		ok   bool
+		txs  int
+	}{
+		{"unknown email, locked, closed, blocked or no hash (no account to charge)", func() *fakeStore { return &fakeStore{} }, false, 1},
+		{"wrong password, 1st failure", func() *fakeStore { st := goodStore(); st.acct.FailedLogins = 1; return st }, false, 1},
+		{"wrong password, 4th failure", func() *fakeStore { st := goodStore(); st.acct.FailedLogins = 4; return st }, false, 1},
+		{"unreadable stored hash", func() *fakeStore { st := goodStore(); st.acct.FailedLogins = 2; return st }, true, 1},
+		{"wrong password, 5th failure: the one that locks", func() *fakeStore { st := goodStore(); st.acct.FailedLogins = 5; st.state.FailedLogins = 5; return st }, false, 2},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			st := tc.st()
+			h := &fakeHasher{store: st, ok: false}
+			if tc.ok { // el hash guardado no se puede leer
+				h.err = errors.New("malformed")
+			}
+			_, err := newSvc(st, h, nil).Login(context.Background(), req)
+			if !errors.Is(err, app.ErrInvalidCredentials) {
+				t.Fatalf("err = %v", err)
+			}
+			if st.txs != tc.txs {
+				t.Fatalf("%d transactions, want %d", st.txs, tc.txs)
+			}
+		})
+	}
+}
+
+// Piso de tiempo común: todo 401 tarda al menos el piso, y lo que no es 401 no se retrasa.
+func TestFloorDelaysEvery401AndNothingElse(t *testing.T) {
+	const floor = 80 * time.Millisecond
+	svc := func(st *fakeStore, ok bool) *app.Service {
+		return app.NewService(st, &fakeHasher{store: st, ok: ok}, app.NewGate(4, 4, time.Second), discard, app.WithFloor(floor))
+	}
+	closed := goodStore()
+	closed.state.MFALockouts = 3
+	for name, st := range map[string]*app.Service{
+		"unknown": svc(&fakeStore{}, false), "wrong password": svc(goodStore(), false), "second step closed": svc(closed, true),
+	} {
+		start := time.Now()
+		_, err := st.Login(context.Background(), req)
+		if !errors.Is(err, app.ErrInvalidCredentials) || time.Since(start) < floor {
+			t.Errorf("%s: err = %v after %v, want ErrInvalidCredentials not before %v", name, err, time.Since(start), floor)
+		}
+	}
+	start := time.Now()
+	if _, err := svc(goodStore(), true).Login(context.Background(), req); err != nil || time.Since(start) >= floor {
+		t.Errorf("a successful login: err = %v after %v, want no delay", err, time.Since(start))
 	}
 }
 

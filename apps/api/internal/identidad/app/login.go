@@ -35,6 +35,8 @@ func (e *MFALockedError) Error() string { return "identidad: the second step is 
 type Account struct {
 	ID           string
 	PasswordHash string
+	// FailedLogins son los intentos cobrados en la ventana, incluido este. Con 5 y contraseña mala hay que bloquear.
+	FailedLogins int
 }
 
 // UserState es el estado de iam.users leído con el candado de la fila. Los tiempos los calcula la base
@@ -163,17 +165,45 @@ type Service struct {
 	hasher Hasher
 	gate   *Gate
 	log    *slog.Logger
+	floor  time.Duration
 }
 
+// Option ajusta el Service.
+type Option func(*Service)
+
+// WithFloor fija el piso de tiempo de todo 401 invalid_credentials: no responde antes de que pasen d desde que
+// empezó la petición. Tapa lo poco que difieren las ramas (el segundo paso cerrado, el 5.º fallo que bloquea) del
+// camino ficticio. Cero lo apaga.
+func WithFloor(d time.Duration) Option { return func(s *Service) { s.floor = d } }
+
 // NewService arma el caso de uso.
-func NewService(store Store, hasher Hasher, gate *Gate, log *slog.Logger) *Service {
-	return &Service{store: store, hasher: hasher, gate: gate, log: log}
+func NewService(store Store, hasher Hasher, gate *Gate, log *slog.Logger, opts ...Option) *Service {
+	s := &Service{store: store, hasher: hasher, gate: gate, log: log}
+	for _, o := range opts {
+		o(s)
+	}
+	return s
 }
 
 // Login sigue el orden de ADR 0004: (1) semáforo del hash; sin cupo, ErrOverloaded y no se cobró nada.
 // (2) cobro del intento en una transacción corta. (3) hash, ficticio si no hubo cuenta que cobrar; nunca
 // dentro de una transacción. (4) resultado, en una sola transacción con la fila del usuario bloqueada.
 func (s *Service) Login(ctx context.Context, req Request) (Result, error) {
+	start := time.Now()
+	res, err := s.login(ctx, req)
+	if errors.Is(err, ErrInvalidCredentials) && s.floor > 0 {
+		// Piso común: el 401 no sale antes, sea cual sea la rama que lo produjo.
+		t := time.NewTimer(s.floor - time.Since(start))
+		defer t.Stop()
+		select {
+		case <-t.C:
+		case <-ctx.Done():
+		}
+	}
+	return res, err
+}
+
+func (s *Service) login(ctx context.Context, req Request) (Result, error) {
 	release, err := s.gate.Acquire(ctx)
 	if err != nil {
 		return Result{}, err
@@ -190,6 +220,7 @@ func (s *Service) Login(ctx context.Context, req Request) (Result, error) {
 		if err != nil {
 			// Un hash guardado ilegible cierra: se trata como contraseña mala. Ni el hash ni el correo van al log.
 			s.log.ErrorContext(ctx, "stored password hash is unreadable", "user_id", acct.ID)
+			s.hasher.Dummy(req.Password) // sin esto, este usuario respondería sin hashear
 			ok = false
 		}
 	} else {
@@ -201,8 +232,12 @@ func (s *Service) Login(ctx context.Context, req Request) (Result, error) {
 	case !found:
 		return Result{}, ErrInvalidCredentials
 	case !ok:
-		if err := s.registerFailure(ctx, acct); err != nil {
-			return Result{}, err
+		// Solo el 5.º fallo de la ventana abre una segunda transacción: la contraseña mala hace en la base lo
+		// mismo que el correo inexistente (una transacción), y el tiempo no distingue la cuenta.
+		if acct.FailedLogins >= domain.MaxAttempts {
+			if err := s.registerFailure(ctx, acct); err != nil {
+				return Result{}, err
+			}
 		}
 		return Result{}, ErrInvalidCredentials
 	}
