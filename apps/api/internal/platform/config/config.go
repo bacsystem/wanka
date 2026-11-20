@@ -48,6 +48,8 @@ var (
 	Platform = Service{"platform-api", "DATABASE_URL_PLATFORM", 5}
 	Worker   = Service{"worker", "DATABASE_URL_WORKER", 10}
 	Webhooks = Service{"webhooks", "DATABASE_URL_WEBHOOKS", 5}
+	// Seed es solo para `wanka dev-seed` en local: se conecta con el superusuario del PostgreSQL de desarrollo.
+	Seed = Service{"dev-seed", "DATABASE_URL_SEED", 2}
 )
 
 // DefaultHTTPAddr is used when HTTP_ADDR is not set.

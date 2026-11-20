@@ -80,6 +80,7 @@ wanka serve --plane=platform    # consola de administración
 wanka serve --plane=webhooks    # receptor de webhooks
 wanka worker                    # ejecuta los jobs (colas de River); sin la base sale con código 1
 wanka migrate up                # aplica las migraciones pendientes y termina
+wanka dev-seed                  # solo local (WANKA_ENV=local): empresa y usuarios de prueba; ver docs/local-environment.md
 ```
 
 `serve` expone en todos los planos:

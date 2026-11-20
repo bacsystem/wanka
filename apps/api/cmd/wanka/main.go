@@ -110,7 +110,7 @@ func run(ctx context.Context, args []string, getenv func(string) string, stdout,
 	case "help", "-h", "--help":
 		usage(stdout)
 		return exitOK
-	case "serve", "worker", "migrate":
+	case "serve", "worker", "migrate", "dev-seed":
 	default:
 		fmt.Fprintf(stderr, "wanka: unknown subcommand %q\n", sub)
 		usage(stderr)
@@ -142,6 +142,8 @@ func run(ctx context.Context, args []string, getenv func(string) string, stdout,
 	switch sub {
 	case "migrate":
 		svc = config.Migrator
+	case "dev-seed":
+		svc = config.Seed
 	case "serve":
 		var ok bool
 		if svc, ok = planes[plane]; !ok {
@@ -162,7 +164,7 @@ func run(ctx context.Context, args []string, getenv func(string) string, stdout,
 	log := logging.New(stdout, cfg.LogLevel).With("command", sub)
 
 	var mail mailer.Mailer
-	if sub != "migrate" {
+	if sub != "migrate" && sub != "dev-seed" {
 		mail = newMailer(log, cfg)
 	}
 
@@ -171,6 +173,8 @@ func run(ctx context.Context, args []string, getenv func(string) string, stdout,
 		err = serve(ctx, log, cfg, svc, plane, defaultWiring)
 	case "migrate":
 		err = migrate(ctx, log, cfg)
+	case "dev-seed":
+		err = devSeed(ctx, log, cfg, getenv, stdout)
 	default:
 		err = worker(ctx, log, cfg, svc, getenv, mail)
 	}
@@ -415,5 +419,6 @@ func usage(w io.Writer) {
   wanka serve --plane=tenant|platform|webhooks
   wanka worker
   wanka migrate up
+  wanka dev-seed   (solo local: WANKA_ENV=local)
 `)
 }

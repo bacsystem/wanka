@@ -19,6 +19,7 @@ API_ENV = HTTP_ADDR=127.0.0.1:$(WANKA_API_PORT) \
   DATABASE_URL_PLATFORM=postgres://wanka_platform:$(WANKA_ROLE_PASSWORD)@$(PG_HOST)/wanka \
   DATABASE_URL_WORKER=postgres://wanka_worker:$(WANKA_ROLE_PASSWORD)@$(PG_HOST)/wanka \
   DATABASE_URL_WEBHOOKS=postgres://wanka_webhooks:$(WANKA_ROLE_PASSWORD)@$(PG_HOST)/wanka
+SEED_URL = postgres://postgres:$(POSTGRES_SUPERUSER_PASSWORD)@$(PG_HOST)/wanka
 MIGRATOR_URL = postgres://wanka_migrator:$(WANKA_ROLE_PASSWORD)@$(PG_HOST)/wanka
 
 .PHONY: help env up down reset roles migrate seed api web test test-api rls-check lint logs prune-volumes _up _start-api _start-web _stop-procs
@@ -74,7 +75,7 @@ _stop-procs:
 down: _stop-procs ## Detiene API, web y PostgreSQL (conserva los datos)
 	@if [ -f $(ENV_FILE) ]; then $(DC) down; fi
 
-reset: _stop-procs ## Borra contenedor, volumen de datos y estado local (pide confirmar; CONFIRM=1 lo salta)
+reset: env _stop-procs ## Borra contenedor, volumen de datos y estado local (pide confirmar; CONFIRM=1 lo salta)
 	@if [ "$$CONFIRM" != "1" ]; then printf "Borra TODOS los datos locales de wanka-local. Seguir? [s/N] "; read a; [ "$$a" = "s" ] || { echo cancelado; exit 1; }; fi
 	@if [ -f $(ENV_FILE) ]; then $(DC) --profile tools down -v --remove-orphans; fi
 	rm -f .local/api.log .local/web.log .local/wanka
@@ -86,10 +87,8 @@ roles: env ## Bootstrap de roles y claves locales (idempotente)
 migrate: env ## Aplica las migraciones (wanka migrate up)
 	@cd apps/api && DATABASE_URL_MIGRATOR=$(MIGRATOR_URL) go run ./cmd/wanka migrate up
 
-seed: ## Empresa y usuarios de prueba (pendiente de #24)
-	@if grep -rqs '"dev-seed"' apps/api/cmd/wanka; then \
-	  cd apps/api && $(API_ENV) DATABASE_URL_MIGRATOR=$(MIGRATOR_URL) go run ./cmd/wanka dev-seed; \
-	else echo "make seed: todavia no existe 'wanka dev-seed'; se completa con #24 (hasher de contrasenas del login)." >&2; exit 1; fi
+seed: env ## Empresa de prueba y un usuario por rol (idempotente; solo local)
+	@cd apps/api && WANKA_ENV=local DATABASE_URL_SEED=$(SEED_URL) go run ./cmd/wanka dev-seed
 
 api: env ## API en primer plano (go run), para depurar
 	@cd apps/api && $(API_ENV) go run ./cmd/wanka serve --plane=tenant
