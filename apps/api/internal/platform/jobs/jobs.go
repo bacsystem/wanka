@@ -175,8 +175,8 @@ type CompanySyncArgs struct {
 	TenantID pgtype.UUID `json:"tenant_id"`
 }
 
-func (CompanySyncArgs) Kind() string            { return "company_sync" }
-func (a CompanySyncArgs) Tenant() pgtype.UUID   { return a.TenantID }
+func (CompanySyncArgs) Kind() string          { return "company_sync" }
+func (a CompanySyncArgs) Tenant() pgtype.UUID { return a.TenantID }
 
 // SeriesReconcileArgs son los argumentos del job de conciliación de series con Khipu.
 type SeriesReconcileArgs struct {
