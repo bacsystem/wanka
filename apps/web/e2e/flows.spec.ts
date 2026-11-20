@@ -1,6 +1,7 @@
 import { expect, test } from "./fixtures";
 
-test("login → 2FA → company selection → shell with the chosen tenant", async ({ page }) => {
+// El login real (#24) reemplazó al mock; el 2FA (#25) y la selección de empresa (#27) lo reactivan sobre la API.
+test.skip("login → 2FA → company selection → shell with the chosen tenant", async ({ page }) => {
   await page.goto("/login");
   await page.getByLabel("Contraseña", { exact: true }).fill("secreto123");
   await page.getByRole("button", { name: /Ingresar a Wanka/ }).click();
@@ -22,7 +23,8 @@ test("login → 2FA → company selection → shell with the chosen tenant", asy
   await expect(selector).toContainText("Clínica Dental Sonrisa");
 });
 
-test("login validates credentials and recover flow shows confirmation", async ({ page }) => {
+// La validación del login real está en e2e/login.spec.ts; la recuperación de contraseña vuelve con #26.
+test.skip("login validates credentials and recover flow shows confirmation", async ({ page }) => {
   await page.goto("/login");
   await page.getByLabel("Contraseña", { exact: true }).fill("123");
   await page.getByRole("button", { name: /Ingresar a Wanka/ }).click();
@@ -32,7 +34,8 @@ test("login validates credentials and recover flow shows confirmation", async ({
   await expect(page.getByText("Enlace despachado con éxito")).toBeVisible();
 });
 
-test("onboarding: industry choice swaps the module list and steps advance", async ({ page }) => {
+// Pantalla mock inaccesible (404) hasta la historia #31; entonces se reactiva.
+test.skip("onboarding: industry choice swaps the module list and steps advance", async ({ page }) => {
   await page.goto("/onboarding");
   await page.getByRole("button", { name: /Restaurante, café y bar/ }).click();
   await expect(page.getByText(/^Control de mesas y comandas/)).toBeVisible();

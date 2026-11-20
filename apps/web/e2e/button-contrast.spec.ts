@@ -48,7 +48,7 @@ const BUTTONS: { route: string; name: RegExp; tenant?: string; story?: string }[
   { route: "/ventas/nueva", name: /^Agregar /, story: "#48" },
   { route: "/ventas/proformas", name: /Facturar 1-clic/, story: "#54" },
   { route: "/salon", name: /Abrir mesa/, tenant: "t_004", story: "#113" },
-  { route: "/admin", name: /Ver incidentes/ },
+  { route: "/admin", name: /Ver incidentes/, story: "#84" },
 ];
 
 for (const theme of ["light", "dark"] as const) {

@@ -35,8 +35,13 @@ describe("rutas", () => {
     expect(isEnabledPath("/cualquier-cosa")).toBe(false);
   });
 
-  it.each(["/login", "/seleccionar-empresa", "/onboarding", "/admin", "/admin/empresas/e_1"])("%s es del flujo de ingreso o de la consola", (path) => {
+  it.each(["/login", "/login/dos-pasos"])("%s es del ingreso real (#24)", (path) => {
     expect(routeAccess(path)).toBe("open");
+  });
+
+  // Pantallas mock: 404 hasta que su historia las habilite (lista escrita a mano, no derivada del código).
+  it.each(["/seleccionar-empresa", "/onboarding", "/admin", "/admin/login", "/admin/empresas/e_1"])("%s es una pantalla mock: 404 hasta su historia", (path) => {
+    expect(routeAccess(path)).toBe("disabled");
   });
 
   it.each(["/loginx", "/administrador", "/login-falso/ventas"])("%s no se cuela por prefijo", (path) => {

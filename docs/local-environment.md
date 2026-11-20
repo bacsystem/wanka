@@ -78,3 +78,7 @@ Pasos:
 5. `make down` al terminar.
 
 Nota: `make reset` solo detiene la API y la web cuyo pid está en el `.local/` de ese árbol de trabajo; si levantaste la API desde otro worktree, detenela allí.
+
+## E2E del login (#24)
+
+`pnpm --filter web test:e2e login` corre contra la API real: si `WANKA_API_URL` (por defecto `http://127.0.0.1:58080`) responde en `/readyz`, `e2e/global-setup.ts` siembra por `docker exec wanka-local-pg psql` (se cambia con `E2E_DB_CONTAINER`) una empresa y, por proyecto de Playwright, cuatro usuarios (`e2e-{ok,bad,nomembership,mfa}-{desktop,tablet,mobile}@e2e.wanka.test`) con una contraseña aleatoria de esa corrida; no hay credenciales en el repositorio. Sin la API, los specs se saltan. Son usuarios propios del E2E, aparte de los de `make seed`.
