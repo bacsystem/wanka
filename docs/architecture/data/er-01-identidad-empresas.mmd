@@ -13,6 +13,7 @@ erDiagram
   USERS ||--o{ USER_TOTP : protege
   USERS ||--o{ SESSIONS : abre
   USERS ||--o{ USER_TOKENS : recibe
+  SIGNUP_REQUESTS |o--o| TENANTS : crea_al_confirmar
   ROLE_TEMPLATES ||--o{ ROLES : origina
   USERS ||--o{ MFA_ENROLLMENTS : enrola
   SITES ||--o{ CASH_REGISTERS : tiene
@@ -146,6 +147,19 @@ erDiagram
     text new_email "solo email_change"
     timestamptz expires_at "15 min, 7 dias o 24 h segun purpose; indice para limpieza"
     timestamptz consumed_at "irreversible (trigger)"
+    timestamptz created_at "lo fija el servidor (trigger)"
+  }
+  SIGNUP_REQUESTS {
+    uuid id PK "iam.signup_requests SIN RLS: una fila por alta con formato valido, en todos los caminos (issue 31)"
+    text kind "new_account, existing_account u over_limit"
+    text email "normalizado; topes por correo, indice email+created_at"
+    bytea token_hash UK "sha256 del wk_su_; lo pone el job iam.signup_mail y lo reemplaza en cada reintento sin consumir; solo new_account"
+    timestamptz notice_sent_at "solo existing_account: aviso ya tienes cuenta, uno por correo en 24 h"
+    text password_hash "argon2id PHC, solo new_account; pasa a null al consumir"
+    text ruc "y legal_name, trade_name, industry, full_name con los CHECK de destino"
+    timestamptz expires_at "24 h como maximo; indice para limpieza"
+    timestamptz consumed_at "irreversible (trigger); CHECK consumed_at null = tenant_id null"
+    uuid tenant_id "empresa creada al confirmar, sin FK; repite el 201 de un reintento"
     timestamptz created_at "lo fija el servidor (trigger)"
   }
   ROLE_TEMPLATES {

@@ -108,11 +108,11 @@ Modelo y reglas en [`data/data-model.md`](data/data-model.md): `tenant_id` y RLS
 
 | # | Decisión | Estado |
 |---|---|---|
-| [0001](adr/0001-multitenancy-rls.md) | Multi-tenancy con base única, `tenant_id` y RLS; acceso cross-tenant de la consola | aceptado; modificado por [0012](adr/0012-maintenance-without-tenant.md) (2026-11-19) en la lista blanca de políticas y la fila de `ops.idempotency_keys`; nota del 2026-11-19 (grants de identidad, épica #3); nota del 2026-11-20 (#246: ramas por usuario solo de `wanka_app`, purga frente a los triggers) |
+| [0001](adr/0001-multitenancy-rls.md) | Multi-tenancy con base única, `tenant_id` y RLS; acceso cross-tenant de la consola | aceptado; modificado por [0012](adr/0012-maintenance-without-tenant.md) (2026-11-19) en la lista blanca de políticas y la fila de `ops.idempotency_keys`; nota del 2026-11-19 (grants de identidad, épica #3); nota del 2026-11-20 (#246: ramas por usuario solo de `wanka_app`, purga frente a los triggers); nota del 2026-11-20 (alta por autoservicio: `iam.signup_requests`, `ops.signup_idempotency_keys`, `platform_fn.start_self_service_trial`) |
 | [0002](adr/0002-modular-monolith-go.md) | Monolito modular hexagonal en Go; librerías base | aceptado |
 | [0003](adr/0003-einvoicing-khipu-port.md) | Facturación vía Khipu tras `InvoicingProvider` (con hechos de la documentación) | propuesto; nota del 2026-11-19 (alta, `activate`, series; ver 0013) |
 | [0004](adr/0004-in-house-auth.md) | Autenticación y RBAC propios; plano super-admin separado | aceptado; modificado por [0011](adr/0011-membership-loss-keeps-user-session.md) (2026-11-18) en la membresía perdida y por [0014](adr/0014-login-lockout-doubling.md) (2026-11-20) en el techo del bloqueo del login; nota del 2026-11-19 (bloqueo del login, recuperación e invitación, épica #3) |
-| [0005](adr/0005-industry-modules-feature-flags.md) | Módulos de rubro, planes y feature flags; empresa cerrada en solo lectura | propuesto |
+| [0005](adr/0005-industry-modules-feature-flags.md) | Módulos de rubro, planes y feature flags; empresa cerrada en solo lectura | propuesto; nota del 2026-11-20 (prueba vencida en solo lectura) |
 | [0006](adr/0006-async-jobs-outbox.md) | Jobs y outbox en Postgres con River | propuesto |
 | [0007](adr/0007-deployment-railway.md) | Railway con Docker, portable | aceptado |
 | [0008](adr/0008-money-and-numbering.md) | Dinero `numeric` y correlativos sin huecos | propuesto; nota del 2026-11-19 (GRE numerada por Khipu, huecos solo de Wanka; ver 0013) |
@@ -121,7 +121,7 @@ Modelo y reglas en [`data/data-model.md`](data/data-model.md): `tenant_id` y RLS
 | [0011](adr/0011-membership-loss-keeps-user-session.md) | Perder la membresía desliga la sesión de esa empresa (a `/seleccionar-empresa`), no la revoca; modifica 0004 | aceptado |
 | [0012](adr/0012-maintenance-without-tenant.md) | Mantenimiento sin tenant en tablas con RLS: políticas `purge_*` de `wanka_worker` acotadas por antigüedad; modifica 0001 | aceptado (2026-11-19, decisión del dueño) |
 | [0014](adr/0014-login-lockout-doubling.md) | Bloqueo creciente del login (15 min que se duplican hasta 24 h), y cierre del ingreso con contraseña a los 100 fallos seguidos (`login_failure_streak`) hasta restablecerla o cambiarla; se reinicia solo con un ingreso correcto o un cambio o restablecimiento de contraseña; modifica 0004 | aceptado (2026-11-20, decisión del dueño; nota del mismo día: techo en 100) |
-| [0013](adr/0013-khipu-company-config-sync.md) | Datos de la empresa, locales y series frente a Khipu: razón social de solo lectura, logo de 200 KB, sincronización de anexos y series, exclusividad y conflicto, RUC ya presente en Khipu; complementa 0003 y 0008 | aceptado (2026-11-19, decisión del dueño; buzón de Wanka por tenant) |
+| [0013](adr/0013-khipu-company-config-sync.md) | Datos de la empresa, locales y series frente a Khipu: razón social de solo lectura, logo de 200 KB, sincronización de anexos y series, exclusividad y conflicto, RUC ya presente en Khipu; complementa 0003 y 0008 | aceptado (2026-11-19, decisión del dueño; buzón de Wanka por tenant); nota del 2026-11-20 (H15: la conciliación baja `synced_seq` en vez de subir `provider_sync_seq`) |
 
 **Proceso de los ADR, desde que este PR se mergea:**
 - Un ADR nuevo toma el siguiente número libre (`adr/NNNN-titulo-en-kebab.md`), con contexto, opciones, decisión, consecuencias (también las malas), estado y fecha. Se agrega a esta tabla en el mismo PR.
