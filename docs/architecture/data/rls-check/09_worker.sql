@@ -183,3 +183,12 @@ SELECT test.expect_error('TRUNCATE iam.role_template_permissions', '42501', 'wan
 SELECT test.expect_error($$UPDATE iam.roles SET name = 'x'$$, '42501', 'wanka_worker no escribe iam.roles');
 SELECT test.expect_error($$DELETE FROM iam.roles$$, '42501', 'wanka_worker no borra iam.roles');
 SELECT test.expect_error($$DELETE FROM iam.memberships$$, '42501', 'wanka_worker no borra iam.memberships');
+\echo '== K1f. (wanka_worker) iam.users (#24): solo id y email, para el aviso del bloqueo; nunca la contrasena ni los contadores =='
+SELECT test.assert((SELECT count(*) FROM iam.users WHERE email = 'cajero@a.pe') = 1, 'wanka_worker lee el correo de un usuario por id/email');
+SELECT test.expect_error('SELECT password_hash FROM iam.users', '42501', 'wanka_worker no lee password_hash');
+SELECT test.expect_error('SELECT failed_logins FROM iam.users', '42501', 'wanka_worker no lee los contadores del login');
+SELECT test.expect_error('SELECT locked_until FROM iam.users', '42501', 'wanka_worker no lee locked_until');
+SELECT test.expect_error('SELECT * FROM iam.users', '42501', 'wanka_worker no lee iam.users completa');
+SELECT test.expect_error($$UPDATE iam.users SET email = 'x@y.pe'$$, '42501', 'wanka_worker no escribe iam.users');
+SELECT test.expect_error($$INSERT INTO iam.users (id, email) VALUES (gen_random_uuid(), 'w@y.pe')$$, '42501', 'wanka_worker no inserta usuarios');
+SELECT test.expect_error('DELETE FROM iam.users', '42501', 'wanka_worker no borra usuarios');

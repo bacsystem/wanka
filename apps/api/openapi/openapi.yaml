@@ -57,6 +57,8 @@ tags:
     description: Mensajes por WhatsApp
 paths:
   # --- identidad ---
+  /v1/auth/login:
+    $ref: 'paths/identidad.yaml#/paths/~1v1~1auth~1login'
   /v1/auth/mfa/enrollment/totp:
     $ref: 'paths/identidad.yaml#/paths/~1v1~1auth~1mfa~1enrollment~1totp'
   /v1/auth/mfa/enrollment/totp/confirm:
@@ -95,8 +97,3 @@ components:
       type: http
       scheme: bearer
       description: Token opaco con prefijo wk_at_. Los tokens wka_ (plataforma) se rechazan.
-  # Esquemas que ningún camino referencia todavía (empaquetar los descartaría). Se quita la línea
-  # cuando el camino que lo usa llegue (p. ej. POST /v1/auth/login, #24).
-  schemas:
-    MfaEnrollmentRequired:
-      $ref: 'paths/identidad.yaml#/components/schemas/MfaEnrollmentRequired'

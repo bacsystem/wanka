@@ -3,6 +3,48 @@ info:
   title: Wanka API - identidad
   version: 0.1.0-draft
 paths:
+  /v1/auth/login:
+    post:
+      tags: [identidad]
+      operationId: login
+      security: []
+      x-module: none
+      x-permission: none
+      summary: Inicia sesión con correo y contraseña
+      description: |
+        Clase Public, sin Bearer. El correo se normaliza con TrimSpace y ToLower antes de buscarlo. Orden
+        (ADR 0004, nota del 2026-11-19): esquema (400 o 422), cuotas (5/min por IP+email y 30/min por IP, la
+        IP es la de X-Client-Ip, conventions.md §3 y §7: 429 rate_limited con Retry-After), semáforo del hash
+        (sin cupo: 503 overloaded con Retry-After 1, sin cobrar el intento), cobro del intento, hash (ficticio
+        si la cuenta no existe, está bloqueada, cerrada, es de un usuario bloqueado o no tiene contraseña) y
+        resultado. Contraseña mala, correo inexistente, cuenta bloqueada o cerrada, usuario bloqueado, sin
+        contraseña y segundo paso cerrado tras 3 bloqueos: el mismo 401 invalid_credentials, con el mismo
+        cuerpo (la API nunca dice que la cuenta existe). Cada 5.º fallo seguido bloquea la cuenta
+        15 min · 2^(n-1), hasta 24 h, y avisa por correo; con 100 fallos seguidos el ingreso con contraseña
+        queda cerrado hasta restablecerla (ADR 0014). Una contraseña correcta devuelve el cobro. Con la contraseña correcta y ninguna
+        membresía activa: 403 tenant_access_denied, sin sesión. Con la contraseña correcta y el segundo paso
+        bloqueado: 429 rate_limited con Retry-After hasta el fin del bloqueo. La rama
+        mfa_enrollment_required responde 503 dependency_unavailable con Retry-After 60 hasta que #25 la
+        implemente. Idempotency-Key no se acepta en /v1/auth/*: 400 malformed_request.
+      parameters:
+        - $ref: '../components/headers.yaml#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginRequest' }
+      responses:
+        '200':
+          description: Sesión creada, o segundo paso pendiente
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LoginResponse' }
+        '400': { $ref: '../components/problem.yaml#/components/responses/Problem' }
+        '401': { $ref: '../components/problem.yaml#/components/responses/Problem' }
+        '403': { $ref: '../components/problem.yaml#/components/responses/Problem' }
+        '422': { $ref: '../components/problem.yaml#/components/responses/Problem' }
+        '429': { $ref: '../components/problem.yaml#/components/responses/Problem' }
+        '503': { $ref: '../components/problem.yaml#/components/responses/Problem' }
   /v1/auth/mfa/enrollment/totp:
     post:
       tags: [identidad]
@@ -160,6 +202,95 @@ components:
       type: string
       description: Código de un solo uso enviado al correo en el enrolamiento obligatorio. Vence con el enrollmentToken; en la base solo va su HMAC (conventions.md §2).
       pattern: '^[0-9]{6}$'
+    LoginRequest:
+      type: object
+      additionalProperties: false
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          minLength: 3
+          maxLength: 254
+          description: Se normaliza (TrimSpace y ToLower) antes de buscarlo; la longitud se mide ya normalizado.
+        password:
+          type: string
+          minLength: 1
+          maxLength: 128
+          description: Hasta 128 caracteres. La política de contraseña nueva se aplica al definirla, no al ingresar.
+    LoginResponse:
+      description: Resultado del login; el discriminador es status.
+      oneOf:
+        - $ref: '#/components/schemas/LoginAuthenticated'
+        - $ref: '#/components/schemas/LoginMfaRequired'
+        - $ref: '#/components/schemas/MfaEnrollmentRequired'
+      discriminator:
+        propertyName: status
+        mapping:
+          authenticated: '#/components/schemas/LoginAuthenticated'
+          mfa_required: '#/components/schemas/LoginMfaRequired'
+          mfa_enrollment_required: '#/components/schemas/MfaEnrollmentRequired'
+    LoginAuthenticated:
+      type: object
+      description: Sesión sin empresa elegida (mfa_method none); el BFF pone las cookies y decide el siguiente paso con memberships.
+      required: [status, accessToken, refreshToken, expiresAt, memberships]
+      properties:
+        status: { type: string, const: authenticated }
+        accessToken: { type: string, pattern: '^wk_at_[A-Za-z0-9_-]{43}$' }
+        refreshToken: { type: string, pattern: '^wk_rt_[A-Za-z0-9_-]{43}$' }
+        expiresAt: { type: string, format: date-time, description: 'Vencimiento del accessToken (15 min), RFC 3339 con zona.' }
+        memberships:
+          type: array
+          description: Solo membresías activas (ADR 0011).
+          items: { $ref: '#/components/schemas/MembershipSummary' }
+    LoginMfaRequired:
+      type: object
+      description: El usuario tiene TOTP confirmado. No trae tokens de acceso; el challengeToken se canjea en POST /v1/auth/mfa/verify (#25).
+      required: [status, challengeToken, expiresAt]
+      properties:
+        status: { type: string, const: mfa_required }
+        challengeToken: { type: string, pattern: '^wk_ch_[A-Za-z0-9_-]{43}$' }
+        expiresAt: { type: string, format: date-time, description: Vencimiento del challengeToken (5 min). }
+    MembershipSummary:
+      type: object
+      description: Una membresía activa del usuario (la forma la fija el comentario de #27; la usan el login, el confirm de #25 y GET /v1/me/memberships).
+      required: [membershipId, tenant, role, selectable, readOnly, sites]
+      properties:
+        membershipId: { type: string, format: uuid }
+        tenant:
+          type: object
+          required: [id, name, industry, status]
+          properties:
+            id: { type: string, format: uuid }
+            name: { type: string, description: 'Nombre comercial o, si falta, la razón social; vacío hasta que #31 la complete.' }
+            industry: { type: string, description: 'Enum abierto; vacío hasta que #31 lo complete.' }
+            status: { type: string, description: 'Enum abierto: trial, activa, suspendida, cerrada.' }
+        role:
+          type: object
+          required: [id, name, requiresMfa]
+          properties:
+            id: { type: string, format: uuid }
+            name: { type: string }
+            requiresMfa: { type: boolean }
+        selectable: { type: boolean, description: Falso si la empresa está suspendida. }
+        blockedReason: { type: string, description: 'Solo con selectable falso. Enum abierto: tenant_suspended.' }
+        readOnly: { type: boolean, description: Verdadero si la empresa está cerrada. }
+        sites:
+          type: array
+          description: Solo sedes y cajas activas dentro del alcance de la membresía.
+          items:
+            type: object
+            required: [id, name, cashRegisters]
+            properties:
+              id: { type: string, format: uuid }
+              name: { type: string }
+              cashRegisters:
+                type: array
+                items:
+                  type: object
+                  required: [id, code]
+                  properties:
+                    id: { type: string, format: uuid }
+                    code: { type: string }
     MfaEnrollmentRequired:
       type: object
       description: |
@@ -211,8 +342,8 @@ components:
           items: { type: string }
         memberships:
           type: array
-          description: Misma forma que GET /v1/me/memberships; se fija en #27.
-          items: { type: object }
+          description: Misma forma que GET /v1/me/memberships.
+          items: { $ref: '#/components/schemas/MembershipSummary' }
     MfaEmailCodeResent:
       type: object
       required: [resendAvailableAt, sendsRemaining]

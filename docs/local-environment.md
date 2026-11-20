@@ -28,7 +28,7 @@ La API no va en un contenedor: `go build` local evita mantener una imagen y reut
 | `make down` | detiene API, web y PostgreSQL; conserva los datos |
 | `make reset` | borra contenedor, volumen de datos y estado local (pide confirmación; `CONFIRM=1 make reset` la salta) |
 | `make migrate` / `make roles` | aplica migraciones / el bootstrap de roles (idempotentes) |
-| `make seed` | empresa y usuarios de prueba: **pendiente de #24** (falla con un mensaje claro hasta que exista `wanka dev-seed`) |
+| `make seed` | empresa de prueba y un usuario por rol base (idempotente; corre `wanka dev-seed`, que se niega si no es `WANKA_ENV=local` con una base en loopback) |
 | `make api` / `make web` | API o web en primer plano, para depurar |
 | `make test` / `make test-api` | pruebas de web y API / solo API contra el PostgreSQL local |
 | `make rls-check` | `docs/architecture/data/rls-check/run.sh` (su propio contenedor) |
@@ -56,12 +56,29 @@ El único volumen de este entorno es `wanka-local-pgdata` (nombre fijo). El serv
 
 ## Prueba de punta a punta
 
-Cuando estén el login (#24) y la semilla (`make seed`):
+`make seed` crea la empresa «Empresa Demo SAC» (RUC inventado 20999999990), sus roles base, un local `PRINCIPAL` con la caja `CAJA-01` y un usuario activo por rol. Todos comparten la contraseña de prueba `Demo-Wanka-2026-local` (solo local; datos inventados, sin correo real: el dominio `demo.local` no se resuelve).
 
-1. `make reset && make up && make seed`.
-2. Abrí `http://localhost:3400/login` e ingresá con cada usuario de prueba (uno por rol base: dueño, administrador, contador, cajero, vendedor, almacenero; las contraseñas las imprime `make seed`).
-3. Comprobá que el shell vacío carga y que cada rol ve solo lo que sus permisos permiten.
+| Rol | Correo | Login hoy |
+|---|---|---|
+| dueño | `dueno@demo.local` | 503 hasta que #25 permita enrolar el 2FA (el rol lo exige) |
+| administrador | `administrador@demo.local` | 503, igual |
+| contador | `contador@demo.local` | 503, igual |
+| cajero | `cajero@demo.local` | 200 |
+| vendedor | `vendedor@demo.local` | 200 |
+| almacenero | `almacenero@demo.local` | 200 |
+
+`make seed` escribe como el **superusuario** del PostgreSQL local (`DATABASE_URL_SEED`, que solo fija el Makefile): ningún rol de servicio puede crear empresas ni usuarios globales, y el superusuario se salta la RLS (incluida `FORCE`). Por eso `wanka dev-seed` solo corre con `WANKA_ENV=local` y con todos los hosts de la URL en loopback o socket Unix. Al resembrar, cada usuario queda sin bloqueos ni racha de fallos, y la empresa y las membresías, activas.
+
+Pasos:
+
+1. `CONFIRM=1 make reset && make up && make seed` (la semilla se puede repetir: repone contraseñas y desbloqueos).
+2. `curl -X POST http://127.0.0.1:58080/v1/auth/login -H 'Content-Type: application/json' -d '{"email":"cajero@demo.local","password":"Demo-Wanka-2026-local"}'` debe dar 200 con los tokens; repetilo con cada rol de la tabla.
+3. Abrí `http://localhost:3400` y comprobá que el shell vacío carga.
 4. `curl http://127.0.0.1:58080/readyz` debe devolver `{"status":"ready"}`; con `docker compose -p wanka-local stop postgres` debe dar 503 sin matar la API.
 5. `make down` al terminar.
 
-Hoy (sin login ni semilla) se puede comprobar `make up`, las rutas de salud, el shell vacío y `make test-api`.
+Nota: `make reset` solo detiene la API y la web cuyo pid está en el `.local/` de ese árbol de trabajo; si levantaste la API desde otro worktree, detenela allí.
+
+## E2E del login (#24)
+
+`pnpm --filter web test:e2e login` corre contra la API real: si `WANKA_API_URL` (por defecto `http://127.0.0.1:58080`) responde en `/readyz`, `e2e/global-setup.ts` siembra por `docker exec wanka-local-pg psql` (se cambia con `E2E_DB_CONTAINER`) una empresa y, por proyecto de Playwright, cuatro usuarios (`e2e-{ok,bad,nomembership,mfa}-{desktop,tablet,mobile}@e2e.wanka.test`) con una contraseña aleatoria de esa corrida; no hay credenciales en el repositorio. Sin la API, los specs se saltan. Son usuarios propios del E2E, aparte de los de `make seed`.

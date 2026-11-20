@@ -34,9 +34,10 @@ components:
   apigen: { in: internal/apigen/** }
   # Prueba de contrato del spec (openapi/contract_test.go): lee las tablas de los paquetes generados.
   openapi_contract: { in: openapi }
-  # Fachada del módulo de identidad (ADR 0002): el resolver de permisos de PostgreSQL y la siembra de los roles base.
-  # Solo cmd la cablea; los demás módulos la importan por su paquete raíz, nunca por internal/identidad/**.
+  # Módulo de identidad (ADR 0002): la fachada (paquete raíz: login, resolver de permisos, siembra de roles base) la
+  # cablea cmd; domain, app y adapters son internos y los demás módulos no los importan.
   identidad: { in: internal/identidad }
+  identidad_inner: { in: internal/identidad/** }
   main: { in: cmd/** }
   # Generador de la lista de contraseñas filtradas (se corre a mano, #238): reutiliza el formato de platform.
   tool_breachedgen: { in: scripts/breachedgen }
@@ -53,6 +54,8 @@ vendors:
   riverdriver: { in: github.com/riverqueue/river/riverdriver/riverpgxv5 }
   # oapi-codegen runtime: solo lo importa el código generado (internal/apigen).
   oapiruntime: { in: [github.com/oapi-codegen/runtime, github.com/oapi-codegen/runtime/**] }
+  # argon2id de las contraseñas (ADR 0002 y 0004): solo el adaptador de hash de identidad.
+  xcrypto: { in: golang.org/x/crypto/argon2 }
   # decimal: dinero y cantidades (internal/platform/money y pricing, ADR 0008).
   decimal: { in: github.com/shopspring/decimal }
 deps:
@@ -76,14 +79,17 @@ deps:
     canUse: [oapiruntime]
   openapi_contract:
     mayDependOn: [apigen, platform, platform_db]
+  # Los tests de la fachada montan el cableado real (apigen para el contrato, pgsession y el stub de correo).
   identidad:
-    # identidad: sus pruebas externas (paquete identidad_test) importan la fachada.
-    mayDependOn: [identidad, platform, platform_db]
+    mayDependOn: [identidad, identidad_inner, apigen, platform, platform_db, platform_jobs, platform_pg, platform_mailer_stub]
     canUse: [pgx]
+  identidad_inner:
+    mayDependOn: [identidad_inner, apigen, platform, platform_db, platform_jobs]
+    canUse: [pgx, xcrypto]
   tool_breachedgen:
     mayDependOn: [platform]
   main:
-    mayDependOn: [apigen, identidad, platform, platform_pg, platform_mailer_stub, platform_db, platform_jobs, migrations]
+    mayDependOn: [apigen, identidad, identidad_inner, platform, platform_pg, platform_mailer_stub, platform_db, platform_jobs, migrations]
     canUse: [pgx]
 exclude:
   - testdata

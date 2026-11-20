@@ -53,9 +53,9 @@ const screens: { path: string; heading: RegExp; story?: string }[] = [
   { path: "/configuracion/integraciones", heading: /^Integraciones$/, story: "#77" },
   { path: "/ventas/proformas/nueva", heading: /Nueva cotización COT-2026-00129/, story: "#53" },
   { path: "/ventas/comprobantes/F001-00000842/nota-debito", heading: /Emitir nota de débito/, story: "#52" },
-  { path: "/login", heading: /Bienvenido de nuevo/ },
-  { path: "/seleccionar-empresa", heading: /elige con qué empresa trabajar/ },
-  { path: "/onboarding", heading: /Configura tu espacio de trabajo/ },
+  { path: "/login", heading: /Iniciar sesión/ },
+  { path: "/seleccionar-empresa", heading: /elige con qué empresa trabajar/, story: "#27" },
+  { path: "/onboarding", heading: /Configura tu espacio de trabajo/, story: "#31" },
 ];
 
 for (const s of screens) {
