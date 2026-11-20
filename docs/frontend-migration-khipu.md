@@ -1,6 +1,6 @@
 # Frontend migration to khipu-design-system (contract)
 
-Status: proposed · 2026-11-17; §0 decided by the owner 2026-11-19 · base `main` e1cd481, DS v0.5.23 · decision record: [ADR 0010](architecture/adr/0010-frontend-khipu-migration.md) (owner decisions confirmed 2026-11-17) · dependency graph: [`frontend-migration-khipu.mmd`](frontend-migration-khipu.mmd).
+Status: proposed · 2026-11-17; §0 decided by the owner 2026-11-19 · base `main` e1cd481, DS v0.5.23 · decision record: [ADR 0010](architecture/adr/0010-frontend-khipu-migration.md) (owner decisions confirmed 2026-11-17) · dependency graph: [`frontend-migration-khipu.mmd`](frontend-migration-khipu.mmd). <!-- docs-sync: ignore -->
 Owner rules (fixed): the app only uses DS components; no exceptions; no styles outside DS tokens/recipes; anything missing goes to the DS (PR + tag). Inputs: QA UI audit. Counts re-measured on e1cd481 (source files, tests excluded): `ui/button` 97 files, `shared/status-badge` 90, `section-card` 59, `page-header` 52, `stat-card` 36, `data-table` 30, `ui/tabs` 21 (outside ui/shared/layout), `shared/initials-avatar` 9, `sonner` 71 files / 249 `toast.*` calls, `lucide-react` 130 files, `recharts` 10 files, 16 native `type="date"` fields in 13 files.
 
 ## 0. Wave-by-wave rebuild (owner decision, 2026-11-19; supersedes the sweep in §1–§2)
