@@ -69,7 +69,7 @@ func newEnv(t *testing.T, o envOpts) *env {
 	d := dbtest.New(t)
 	ctx := context.Background()
 	d.Migrate(ctx, t)
-	pool, err := db.Open(ctx, d.URL(dbtest.App), db.Options{MaxConns: 20, AppName: "identidad-test"})
+	pool, err := db.Open(ctx, d.URL(dbtest.App), db.Options{MaxConns: 20, AcquireTimeout: 30 * time.Second, AppName: "identidad-test"})
 	if err != nil {
 		t.Fatal(err)
 	}
