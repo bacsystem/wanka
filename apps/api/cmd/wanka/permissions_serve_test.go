@@ -21,6 +21,7 @@ import (
 	"github.com/bacsystem/wanka/apps/api/internal/platform/auth"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/config"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/db/dbtest"
+	"github.com/bacsystem/wanka/apps/api/internal/platform/httpx"
 )
 
 // startServe arranca serve con el cableado w en el plano tenant, sobre la base de d, y devuelve su dirección.
@@ -146,14 +147,23 @@ func TestServeUsesThePostgresPermissionResolver(t *testing.T) {
 	want("suspended membership", "/v1/items", 403, "tenant_access_denied")
 }
 
-// Ruta completa con 50 usuarios virtuales (una cuenta cada uno) en 20 empresas y la caché fría: la tasa de errores es
-// menor al 1 %. Las latencias frías y calientes salen con -v como referencia, pero NO se acotan aquí: dependen del
-// runner, del pool y del servidor HTTP completo (en la CI dieron más del doble que en local). La cota de 50 ms vive en
-// identidad.TestPermissionResolverUnder50ms, que mide solo lo que el paso de permisos agrega.
-func TestPermissionRouteColdCacheErrorRate(t *testing.T) {
+// Criterio no funcional de #233, en la ruta con permiso servida por serve (cableado de producción): 50 usuarios
+// virtuales (una cuenta cada uno) en 20 empresas. Cada usuario tiene una membresía (rol base cajero, así lee la
+// plantilla) y una sesión en cada empresa. Por cada membresía el usuario virtual pide la ruta dos veces seguidas: la
+// primera con la caché de permisos fría (resolver, y BindVersion si hiciera falta) y la segunda caliente; las dos
+// latencias se recogen en la misma pasada, intercaladas, y el costo que agrega el paso es p95(fría) - p95(caliente).
+// Lo que está en vuelo nunca pasa de las 20 conexiones del pool (un semáforo del mismo tamaño). Se afirma la mediana de
+// 3 repeticiones (cada una con membresías frías propias) < 50 ms y errores < 1 %. Se salta con -race y corre sin él en
+// el paso de cotas de tiempo de la CI; la cifra sale con -v.
+func TestPermissionRouteUnder50ms(t *testing.T) {
+	if raceEnabled {
+		t.Skip("timing bound: runs without -race in its own CI step")
+	}
 	const (
 		vus     = 50
 		tenants = 20
+		poolMax = 20
+		reps    = 3
 	)
 	ctx := context.Background()
 	d := dbtest.New(t)
@@ -177,12 +187,13 @@ func TestPermissionRouteColdCacheErrorRate(t *testing.T) {
 		}
 	}
 	grantVentas(ctx, t, admin)
-	tokens := make([][]string, vus+1) // por usuario virtual: un token por empresa; el último usuario solo calienta
-	for u := range tokens {
+	// tokens[rep][vu]: un token por empresa; el último usuario de cada repetición no existe, el de calentamiento va aparte.
+	seedUser := func() []string {
 		var user pgtype.UUID
 		if err := admin.QueryRow(ctx, `INSERT INTO iam.users (id, email) SELECT i, i::text || '@perf.test' FROM gen_random_uuid() i RETURNING id`).Scan(&user); err != nil {
 			t.Fatal(err)
 		}
+		var out []string
 		for _, ten := range tenantIDs {
 			var membership pgtype.UUID
 			if err := admin.QueryRow(ctx, `INSERT INTO iam.memberships (id, tenant_id, user_id, role_id, status)
@@ -198,41 +209,84 @@ func TestPermissionRouteColdCacheErrorRate(t *testing.T) {
 				user, ten, membership, hash[:]); err != nil {
 				t.Fatal(err)
 			}
-			tokens[u] = append(tokens[u], token)
+			out = append(out, token)
+		}
+		return out
+	}
+	tokens := make([][][]string, reps)
+	for rep := range tokens {
+		for u := 0; u < vus; u++ {
+			tokens[rep] = append(tokens[rep], seedUser())
 		}
 	}
+	warmup := seedUser()
 
+	// Los limitadores por sesión y por empresa (conventions §7) devuelven 429 a esta ráfaga, que no es la carga que se mide:
+	// se abren para que el 429 no cuente como error del paso de permisos. El cableado real lo prueba el otro test.
+	huge := httpx.LimiterConfig{Capacity: 1 << 30, Refill: time.Nanosecond, MaxKeys: 100_000}
 	w := defaultWiring
+	w.auth.SessionLimiter, w.auth.TenantLimiter = huge, huge
 	w.mount = func(r *auth.Routes) {
 		r.HandleFunc("GET /v1/items", auth.Tenant, auth.Spec{Module: "ventas", Permission: "ventas.pos:read"},
 			func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) })
 	}
-	addr := startServe(t, d, w, 20)
-	inFlight := make(chan struct{}, 20) // nunca más peticiones a la vez que conexiones en el pool
+	addr := startServe(t, d, w, poolMax)
+	inFlight := make(chan struct{}, poolMax) // nunca más peticiones a la vez que conexiones en el pool
 
-	pass := func(name string) (p95 time.Duration, errs, total int) {
-		var mu sync.Mutex
-		var lat []time.Duration
-		var wg sync.WaitGroup
-		for u := 0; u < vus; u++ {
+	do := func(token string) (time.Duration, bool) {
+		req, _ := http.NewRequest(http.MethodGet, "http://"+addr+"/v1/items", nil)
+		req.Header.Set("Authorization", "Bearer "+token)
+		inFlight <- struct{}{}
+		defer func() { <-inFlight }()
+		start := time.Now()
+		resp, err := http.DefaultClient.Do(req)
+		el := time.Since(start)
+		ok := err == nil && resp.StatusCode == http.StatusOK
+		if err == nil {
+			_ = resp.Body.Close()
+		}
+		if !ok {
+			code := 0
+			if err == nil {
+				code = resp.StatusCode
+			}
+			t.Logf("failed request: status %d err %v", code, err)
+		}
+		return el, ok
+	}
+	// Calentamiento fuera de la medición: entitlements de las 20 empresas y conexiones HTTP y del pool.
+	for _, token := range warmup {
+		if _, ok := do(token); !ok {
+			t.Fatal("warm-up request failed")
+		}
+	}
+
+	p95 := func(l []time.Duration) time.Duration {
+		slices.Sort(l)
+		return l[len(l)*95/100]
+	}
+	var diffs []time.Duration
+	errs, total := 0, 0
+	for rep := range tokens {
+		var (
+			mu         sync.Mutex
+			cold, warm []time.Duration
+			wg         sync.WaitGroup
+		)
+		for u := range tokens[rep] {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				for _, token := range tokens[u] {
-					req, _ := http.NewRequest(http.MethodGet, "http://"+addr+"/v1/items", nil)
-					req.Header.Set("Authorization", "Bearer "+token)
-					inFlight <- struct{}{}
-					start := time.Now()
-					resp, err := http.DefaultClient.Do(req)
-					el := time.Since(start)
-					<-inFlight
-					ok := err == nil && resp.StatusCode == http.StatusOK
-					if err == nil {
-						_ = resp.Body.Close()
-					}
+				for _, token := range tokens[rep][u] {
+					c, ok1 := do(token) // caché fría
+					h, ok2 := do(token) // caliente
 					mu.Lock()
-					lat = append(lat, el)
-					if !ok {
+					cold, warm = append(cold, c), append(warm, h)
+					total += 2
+					if !ok1 {
+						errs++
+					}
+					if !ok2 {
 						errs++
 					}
 					mu.Unlock()
@@ -240,24 +294,19 @@ func TestPermissionRouteColdCacheErrorRate(t *testing.T) {
 			}()
 		}
 		wg.Wait()
-		slices.Sort(lat)
-		p95 = lat[len(lat)*95/100]
-		t.Logf("%s: %d requests, p50 %v, p95 %v, max %v, errors %d", name, len(lat), lat[len(lat)/2], p95, lat[len(lat)-1], errs)
-		return p95, errs, len(lat)
+		c95, w95 := p95(cold), p95(warm)
+		diffs = append(diffs, c95-w95)
+		t.Logf("rep %d: cold p95 %v, warm p95 %v, the permission step adds %v", rep+1, c95, w95, c95-w95)
 	}
-	// Calentamiento fuera de la medición: un usuario más pide una vez en cada empresa, así que los entitlements de las 20
-	// empresas, las conexiones HTTP y las del pool ya existen; sus membresías no son las que se miden.
-	for _, token := range tokens[vus] {
-		if code, _ := get(t, addr, "/v1/items", token); code != http.StatusOK {
-			t.Fatalf("warm-up request = %d, want 200", code)
-		}
+	sorted := slices.Clone(diffs)
+	slices.Sort(sorted)
+	median := sorted[len(sorted)/2]
+	t.Logf("route with permission, cold cache, %d VUs, %d tenants, at most %d in flight: median added p95 of %d reps = %v (bound 50ms); errors %d/%d", vus, tenants, poolMax, reps, median, errs, total)
+	if median >= 50*time.Millisecond {
+		t.Errorf("the permission step adds %v at p95 (median of %d), want < 50ms", median, reps)
 	}
-	tokens = tokens[:vus]
-	cold, coldErrs, coldN := pass("cold cache")
-	warm, warmErrs, warmN := pass("warm cache")
-	t.Logf("cold p95 %v, warm p95 %v, difference %v (reference only); errors %d/%d", cold, warm, cold-warm, coldErrs+warmErrs, coldN+warmN)
-	if float64(coldErrs+warmErrs) >= 0.01*float64(coldN+warmN) {
-		t.Errorf("errors = %d of %d, want < 1%%", coldErrs+warmErrs, coldN+warmN)
+	if float64(errs) >= 0.01*float64(total) {
+		t.Errorf("errors = %d of %d, want < 1%%", errs, total)
 	}
 }
 
