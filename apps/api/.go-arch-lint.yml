@@ -35,6 +35,8 @@ components:
   # Prueba de contrato del spec (openapi/contract_test.go): lee las tablas de los paquetes generados.
   openapi_contract: { in: openapi }
   main: { in: cmd/** }
+  # Generador de la lista de contraseñas filtradas (se corre a mano, #238): reutiliza el formato de platform.
+  tool_breachedgen: { in: scripts/breachedgen }
   migrations: { in: migrations }
   bootstrap: { in: bootstrap }
 vendors:
@@ -71,6 +73,8 @@ deps:
     canUse: [oapiruntime]
   openapi_contract:
     mayDependOn: [apigen, platform, platform_db]
+  tool_breachedgen:
+    mayDependOn: [platform]
   main:
     mayDependOn: [apigen, platform, platform_pg, platform_mailer_stub, platform_db, platform_jobs, migrations]
     canUse: [pgx]
