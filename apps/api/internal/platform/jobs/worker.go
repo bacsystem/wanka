@@ -134,7 +134,7 @@ func (r *Registry) AddPeriodic(every time.Duration, newArgs func() Args, opts ..
 			}
 			return newArgs(), io
 		},
-		&river.PeriodicJobOpts{ID: probe.Kind()},
+		&river.PeriodicJobOpts{ID: probe.Kind(), RunOnStart: o.runOnStart},
 	))
 	return nil
 }

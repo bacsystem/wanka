@@ -235,7 +235,18 @@ func TestUserTOTP(t *testing.T) {
 	wantState(t, execErr(app, `INSERT INTO iam.user_totp (user_id, secret_enc) VALUES (gen_random_uuid(), '\x03')`), "23503", "FK to iam.users")
 	wantState(t, execErr(app, `INSERT INTO iam.user_totp (user_id, secret_enc) VALUES ($1, NULL)`, newUser(t, admin, "totp2@test.pe")), "23502", "secret is required")
 	wantState(t, execErr(app, `UPDATE iam.user_totp SET recovery_codes_hash = ARRAY['v1:aa', NULL] WHERE user_id = $1`, u), "23514", "no NULL recovery code")
-	if err := execErr(app, `UPDATE iam.user_totp SET confirmed_at = now(), last_used_step = 9223372036854775807, recovery_codes_hash = ARRAY['v1:aa','v2:bb'] WHERE user_id = $1`, u); err != nil {
+	good := "v1:" + strings.Repeat("A", 43)
+	for _, bad := range []string{"ABCD-EFGH", "v1:aa", "v0:" + strings.Repeat("A", 43), "V1:" + strings.Repeat("A", 43), "v1:" + strings.Repeat("A", 42),
+		"v1:" + strings.Repeat("A", 44), "v1:" + strings.Repeat("+", 43), good + "\n", good + "," + good} {
+		wantState(t, execErr(app, `UPDATE iam.user_totp SET recovery_codes_hash = ARRAY[$1::text] WHERE user_id = $2`, bad, u), "23514", fmt.Sprintf("recovery code %q", bad))
+	}
+	wantState(t, execErr(app, `UPDATE iam.user_totp SET recovery_codes_hash = ARRAY[$1::text, 'plain'] WHERE user_id = $2`, good, u), "23514", "one bad code among good ones")
+	for _, ok := range []string{"{}", "{" + good + "}", "{" + good + ",v12:" + strings.Repeat("a_-", 14) + "ab}"} {
+		if err := execErr(app, `UPDATE iam.user_totp SET recovery_codes_hash = $1::text[] WHERE user_id = $2`, ok, u); err != nil {
+			t.Errorf("well-formed recovery codes %q rejected: %v", ok, err)
+		}
+	}
+	if err := execErr(app, `UPDATE iam.user_totp SET confirmed_at = now(), last_used_step = 9223372036854775807, recovery_codes_hash = ARRAY['v1:'||repeat('A',43),'v2:'||repeat('b',43)] WHERE user_id = $1`, u); err != nil {
 		t.Errorf("confirming TOTP: %v", err)
 	}
 	wantState(t, execErr(app, `DELETE FROM iam.user_totp`), "42501", "app DELETE")

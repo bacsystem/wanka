@@ -168,18 +168,18 @@ func TestPurgeExpiredIdentityRowsKeepsTheRetentionWindow(t *testing.T) {
 	worker := openPool(t, d, dbtest.Worker, 3)
 
 	// Lote de 2: 5 filas viejas = 3 transacciones; una sola tanda no las borraría todas.
-	if n, err := purgeExpired(ctx, worker, "iam.user_tokens", UserTokenRetention, 2); err != nil || n != 5 {
-		t.Fatalf("user tokens purged %d (%v), want 5", n, err)
+	if n, err := purgeExpired(ctx, worker, "iam.user_tokens", UserTokenRetention, 2); err != nil || n != 6 {
+		t.Fatalf("user tokens purged %d (%v), want 6", n, err)
 	}
-	if n, err := purgeExpired(ctx, worker, "iam.mfa_enrollments", MFAEnrollmentRetention, 2); err != nil || n != 8 {
-		t.Fatalf("enrollments purged %d (%v), want 8 (old + mid)", n, err)
+	if n, err := purgeExpired(ctx, worker, "iam.mfa_enrollments", MFAEnrollmentRetention, 2); err != nil || n != 10 {
+		t.Fatalf("enrollments purged %d (%v), want 10 (old + mid + edge + past)", n, err)
 	}
 	for _, c := range []struct {
 		table, prefix string
 		want          int
 	}{
-		{"iam.user_tokens", "old", 0}, {"iam.user_tokens", "mid", 3}, {"iam.user_tokens", "new", 2}, {"iam.user_tokens", "live", 2},
-		{"iam.mfa_enrollments", "old", 0}, {"iam.mfa_enrollments", "mid", 0}, {"iam.mfa_enrollments", "new", 2}, {"iam.mfa_enrollments", "live", 2},
+		{"iam.user_tokens", "old", 0}, {"iam.user_tokens", "mid", 3}, {"iam.user_tokens", "new", 2}, {"iam.user_tokens", "live", 2}, {"iam.user_tokens", "edge", 1}, {"iam.user_tokens", "past", 0},
+		{"iam.mfa_enrollments", "old", 0}, {"iam.mfa_enrollments", "mid", 0}, {"iam.mfa_enrollments", "new", 2}, {"iam.mfa_enrollments", "live", 2}, {"iam.mfa_enrollments", "edge", 0}, {"iam.mfa_enrollments", "past", 0},
 	} {
 		if got := identityCount(ctx, t, d, c.table, c.prefix); got != c.want {
 			t.Errorf("%s %q rows left = %d, want %d", c.table, c.prefix, got, c.want)
@@ -194,8 +194,9 @@ func TestPurgeExpiredIdentityRowsKeepsTheRetentionWindow(t *testing.T) {
 	}
 }
 
-// #231: los dos jobs diarios están registrados (cola maintenance) y borran de verdad cuando corren.
-func TestRegisterMaintenanceRunsTheDailyIdentityPurges(t *testing.T) {
+// #231 (H1): River no guarda el próximo turno, así que los jobs diarios corren al arrancar el worker. Sin insertar nada
+// a mano en ops.river_job: lo prueba el planificador, no solo el handler.
+func TestDailyIdentityPurgesRunOnWorkerStart(t *testing.T) {
 	ctx := ctx5(t)
 	d := migrated(t)
 	seedIdentityRows(ctx, t, d, "old", 3, UserTokenRetention+time.Hour)
@@ -208,10 +209,7 @@ func TestRegisterMaintenanceRunsTheDailyIdentityPurges(t *testing.T) {
 	})
 	admin := d.Admin(ctx, t)
 	for _, kind := range []string{KindPurgeUserTokens, KindPurgeMFAEnrollments} {
-		if _, err := admin.Exec(ctx, `INSERT INTO ops.river_job (kind, args, queue) VALUES ($1, '{}', 'maintenance')`, kind); err != nil {
-			t.Fatal(err)
-		}
-		eventually(t, 15*time.Second, kind+" to complete", func() bool {
+		eventually(t, 15*time.Second, kind+" to run on start", func() bool {
 			rows := jobsOfKind(ctx, t, admin, kind)
 			return len(rows) == 1 && rows[0].State == "completed"
 		})

@@ -378,12 +378,16 @@ SELECT test.assert((SELECT email_sent_at = now() FROM iam.mfa_enrollments WHERE 
                    'email_sent_at no se finge: lo fija el servidor en cada envio');
 ROLLBACK;
 \echo '== I1. iam.user_totp (#231): wanka_app lee, inserta y actualiza; una fila por usuario; sin DELETE ni TRUNCATE =='
-INSERT INTO iam.user_totp (user_id, secret_enc, recovery_codes_hash) VALUES ('eeeeeeee-0000-0000-0000-000000000002', '\x01', ARRAY['v1:aa','v1:bb']);
-UPDATE iam.user_totp SET confirmed_at = now(), last_used_step = 57000000, recovery_codes_hash = ARRAY['v1:bb'] WHERE user_id = 'eeeeeeee-0000-0000-0000-000000000002';
-SELECT test.assert((SELECT confirmed_at IS NOT NULL AND last_used_step = 57000000 AND recovery_codes_hash = ARRAY['v1:bb'] FROM iam.user_totp
+INSERT INTO iam.user_totp (user_id, secret_enc, recovery_codes_hash) VALUES ('eeeeeeee-0000-0000-0000-000000000002', '\x01', ARRAY['v1:' || repeat('A', 43),'v2:' || repeat('b', 43)]);
+UPDATE iam.user_totp SET confirmed_at = now(), last_used_step = 57000000, recovery_codes_hash = ARRAY['v2:' || repeat('b', 43)] WHERE user_id = 'eeeeeeee-0000-0000-0000-000000000002';
+SELECT test.assert((SELECT confirmed_at IS NOT NULL AND last_used_step = 57000000 AND recovery_codes_hash = ARRAY['v2:' || repeat('b', 43)] FROM iam.user_totp
                      WHERE user_id = 'eeeeeeee-0000-0000-0000-000000000002'), 'wanka_app confirma el TOTP, avanza last_used_step y quita el codigo usado');
 SELECT test.expect_error($$INSERT INTO iam.user_totp (user_id, secret_enc) VALUES ('eeeeeeee-0000-0000-0000-000000000002', '\x02')$$, '23505', 'a lo sumo una fila TOTP por usuario');
 SELECT test.expect_error($$INSERT INTO iam.user_totp (user_id, secret_enc) VALUES (gen_random_uuid(), '\x02')$$, '23503', 'user_totp.user_id es FK a iam.users');
+SELECT test.expect_error($$UPDATE iam.user_totp SET recovery_codes_hash = ARRAY['ABCD-EFGH']$$, '23514', 'un codigo de recuperacion en claro no entra');
+SELECT test.expect_error($$UPDATE iam.user_totp SET recovery_codes_hash = ARRAY['v1:aa']$$, '23514', 'un codigo de recuperacion que no es un HMAC de 43 caracteres no entra');
+SELECT test.expect_error($$UPDATE iam.user_totp SET recovery_codes_hash = ARRAY['v1:' || repeat('A', 43) || ',' || 'v1:' || repeat('B', 43)]$$, '23514', 'un elemento con coma no entra');
+UPDATE iam.user_totp SET recovery_codes_hash = '{}';
 SELECT test.expect_error($$DELETE FROM iam.user_totp$$, '42501', 'wanka_app no borra user_totp');
 SELECT test.expect_error($$TRUNCATE iam.user_totp$$, '42501', 'wanka_app no vacia user_totp');
 

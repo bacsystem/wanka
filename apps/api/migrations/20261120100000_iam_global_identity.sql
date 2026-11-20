@@ -37,9 +37,14 @@ CREATE TABLE iam.user_totp (
   confirmed_at timestamptz,
   last_used_step bigint,                      -- último paso TOTP aceptado: rechaza el código reutilizado
   -- Un elemento por código: «vN:» + HMAC-SHA256 con la clave derivada de la versión N de TOTP_ENC_KEY (ADR 0004, nota del
-  -- 2026-11-19; er-01); se quita el usado. El prefijo de versión es lo que permite rotar la clave.
+  -- 2026-11-19; er-01); se quita el usado. Arreglo vacío = sin códigos. El prefijo de versión es lo que permite rotar la clave.
   recovery_codes_hash text[] NOT NULL DEFAULT '{}'
     CONSTRAINT user_totp_recovery_codes_no_null CHECK (array_position(recovery_codes_hash, NULL) IS NULL)
+    -- Formato fijado por el contrato (PR #230): «vN:» + HMAC-SHA256 en base64url sin relleno (43 caracteres). Ningún código en
+    -- claro entra. La segunda mitad rechaza un elemento que traiga una coma dentro (rompería la regex sobre el arreglo unido).
+    CONSTRAINT user_totp_recovery_codes_format CHECK (
+      array_to_string(recovery_codes_hash, ',') ~ '^(v[1-9][0-9]*:[A-Za-z0-9_-]{43}(,|$))*$'
+      AND cardinality(recovery_codes_hash) = cardinality(string_to_array(array_to_string(recovery_codes_hash, ','), ',')))
 );
 
 -- Enrolamiento obligatorio del login con emailCode (#25, data-model §6): una fila por enrollmentToken. Pasó de #25 a esta

@@ -69,7 +69,7 @@ func RegisterMaintenance(r *Registry, pool *db.Pool) error {
 	if err != nil {
 		return err
 	}
-	if err := r.AddPeriodic(purgeDailyEvery, func() Args { return purgeUserTokensArgs{} }, WithQueue(QueueMaintenance), WithUnique()); err != nil {
+	if err := r.AddPeriodic(purgeDailyEvery, func() Args { return purgeUserTokensArgs{} }, WithQueue(QueueMaintenance), WithUnique(), WithRunOnStart()); err != nil {
 		return err
 	}
 	err = Register(r, func(ctx context.Context, _ Job[purgeMFAEnrollmentsArgs]) error {
@@ -79,7 +79,7 @@ func RegisterMaintenance(r *Registry, pool *db.Pool) error {
 	if err != nil {
 		return err
 	}
-	return r.AddPeriodic(purgeDailyEvery, func() Args { return purgeMFAEnrollmentsArgs{} }, WithQueue(QueueMaintenance), WithUnique())
+	return r.AddPeriodic(purgeDailyEvery, func() Args { return purgeMFAEnrollmentsArgs{} }, WithQueue(QueueMaintenance), WithUnique(), WithRunOnStart())
 }
 
 // purgeTables son las únicas tablas que purgeExpired acepta: el nombre va en el SQL, así que nunca viene de afuera.

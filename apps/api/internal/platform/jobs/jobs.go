@@ -74,6 +74,7 @@ type insertOptions struct {
 	maxAttempts int
 	scheduledAt time.Time
 	unique      bool
+	runOnStart  bool
 }
 
 // WithQueue elige la cola (una de las constantes Queue*). Es obligatoria.
@@ -90,6 +91,11 @@ func WithScheduledAt(t time.Time) Option { return func(o *insertOptions) { o.sch
 // clave son todos los argumentos serializados: dos jobs del mismo Kind con algún
 // campo distinto no son el mismo job.
 func WithUnique() Option { return func(o *insertOptions) { o.unique = true } }
+
+// WithRunOnStart hace que un job periódico corra también al arrancar el worker. River no guarda el próximo turno:
+// sin esto, un intervalo largo (24 h) se reinicia con cada despliegue y el job puede no correr nunca. Solo para jobs
+// idempotentes (usar con WithUnique si hay varias réplicas).
+func WithRunOnStart() Option { return func(o *insertOptions) { o.runOnStart = true } }
 
 func resolveOptions(opts []Option) (insertOptions, error) {
 	o := insertOptions{maxAttempts: DefaultMaxAttempts}
