@@ -16,6 +16,14 @@ ROLLBACK;
 \echo '== W3. entitlements (#171): wanka_webhooks no tiene acceso a platform =='
 SELECT test.expect_error('SELECT count(*) FROM platform.modules', '42501', 'wanka_webhooks sin acceso a las tablas de entitlements');
 SELECT test.expect_error('SELECT count(*) FROM platform.tenant_usage', '42501', 'wanka_webhooks sin acceso al uso');
+\echo '== W4. (wanka_webhooks) sin acceso a las tablas de identidad global nuevas (#231) =='
+-- wanka_webhooks no tiene USAGE en el esquema iam: ni siquiera resuelve el nombre de la tabla (42501).
+SELECT test.expect_error('SELECT * FROM ' || t, '42501', 'wanka_webhooks no lee ' || t)
+  FROM unnest(ARRAY['iam.user_totp','iam.mfa_enrollments','iam.user_tokens']) AS t;
+SELECT test.expect_error('INSERT INTO ' || t || ' DEFAULT VALUES', '42501', 'wanka_webhooks no inserta en ' || t)
+  FROM unnest(ARRAY['iam.user_totp','iam.mfa_enrollments','iam.user_tokens']) AS t;
+SELECT test.expect_error('DELETE FROM ' || t, '42501', 'wanka_webhooks no borra de ' || t)
+  FROM unnest(ARRAY['iam.user_totp','iam.mfa_enrollments','iam.user_tokens']) AS t;
 \echo '== W2. (wanka_webhooks) sin acceso a iam.permissions (issue #172) =='
 SELECT test.expect_error('SELECT * FROM iam.permissions', '42501', 'wanka_webhooks no lee el catalogo de permisos');
 \echo '== R12. (wanka_webhooks) sin acceso a las plantillas de rol ni a las sedes (#232) =='

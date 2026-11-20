@@ -81,7 +81,7 @@ func (d *DB) SeedSession(t testing.TB, spec SessionSpec) Seeded {
 	s.Token = token
 	err := conn.QueryRow(ctx, `
 		WITH t AS (INSERT INTO org.tenants (id) VALUES (gen_random_uuid()) RETURNING id),
-		     u AS (INSERT INTO iam.users (id) VALUES (gen_random_uuid()) RETURNING id),
+		     u AS (INSERT INTO iam.users (id, email) SELECT i, i::text || '@seed.test' FROM gen_random_uuid() i RETURNING id),
 		     r AS (INSERT INTO iam.roles (id, tenant_id, name) SELECT gen_random_uuid(), t.id, 'Rol' FROM t RETURNING id),
 		     m AS (INSERT INTO iam.memberships (id, tenant_id, user_id, role_id, status, authz_version)
 		           SELECT gen_random_uuid(), t.id, u.id, r.id, $1, $2 FROM t, u, r RETURNING id)

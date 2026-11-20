@@ -172,7 +172,7 @@ func seed() error {
 			token := "wk_at_" + base64.RawURLEncoding.EncodeToString(raw[:])
 			hash := sha256.Sum256([]byte(token))
 			fmt.Fprintln(w, token)
-			batch.Queue(`WITH u AS (INSERT INTO iam.users (id) VALUES (gen_random_uuid()) RETURNING id),
+			batch.Queue(`WITH u AS (INSERT INTO iam.users (id, email) SELECT i, i::text || '@loadtest.test' FROM gen_random_uuid() i RETURNING id),
 				m AS (INSERT INTO iam.memberships (id, tenant_id, user_id, role_id, status, authz_version)
 				      SELECT gen_random_uuid(), $1::uuid, u.id, $2::uuid, 'activo', 1 FROM u RETURNING id, user_id)
 				INSERT INTO iam.sessions (id, user_id, tenant_id, site_id, cash_register_id, membership_id, access_hash, access_expires_at,

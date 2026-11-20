@@ -54,6 +54,18 @@ DO $$ DECLARE n int; BEGIN DELETE FROM iam.mfa_enrollments WHERE expires_at < no
   PERFORM test.assert(n > 0, 'wanka_worker borra tokens de enrolamiento por expires_at'); RAISE EXCEPTION 'rollback' USING ERRCODE = 'P0001';
   EXCEPTION WHEN SQLSTATE 'P0001' THEN NULL; END $$;
 SELECT test.expect_error('INSERT INTO iam.mfa_enrollments DEFAULT VALUES', '42501', 'wanka_worker no inserta tokens de enrolamiento');
+\echo '== K1e. (wanka_worker) iam.user_tokens (#231): limpieza por expires_at sin leer el hash; user_totp inaccesible =='
+SELECT test.expect_error('SELECT token_hash FROM iam.user_tokens', '42501', 'wanka_worker no lee token_hash de iam.user_tokens');
+SELECT test.expect_error('SELECT user_id FROM iam.user_tokens', '42501', 'wanka_worker no lee user_id de iam.user_tokens');
+SELECT test.expect_error('SELECT consumed_at FROM iam.user_tokens', '42501', 'wanka_worker no lee consumed_at de iam.user_tokens');
+SELECT test.expect_error('SELECT new_email FROM iam.user_tokens', '42501', 'wanka_worker no lee new_email de iam.user_tokens');
+DO $$ DECLARE n int; BEGIN DELETE FROM iam.user_tokens WHERE expires_at < now() + interval '1 day'; GET DIAGNOSTICS n = ROW_COUNT;
+  PERFORM test.assert(n > 0, 'wanka_worker borra tokens por expires_at'); RAISE EXCEPTION 'rollback' USING ERRCODE = 'P0001';
+  EXCEPTION WHEN SQLSTATE 'P0001' THEN NULL; END $$;
+SELECT test.expect_error('INSERT INTO iam.user_tokens DEFAULT VALUES', '42501', 'wanka_worker no inserta tokens');
+SELECT test.expect_error($$UPDATE iam.user_tokens SET consumed_at = now()$$, '42501', 'wanka_worker no consume tokens');
+SELECT test.assert(NOT has_table_privilege('wanka_worker', 'iam.user_totp', p), 'wanka_worker sin ' || p || ' en iam.user_totp')
+  FROM unnest(ARRAY['SELECT','INSERT','UPDATE','DELETE','TRUNCATE','REFERENCES','TRIGGER']) AS p;
 \echo '== K2. catalogo: duenio y search_path de las funciones SECURITY DEFINER, roles y FORCE RLS =='
 SELECT test.assert((SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
                      WHERE p.prosecdef AND n.nspname IN ('iam','ops','platform_fn')

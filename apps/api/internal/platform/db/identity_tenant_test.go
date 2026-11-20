@@ -38,7 +38,7 @@ func seedIdentity(ctx context.Context, t *testing.T, d *dbtest.DB) *pgx.Conn {
 	t.Helper()
 	admin := d.Admin(ctx, t)
 	for _, q := range []string{
-		`INSERT INTO iam.users (id) VALUES ('` + usr1 + `'), ('` + usr2 + `'), ('` + usr3 + `')`,
+		`INSERT INTO iam.users (id, email) VALUES ('` + usr1 + `', 'u1@a.pe'), ('` + usr2 + `', 'u2@a.pe'), ('` + usr3 + `', 'u3@a.pe')`,
 		`INSERT INTO org.tenants (id, ruc, legal_name, trade_name, industry) VALUES
 		   ('` + tenA + `', '20100000001', 'Razon A SAC', 'Comercial A', 'retail'),
 		   ('` + tenB + `', '20100000002', 'Razon B SAC', NULL, 'veterinaria')`,
@@ -710,7 +710,7 @@ func TestListMyMembershipsUnder50ms(t *testing.T) {
 	d := migrated(t)
 	admin := d.Admin(ctx, t)
 	const user = "99999999-0000-0000-0000-000000000001"
-	if _, err := admin.Exec(ctx, `INSERT INTO iam.users (id) VALUES ($1)`, user); err != nil {
+	if _, err := admin.Exec(ctx, `INSERT INTO iam.users (id, email) VALUES ($1, 'perf@a.pe')`, user); err != nil {
 		t.Fatal(err)
 	}
 	// 20 empresas (de 5 sedes con 3 cajas cada una) y un rol por empresa; la mitad de las membresías con alcance parcial.
@@ -719,7 +719,7 @@ func TestListMyMembershipsUnder50ms(t *testing.T) {
 	  INSERT INTO org.tenants (id, ruc, legal_name, industry)
 	    SELECT ('00000000-0000-0000-0001-' || lpad(n::text, 12, '0'))::uuid, lpad((20000000000 + n)::text, 11, '0'), 'Empresa ' || n, 'retail'
 	      FROM generate_series(1, 220) n;
-	  INSERT INTO iam.users (id) SELECT ('00000000-0000-0000-0002-' || lpad(n::text, 12, '0'))::uuid FROM generate_series(1, 200) n;
+	  INSERT INTO iam.users (id, email) SELECT ('00000000-0000-0000-0002-' || lpad(n::text, 12, '0'))::uuid, 'noise' || n || '@a.pe' FROM generate_series(1, 200) n;
 	  INSERT INTO iam.roles (id, tenant_id, name)
 	    SELECT ('00000000-0000-0000-0003-' || lpad(n::text, 12, '0'))::uuid, ('00000000-0000-0000-0001-' || lpad(n::text, 12, '0'))::uuid, 'Rol' FROM generate_series(1, 220) n;
 	  INSERT INTO org.sites (id, tenant_id, code, name)

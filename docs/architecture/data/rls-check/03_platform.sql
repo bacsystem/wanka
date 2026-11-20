@@ -34,6 +34,12 @@ SELECT test.assert((SELECT count(*) FROM iam.permissions) > 100, 'wanka_platform
 SELECT test.expect_error($$INSERT INTO iam.permissions (code, description) VALUES ('ventas.pos:void', 'Anular ventas')$$, '42501', 'wanka_platform no inserta permisos');
 SELECT test.expect_error($$UPDATE iam.permissions SET description = 'x'$$, '42501', 'wanka_platform no actualiza permisos');
 SELECT test.expect_error($$DELETE FROM iam.permissions$$, '42501', 'wanka_platform no borra permisos');
+\echo '== P7. (wanka_platform) sin acceso a las tablas de identidad global nuevas (#231) =='
+SELECT test.assert(NOT has_table_privilege('wanka_platform', t, p), 'wanka_platform sin ' || p || ' en ' || t)
+  FROM unnest(ARRAY['iam.user_totp','iam.mfa_enrollments','iam.user_tokens']) AS t,
+       unnest(ARRAY['SELECT','INSERT','UPDATE','DELETE','TRUNCATE','REFERENCES','TRIGGER']) AS p;
+SELECT test.assert(NOT has_any_column_privilege('wanka_platform', t, 'SELECT'), 'wanka_platform no lee ninguna columna de ' || t)
+  FROM unnest(ARRAY['iam.user_totp','iam.mfa_enrollments','iam.user_tokens']) AS t;
 \echo '== R10. wanka_platform no lee ni escribe las plantillas de rol (#232): ningun rol de aplicacion escribe, y a plataforma no se le dio lectura =='
 SELECT test.expect_error('SELECT count(*) FROM iam.role_templates', '42501', 'wanka_platform no lee iam.role_templates');
 SELECT test.expect_error('SELECT count(*) FROM iam.role_template_permissions', '42501', 'wanka_platform no lee iam.role_template_permissions');

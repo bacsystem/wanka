@@ -6,82 +6,8 @@
 \set ON_ERROR_STOP on
 CREATE SCHEMA platform_fn;
 
--- Columnas que la migracion del kernel deja a identidad (expandir, data-model §6); las usan las funciones de abajo. Las de
--- org.tenants (ruc, legal_name, trade_name, industry) ya vienen de la migracion de #232.
-ALTER TABLE iam.users ADD COLUMN email text UNIQUE NOT NULL;
--- Enrolamiento obligatorio del login con emailCode (#25, data-model §6): contador de segundo paso del usuario y una fila por
--- enrollmentToken. Sin tenant_id, asi que sin RLS (identidad global, como iam.users e iam.sessions).
-ALTER TABLE iam.users ADD COLUMN mfa_failed_attempts smallint NOT NULL DEFAULT 0
-    CONSTRAINT users_mfa_failed_attempts_range CHECK (mfa_failed_attempts BETWEEN 0 AND 4),
-  ADD COLUMN mfa_locked_until timestamptz,
-  ADD COLUMN mfa_lockouts smallint NOT NULL DEFAULT 0
-    CONSTRAINT users_mfa_lockouts_range CHECK (mfa_lockouts BETWEEN 0 AND 3);  -- 3: segundo paso cerrado hasta restablecer la contrasena
-CREATE TABLE iam.mfa_enrollments (
-  id uuid PRIMARY KEY,
-  user_id uuid NOT NULL REFERENCES iam.users,
-  token_hash bytea NOT NULL UNIQUE CONSTRAINT mfa_enrollments_token_hash_len CHECK (octet_length(token_hash) = 32),
-  email_code_hmac bytea NOT NULL CONSTRAINT mfa_enrollments_code_hmac_len CHECK (octet_length(email_code_hmac) = 32),
-  email_sends smallint NOT NULL DEFAULT 1 CONSTRAINT mfa_enrollments_sends_range CHECK (email_sends BETWEEN 1 AND 3),
-  email_sent_at timestamptz NOT NULL DEFAULT now(),
-  totp_secret_enc bytea,
-  expires_at timestamptz NOT NULL,
-  consumed_at timestamptz,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  CONSTRAINT mfa_enrollments_ttl CHECK (expires_at > created_at AND expires_at <= created_at + interval '10 minutes'),
-  CONSTRAINT mfa_enrollments_consumed_after CHECK (consumed_at IS NULL OR consumed_at >= created_at)
-);
-CREATE INDEX mfa_enrollments_user_created_idx ON iam.mfa_enrollments (user_id, created_at);  -- FK y tope de correos por hora
-CREATE INDEX mfa_enrollments_expires_at_idx ON iam.mfa_enrollments (expires_at);             -- limpieza (data-model §5)
--- Equivalente de iam.guard_session_writes() (revision del PR #203): los GRANT por columna no bastan, porque el INSERT es
--- de fila completa y consumed_at esta en el UPDATE. Sin SECURITY DEFINER (corre con el rol que escribe); solo un
--- superusuario (las semillas de prueba) lo salta. Todo rechazo es 42501.
-CREATE FUNCTION iam.guard_mfa_enrollment_writes() RETURNS trigger
-  LANGUAGE plpgsql
-  SET search_path = pg_catalog, pg_temp
-AS $$
-BEGIN
-  IF coalesce((SELECT r.rolsuper FROM pg_catalog.pg_roles r WHERE r.rolname = current_user), false) THEN
-    RETURN NEW;
-  END IF;
-  IF TG_OP = 'INSERT' THEN
-    NEW.created_at := pg_catalog.now();      -- la fija el servidor: el CHECK del TTL se mide contra el reloj real
-    NEW.email_sent_at := pg_catalog.now();
-    NEW.email_sends := 1;
-    NEW.consumed_at := NULL;
-    RETURN NEW;
-  END IF;
-  IF OLD.consumed_at IS NOT NULL THEN
-    -- Un token consumido no se reabre ni cambia; consumir otra vez es un no-op que conserva el instante viejo.
-    IF NEW.consumed_at IS NULL THEN
-      RAISE EXCEPTION 'a consumed enrollment stays consumed' USING ERRCODE = 'insufficient_privilege';
-    END IF;
-    NEW.consumed_at := OLD.consumed_at;
-    IF pg_catalog.to_jsonb(NEW) <> pg_catalog.to_jsonb(OLD) THEN
-      RAISE EXCEPTION 'a consumed enrollment cannot change' USING ERRCODE = 'insufficient_privilege';
-    END IF;
-    RETURN NEW;
-  END IF;
-  IF NEW.consumed_at IS NOT NULL THEN
-    NEW.consumed_at := pg_catalog.now();     -- lo fija el servidor
-  END IF;
-  IF NEW.email_sends < OLD.email_sends THEN
-    RAISE EXCEPTION 'email_sends never decreases' USING ERRCODE = 'insufficient_privilege';
-  END IF;
-  IF OLD.totp_secret_enc IS NOT NULL AND NEW.totp_secret_enc IS DISTINCT FROM OLD.totp_secret_enc THEN
-    RAISE EXCEPTION 'the pending TOTP secret does not rotate' USING ERRCODE = 'insufficient_privilege';
-  END IF;
-  IF NEW.email_code_hmac IS DISTINCT FROM OLD.email_code_hmac AND NEW.email_sends <> OLD.email_sends + 1 THEN
-    RAISE EXCEPTION 'a new email code is a new send' USING ERRCODE = 'insufficient_privilege';
-  END IF;
-  IF NEW.email_sends > OLD.email_sends THEN
-    NEW.email_sent_at := pg_catalog.now();   -- los 60 s entre envios no dependen de lo que escriba la app
-  ELSE
-    NEW.email_sent_at := OLD.email_sent_at;
-  END IF;
-  RETURN NEW;
-END $$;
-CREATE TRIGGER mfa_enrollments_guard_writes BEFORE INSERT OR UPDATE ON iam.mfa_enrollments
-  FOR EACH ROW EXECUTE FUNCTION iam.guard_mfa_enrollment_writes();
+-- Las columnas de org.tenants (ruc, legal_name, trade_name, industry) vienen de la migracion de #232.
+-- iam.users (email, contadores), iam.user_totp, iam.mfa_enrollments y iam.user_tokens ya son de la migracion real 20261120100000 (#231).
 
 -- org.sites y org.cash_registers (nucleo) vienen de la migracion de #232; el anexo SUNAT y la sincronizacion (ADR 0013) las agrega
 -- empresas (#33), y aqui queda como referencia para los casos A12 y K5.
@@ -302,11 +228,6 @@ GRANT UPDATE (provider_synced_version) ON org.sites, org.tenant_settings TO wank
 GRANT UPDATE (provider_synced_at, provider_conflict_at) ON org.document_series TO wanka_worker;
 GRANT USAGE ON SCHEMA einv TO wanka_app, wanka_worker;
 GRANT SELECT, INSERT, UPDATE ON einv.company_sync_state TO wanka_worker;
--- iam.mfa_enrollments (#25): la app no mueve user_id, token_hash, expires_at ni created_at, ni borra; el worker solo limpia.
-GRANT SELECT, INSERT ON iam.mfa_enrollments TO wanka_app;
-GRANT UPDATE (email_code_hmac, email_sends, email_sent_at, totp_secret_enc, consumed_at) ON iam.mfa_enrollments TO wanka_app;
-GRANT DELETE ON iam.mfa_enrollments TO wanka_worker;
-GRANT SELECT (id, expires_at) ON iam.mfa_enrollments TO wanka_worker;
 GRANT EXECUTE ON FUNCTION iam.list_support_requests(), iam.decide_impersonation(uuid,boolean),
   iam.redeem_impersonation(bytea,uuid,bytea) TO wanka_app;
 GRANT USAGE ON SCHEMA ops TO wanka_webhooks;
