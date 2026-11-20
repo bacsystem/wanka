@@ -33,12 +33,12 @@ La API no va en un contenedor: `go build` local evita mantener una imagen y reut
 | `make test` / `make test-api` | pruebas de web y API / solo API contra el PostgreSQL local |
 | `make rls-check` | `docs/architecture/data/rls-check/run.sh` (su propio contenedor) |
 | `make lint` | eslint, `gofmt` y `go vet` |
-| `make prune-volumes` | borra solo volúmenes Docker **anónimos colgados** (nombre de 64 hex y sin contenedor; nunca los con nombre, como `wanka-local-pgdata`) con `CONFIRM=1`; limpia restos de corridas viejas |
+| `make prune-volumes` | **solo lista** los volúmenes Docker anónimos colgados con su fecha; no borra nada |
 | `make logs` | sigue PostgreSQL, API y web (los de API y web están en `.local/*.log`) |
 
 ## Volúmenes
 
-El único volumen de este entorno es `wanka-local-pgdata` (nombre fijo). El servicio `roles` y `rls-check` usan `tmpfs` para el directorio de datos, así que no dejan volúmenes anónimos. `make prune-volumes` limpia los que dejaron versiones anteriores.
+El único volumen de este entorno es `wanka-local-pgdata` (nombre fijo). El servicio `roles` y `rls-check` usan `tmpfs` para el directorio de datos, así que no dejan volúmenes anónimos. Las fugas viejas venían de `rls-check/run.sh` (un volumen anónimo por corrida). `make prune-volumes` los lista, pero en esta máquina también pueden ser de otros proyectos: revisalos antes de borrar y hacelo de a uno.
 
 ## Pruebas sueltas
 

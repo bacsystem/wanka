@@ -81,7 +81,6 @@ reset: _stop-procs ## Borra contenedor, volumen de datos y estado local (pide co
 
 roles: env ## Bootstrap de roles y claves locales (idempotente)
 	@$(DC) up -d --wait postgres
-	@docker exec -e PGPASSWORD="$$POSTGRES_SUPERUSER_PASSWORD" wanka-local-pg psql -h 127.0.0.1 -U postgres -d wanka -Atc 'select 1' >/dev/null 2>&1 || { echo "La clave de $(ENV_FILE) no coincide con el volumen wanka-local-pgdata (creado con otra clave). Corre: make reset, y luego make up" >&2; exit 1; }
 	@$(DC) --profile tools run --rm roles
 
 migrate: env ## Aplica las migraciones (wanka migrate up)
@@ -111,12 +110,11 @@ lint: ## eslint (web), gofmt y go vet (api)
 	pnpm lint
 	cd apps/api && test -z "$$(gofmt -l .)" && go vet ./...
 
-prune-volumes: ## Elimina volumenes Docker anonimos colgados (nunca los con nombre); CONFIRM=1 para ejecutar
-	@echo "volumenes anonimos colgados: $$(docker volume ls -qf dangling=true | grep -cE '^[0-9a-f]{64}$$' || true | tr -d ' ')"
-	@if [ "$$CONFIRM" = "1" ]; then \
-	  docker volume ls -qf dangling=true | grep -E '^[0-9a-f]{64}$$' | xargs -n1 docker volume rm >/dev/null 2>&1 || true; \
-	  echo "quedan: $$(docker volume ls -qf dangling=true | grep -cE '^[0-9a-f]{64}$$' || true | tr -d ' ')"; \
-	else echo "no se borro nada; corre CONFIRM=1 make prune-volumes"; fi
+prune-volumes: ## Lista volumenes Docker anonimos colgados (no borra nada)
+	@echo "Volumenes anonimos colgados (sin contenedor). Pueden ser de otros proyectos: revisa antes de borrar."
+	@for v in $$(docker volume ls -qf dangling=true | grep -E '^[0-9a-f]{64}$$'); do \
+	  echo "$$(docker volume inspect -f '{{.CreatedAt}}' $$v)  $$v"; done
+	@echo "Para borrar uno: docker volume rm <nombre>"
 
 logs: ## Sigue los logs de PostgreSQL, API y web
 	@mkdir -p $(STATE); touch $(STATE)/api.log $(STATE)/web.log
