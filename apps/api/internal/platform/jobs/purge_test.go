@@ -161,37 +161,43 @@ func identityCount(ctx context.Context, t *testing.T, d *dbtest.DB, table, prefi
 func TestPurgeExpiredIdentityRowsKeepsTheRetentionWindow(t *testing.T) {
 	ctx := ctx5(t)
 	d := migrated(t)
-	seedIdentityRows(ctx, t, d, "old", 5, UserTokenRetention+time.Hour)     // fuera de ambas ventanas
-	seedIdentityRows(ctx, t, d, "mid", 3, MFAEnrollmentRetention+time.Hour) // fuera solo de la de enrolamientos
-	seedIdentityRows(ctx, t, d, "new", 2, MFAEnrollmentRetention-time.Hour) // dentro de ambas
-	seedIdentityRows(ctx, t, d, "live", 2, -10*time.Minute)                 // aún vigentes
-	seedIdentityRows(ctx, t, d, "edge", 1, UserTokenRetention-time.Minute)  // 1 min antes del borde de 7 días: se queda
-	seedIdentityRows(ctx, t, d, "past", 1, UserTokenRetention+time.Minute)  // 1 min después: se va
+	// Duraciones escritas a mano (7 días y 24 h del data-model §5), no las constantes del código.
+	const week, day = 7 * 24 * time.Hour, 24 * time.Hour
+	seedIdentityRows(ctx, t, d, "old", 5, week+time.Hour)    // fuera de ambas ventanas
+	seedIdentityRows(ctx, t, d, "mid", 3, day+time.Hour)     // fuera solo de la de enrolamientos
+	seedIdentityRows(ctx, t, d, "new", 2, day-time.Hour)     // dentro de ambas
+	seedIdentityRows(ctx, t, d, "live", 2, -10*time.Minute)  // aún vigentes
+	seedIdentityRows(ctx, t, d, "edge", 1, week-time.Minute) // 1 min antes del borde de 7 días: se queda
+	seedIdentityRows(ctx, t, d, "past", 1, week+time.Minute) // 1 min después: se va
+	seedIdentityRows(ctx, t, d, "dedge", 1, day-time.Minute) // 1 min antes del borde de 24 h
+	seedIdentityRows(ctx, t, d, "dpast", 1, day+time.Minute) // 1 min después
 	worker := openPool(t, d, dbtest.Worker, 3)
 
-	// Lote de 2: 5 filas viejas = 3 transacciones; una sola tanda no las borraría todas.
-	if n, err := purgeExpired(ctx, worker, "iam.user_tokens", UserTokenRetention, 2); err != nil || n != 6 {
-		t.Fatalf("user tokens purged %d (%v), want 6", n, err)
+	// Lote de 2 sobre el trabajo real de cada job.
+	if n, err := purgeUserTokens(ctx, worker, 2); err != nil || n != 6 {
+		t.Fatalf("user tokens purged %d (%v), want 6 (old + past)", n, err)
 	}
-	if n, err := purgeExpired(ctx, worker, "iam.mfa_enrollments", MFAEnrollmentRetention, 2); err != nil || n != 10 {
-		t.Fatalf("enrollments purged %d (%v), want 10 (old + mid + edge + past)", n, err)
+	if n, err := purgeMFAEnrollments(ctx, worker, 2); err != nil || n != 11 {
+		t.Fatalf("enrollments purged %d (%v), want 11 (old + mid + edge + past + dpast)", n, err)
 	}
 	for _, c := range []struct {
 		table, prefix string
 		want          int
 	}{
-		{"iam.user_tokens", "old", 0}, {"iam.user_tokens", "mid", 3}, {"iam.user_tokens", "new", 2}, {"iam.user_tokens", "live", 2}, {"iam.user_tokens", "edge", 1}, {"iam.user_tokens", "past", 0},
-		{"iam.mfa_enrollments", "old", 0}, {"iam.mfa_enrollments", "mid", 0}, {"iam.mfa_enrollments", "new", 2}, {"iam.mfa_enrollments", "live", 2}, {"iam.mfa_enrollments", "edge", 0}, {"iam.mfa_enrollments", "past", 0},
+		{"iam.user_tokens", "old", 0}, {"iam.user_tokens", "mid", 3}, {"iam.user_tokens", "new", 2}, {"iam.user_tokens", "live", 2},
+		{"iam.user_tokens", "edge", 1}, {"iam.user_tokens", "past", 0}, {"iam.user_tokens", "dedge", 1}, {"iam.user_tokens", "dpast", 1},
+		{"iam.mfa_enrollments", "old", 0}, {"iam.mfa_enrollments", "mid", 0}, {"iam.mfa_enrollments", "new", 2}, {"iam.mfa_enrollments", "live", 2},
+		{"iam.mfa_enrollments", "edge", 0}, {"iam.mfa_enrollments", "past", 0}, {"iam.mfa_enrollments", "dedge", 1}, {"iam.mfa_enrollments", "dpast", 0},
 	} {
 		if got := identityCount(ctx, t, d, c.table, c.prefix); got != c.want {
 			t.Errorf("%s %q rows left = %d, want %d", c.table, c.prefix, got, c.want)
 		}
 	}
 	// Idempotente, y una tabla fuera de la lista no se purga.
-	if n, err := purgeExpired(ctx, worker, "iam.user_tokens", UserTokenRetention, 2); err != nil || n != 0 {
+	if n, err := purgeUserTokens(ctx, worker, 2); err != nil || n != 0 {
 		t.Fatalf("second pass purged %d (%v), want 0", n, err)
 	}
-	if _, err := purgeExpired(ctx, worker, "iam.users", UserTokenRetention, 2); err == nil {
+	if _, err := purgeExpired(ctx, worker, "iam.users", time.Hour, 2); err == nil {
 		t.Fatal("purging iam.users was accepted")
 	}
 }
@@ -201,7 +207,7 @@ func TestPurgeExpiredIdentityRowsKeepsTheRetentionWindow(t *testing.T) {
 func TestDailyIdentityPurgesRunOnWorkerStart(t *testing.T) {
 	ctx := ctx5(t)
 	d := migrated(t)
-	seedIdentityRows(ctx, t, d, "old", 3, UserTokenRetention+time.Hour)
+	seedIdentityRows(ctx, t, d, "old", 3, 7*24*time.Hour+time.Hour)
 	seedIdentityRows(ctx, t, d, "live", 2, -10*time.Minute)
 	pool := openPool(t, d, dbtest.Worker, 5)
 	stop := startWorker(t, pool, Config{}, func(r *Registry) {

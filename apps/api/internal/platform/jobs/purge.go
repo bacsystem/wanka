@@ -63,7 +63,7 @@ func RegisterMaintenance(r *Registry, pool *db.Pool) error {
 		return err
 	}
 	err = Register(r, func(ctx context.Context, _ Job[purgeUserTokensArgs]) error {
-		_, err := purgeExpired(ctx, pool, "iam.user_tokens", UserTokenRetention, purgeBatch)
+		_, err := purgeUserTokens(ctx, pool, purgeBatch)
 		return err
 	})
 	if err != nil {
@@ -73,13 +73,23 @@ func RegisterMaintenance(r *Registry, pool *db.Pool) error {
 		return err
 	}
 	err = Register(r, func(ctx context.Context, _ Job[purgeMFAEnrollmentsArgs]) error {
-		_, err := purgeExpired(ctx, pool, "iam.mfa_enrollments", MFAEnrollmentRetention, purgeBatch)
+		_, err := purgeMFAEnrollments(ctx, pool, purgeBatch)
 		return err
 	})
 	if err != nil {
 		return err
 	}
 	return r.AddPeriodic(purgeDailyEvery, func() Args { return purgeMFAEnrollmentsArgs{} }, WithQueue(QueueMaintenance), WithUnique(), WithRunOnStart())
+}
+
+// purgeUserTokens y purgeMFAEnrollments son el trabajo real de cada job, con su retención fija: el handler registrado
+// y los tests llaman a estas funciones, nunca a purgeExpired con una retención propia.
+func purgeUserTokens(ctx context.Context, pool *db.Pool, batch int) (int64, error) {
+	return purgeExpired(ctx, pool, "iam.user_tokens", UserTokenRetention, batch)
+}
+
+func purgeMFAEnrollments(ctx context.Context, pool *db.Pool, batch int) (int64, error) {
+	return purgeExpired(ctx, pool, "iam.mfa_enrollments", MFAEnrollmentRetention, batch)
 }
 
 // purgeTables son las únicas tablas que purgeExpired acepta: el nombre va en el SQL, así que nunca viene de afuera.
