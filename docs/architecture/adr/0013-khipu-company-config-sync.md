@@ -1,6 +1,6 @@
 # ADR 0013: Datos de la empresa, locales y series frente a Khipu (épica #4)
 
-- Estado: propuesto
+- Estado: aceptado (2026-11-19, decisión del dueño)
 - Fecha: 2026-11-19
 - Complementa: [ADR 0003](0003-einvoicing-khipu-port.md) y [ADR 0008](0008-money-and-numbering.md). No reemplaza ninguna de sus decisiones: fija lo que esos ADR no decían sobre la razón social, el logo, los anexos y las series, y cómo Wanka sostiene la exclusividad de sus series. Las correcciones a esos dos ADR van como nota fechada al final de cada uno.
 
@@ -41,7 +41,7 @@ Lo que Wanka necesita y Khipu no modela: local operativo con cajas y almacenes, 
 
 ### 1. Alta y el RUC que ya está en Khipu (#31; opción e1)
 
-- **El correo del alta asistida es un buzón de soporte de Wanka, uno por tenant** (alias), nunca el del cliente. **Pendiente de confirmar por el dueño** (decisión operativa); si no lo confirma, la prevención de §4 pierde su primera pata y la exclusividad queda solo en la detección. Quien recibe la invitación al portal de Khipu es Wanka. Así el cliente no tiene acceso al portal y nadie más emite en sus series (opción d3, prevención). Es además el correo único que Khipu exige por cuenta (`AltaAsistidaService.java:70`).
+- **El correo del alta asistida es un buzón de soporte de Wanka, uno por tenant** (alias), nunca el del cliente. Confirmado por el dueño el 2026-11-19 (opción B). Quien recibe la invitación al portal de Khipu es Wanka. Así el cliente no tiene acceso al portal y nadie más emite en sus series (opción d3, prevención). Es además el correo único que Khipu exige por cuenta (`AltaAsistidaService.java:70`).
 - **La serie inicial del alta** es la serie de boleta (`03`) del local principal que creó el onboarding de Wanka (anexo `0000`). Wanka la adopta en la primera sincronización (§3): coincide en tipo, código y anexo, y Khipu la tiene en 0, así que se adopta aunque Wanka la haya fijado en un número mayor para continuar otro proveedor.
 - **Antes del alta, el operador busca el RUC** (`GET /v1/admin/empresas?q=<RUC>`, `AdminEmpresaController.java:37,51`). Si ya existe, o si el alta responde `409 DUPLICADO`:
   - En Wanka **no cambia nada**: `org.tenants.status` sigue como estaba (`trial`) y la empresa opera todo lo que no es emisión (#31). La facturación sigue en «Pendiente de activación de facturación», sin correlativo consumido. No hay estado nuevo ni columna nueva.
