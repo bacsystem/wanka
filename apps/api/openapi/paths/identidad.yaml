@@ -237,7 +237,7 @@ components:
         status: { type: string, const: authenticated }
         accessToken: { type: string, pattern: '^wk_at_[A-Za-z0-9_-]{43}$' }
         refreshToken: { type: string, pattern: '^wk_rt_[A-Za-z0-9_-]{43}$' }
-        expiresAt: { type: string, format: date-time, description: Vencimiento del accessToken (15 min), RFC 3339 con zona. }
+        expiresAt: { type: string, format: date-time, description: 'Vencimiento del accessToken (15 min), RFC 3339 con zona.' }
         memberships:
           type: array
           description: Solo membresías activas (ADR 0011).

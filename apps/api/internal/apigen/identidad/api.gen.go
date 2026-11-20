@@ -129,7 +129,7 @@ type EntitlementsStatus string
 type LoginAuthenticated struct {
 	AccessToken string `json:"accessToken"`
 
-	// ExpiresAt Vencimiento del accessToken (15 min)
+	// ExpiresAt Vencimiento del accessToken (15 min), RFC 3339 con zona.
 	ExpiresAt time.Time `json:"expiresAt"`
 
 	// Memberships Solo membresías activas (ADR 0011).
