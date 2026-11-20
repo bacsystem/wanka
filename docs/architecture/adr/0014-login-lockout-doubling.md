@@ -68,3 +68,9 @@ Cambia la decisión de arriba en un punto: **sí** hay cierre, a los 100 fallos 
 - **La salida es #26** (restablecer la contraseña desde «Olvidé mi contraseña», que exige el buzón) o #30 (cambiarla con una sesión abierta). Las dos ponen la racha en 0. Como el segundo paso, el cierre solo lo puede provocar quien insiste durante 2 semanas, y el titular lo ve venir por los avisos.
 
 **Qué ve quien llega cerrado:** lo mismo que con un bloqueo, `401 invalid_credentials` con el mismo cuerpo y tiempo que una contraseña mala, sin cobrar el intento.
+
+**Precisión (2026-11-20, PR #251): un ingreso correcto con intentos malos en vuelo.**
+- **Qué pasa.** Una contraseña correcta devuelve el cobro poniendo en 0 `failed_logins`, `login_lockouts` y `login_failure_streak`, no solo restando su propio cobro. Si se confirma mientras hay intentos malos en vuelo, el presupuesto se reinicia. Lo fija el test `TestACorrectLoginRestartsTheBudgetOfTheBadOnes`: hasta 4 malas ya cobradas, la correcta ocupa el 5.º lugar y lo devuelve, y después caben 5 malas más. En total son 10 verificaciones.
+- **El máximo.** 4 malas en vuelo más 5 por cada ingreso correcto.
+- **Por qué no es un hueco.** Solo puede provocarlo quien tiene la contraseña, y el efecto es el mismo que si el usuario hubiera entrado entre dos intentos: la racha de fallos **seguidos** termina con un acierto, como la cuenta NIST SP 800-63B §5.2.2.
+- **Alternativa descartada.** Que la devolución reste solo el propio cobro. Dejaría vivos fallos que un ingreso correcto ya cortó, y un atacante sin la contraseña acumularía bloqueos y racha contra un titular que entra todos los días hasta cerrarle la cuenta. Eso contradice «fallos seguidos» y el motivo por el que el ingreso correcto limpia los contadores.

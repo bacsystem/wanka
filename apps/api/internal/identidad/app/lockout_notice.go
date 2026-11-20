@@ -20,6 +20,8 @@ type LockoutNoticeArgs struct {
 	LockedUntil *time.Time `json:"locked_until,omitempty"`
 	// Closed: el aviso es el del cierre del ingreso con contraseña (100 fallos seguidos), sin fin de bloqueo.
 	Closed bool `json:"closed,omitempty"`
+	// ClosedAt es el instante del cierre; hace único cada cierre (un usuario puede cerrarse, restablecer y cerrarse otra vez).
+	ClosedAt *time.Time `json:"closed_at,omitempty"`
 }
 
 // Kind es el nombre estable del job.
@@ -67,7 +69,14 @@ func LockoutNotice(dir EmailDirectory, m mailer.Mailer) func(ctx context.Context
 				"Alguien tiene tu contraseña. Para volver a entrar, restablécela desde la pantalla de ingreso de Wanka.\n\n" +
 				"Wanka nunca te pedirá tu contraseña por teléfono, WhatsApp ni chat.\n"
 			msg.Tags = []string{"login_closed"}
-			msg.IdempotencyKey = "login-closed:" + job.Args.UserID
+			// La llave lleva el instante del cierre: un cierre posterior no se deduplica contra el anterior. Del lado del
+			// kernel, el stub solo recuerda las llaves de los últimos DefaultMaxSent mensajes (mailer/stub) y no hay
+			// adaptador real todavía; el proveedor real fija su propia retención y la llave ya es única por cierre.
+			var at time.Time
+			if job.Args.ClosedAt != nil {
+				at = *job.Args.ClosedAt
+			}
+			msg.IdempotencyKey = fmt.Sprintf("login-closed:%s:%d", job.Args.UserID, at.UnixMicro())
 		}
 		switch err := m.Send(ctx, msg); {
 		case err == nil:

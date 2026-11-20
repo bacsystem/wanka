@@ -97,8 +97,9 @@ func TestLockoutNoticeArgsCarryNoPersonalData(t *testing.T) {
 
 // El aviso de cierre no lleva locked_until (no tiene fin de bloqueo); el de bloqueo sí.
 func TestLockoutNoticeArgsJSON(t *testing.T) {
-	closed, _ := json.Marshal(app.LockoutNoticeArgs{UserID: "u", Closed: true})
-	if strings.Contains(string(closed), "locked_until") || strings.Contains(string(closed), "0001") || !strings.Contains(string(closed), `"closed":true`) {
+	at := time.Date(2026, 11, 20, 10, 0, 0, 0, time.UTC)
+	closed, _ := json.Marshal(app.LockoutNoticeArgs{UserID: "u", Closed: true, ClosedAt: &at})
+	if strings.Contains(string(closed), "locked_until") || strings.Contains(string(closed), "0001") || !strings.Contains(string(closed), `"closed":true`) || !strings.Contains(string(closed), `"closed_at":"2026-11-20T10:00:00Z"`) {
 		t.Fatalf("closing notice args = %s", closed)
 	}
 	locked, _ := json.Marshal(jobArgs)
@@ -109,8 +110,17 @@ func TestLockoutNoticeArgsJSON(t *testing.T) {
 
 func TestClosingNoticeHasItsOwnMailAndIdempotencyKey(t *testing.T) {
 	s := &sink{}
-	err := app.LockoutNotice(dir{email: "ana@x.pe"}, s)(context.Background(), jobs.Job[app.LockoutNoticeArgs]{Args: app.LockoutNoticeArgs{UserID: "u1", Closed: true}})
-	if err != nil || len(s.sent) != 1 || s.sent[0].IdempotencyKey != "login-closed:u1" || !strings.Contains(s.sent[0].TextBody, "100") {
-		t.Fatalf("err = %v, sent = %+v", err, s.sent)
+	at1 := time.Date(2026, 11, 20, 10, 0, 0, 0, time.UTC)
+	at2 := at1.AddDate(0, 3, 0)
+	for _, at := range []time.Time{at1, at2} {
+		at := at
+		err := app.LockoutNotice(dir{email: "ana@x.pe"}, s)(context.Background(), jobs.Job[app.LockoutNoticeArgs]{Args: app.LockoutNoticeArgs{UserID: "u1", Closed: true, ClosedAt: &at}})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	if len(s.sent) != 2 || s.sent[0].IdempotencyKey == s.sent[1].IdempotencyKey || !strings.Contains(s.sent[0].TextBody, "100") ||
+		s.sent[0].IdempotencyKey != "login-closed:u1:"+strconv.FormatInt(at1.UnixMicro(), 10) {
+		t.Fatalf("sent = %+v: two closings of the same user need two keys", s.sent)
 	}
 }

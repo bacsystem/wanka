@@ -129,14 +129,14 @@ func (u *userTx) LockAccount(ctx context.Context, streak int) (bool, error) {
 		return false, nil
 	}
 	// El cierre (racha 100) no fija locked_until: el cobro ya no cobra con la racha en 100. Los bloqueos sí.
-	var until pgtype.Timestamptz
+	var until, now pgtype.Timestamptz
 	err := u.tx.QueryRow(ctx, `
 		UPDATE iam.users SET failed_logins = 0, login_lockouts = $3,
 		       locked_until = CASE WHEN $5 THEN locked_until ELSE now() + make_interval(secs => $2) END
 		 WHERE id = $1::uuid AND status = 'activo' AND login_failure_streak >= $4
 		   AND (locked_until IS NULL OR locked_until <= now())
-		RETURNING coalesce(locked_until, 'epoch'::timestamptz)`,
-		u.id, lo.For.Seconds(), lo.Counted, streak, lo.Closed).Scan(&until)
+		RETURNING coalesce(locked_until, 'epoch'::timestamptz), now()`,
+		u.id, lo.For.Seconds(), lo.Counted, streak, lo.Closed).Scan(&until, &now)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, nil
 	}
@@ -144,9 +144,13 @@ func (u *userTx) LockAccount(ctx context.Context, streak int) (bool, error) {
 		return false, fmt.Errorf("locking the account: %w", err)
 	}
 	// El aviso va en la misma transacción: si el bloqueo se revierte, no hay aviso. Único por usuario y fin del bloqueo.
-	// El cierre no tiene fin de bloqueo: sin locked_until, único por usuario (closed) mientras el aviso esté en curso.
+	// El cierre no tiene fin de bloqueo: lleva el instante del cierre (now() de esta transacción) en vez de locked_until,
+	// así un segundo cierre, meses después y tras un restablecimiento, es otro job y otro correo.
 	args := app.LockoutNoticeArgs{UserID: u.id, Closed: lo.Closed}
-	if !lo.Closed {
+	if lo.Closed {
+		t := now.Time.UTC()
+		args.ClosedAt = &t
+	} else {
 		t := until.Time.UTC()
 		args.LockedUntil = &t
 	}
