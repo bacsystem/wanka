@@ -44,6 +44,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - `CLAUDE.md`: team rule that state docs and the board stay current, checked with the `docs-sync` skill (bacsystem/skills), and that status answers come from `gh`; the two Mermaid rules merged into one to stay under the 22 000 B budget.
 
 ### Fixed
+- CI: the timing-bounds step of `api.yml` runs its packages one at a time (`go test -p 1`). In parallel they shared the PostgreSQL service, so each bound also measured the load of the other timing tests: `TestListMyMembershipsUnder50ms` failed on the release PR #263 with a 10 ms median instead of 5 ms (#260).
 - `apps/api`: `TestListMyMembershipsUnder50ms` (#232) failed now and then in CI (p95 50.09 ms against 50 ms) because it took one pass of 200 queries. It now warms up, keeps one query in flight (the connection count) and compares the median of the p95 of 3 repetitions against the same 50 ms bound, logging each repetition (#260).
 
 ## [0.19.0] - 2026-11-19

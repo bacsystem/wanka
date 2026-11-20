@@ -154,7 +154,9 @@ jobs:
         env:
           WANKA_TEST_ADMIN_URL: postgres://postgres:ci-superuser-not-a-secret@localhost:5432/wanka
           WANKA_TEST_ROLE_PASSWORD: ci-roles-not-a-secret
-        run: go test -v -count=1 -run 'Under[0-9]+ms|EnumerationTimingIsOfTheSameOrder' ./internal/platform/pricing/ ./internal/platform/jobs/ ./internal/platform/db/ ./internal/platform/passwordpolicy/ ./internal/identidad/ ./cmd/wanka/
+        # -p 1: un paquete a la vez. go test corre los paquetes en paralelo y comparten el mismo PostgreSQL, así que
+        # sin esto cada cota mide también la carga de los demás tests de tiempo (#260, release #263).
+        run: go test -p 1 -v -count=1 -run 'Under[0-9]+ms|EnumerationTimingIsOfTheSameOrder' ./internal/platform/pricing/ ./internal/platform/jobs/ ./internal/platform/db/ ./internal/platform/passwordpolicy/ ./internal/identidad/ ./cmd/wanka/
       # ADR 0001: los casos de referencia de RLS corren en un contenedor propio de
       # PostgreSQL 16 con los roles reales (Docker del runner). Deben pasar, y la
       # mutación naive_session_lookup debe hacerlos fallar en el paso wanka_app; el
