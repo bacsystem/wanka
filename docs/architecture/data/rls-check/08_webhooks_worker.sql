@@ -26,3 +26,9 @@ SELECT test.expect_error('DELETE FROM ' || t, '42501', 'wanka_webhooks no borra 
   FROM unnest(ARRAY['iam.user_totp','iam.mfa_enrollments','iam.user_tokens']) AS t;
 \echo '== W2. (wanka_webhooks) sin acceso a iam.permissions (issue #172) =='
 SELECT test.expect_error('SELECT * FROM iam.permissions', '42501', 'wanka_webhooks no lee el catalogo de permisos');
+\echo '== R12. (wanka_webhooks) sin acceso a las plantillas de rol ni a las sedes (#232) =='
+SELECT test.expect_error('SELECT * FROM iam.role_templates', '42501', 'wanka_webhooks no lee iam.role_templates');
+SELECT test.expect_error('SELECT * FROM iam.role_template_permissions', '42501', 'wanka_webhooks no lee iam.role_template_permissions');
+SELECT test.expect_error('SELECT * FROM iam.role_permissions', '42501', 'wanka_webhooks no lee iam.role_permissions');
+SELECT test.expect_error('SELECT * FROM org.sites', '42501', 'wanka_webhooks no lee org.sites');
+SELECT test.expect_error('SELECT * FROM org.cash_registers', '42501', 'wanka_webhooks no lee org.cash_registers');

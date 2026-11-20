@@ -6,13 +6,13 @@
 \set ON_ERROR_STOP on
 CREATE SCHEMA platform_fn;
 
--- Columnas que la migracion del kernel deja a identidad y a empresas (expandir, data-model §6); las usan las funciones de abajo.
-ALTER TABLE org.tenants ADD COLUMN ruc text UNIQUE NOT NULL, ADD COLUMN name text NOT NULL;
+-- Las columnas de org.tenants (ruc, legal_name, trade_name, industry) vienen de la migracion de #232.
 -- iam.users (email, contadores), iam.user_totp, iam.mfa_enrollments y iam.user_tokens ya son de la migracion real 20261120100000 (#231).
 
-CREATE TABLE org.sites (id uuid PRIMARY KEY, tenant_id uuid NOT NULL REFERENCES org.tenants, name text NOT NULL, UNIQUE (tenant_id, id),
-  sunat_annex text CHECK (sunat_annex ~ '^[0-9]{4}$'), active boolean NOT NULL DEFAULT true, version bigint NOT NULL DEFAULT 1,
-  provider_synced_version bigint);
+-- org.sites y org.cash_registers (nucleo) vienen de la migracion de #232; el anexo SUNAT y la sincronizacion (ADR 0013) las agrega
+-- empresas (#33), y aqui queda como referencia para los casos A12 y K5.
+ALTER TABLE org.sites ADD COLUMN sunat_annex text CHECK (sunat_annex ~ '^[0-9]{4}$'), ADD COLUMN version bigint NOT NULL DEFAULT 1,
+  ADD COLUMN provider_synced_version bigint;
 -- Sincronizacion con Khipu (ADR 0013): solo wanka_worker marca lo sincronizado o en conflicto; wanka_app edita el resto.
 CREATE TABLE org.tenant_settings (tenant_id uuid PRIMARY KEY REFERENCES org.tenants, ubigeo text, fiscal_address text,
   version bigint NOT NULL DEFAULT 1, provider_sync_seq bigint NOT NULL DEFAULT 0, provider_synced_version bigint);
@@ -45,30 +45,17 @@ CREATE TABLE platform.impersonation_grants (id uuid PRIMARY KEY, platform_user_i
   consent_expires_at timestamptz, exchange_token_hash bytea UNIQUE, redeemed_at timestamptz, revoked_at timestamptz);
 CREATE TABLE platform.audit_events (id bigserial PRIMARY KEY, platform_user_id uuid, target_tenant_id uuid, action text NOT NULL);
 
--- RLS habilitado y FORZADO en las demas tablas de tenant (ADR 0001); iam.roles, iam.memberships, org.tenants y audit.events
--- ya lo traen de la migracion del kernel, con su tenant_isolation.
+-- RLS habilitado y FORZADO en las demas tablas de tenant (ADR 0001); iam.*, org.sites, org.cash_registers, org.tenants y
+-- audit.events ya lo traen de las migraciones reales, con su tenant_isolation.
 DO $$ DECLARE t text; BEGIN
-  FOREACH t IN ARRAY ARRAY['org.sites','org.tenant_settings','org.document_series','einv.company_sync_state'] LOOP
+  FOREACH t IN ARRAY ARRAY['org.tenant_settings','org.document_series','einv.company_sync_state'] LOOP
     EXECUTE format('ALTER TABLE %s ENABLE ROW LEVEL SECURITY', t);
     EXECUTE format('ALTER TABLE %s FORCE ROW LEVEL SECURITY', t);
     EXECUTE format('CREATE POLICY tenant_isolation ON %s USING (tenant_id = app.current_tenant()) WITH CHECK (tenant_id = app.current_tenant())', t);
   END LOOP; END $$;
--- Solo las membresias invitado/activo dan lectura sin tenant (ADR 0001, issue #187): una suspendida no ve ni su empresa.
-CREATE POLICY member_read ON org.tenants FOR SELECT USING (app.current_tenant() IS NULL AND id IN
-  (SELECT tenant_id FROM iam.memberships WHERE user_id = app.current_user_id() AND status IN ('invitado','activo')));
+-- own_memberships, member_read (org.tenants, iam.roles, org.sites, org.cash_registers) y la vista iam.list_my_memberships ya
+-- vienen de la migracion de #232 (antes vivian solo aqui). platform_rw es de plataforma (ola 6) y sigue aqui.
 CREATE POLICY platform_rw ON org.tenants TO wanka_platform USING (true) WITH CHECK (true);
-CREATE POLICY own_memberships ON iam.memberships FOR SELECT USING (app.current_tenant() IS NULL AND user_id = app.current_user_id()
-  AND status IN ('invitado','activo'));
-CREATE POLICY member_read ON iam.roles FOR SELECT USING (app.current_tenant() IS NULL AND id IN
-  (SELECT role_id FROM iam.memberships WHERE user_id = app.current_user_id() AND status IN ('invitado','activo')));
-CREATE POLICY member_read ON org.sites FOR SELECT USING (app.current_tenant() IS NULL AND EXISTS
-  (SELECT 1 FROM iam.memberships m WHERE m.user_id = app.current_user_id() AND m.status = 'activo' AND m.tenant_id = sites.tenant_id AND m.all_sites));
-
--- Vista security_invoker (no es SECURITY DEFINER): corre con los permisos y RLS de quien llama
-CREATE VIEW iam.list_my_memberships WITH (security_invoker = true) AS
-  SELECT t.name AS tenant, r.name AS role, r.requires_mfa, s.name AS site, m.status
-    FROM iam.memberships m JOIN org.tenants t ON t.id = m.tenant_id JOIN iam.roles r ON r.id = m.role_id
-    LEFT JOIN org.sites s ON s.tenant_id = m.tenant_id AND m.all_sites;
 
 -- ===== Funciones SECURITY DEFINER: dueño wanka_definer (NOLOGIN, NOBYPASSRLS, no es dueño de tablas) =====
 -- Patrón para las que tocan tablas con RLS sin tenant fijado por el llamador: guardan el valor del llamador,
@@ -137,8 +124,8 @@ AS $$
 DECLARE prev text := current_setting('app.tenant_id', true);
 BEGIN
   PERFORM set_config('app.tenant_id', p_tenant::text, true);
-  INSERT INTO org.tenants (id, ruc, name) VALUES (p_tenant, p_ruc, p_name);
-  INSERT INTO org.sites (id, tenant_id, name) VALUES (p_site, p_tenant, 'Sede principal');
+  INSERT INTO org.tenants (id, ruc, legal_name) VALUES (p_tenant, p_ruc, p_name);
+  INSERT INTO org.sites (id, tenant_id, code, name) VALUES (p_site, p_tenant, '0000', 'Sede principal');
   INSERT INTO iam.roles (id, tenant_id, name, requires_mfa) VALUES (p_role, p_tenant, 'Propietario', true);
   INSERT INTO iam.users (id, email) VALUES (p_owner, p_owner_email) ON CONFLICT (email) DO NOTHING;
   INSERT INTO iam.memberships (id, tenant_id, user_id, role_id, status) VALUES (gen_random_uuid(), p_tenant, p_owner, p_role, 'invitado');
@@ -181,6 +168,8 @@ AS $$
 DECLARE n int; prev text := current_setting('app.tenant_id', true);
 BEGIN
   PERFORM set_config('app.tenant_id', p_tenant::text, true);
+  DELETE FROM iam.membership_sites WHERE tenant_id = p_tenant;   -- las cajas y el alcance de las membresias, antes que su sede (FK compuesta)
+  DELETE FROM org.cash_registers WHERE tenant_id = p_tenant;
   DELETE FROM org.sites WHERE tenant_id = p_tenant;
   GET DIAGNOSTICS n = ROW_COUNT;
   PERFORM set_config('app.tenant_id', coalesce(prev, ''), true);
@@ -214,6 +203,12 @@ GRANT INSERT ON iam.memberships, iam.users, iam.roles TO wanka_definer;
 GRANT SELECT ON iam.users, iam.roles TO wanka_definer;
 GRANT SELECT, INSERT, UPDATE ON org.tenants TO wanka_definer;
 GRANT SELECT, INSERT, DELETE ON org.sites TO wanka_definer;
+GRANT SELECT, DELETE ON org.cash_registers TO wanka_definer;
+GRANT DELETE ON iam.membership_sites TO wanka_definer;
+-- La politica member_read de org.sites (ADR 0001) lee iam.membership_sites con los privilegios de quien consulta org.sites:
+-- un rol que lee o borra sedes necesita SELECT ahi aunque no lea membresias (sin el, "permission denied for table
+-- membership_sites"). Lo necesitan wanka_definer (purga, ola 6) y wanka_worker (sincronizacion con Khipu, ADR 0013 / #33).
+GRANT SELECT ON iam.membership_sites TO wanka_definer, wanka_worker;   -- ola 6 (purga de una empresa cerrada)
 GRANT INSERT ON audit.events TO wanka_definer;   -- el esquema audit y sus GRANT para app y worker: migracion del kernel (#173)
 GRANT SELECT ON ops.webhook_routes TO wanka_definer;
 GRANT SELECT, INSERT, UPDATE ON platform.impersonation_grants TO wanka_definer;
@@ -233,7 +228,6 @@ GRANT UPDATE (provider_synced_version) ON org.sites, org.tenant_settings TO wank
 GRANT UPDATE (provider_synced_at, provider_conflict_at) ON org.document_series TO wanka_worker;
 GRANT USAGE ON SCHEMA einv TO wanka_app, wanka_worker;
 GRANT SELECT, INSERT, UPDATE ON einv.company_sync_state TO wanka_worker;
-GRANT SELECT ON iam.list_my_memberships TO wanka_app;
 GRANT EXECUTE ON FUNCTION iam.list_support_requests(), iam.decide_impersonation(uuid,boolean),
   iam.redeem_impersonation(bytea,uuid,bytea) TO wanka_app;
 GRANT USAGE ON SCHEMA ops TO wanka_webhooks;

@@ -30,11 +30,11 @@ COMMIT;
 -- Las membresias invitado/activo siguen visibles: el filtro no cierra de mas.
 BEGIN;
 SELECT set_config('app.user_id','eeeeeeee-0000-0000-0000-000000000002', true);   -- cajero: activo en A
-SELECT test.assert((SELECT string_agg(t.name || ':' || m.status, ',') FROM org.tenants t JOIN iam.memberships m ON m.tenant_id = t.id) = 'Empresa A:activo', 'activo: ve su empresa y su membresia');
+SELECT test.assert((SELECT string_agg(t.legal_name || ':' || m.status, ',') FROM org.tenants t JOIN iam.memberships m ON m.tenant_id = t.id) = 'Empresa A:activo', 'activo: ve su empresa y su membresia');
 COMMIT;
 BEGIN;
 SELECT set_config('app.user_id','eeeeeeee-0000-0000-0000-000000000009', true);   -- propietario de B: invitado
-SELECT test.assert((SELECT string_agg(t.name || ':' || m.status, ',') FROM org.tenants t JOIN iam.memberships m ON m.tenant_id = t.id) = 'Empresa B:invitado', 'invitado: ve su empresa y su membresia');
+SELECT test.assert((SELECT string_agg(t.legal_name || ':' || m.status, ',') FROM org.tenants t JOIN iam.memberships m ON m.tenant_id = t.id) = 'Empresa B:invitado', 'invitado: ve su empresa y su membresia');
 COMMIT;
 -- Catalogo: el filtro de estado esta escrito en las dos politicas. Con own_memberships filtrando, la subconsulta de member_read
 -- ya no ve la suspendida, asi que quitarlo de member_read no cambia ninguna fila: solo el catalogo lo distingue.
@@ -48,11 +48,16 @@ SELECT test.assert((SELECT qual ~ 'status'
                            AND (SELECT array_agg(DISTINCT m[1] ORDER BY m[1]) FROM regexp_matches(qual, '''([^'']*)''', 'g') AS m) = ARRAY['activo','invitado']
                       FROM pg_policies WHERE schemaname = 'iam' AND tablename = 'memberships' AND policyname = 'own_memberships'),
                    'iam.memberships own_memberships exige exactamente invitado/activo');
-\echo '== A3. list_my_memberships (security_invoker) con solo app.user_id del cajero =='
+\echo '== A3. list_my_memberships (security_invoker) con solo app.user_id del cajero: rol, empresa, sedes y cajas de su alcance =='
 BEGIN;
 SELECT set_config('app.user_id','eeeeeeee-0000-0000-0000-000000000002', true);
-SELECT test.assert((SELECT string_agg(tenant || '|' || role || '|' || requires_mfa || '|' || site || '|' || status, ',') FROM iam.list_my_memberships)
-                   = 'Empresa A|Cajero|false|Sede principal|activo', 'list_my_memberships del cajero');
+SELECT test.assert((SELECT count(*) FROM iam.list_my_memberships) = 1, 'list_my_memberships del cajero: una fila');
+SELECT test.assert((SELECT tenant_name = 'Empresa A' AND role_name = 'Cajero' AND NOT requires_mfa AND membership_status = 'activo'
+                           AND tenant_status = 'trial' AND NOT all_sites
+                           AND sites = '[{"id":"a5000000-0000-0000-0000-0000000000a1","code":"0000","name":"Sede principal"}]'::jsonb
+                           AND cash_registers = '[{"id":"ca000000-0000-0000-0000-0000000000a1","code":"CAJA-01","site_id":"a5000000-0000-0000-0000-0000000000a1"},
+                                                  {"id":"ca000000-0000-0000-0000-0000000000a2","code":"CAJA-02","site_id":"a5000000-0000-0000-0000-0000000000a1"}]'::jsonb
+                      FROM iam.list_my_memberships), 'list_my_memberships del cajero: sede 0000 y sus dos cajas, no la sede S2');
 COMMIT;
 \echo '== A4. list_support_requests =='
 BEGIN;
@@ -512,3 +517,214 @@ BEGIN;
 SELECT set_config('app.tenant_id','bbbbbbbb-0000-0000-0000-000000000002', true);
 SELECT test.assert((SELECT count(*) FROM org.document_series) = 0 AND (SELECT count(*) FROM org.tenant_settings) = 0, 'wanka_app con tenant B no ve la configuracion de A');
 ROLLBACK;
+
+-- ===== Identidad de la ola 1, F2 (#232). Ids R1..: no se repiten con los de otras historias. =====
+\echo '== R1. role_permissions y membership_sites: PK, FK compuestas (un rol o una sede de otra empresa se rechaza) y RLS =='
+BEGIN;
+SELECT set_config('app.tenant_id','aaaaaaaa-0000-0000-0000-000000000001', true);
+SELECT test.assert((SELECT count(*) FROM iam.role_permissions) = 1, 'role_permissions: solo las de A');
+SELECT test.expect_error($$INSERT INTO iam.role_permissions VALUES ('aaaaaaaa-0000-0000-0000-000000000001','b0000000-0000-0000-0000-0000000000b1','ventas.pos:create')$$,
+  '23503', 'role_permissions: un rol de otra empresa se rechaza (FK compuesta)');
+SELECT test.expect_error($$INSERT INTO iam.role_permissions VALUES ('aaaaaaaa-0000-0000-0000-000000000001','a0000000-0000-0000-0000-0000000000a2','ventas.pos:fly')$$,
+  '23503', 'role_permissions: un permiso fuera del catalogo se rechaza');
+SELECT test.expect_error($$INSERT INTO iam.role_permissions VALUES ('aaaaaaaa-0000-0000-0000-000000000001','a0000000-0000-0000-0000-0000000000a2','ventas.pos:read')$$,
+  '23505', 'role_permissions: la PK es (tenant, rol, permiso)');
+SELECT test.expect_error($$INSERT INTO iam.role_permissions VALUES ('bbbbbbbb-0000-0000-0000-000000000002','b0000000-0000-0000-0000-0000000000b1','ventas.pos:create')$$,
+  '42501', 'role_permissions: la RLS rechaza una fila de otra empresa');
+SELECT test.expect_error($$INSERT INTO iam.role_permissions VALUES ('aaaaaaaa-0000-0000-0000-000000000001','a0000000-0000-0000-0000-0000000000a3','ventas.pos:read')$$,
+  '42501', 'role_permissions: un rol system no tiene filas propias (sus permisos salen de la plantilla)');
+INSERT INTO iam.role_permissions VALUES ('aaaaaaaa-0000-0000-0000-000000000001','a0000000-0000-0000-0000-0000000000a2','ventas.pos:create');
+SELECT test.assert((SELECT count(*) FROM iam.role_permissions) = 2, 'role_permissions: inserta un permiso de un rol propio');
+SELECT test.expect_error($$INSERT INTO iam.membership_sites VALUES ('aaaaaaaa-0000-0000-0000-000000000001','3e000000-0000-0000-0000-0000000000c1','b5000000-0000-0000-0000-0000000000b1')$$,
+  '23503', 'membership_sites: una sede de otra empresa se rechaza (FK compuesta)');
+SELECT test.expect_error($$INSERT INTO iam.membership_sites VALUES ('aaaaaaaa-0000-0000-0000-000000000001','3e000000-0000-0000-0000-0000000000e2','a5000000-0000-0000-0000-0000000000a1')$$,
+  '23503', 'membership_sites: una membresia de otra empresa se rechaza (FK compuesta)');
+SELECT test.expect_error($$INSERT INTO iam.membership_sites VALUES ('aaaaaaaa-0000-0000-0000-000000000001','3e000000-0000-0000-0000-0000000000c1','a5000000-0000-0000-0000-0000000000a1')$$,
+  '23505', 'membership_sites: la PK es (tenant, membresia, sede)');
+INSERT INTO iam.membership_sites VALUES ('aaaaaaaa-0000-0000-0000-000000000001','3e000000-0000-0000-0000-0000000000c1','a5000000-0000-0000-0000-0000000000a2');
+SELECT test.assert((SELECT count(*) FROM iam.membership_sites) = 2, 'membership_sites: inserta una sede del alcance');
+ROLLBACK;
+SELECT test.assert((SELECT count(*) FROM iam.role_permissions) = 0 AND (SELECT count(*) FROM iam.membership_sites) = 0 AND (SELECT count(*) FROM org.sites) = 0
+                   AND (SELECT count(*) FROM org.cash_registers) = 0, 'RLS: 0 filas de las tablas nuevas sin tenant ni usuario');
+
+\echo '== R2. org.sites y org.cash_registers: UNIQUE por empresa, FK compuestas, GRANT por columna y sin DELETE =='
+BEGIN;
+SELECT set_config('app.tenant_id','aaaaaaaa-0000-0000-0000-000000000001', true);
+SELECT test.expect_error($$INSERT INTO org.sites (id, tenant_id, code, name) VALUES (gen_random_uuid(), 'aaaaaaaa-0000-0000-0000-000000000001', 'S2', 'Otra')$$, '23505', 'sites: el codigo es unico por empresa');
+SELECT test.expect_error($$INSERT INTO org.sites (id, tenant_id, code, name) VALUES (gen_random_uuid(), 'bbbbbbbb-0000-0000-0000-000000000002', 'S9', 'Otra')$$, '42501', 'sites: la RLS rechaza una sede de otra empresa');
+SELECT test.expect_error($$INSERT INTO org.cash_registers (id, tenant_id, site_id, code) VALUES (gen_random_uuid(), 'aaaaaaaa-0000-0000-0000-000000000001', 'b5000000-0000-0000-0000-0000000000b1', 'CAJA-09')$$,
+  '23503', 'cajas: una sede de otra empresa se rechaza (FK compuesta)');
+SELECT test.expect_error($$INSERT INTO org.cash_registers (id, tenant_id, site_id, code) VALUES (gen_random_uuid(), 'aaaaaaaa-0000-0000-0000-000000000001', 'a5000000-0000-0000-0000-0000000000a2', 'CAJA-01')$$,
+  '23505', 'cajas: el codigo es unico por empresa');
+SELECT test.expect_error($$INSERT INTO org.cash_registers (id, tenant_id, site_id, code) VALUES (gen_random_uuid(), 'bbbbbbbb-0000-0000-0000-000000000002', 'b5000000-0000-0000-0000-0000000000b1', 'CAJA-09')$$,
+  '42501', 'cajas: la RLS rechaza una caja de otra empresa');
+INSERT INTO org.sites (id, tenant_id, code, name) VALUES (gen_random_uuid(), 'aaaaaaaa-0000-0000-0000-000000000001', 'S3', 'Sede 3');
+INSERT INTO org.cash_registers (id, tenant_id, site_id, code) VALUES (gen_random_uuid(), 'aaaaaaaa-0000-0000-0000-000000000001', 'a5000000-0000-0000-0000-0000000000a2', 'CAJA-09');
+UPDATE org.sites SET name = 'Renombrada', active = false, updated_at = now() WHERE code = 'S3';
+UPDATE org.cash_registers SET active = false WHERE code = 'CAJA-09';
+SELECT test.expect_error($$UPDATE org.sites SET tenant_id = 'bbbbbbbb-0000-0000-0000-000000000002' WHERE code = 'S3'$$, '42501', 'sites: tenant_id no se actualiza');
+SELECT test.expect_error($$UPDATE org.sites SET created_at = now() WHERE code = 'S3'$$, '42501', 'sites: created_at no se actualiza');
+SELECT test.expect_error($$UPDATE org.cash_registers SET site_id = 'a5000000-0000-0000-0000-0000000000a1' WHERE code = 'CAJA-09'$$, '42501', 'cajas: site_id no se actualiza');
+SELECT test.expect_error($$DELETE FROM org.sites WHERE code = 'S3'$$, '42501', 'wanka_app no borra sedes');
+SELECT test.expect_error($$DELETE FROM org.cash_registers WHERE code = 'CAJA-09'$$, '42501', 'wanka_app no borra cajas');
+ROLLBACK;
+
+\echo '== R3. iam.roles: plantilla, version, nombre unico sin distinguir mayusculas y nadie crea otro dueno =='
+BEGIN;
+SELECT set_config('app.tenant_id','aaaaaaaa-0000-0000-0000-000000000001', true);
+SELECT test.expect_error($$INSERT INTO iam.roles (id, tenant_id, name) VALUES (gen_random_uuid(), 'aaaaaaaa-0000-0000-0000-000000000001', 'CAJERO')$$, '23505', 'roles: el nombre es unico sin distinguir mayusculas');
+SELECT test.expect_error($$INSERT INTO iam.roles (id, tenant_id, name, system, requires_mfa) VALUES (gen_random_uuid(), 'aaaaaaaa-0000-0000-0000-000000000001', 'Falso', true, true)$$,
+  '23514', 'roles: system sin plantilla se rechaza (CHECK)');
+SELECT test.expect_error($$INSERT INTO iam.roles (id, tenant_id, name, template_code) VALUES (gen_random_uuid(), 'aaaaaaaa-0000-0000-0000-000000000001', 'Falso', 'cajero')$$,
+  '23514', 'roles: una plantilla en un rol que no es system se rechaza (CHECK)');
+SELECT test.expect_error($$INSERT INTO iam.roles (id, tenant_id, name, system, template_code, requires_mfa) VALUES (gen_random_uuid(), 'aaaaaaaa-0000-0000-0000-000000000001', 'Otro dueno', true, 'dueno', true)$$,
+  '23505', 'roles: nadie crea otro dueno aunque inserte con system = true (indice unico tenant+plantilla)');
+SELECT test.assert((SELECT version FROM iam.roles WHERE name = 'Cajero') = 1, 'roles: version nace en 1');
+ROLLBACK;
+
+\echo '== R4. iam.guard_role_writes: cada regla del trigger rechaza con 42501 a wanka_app =='
+BEGIN;
+SELECT set_config('app.tenant_id','aaaaaaaa-0000-0000-0000-000000000001', true);
+SELECT test.expect_error($$DELETE FROM iam.roles WHERE template_code = 'dueno'$$, '42501', 'R4a: no se borra un rol system');
+SELECT test.expect_error($$UPDATE iam.roles SET template_code = 'dueno', system = true WHERE name = 'Cajero'$$, '42501', 'R4b: un rol propio no pasa a base (system y template_code)');
+SELECT test.expect_error($$UPDATE iam.roles SET system = false, template_code = NULL WHERE name = 'Dueno'$$, '42501', 'R4c: un rol base no pasa a propio');
+SELECT test.expect_error($$UPDATE iam.roles SET template_code = 'cajero' WHERE name = 'Dueno'$$, '42501', 'R4d: un rol base no cambia de plantilla');
+SELECT test.expect_error($$UPDATE iam.roles SET name = 'Jefe' WHERE name = 'Dueno'$$, '42501', 'R4e: no se renombra un rol system');
+SELECT test.expect_error($$UPDATE iam.roles SET id = gen_random_uuid() WHERE name = 'Dueno'$$, '42501', 'R4h: un rol system no cambia de id');
+SELECT test.expect_error($$UPDATE iam.roles SET created_at = '2000-01-01' WHERE name = 'Dueno'$$, '42501', 'R4h: un rol system no cambia created_at');
+SELECT test.expect_error($$UPDATE iam.roles SET requires_mfa = false WHERE name = 'Dueno'$$, '42501', 'R4f: requires_mfa de un rol system no baja de su plantilla');
+-- En A: el trigger (BEFORE) lo rechaza antes que el indice unico de la plantilla, que sin el daria 23505.
+SELECT test.expect_error($$INSERT INTO iam.roles (id, tenant_id, name, system, template_code, requires_mfa) VALUES (gen_random_uuid(), 'aaaaaaaa-0000-0000-0000-000000000001', 'Dueno 2', true, 'dueno', false)$$,
+  '42501', 'R4g: no se inserta un rol system con requires_mfa menor que el de su plantilla');
+-- Lo permitido sigue funcionando: el trigger no cierra de mas.
+UPDATE iam.roles SET name = 'Cajero 2', version = version + 1 WHERE name = 'Cajero';
+UPDATE iam.roles SET requires_mfa = true WHERE name = 'Cajero 2';
+UPDATE iam.roles SET version = version + 1 WHERE name = 'Dueno';
+INSERT INTO iam.roles (id, tenant_id, name) VALUES ('a0000000-0000-0000-0000-0000000000f1', 'aaaaaaaa-0000-0000-0000-000000000001', 'Efimero');
+INSERT INTO iam.role_permissions VALUES ('aaaaaaaa-0000-0000-0000-000000000001', 'a0000000-0000-0000-0000-0000000000f1', 'ventas.pos:read');
+DELETE FROM iam.roles WHERE id = 'a0000000-0000-0000-0000-0000000000f1';
+SELECT test.assert((SELECT count(*) FROM iam.role_permissions WHERE role_id = 'a0000000-0000-0000-0000-0000000000f1') = 0, 'borrar un rol propio se lleva sus permisos');
+SELECT test.expect_error($$DELETE FROM iam.roles WHERE name = 'Cajero 2'$$, '23503', 'un rol propio en uso no se borra (FK de iam.memberships)');
+ROLLBACK;
+
+\echo '== R5. DELETE acotado: solo lo propio, y membresias solo en estado invitado (trigger iam.guard_membership_deletes) =='
+BEGIN;
+SELECT set_config('app.tenant_id','aaaaaaaa-0000-0000-0000-000000000001', true);
+DELETE FROM iam.role_permissions WHERE tenant_id = 'bbbbbbbb-0000-0000-0000-000000000002';   -- RLS: 0 filas, no las de B
+DELETE FROM iam.membership_sites WHERE tenant_id = 'bbbbbbbb-0000-0000-0000-000000000002';
+DELETE FROM iam.roles WHERE tenant_id = 'bbbbbbbb-0000-0000-0000-000000000002';
+DELETE FROM iam.memberships WHERE tenant_id = 'bbbbbbbb-0000-0000-0000-000000000002';
+ROLLBACK;
+SELECT test.assert((SELECT count(*) FROM (SELECT set_config('app.tenant_id','bbbbbbbb-0000-0000-0000-000000000002', false)) x, iam.role_permissions) = 1,
+                   'el DELETE con el tenant de A no toco los permisos de B');
+SELECT set_config('app.tenant_id','', false);
+BEGIN;
+SELECT set_config('app.tenant_id','aaaaaaaa-0000-0000-0000-000000000001', true);
+SELECT test.expect_error($$DELETE FROM iam.memberships WHERE id = '3e000000-0000-0000-0000-0000000000c1'$$, '42501', 'R5a: no se borra una membresia activa');
+WITH u AS (UPDATE iam.memberships SET status = 'suspendido' WHERE id = '3e000000-0000-0000-0000-0000000000e1' RETURNING 1)
+  SELECT test.assert((SELECT count(*) FROM u) = 1, 'R5e: activo -> suspendido afecta 1 fila');
+SELECT test.expect_error($$DELETE FROM iam.memberships WHERE id = '3e000000-0000-0000-0000-0000000000e1'$$, '42501', 'R5b: no se borra una membresia suspendida');
+-- R5d: una membresia que dejo de ser invitada no vuelve a serlo (si no, activo/suspendido -> invitado -> DELETE saltaria la guarda).
+SELECT test.expect_error($$UPDATE iam.memberships SET status = 'invitado' WHERE id = '3e000000-0000-0000-0000-0000000000e1'$$, '42501', 'R5d: suspendido no vuelve a invitado');
+SELECT test.expect_error($$UPDATE iam.memberships SET status = 'invitado' WHERE id = '3e000000-0000-0000-0000-0000000000c1'$$, '42501', 'R5d: activo no vuelve a invitado');
+-- R5e: las transiciones legitimas no se bloquean: suspendido -> activo e invitado -> activo.
+WITH u AS (UPDATE iam.memberships SET status = 'activo' WHERE id = '3e000000-0000-0000-0000-0000000000e1' RETURNING 1)
+  SELECT test.assert((SELECT count(*) FROM u) = 1, 'R5e: suspendido -> activo afecta 1 fila');
+INSERT INTO iam.users (id, email) VALUES ('eeeeeeee-0000-0000-0000-0000000000f2', 'aceptada@a.pe');
+INSERT INTO iam.memberships (id, tenant_id, user_id, role_id, status)
+  VALUES ('3e000000-0000-0000-0000-0000000000f2', 'aaaaaaaa-0000-0000-0000-000000000001', 'eeeeeeee-0000-0000-0000-0000000000f2', 'a0000000-0000-0000-0000-0000000000a2', 'invitado');
+WITH u AS (UPDATE iam.memberships SET status = 'activo' WHERE id = '3e000000-0000-0000-0000-0000000000f2' RETURNING 1)
+  SELECT test.assert((SELECT count(*) FROM u) = 1, 'R5e: invitado -> activo afecta 1 fila');
+-- R5c: una invitacion que nunca dejo de serlo se anula, con sus sedes.
+INSERT INTO iam.users (id, email) VALUES ('eeeeeeee-0000-0000-0000-0000000000f1', 'invitado@a.pe');
+INSERT INTO iam.memberships (id, tenant_id, user_id, role_id, all_sites, status)
+  VALUES ('3e000000-0000-0000-0000-0000000000f1', 'aaaaaaaa-0000-0000-0000-000000000001', 'eeeeeeee-0000-0000-0000-0000000000f1', 'a0000000-0000-0000-0000-0000000000a2', false, 'invitado');
+INSERT INTO iam.membership_sites VALUES ('aaaaaaaa-0000-0000-0000-000000000001', '3e000000-0000-0000-0000-0000000000f1', 'a5000000-0000-0000-0000-0000000000a1');
+DELETE FROM iam.memberships WHERE id = '3e000000-0000-0000-0000-0000000000f1';
+SELECT test.assert((SELECT count(*) FROM iam.memberships WHERE id = '3e000000-0000-0000-0000-0000000000f1') = 0
+                   AND (SELECT count(*) FROM iam.membership_sites WHERE membership_id = '3e000000-0000-0000-0000-0000000000f1') = 0,
+                   'R5c: una invitacion se anula, con sus sedes');
+DELETE FROM iam.membership_sites WHERE membership_id = '3e000000-0000-0000-0000-0000000000c1';
+ROLLBACK;
+SELECT test.assert((SELECT count(*) FROM iam.role_templates) = 2 AND (SELECT count(*) FROM iam.role_template_permissions) = 1, 'wanka_app lee las plantillas');
+
+\echo '== R6. plantillas de rol: wanka_app solo lee; ningun DML; wanka_definer las lee =='
+SELECT test.expect_error($$INSERT INTO iam.role_templates (code, name, requires_mfa) VALUES ('x', 'X', false)$$, '42501', 'wanka_app no inserta plantillas');
+SELECT test.expect_error($$UPDATE iam.role_templates SET requires_mfa = false$$, '42501', 'wanka_app no actualiza plantillas');
+SELECT test.expect_error($$DELETE FROM iam.role_templates$$, '42501', 'wanka_app no borra plantillas');
+SELECT test.expect_error('TRUNCATE iam.role_templates CASCADE', '42501', 'wanka_app no trunca plantillas');
+SELECT test.expect_error($$INSERT INTO iam.role_template_permissions VALUES ('cajero', 'ventas.pos:create')$$, '42501', 'wanka_app no inserta permisos de plantilla');
+SELECT test.expect_error($$UPDATE iam.role_template_permissions SET permission_code = 'ventas.pos:create'$$, '42501', 'wanka_app no actualiza permisos de plantilla');
+SELECT test.expect_error($$DELETE FROM iam.role_template_permissions$$, '42501', 'wanka_app no borra permisos de plantilla');
+SELECT test.expect_error('TRUNCATE iam.role_template_permissions', '42501', 'wanka_app no trunca permisos de plantilla');
+SELECT test.assert(has_table_privilege('wanka_definer', 'iam.role_templates', 'SELECT') AND has_table_privilege('wanka_definer', 'iam.role_template_permissions', 'SELECT')
+                   AND NOT has_table_privilege('wanka_definer', 'iam.role_templates', 'INSERT,UPDATE,DELETE,TRUNCATE')
+                   AND NOT has_table_privilege('wanka_definer', 'iam.role_template_permissions', 'INSERT,UPDATE,DELETE,TRUNCATE'),
+                   'wanka_definer lee las plantillas y no las escribe');
+
+\echo '== R7. politicas por usuario: solo las membresias propias y lo que referencian; nada de B con app.tenant_id = A =='
+-- El cajero (all_sites = false, sede 0000): su empresa, su rol, su membresia, su sede y las cajas de esa sede.
+BEGIN;
+SELECT set_config('app.user_id','eeeeeeee-0000-0000-0000-000000000002', true);
+SELECT test.assert((SELECT count(*) FROM iam.memberships) = 1 AND (SELECT count(*) FROM org.tenants) = 1 AND (SELECT count(*) FROM iam.roles) = 1,
+                   'cajero: su membresia, su empresa y su rol');
+SELECT test.assert((SELECT string_agg(code, ',' ORDER BY code) FROM org.sites) = '0000', 'cajero: solo la sede de su alcance (no S2)');
+SELECT test.assert((SELECT string_agg(code, ',' ORDER BY code) FROM org.cash_registers) = 'CAJA-01,CAJA-02', 'cajero: solo las cajas de su sede (no CAJA-03)');
+SELECT test.assert((SELECT count(*) FROM iam.membership_sites) = 1, 'cajero: su fila de iam.membership_sites');
+SELECT test.assert((SELECT count(*) FROM iam.role_permissions) = 0, 'cajero: sin tenant no lee permisos de roles (no hay politica por usuario)');
+COMMIT;
+-- El ex miembro de B (suspendido, con alcance parcial) no lee nada, tampoco su fila de iam.membership_sites.
+BEGIN;
+SELECT set_config('app.user_id','eeeeeeee-0000-0000-0000-000000000003', true);
+SELECT test.assert((SELECT count(*) FROM iam.membership_sites) = 0 AND (SELECT count(*) FROM org.cash_registers) = 0 AND (SELECT count(*) FROM org.sites) = 0,
+                   'ex miembro suspendido: 0 filas de iam.membership_sites, org.cash_registers y org.sites');
+COMMIT;
+-- Propietario de A (all_sites = true): ve todas las sedes y cajas de A.
+BEGIN;
+SELECT set_config('app.user_id','eeeeeeee-0000-0000-0000-000000000001', true);
+SELECT test.assert((SELECT string_agg(code, ',' ORDER BY code) FROM org.sites) = '0000,S2', 'propietario: todas las sedes de A');
+SELECT test.assert((SELECT string_agg(code, ',' ORDER BY code) FROM org.cash_registers) = 'CAJA-01,CAJA-02,CAJA-03', 'propietario: todas las cajas de A');
+COMMIT;
+-- Miembro de A y B, sin tenant: ve las dos; con app.tenant_id = A, ninguna fila de B en ninguna de las seis tablas.
+BEGIN;
+SELECT set_config('app.user_id','eeeeeeee-0000-0000-0000-00000000000a', true);
+SELECT test.assert((SELECT count(*) FROM org.tenants) = 2 AND (SELECT count(*) FROM iam.memberships) = 2 AND (SELECT count(*) FROM iam.roles) = 2
+                   AND (SELECT count(*) FROM org.sites) = 3 AND (SELECT count(*) FROM org.cash_registers) = 4,
+                   'multi sin tenant: las dos empresas, sus dos membresias, roles, sedes y cajas');
+COMMIT;
+BEGIN;
+SELECT set_config('app.user_id','eeeeeeee-0000-0000-0000-00000000000a', true);
+SELECT set_config('app.tenant_id','aaaaaaaa-0000-0000-0000-000000000001', true);
+SELECT test.assert((SELECT count(*) FROM org.tenants WHERE id = 'bbbbbbbb-0000-0000-0000-000000000002') = 0
+                   AND (SELECT count(*) FROM iam.roles WHERE tenant_id = 'bbbbbbbb-0000-0000-0000-000000000002') = 0
+                   AND (SELECT count(*) FROM iam.memberships WHERE tenant_id = 'bbbbbbbb-0000-0000-0000-000000000002') = 0
+                   AND (SELECT count(*) FROM org.sites WHERE tenant_id = 'bbbbbbbb-0000-0000-0000-000000000002') = 0
+                   AND (SELECT count(*) FROM org.cash_registers WHERE tenant_id = 'bbbbbbbb-0000-0000-0000-000000000002') = 0
+                   AND (SELECT count(*) FROM iam.membership_sites WHERE tenant_id = 'bbbbbbbb-0000-0000-0000-000000000002') = 0
+                   AND (SELECT count(*) FROM iam.list_my_memberships WHERE tenant_id = 'bbbbbbbb-0000-0000-0000-000000000002') = 0,
+                   'multi con tenant A: cero filas de B en las seis tablas y en la vista');
+SELECT test.assert((SELECT count(*) FROM org.cash_registers) = 3 AND (SELECT count(*) FROM org.sites) = 2, 'multi con tenant A: solo las sedes y cajas de A');
+COMMIT;
+
+\echo '== R8. list_my_memberships: dos empresas, sin nulos, y solo del usuario de la transaccion =='
+SELECT test.assert((SELECT 'security_invoker=true' = ANY (reloptions) FROM pg_class WHERE oid = 'iam.list_my_memberships'::regclass), 'la vista es security_invoker');
+BEGIN;
+SELECT set_config('app.user_id','eeeeeeee-0000-0000-0000-00000000000a', true);
+SELECT test.assert((SELECT string_agg(tenant_name || '|' || role_name || '|' || requires_mfa || '|' || membership_status || '|' || jsonb_array_length(sites) || '|' || jsonb_array_length(cash_registers), ',' ORDER BY tenant_name)
+                      FROM iam.list_my_memberships) = 'Empresa A|Cajero|false|activo|2|3,Empresa B|Propietario|true|activo|1|1', 'multi: A y B con sus sedes y cajas');
+SELECT test.assert((SELECT count(*) FROM iam.list_my_memberships WHERE role_name IS NULL OR sites IS NULL OR cash_registers IS NULL OR requires_mfa IS NULL) = 0, 'sin nulos en rol, sedes y cajas');
+COMMIT;
+BEGIN;
+SELECT set_config('app.user_id','eeeeeeee-0000-0000-0000-000000000009', true);   -- propietario de B, invitado: sin sedes aun
+SELECT test.assert((SELECT membership_status = 'invitado' AND sites = '[]'::jsonb AND cash_registers = '[]'::jsonb FROM iam.list_my_memberships), 'invitado: la membresia con alcance vacio, no nulo');
+COMMIT;
+SELECT test.assert((SELECT count(*) FROM iam.list_my_memberships) = 0, 'sin app.user_id: 0 filas');
+BEGIN;
+-- Con un tenant fijado la vista sigue filtrando por usuario: el propietario de A no recibe la membresia de multi (ni la del cajero).
+SELECT set_config('app.tenant_id','aaaaaaaa-0000-0000-0000-000000000001', true);
+SELECT set_config('app.user_id','eeeeeeee-0000-0000-0000-000000000001', true);
+SELECT test.assert((SELECT count(*) FROM iam.list_my_memberships) = 1, 'con tenant A, el propietario ve solo su membresia');
+SELECT set_config('app.user_id','eeeeeeee-0000-0000-0000-000000000003', true);   -- ex miembro de B, suspendido
+SELECT set_config('app.tenant_id','bbbbbbbb-0000-0000-0000-000000000002', true);
+SELECT test.assert((SELECT count(*) FROM iam.list_my_memberships) = 0, 'con tenant B, el suspendido no aparece de ninguna forma (ADR 0011)');
+COMMIT;
