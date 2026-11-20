@@ -33,10 +33,8 @@ INSERT INTO iam.users (id, email) VALUES ('eeeeeeee-0000-0000-0000-000000000003'
 INSERT INTO iam.memberships (id, tenant_id, user_id, role_id, status)
   VALUES ('3e000000-0000-0000-0000-0000000000d1','bbbbbbbb-0000-0000-0000-000000000002','eeeeeeee-0000-0000-0000-000000000003','b0000000-0000-0000-0000-0000000000b1','suspendido');
 COMMIT;
--- Identidad de la ola 1, F2 (#232): plantillas (catalogo global; solo el duenio las escribe), un rol base, sedes, cajas y el alcance
--- de las membresias. El cajero solo opera en la sede 0000; 'multi' es miembro de A y de B (prueba de dos tenants).
-INSERT INTO iam.role_templates (code, name, requires_mfa) VALUES ('dueno', 'Dueno', true), ('cajero', 'Cajero', false);
-INSERT INTO iam.role_template_permissions VALUES ('cajero', 'ventas.pos:read');
+-- Identidad de la ola 1, F2 (#232): un rol base, sedes, cajas y el alcance de las membresias. Las plantillas (catalogo global;
+-- solo el duenio las escribe) las siembra la migracion real 20261120120000 (#233): aqui no se insertan otras. El cajero solo opera en la sede 0000; 'multi' es miembro de A y de B (prueba de dos tenants).
 BEGIN;
 SELECT set_config('app.tenant_id','aaaaaaaa-0000-0000-0000-000000000001', true);
 INSERT INTO iam.roles (id, tenant_id, name, system, template_code, requires_mfa)

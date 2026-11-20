@@ -646,7 +646,15 @@ SELECT test.assert((SELECT count(*) FROM iam.memberships WHERE id = '3e000000-00
                    'R5c: una invitacion se anula, con sus sedes');
 DELETE FROM iam.membership_sites WHERE membership_id = '3e000000-0000-0000-0000-0000000000c1';
 ROLLBACK;
-SELECT test.assert((SELECT count(*) FROM iam.role_templates) = 2 AND (SELECT count(*) FROM iam.role_template_permissions) = 1, 'wanka_app lee las plantillas');
+-- Siembra de #233: seis plantillas; el cajero abre caja y hace arqueo pero no la aprueba (lista escrita a mano, no la de la migracion).
+SELECT test.assert((SELECT count(*) FROM iam.role_templates) = 6
+                   AND (SELECT string_agg(code, ',' ORDER BY code) FROM iam.role_templates) = 'administrador,almacenero,cajero,contador,dueno,vendedor'
+                   AND (SELECT count(*) FROM iam.role_template_permissions WHERE template_code = 'cajero') = 21
+                   AND EXISTS (SELECT 1 FROM iam.role_template_permissions WHERE template_code = 'cajero' AND permission_code = 'finanzas.cash:update')
+                   AND NOT EXISTS (SELECT 1 FROM iam.role_template_permissions WHERE template_code = 'cajero' AND permission_code IN ('finanzas.cash:approve', 'facturacion.cpe:void'))
+                   AND NOT EXISTS (SELECT 1 FROM iam.role_template_permissions WHERE template_code = 'administrador' AND permission_code IN ('identidad.support_access:approve', 'empresas.einvoicing:update'))
+                   AND (SELECT count(*) FROM iam.role_template_permissions WHERE template_code = 'dueno') = (SELECT count(*) FROM iam.permissions),
+                   'wanka_app lee las plantillas sembradas por la migracion');
 
 \echo '== R6. plantillas de rol: wanka_app solo lee; ningun DML; wanka_definer las lee =='
 SELECT test.expect_error($$INSERT INTO iam.role_templates (code, name, requires_mfa) VALUES ('x', 'X', false)$$, '42501', 'wanka_app no inserta plantillas');
