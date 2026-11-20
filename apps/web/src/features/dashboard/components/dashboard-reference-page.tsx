@@ -1,4 +1,4 @@
-// REFERENCIA: antigua página de Inicio con datos mock. Ninguna ruta la usa; la historia del tablero la rehace sobre el DS y la API.
+// REFERENCIA: antigua página de Inicio con datos mock. Ninguna ruta la usa; la historia del tablero la rehace sobre el DS y la API. Código heredado movido tal cual (conserva sus estilos viejos).
 
 import { cookies } from "next/headers";
 import { RestaurantDashboard, VeterinaryDashboard } from "@/features/dashboard/components/industry-dashboards";

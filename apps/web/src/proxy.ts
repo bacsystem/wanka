@@ -12,6 +12,8 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Fuera: la API del BFF, los recursos de Next y los archivos con extensión (favicon, fuentes).
-  matcher: ["/((?!api/|_next/|.*\\..*).*)"],
+  // Fuera solo los recursos internos de Next y el favicon. Un punto en la URL NO excluye: los segmentos dinámicos
+  // aceptan puntos (`/clientes/a.b`) y la lista de habilitadas decide TODA ruta, también `/api/*` (las del BFF se
+  // abren en `OPEN_API_ROUTES`).
+  matcher: ["/((?!_next/|favicon\\.ico$).*)"],
 };

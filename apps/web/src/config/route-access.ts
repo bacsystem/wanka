@@ -6,6 +6,12 @@ import { isEnabledPath, type Feature, enabledFeatures } from "./navigation";
  */
 export const OPEN_AREAS: readonly string[] = ["/login", "/seleccionar-empresa", "/onboarding", "/admin"];
 
+/**
+ * Prefijos de route handlers del BFF (`/api/...`). Vacío: todavía no hay rutas de negocio; cada historia que agrega una
+ * (#24 en adelante) agrega aquí su prefijo. Cualquier otro `/api/*` responde 404.
+ */
+export const OPEN_API_ROUTES: readonly string[] = [];
+
 /** Ruta interna que siempre responde 404 (`app/(tenant)/(app)/[...slug]/page.tsx`); el proxy reescribe a ella lo no habilitado. */
 export const DISABLED_ROUTE = "/no-habilitada";
 
@@ -16,6 +22,6 @@ export type RouteAccess = "open" | "enabled" | "disabled";
  * (404), aunque exista su archivo en `app/`.
  */
 export function routeAccess(pathname: string, features: readonly Feature[] = enabledFeatures): RouteAccess {
-  if (OPEN_AREAS.some((area) => pathname === area || pathname.startsWith(`${area}/`))) return "open";
+  if ([...OPEN_AREAS, ...OPEN_API_ROUTES].some((area) => pathname === area || pathname.startsWith(`${area}/`))) return "open";
   return isEnabledPath(pathname, features) ? "enabled" : "disabled";
 }

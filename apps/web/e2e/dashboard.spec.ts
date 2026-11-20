@@ -39,3 +39,14 @@ test("the sidebar is 260 px wide on desktop and a 76 px rail on tablet", async (
   if (testInfo.project.name === "tablet") expect(width).toBeLessThan(100);
   else expect(width).toBeGreaterThan(240);
 });
+
+// Pantalla mock inaccesible: se reactiva con #71 (dashboard de inicio), que la rehace sobre el DS, la conecta a la API y la habilita.
+test.skip("dashboard renders its core sections", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("heading", { level: 1, name: "Inicio" })).toBeVisible();
+  await expect(page.getByText("Ventas de hoy")).toBeVisible();
+  await expect(page.getByText("Ventas últimos 30 días")).toBeVisible();
+  await expect(page.getByText("Últimos comprobantes emitidos")).toBeVisible();
+  await expect(page.getByText("Alertas de stock")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Estado de envíos SUNAT" })).toBeVisible();
+});

@@ -1,7 +1,9 @@
 import { expect, test } from "./fixtures";
 
 // Rutas que NO están en la lista de habilitadas de config/navigation.ts: escritas a mano, no derivadas de la lista.
-const DISABLED = ["/ventas", "/ventas/nueva", "/clientes", "/clientes/u2", "/inventario/stock", "/configuracion/usuarios", "/reportes", "/perfil", "/no-existe"];
+const DISABLED = ["/ventas", "/ventas/nueva", "/clientes", "/clientes/u2", "/inventario/stock", "/configuracion/usuarios", "/reportes", "/perfil", "/no-existe",
+  // Con punto: los segmentos dinámicos los aceptan y no deben saltarse la lista.
+  "/inventario/recepcion/g.1", "/catalogo/variantes/s.k", "/clientes/abc.def", "/ventas.txt", "/api/x"];
 
 for (const path of DISABLED) {
   test(`${path} answers 404 with the not-found page, not the mock or «Módulo en construcción»`, async ({ page }) => {
