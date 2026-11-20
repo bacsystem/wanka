@@ -513,11 +513,20 @@ SELECT set_config('app.tenant_id','', false);
 BEGIN;
 SELECT set_config('app.tenant_id','aaaaaaaa-0000-0000-0000-000000000001', true);
 SELECT test.expect_error($$DELETE FROM iam.memberships WHERE id = '3e000000-0000-0000-0000-0000000000c1'$$, '42501', 'R5a: no se borra una membresia activa');
-UPDATE iam.memberships SET status = 'suspendido' WHERE id = '3e000000-0000-0000-0000-0000000000e1';
+WITH u AS (UPDATE iam.memberships SET status = 'suspendido' WHERE id = '3e000000-0000-0000-0000-0000000000e1' RETURNING 1)
+  SELECT test.assert((SELECT count(*) FROM u) = 1, 'R5e: activo -> suspendido afecta 1 fila');
 SELECT test.expect_error($$DELETE FROM iam.memberships WHERE id = '3e000000-0000-0000-0000-0000000000e1'$$, '42501', 'R5b: no se borra una membresia suspendida');
 -- R5d: una membresia que dejo de ser invitada no vuelve a serlo (si no, activo/suspendido -> invitado -> DELETE saltaria la guarda).
 SELECT test.expect_error($$UPDATE iam.memberships SET status = 'invitado' WHERE id = '3e000000-0000-0000-0000-0000000000e1'$$, '42501', 'R5d: suspendido no vuelve a invitado');
 SELECT test.expect_error($$UPDATE iam.memberships SET status = 'invitado' WHERE id = '3e000000-0000-0000-0000-0000000000c1'$$, '42501', 'R5d: activo no vuelve a invitado');
+-- R5e: las transiciones legitimas no se bloquean: suspendido -> activo e invitado -> activo.
+WITH u AS (UPDATE iam.memberships SET status = 'activo' WHERE id = '3e000000-0000-0000-0000-0000000000e1' RETURNING 1)
+  SELECT test.assert((SELECT count(*) FROM u) = 1, 'R5e: suspendido -> activo afecta 1 fila');
+INSERT INTO iam.users (id, email) VALUES ('eeeeeeee-0000-0000-0000-0000000000f2', 'aceptada@a.pe');
+INSERT INTO iam.memberships (id, tenant_id, user_id, role_id, status)
+  VALUES ('3e000000-0000-0000-0000-0000000000f2', 'aaaaaaaa-0000-0000-0000-000000000001', 'eeeeeeee-0000-0000-0000-0000000000f2', 'a0000000-0000-0000-0000-0000000000a2', 'invitado');
+WITH u AS (UPDATE iam.memberships SET status = 'activo' WHERE id = '3e000000-0000-0000-0000-0000000000f2' RETURNING 1)
+  SELECT test.assert((SELECT count(*) FROM u) = 1, 'R5e: invitado -> activo afecta 1 fila');
 -- R5c: una invitacion que nunca dejo de serlo se anula, con sus sedes.
 INSERT INTO iam.users (id, email) VALUES ('eeeeeeee-0000-0000-0000-0000000000f1', 'invitado@a.pe');
 INSERT INTO iam.memberships (id, tenant_id, user_id, role_id, all_sites, status)

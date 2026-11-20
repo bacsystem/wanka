@@ -397,6 +397,25 @@ func TestGuardMembershipDeletes(t *testing.T) {
 	if err := asApp(t, app, tenA, "", `DELETE FROM iam.memberships WHERE id = '`+memU2A+`'`); err != nil {
 		t.Fatalf("deleting an invited membership: %v", err)
 	}
+	// Las transiciones legítimas no se bloquean: cada UPDATE afecta exactamente una fila.
+	for _, tc := range []struct{ name, id, from, to string }{
+		{"invitado to activo", memU2A, "invitado", "activo"},
+		{"suspendido to activo", memU3A, "suspendido", "activo"},
+		{"activo to suspendido", memU1A, "activo", "suspendido"},
+	} {
+		t.Run("transition/"+tc.name, func(t *testing.T) {
+			tx, err := app.Begin(ctx)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer tx.Rollback(ctx) //nolint:errcheck // la prueba nunca confirma
+			setVars(t, tx, tenA, "")
+			tag, err := tx.Exec(ctx, `UPDATE iam.memberships SET status = $1 WHERE id = $2 AND status = $3`, tc.to, tc.id, tc.from)
+			if err != nil || tag.RowsAffected() != 1 {
+				t.Errorf("%s: rows = %d, err = %v; want 1 row", tc.name, tag.RowsAffected(), err)
+			}
+		})
+	}
 	// Volver a invitado para saltar la guarda del DELETE: activo y suspendido lo rechazan.
 	for _, id := range []string{memU1A, memU3A} {
 		wantState(t, asApp(t, app, tenA, "", `UPDATE iam.memberships SET status = 'invitado' WHERE id = '`+id+`'`), "42501", "re-invite "+id)
