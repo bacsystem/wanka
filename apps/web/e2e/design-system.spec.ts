@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "./fixtures";
+import { expect, openUserMenu, test, type Page } from "./fixtures";
 
 // palette values of the pinned khipu-design-system (dist/styles/tokens.css): default Lima in :root, Indigo and Oceano in html[data-paleta].
 const LIMA = "#d4f06b";
@@ -9,8 +9,10 @@ const token = (page: Page, name: string) =>
   page.evaluate((n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim(), name);
 
 test.describe("StatGrid mobile scroller", () => {
+  // `/inventario/stock` es una pantalla mock inaccesible (404) hasta que #42 la habilite; entonces se reactiva.
   for (const path of ["/inventario/stock", "/admin"]) {
-    test(`${path}: KPI cards keep 176 px and the container scrolls`, async ({ page }, testInfo) => {
+    const run = path === "/admin" ? test : test.skip;
+    run(`${path}: KPI cards keep 176 px and the container scrolls`, async ({ page }, testInfo) => {
       test.skip(testInfo.project.name !== "mobile", "mobile contract only");
       await page.goto(path);
       const grid = page.getByRole("region", { name: "Indicadores" }).first();
@@ -77,7 +79,8 @@ test.describe("dark tokens", () => {
   });
 });
 
-test("the mobile 'Nueva venta' FAB has its elevation (shadow-lg)", async ({ page }, testInfo) => {
+// El shell nuevo no trae la acción «Nueva venta»: se reactiva con #48 (POS), que la agrega a la barra inferior.
+test.skip("the mobile 'Nueva venta' FAB has its elevation (shadow-lg)", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "mobile", "mobile only");
   await page.goto("/");
   const fab = page.locator('a[aria-label="Nueva venta"]');
@@ -103,8 +106,9 @@ test.describe("admin console palette", () => {
 
   test("the appearance menu offers the palette in the tenant app but not in the console", async ({ page }) => {
     await page.goto("/");
-    await page.getByRole("button", { name: "Cambiar tema y apariencia" }).click();
-    await expect(page.getByRole("menuitemradio", { name: "Océano" })).toBeVisible();
+    await openUserMenu(page);
+    await page.getByRole("menuitem", { name: /Apariencia/ }).click();
+    await expect(page.getByRole("radio", { name: "Océano" })).toBeVisible();
     await page.keyboard.press("Escape");
 
     await page.goto("/admin");

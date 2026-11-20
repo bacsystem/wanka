@@ -1,6 +1,7 @@
 import { expect, test } from "./fixtures";
 
-test("new quote wizard: template, customer, items, live totals and send", async ({ page }) => {
+// Pantalla mock inaccesible hasta que la historia #53 la rehaga sobre el DS, la conecte a la API y la habilite; entonces se reactiva.
+test.skip("new quote wizard: template, customer, items, live totals and send", async ({ page }) => {
   await page.goto("/ventas/proformas");
   await page.getByRole("button", { name: "Nueva cotización" }).click();
   await expect(page).toHaveURL(/\/ventas\/proformas\/nueva$/);
@@ -20,7 +21,8 @@ test("new quote wizard: template, customer, items, live totals and send", async 
   await expect(page).toHaveURL(/\/ventas\/proformas$/);
 });
 
-test("debit note: SUNAT catalogue 10 type, amount and issue", async ({ page }) => {
+// Pantalla mock inaccesible hasta que la historia #52 la rehaga sobre el DS, la conecte a la API y la habilite; entonces se reactiva.
+test.skip("debit note: SUNAT catalogue 10 type, amount and issue", async ({ page }) => {
   await page.goto("/ventas/comprobantes/F001-00000842");
   await page.getByRole("button", { name: "Nota de débito" }).click();
   await expect(page.getByRole("heading", { level: 1, name: /Emitir nota de débito/ })).toBeVisible();
@@ -31,7 +33,8 @@ test("debit note: SUNAT catalogue 10 type, amount and issue", async ({ page }) =
   await expect(page.getByText(/FD01-00000012 emitida/)).toBeVisible();
 });
 
-test("payables: select invoices and schedule a payment; integrations connect", async ({ page }) => {
+// Pantalla mock inaccesible hasta que la historia #70 / #77 la rehaga sobre el DS, la conecte a la API y la habilite; entonces se reactiva.
+test.skip("payables: select invoices and schedule a payment; integrations connect", async ({ page }) => {
   await page.goto("/finanzas/cuentas-por-pagar");
   await page.waitForLoadState("networkidle");
   const schedule = page.getByRole("button", { name: "Programar pago" });
@@ -46,7 +49,8 @@ test("payables: select invoices and schedule a payment; integrations connect", a
   await expect(page.getByText(/conectado$/).first()).toBeVisible();
 });
 
-test("shift history, audit log and management report tabs render data", async ({ page }) => {
+// Pantalla mock inaccesible hasta que la historia #68 / #72 / #79 la rehaga sobre el DS, la conecte a la API y la habilite; entonces se reactiva.
+test.skip("shift history, audit log and management report tabs render data", async ({ page }) => {
   await page.goto("/finanzas/caja/historial");
   await expect(page.getByText("Turnos cerrados", { exact: true })).toBeVisible();
   await page.goto("/configuracion/auditoria");
@@ -58,7 +62,8 @@ test("shift history, audit log and management report tabs render data", async ({
   await expect(page.getByText("Antigüedad de cuentas por cobrar")).toBeVisible();
 });
 
-test("retail: variants matrix filters and POS barcode scan adds the item", async ({ page }) => {
+// Pantalla mock inaccesible hasta que la historia #40 / #48 la rehaga sobre el DS, la conecte a la API y la habilite; entonces se reactiva.
+test.skip("retail: variants matrix filters and POS barcode scan adds the item", async ({ page }) => {
   await page.goto("/catalogo/variantes/POL-001");
   await page.getByRole("tab", { name: /Stock < 10/ }).click();
   await expect(page.getByRole("tab", { name: /Stock < 10/ })).toHaveAttribute("aria-selected", "true");
@@ -69,7 +74,8 @@ test("retail: variants matrix filters and POS barcode scan adds the item", async
   await expect(page.getByText(/Escaneado:/).first()).toBeVisible();
 });
 
-test("veterinary flows: hospitalization vitals, grooming board, new pet drawer", async ({ page }) => {
+// Pantalla mock inaccesible hasta que la historia #116 / #118 la rehaga sobre el DS, la conecte a la API y la habilite; entonces se reactiva.
+test.skip("veterinary flows: hospitalization vitals, grooming board, new pet drawer", async ({ page }) => {
   await page.goto("/hospitalizacion");
   await page.getByRole("button", { name: /Registrar signos/ }).click();
   await page.getByRole("dialog").getByRole("button", { name: "Guardar" }).click();
@@ -81,7 +87,8 @@ test("veterinary flows: hospitalization vitals, grooming board, new pet drawer",
   await expect(page.getByRole("dialog").getByText("Nueva mascota")).toBeVisible();
 });
 
-test("restaurant flows: delivery board and reservation drawer; industry dashboards", async ({ page }) => {
+// Pantalla mock inaccesible hasta que la historia #115 la rehaga sobre el DS, la conecte a la API y la habilite; entonces se reactiva.
+test.skip("restaurant flows: delivery board and reservation drawer; industry dashboards", async ({ page }) => {
   await page.goto("/salon/delivery");
   await expect(page.getByText("Repartidores", { exact: true })).toBeVisible();
   await page.goto("/salon/reservas");

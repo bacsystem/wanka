@@ -11,7 +11,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { getBottomNavHrefs, getNavigation, isActivePath, type NavItem } from "@/config/navigation";
+import { getBottomNavHrefs, getNavigation, isActivePath, type NavItem } from "@/config/legacy-navigation";
 import { useOptionalTenant } from "./tenant-context";
 import { PESO_ICONO, PESO_ICONO_ACTIVO } from "@/lib/iconos";
 import { cn } from "@/lib/utils";

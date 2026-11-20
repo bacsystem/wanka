@@ -10,8 +10,9 @@ const cases = [
   { name: "purchase order lines", path: "/compras/ordenes/nueva", header: "Costo unit." },
 ];
 
+// Pantallas mock inaccesibles (404): se reactivan con #52 (detalle de comprobante) y #64 (órdenes de compra), cuando las habiliten.
 for (const c of cases) {
-  test(`${c.name} fit their container without horizontal scroll`, async ({ page }, testInfo) => {
+  test.skip(`${c.name} fit their container without horizontal scroll`, async ({ page }, testInfo) => {
     test.skip(testInfo.project.name === "mobile", "mobile uses cards / may scroll by design");
     await page.goto(c.path);
     const table = page.getByRole("table").filter({ has: page.getByRole("columnheader", { name: c.header }) }).first();
