@@ -1,7 +1,19 @@
 # Frontend migration to khipu-design-system (contract)
 
-Status: proposed · 2026-11-17 · base `main` e1cd481, DS v0.5.23 · decision record: [ADR 0010](architecture/adr/0010-frontend-khipu-migration.md) (owner decisions confirmed 2026-11-17) · dependency graph: [`frontend-migration-khipu.mmd`](frontend-migration-khipu.mmd).
+Status: proposed · 2026-11-17; §0 decided by the owner 2026-11-19 · base `main` e1cd481, DS v0.5.23 · decision record: [ADR 0010](architecture/adr/0010-frontend-khipu-migration.md) (owner decisions confirmed 2026-11-17) · dependency graph: [`frontend-migration-khipu.mmd`](frontend-migration-khipu.mmd).
 Owner rules (fixed): the app only uses DS components; no exceptions; no styles outside DS tokens/recipes; anything missing goes to the DS (PR + tag). Inputs: QA UI audit. Counts re-measured on e1cd481 (source files, tests excluded): `ui/button` 97 files, `shared/status-badge` 90, `section-card` 59, `page-header` 52, `stat-card` 36, `data-table` 30, `ui/tabs` 21 (outside ui/shared/layout), `shared/initials-avatar` 9, `sonner` 71 files / 249 `toast.*` calls, `lucide-react` 130 files, `recharts` 10 files, 16 native `type="date"` fields in 13 files.
+
+## 0. Wave-by-wave rebuild (owner decision, 2026-11-19; supersedes the sweep in §1–§2)
+
+The owner decided that `apps/web` is **rebuilt as a new app on khipu-design-system**, one wave at a time, instead of migrating every mock screen in sweeps. Today the web only takes the tokens and `Button`, `Badge` and `Table` from the DS (v0.10.0); the shell, the forms and `DataTable` are local.
+
+- **Only what a wave finished end to end is reachable.** A feature is enabled when its screen is built on the DS and calls the real API through the BFF. Example: with login done, the user signs in and lands on the DS shell with a blank home page.
+- **Enabled-features list.** `config/navigation.ts` holds the list of enabled features; the sidebar, the bottom nav, the Ctrl+K palette and the routes read it. A route that is not enabled answers 404, including when its URL is typed by hand. A test guards both (menu and 404). Never comment code out to hide a feature.
+- **Mock screens stay, unreachable,** as layout reference. The story that delivers a feature rebuilds its screen with DS components, connects it to the API and enables it in the same PR. Their E2E tests are marked `skip` with the story that brings them back, not deleted.
+- **DS components only** in anything new or rebuilt: `nav/shell`, `sidebar`, `top-bar`, `barra-inferior`, `selector-contexto`, `menu-usuario`, `panel-apariencia`, `formularios/*`, `feedback/*`, `datos/*`. Never `components/ui/*`, `components/shared/*`, the local shell or `DataTable`. A missing component or variant goes to the DS first (PR, tag, bump), never a local workaround. The local pieces are deleted by the PR that removes their last reachable use.
+- **BFF and API client.** The browser talks only to Next route handlers; they call `apps/api` with a client typed from `apps/api/openapi/`. The BFF sets `X-Client-Ip` as `api/conventions.md` §3 says (the rightmost `X-Forwarded-For` entry from the edge; the browser's value is dropped). A new code generator for the client needs the owner's approval (ADR 0002).
+- **First story:** the empty web on the DS (shell, blank home, empty enabled list, 404 and menu test, BFF skeleton). The frontend of #24–#30 builds on it.
+- **What still applies from §1–§5:** the guard rails of §4 (ESLint bans, `khipu-ds verificar`), the DS gap contracts of §3, the responsive contract of §2.1 and the risks of §5. The W2–W8 sweep of §2 no longer runs as planned: its work happens per story.
 
 ## 1. Strategy
 
