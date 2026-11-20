@@ -38,6 +38,8 @@ components:
   identidad: { in: internal/identidad }
   identidad_inner: { in: internal/identidad/** }
   main: { in: cmd/** }
+  # Generador de la lista de contraseñas filtradas (se corre a mano, #238): reutiliza el formato de platform.
+  tool_breachedgen: { in: scripts/breachedgen }
   migrations: { in: migrations }
   bootstrap: { in: bootstrap }
 vendors:
@@ -76,14 +78,17 @@ deps:
     canUse: [oapiruntime]
   openapi_contract:
     mayDependOn: [apigen, platform, platform_db]
+  # Los tests de la fachada montan el cableado real (apigen para el contrato, pgsession y el stub de correo).
   identidad:
-    mayDependOn: [identidad, identidad_inner, platform, platform_db, platform_jobs]
+    mayDependOn: [identidad, identidad_inner, apigen, platform, platform_db, platform_jobs, platform_pg, platform_mailer_stub]
     canUse: [pgx]
   identidad_inner:
-    mayDependOn: [identidad_inner, platform, platform_db, platform_jobs]
+    mayDependOn: [identidad_inner, apigen, platform, platform_db, platform_jobs]
     canUse: [pgx, xcrypto]
+  tool_breachedgen:
+    mayDependOn: [platform]
   main:
-    mayDependOn: [apigen, identidad, platform, platform_pg, platform_mailer_stub, platform_db, platform_jobs, migrations]
+    mayDependOn: [apigen, identidad, identidad_inner, platform, platform_pg, platform_mailer_stub, platform_db, platform_jobs, migrations]
     canUse: [pgx]
 exclude:
   - testdata

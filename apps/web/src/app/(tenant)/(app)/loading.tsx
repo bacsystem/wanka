@@ -1,5 +1,5 @@
-import { LoadingState } from "@/components/shared/states";
+import { Skeleton } from "khipu-design-system/feedback/skeleton";
 
 export default function Loading() {
-  return <LoadingState />;
+  return <Skeleton className="h-40 w-full" />;
 }

@@ -36,7 +36,7 @@ pnpm workspace monorepo. Only app so far: `apps/web` (Next.js 16 App Router, Rea
 - Every PR gets `/pr-review` posted as a PR comment (re-reviews too) and QA on its final SHA.
 - No merge or release without the owner's explicit approval.
 - State docs and the GitHub board stay current on every change (`delivery-process.md` «Tablero», skill `docs-sync`); status answers come from `gh`.
-- bacsystem standard: the UI is built with khipu-design-system components, never hardcoded styles (`[...]` values, hex/rgb, palette colors, inline `style`); a missing component or variant goes to the DS first. Until the migration plan (PR #128, `docs/frontend-migration-khipu.md`) lands, the local wrappers below are the transition path: don't add new look-alikes.
+- Frontend by wave (owner, 2026-11-19): `apps/web` is rebuilt as a new app on khipu-design-system; only what a wave finished end to end on the real API is reachable, through the enabled-features list in `config/navigation.ts` (menu, Ctrl+K and routes; the rest is 404, test-guarded; never commented-out code). New UI uses DS components only, no hardcoded styles (`[...]`, hex/rgb, palette colors, inline `style`); a missing component goes to the DS first. Detail: `docs/frontend-migration-khipu.md` §0.
 
 ## Commands
 
@@ -85,7 +85,7 @@ Feature-based layout: **`app/` holds thin route files; everything else lives in 
 - `types/domain.ts` — shared domain types (Tenant, SalesDocument/Detail, Customer, CatalogItem, CartLine…). Feature-only types live next to their mocks. Mocks mirror the shape the API returns; no screen calls `apps/api` yet.
 - `lib/format.ts` — currency (`S/`), integer, percent, date (`dd/mm/aaaa`) and `SERIE-NNNNNNNN` formatting. Use these instead of ad-hoc formatting.
 
-Interactions are mock-backed: actions show a sonner toast (`toast.success(...)`) instead of calling an API. Keep that convention until the API exists.
+Enabled screens call `apps/api` through the BFF (Next route handlers) with a client typed from the OpenAPI; unreachable mock screens keep their toasts.
 
 Visual language: the khipu design system (tokens, palettes, type scale) plus the Stitch designs as reference for screen layouts (`design/stitch/screens/*.html`, render them with Playwright at 1440px to compare): KPI `StatCard` with tinted icon box (`tone`), `suffix`, `deltaLabel`, `footer` slot, `emphasizeValue`/`highlight`; `StatCompact` for the icon-left variant; `SectionCard` with `icon`/`iconTone`/`description`; `StatusBadge` bordered pills (`toneClass` exported); `DocumentTypeBadge` uppercase chips; tabs rendered as pill strips (`InventoryTabs`, `PurchasesTabs`) or `TabsList` inside a card; page actions live in `PageHeader actions` (client screens receive the KPI grid via a `kpis` prop and render the header themselves when the actions need state). `StatGrid` is a `<section aria-label="Indicadores">` that scrolls horizontally on mobile (cards `min-w-44`, `shrink-0`, `snap-start`). Pass client-component elements to client screens as data/props, not as pre-built JSX from a server page (it triggers a React key warning).
 
@@ -103,7 +103,6 @@ The tokens, the Tailwind theme, the recipes and the appearance preferences come 
 - Appearance (palette, dark tone, font) is the DS's `AparienciaProvider`; `components/layout/theme-toggle.tsx` is the menu over `useApariencia()`. localStorage keys are the DS's (`khipu-paleta`, `khipu-oscuro`, `khipu-fuente`).
 - Fonts: Inter (default) + optional Plus Jakarta Sans, Manrope, DM Sans, Figtree + JetBrains Mono for codes and amounts.
 - Icons: transition rule — navigation, shell and any new or touched component use `@phosphor-icons/react` (`PESO_ICONO` duotone default, `PESO_ICONO_ACTIVO` fill for the active state, `PESO_ICONO_FUNCIONAL` bold for functional glyphs); the remaining `lucide-react` imports in feature screens are migrated incrementally, tracked in https://github.com/bacsystem/wanka/issues/123. Don't add new Lucide imports.
-- Replacing `components/ui/*`, `DataTable` and the shell with the DS components is follow-up work (stacked PRs), not part of the adoption.
 
 ### Responsive contract
 

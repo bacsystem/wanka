@@ -144,11 +144,6 @@
       "count": 1
     }
   },
-  "src/app/(tenant)/(app)/page.tsx": {
-    "no-restricted-imports": {
-      "count": 4
-    }
-  },
   "src/app/(tenant)/(app)/perfil/page.tsx": {
     "no-restricted-imports": {
       "count": 2
@@ -202,6 +197,11 @@
   "src/app/(tenant)/(app)/ventas/proformas/page.tsx": {
     "no-restricted-imports": {
       "count": 4
+    }
+  },
+  "src/app/(tenant)/(auth)/layout.tsx": {
+    "no-restricted-imports": {
+      "count": 1
     }
   },
   "src/components/layout/app-shell.tsx": {
@@ -489,6 +489,11 @@
       "count": 18
     }
   },
+  "src/features/dashboard/components/dashboard-reference-page.tsx": {
+    "no-restricted-imports": {
+      "count": 4
+    }
+  },
   "src/features/dashboard/components/industry-dashboards.tsx": {
     "no-restricted-imports": {
       "count": 6
@@ -616,12 +621,17 @@
   },
   "src/features/platform-admin/components/admin-login-screen.tsx": {
     "no-restricted-imports": {
-      "count": 5
+      "count": 6
+    }
+  },
+  "src/features/platform-admin/components/admin-palette.tsx": {
+    "no-restricted-imports": {
+      "count": 1
     }
   },
   "src/features/platform-admin/components/admin-shell.tsx": {
     "no-restricted-imports": {
-      "count": 6
+      "count": 10
     }
   },
   "src/features/platform-admin/components/admin-user-menu.tsx": {

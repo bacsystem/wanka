@@ -30,6 +30,7 @@ import (
 	"github.com/bacsystem/wanka/apps/api/internal/platform/mailer"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/mailer/stub"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/metrics"
+	"github.com/bacsystem/wanka/apps/api/internal/platform/passwordpolicy"
 	"github.com/bacsystem/wanka/apps/api/migrations"
 )
 
@@ -60,6 +61,22 @@ type wiring struct {
 	mount func(*auth.Routes)
 	// wrapListener, si no es nil, envuelve o reemplaza el escucha de NOTIFY (solo los tests).
 	wrapListener func(listener) listener
+	// breachedList, si no es nil, reemplaza el archivo embebido de contraseñas filtradas (solo los tests).
+	breachedList []byte
+	// passwords es la política cargada por withPasswords; serve la guarda aquí para que
+	// las rutas de #26, #28 y #30 usen este mismo objeto (nada la vuelve a cargar).
+	passwords *passwordpolicy.Policy
+}
+
+// withPasswords devuelve w con la política de contraseñas cargada (la lista embebida, o
+// breachedList si no es nil). Falla cerrado: si el archivo falta o está dañado, serve no arranca (#238).
+func (w wiring) withPasswords() (wiring, error) {
+	p, err := loadPasswordPolicy(w.breachedList)
+	if err != nil {
+		return w, fmt.Errorf("loading breached password list: %w", err)
+	}
+	w.passwords = p
+	return w, nil
 }
 
 // defaultWiring es el cableado de producción.
@@ -184,6 +201,12 @@ func newMailer(log *slog.Logger, cfg config.Config) mailer.Mailer {
 // it down gracefully.
 func serve(ctx context.Context, log *slog.Logger, cfg config.Config, svc config.Service, plane string, w wiring) error {
 	log = log.With("plane", plane)
+	// La lista de contraseñas filtradas se valida antes de abrir nada: si falta o está
+	// dañada, serve no arranca (cierra; no se degrada a «sin lista», #238).
+	w, err := w.withPasswords()
+	if err != nil {
+		return err
+	}
 	// El pool no conecta al abrirse: con la base caída el proceso arranca
 	// igual y /readyz responde 503 hasta que la base conteste.
 	pool, err := db.Open(ctx, cfg.DatabaseURL, db.Options{MaxConns: cfg.DBPoolMax, AppName: "wanka-" + svc.Name})
@@ -257,6 +280,14 @@ func serve(ctx context.Context, log *slog.Logger, cfg config.Config, svc config.
 	}
 	log.Info("stopped")
 	return nil
+}
+
+// loadPasswordPolicy carga la lista embebida, o data si no es nil.
+func loadPasswordPolicy(data []byte) (*passwordpolicy.Policy, error) {
+	if data != nil {
+		return passwordpolicy.Parse(data)
+	}
+	return passwordpolicy.NewEmbedded()
 }
 
 // sweeper es lo que el bucle de barrido necesita de auth.Routes.

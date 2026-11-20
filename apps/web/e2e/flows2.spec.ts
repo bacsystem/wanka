@@ -1,6 +1,7 @@
 import { expect, test } from "./fixtures";
 
-test("agenda: new appointment drawer validates and schedules; reschedule dialog", async ({ page }, testInfo) => {
+// Pantalla mock inaccesible hasta que la historia #75 la rehaga sobre el DS, la conecte a la API y la habilite; entonces se reactiva.
+test.skip("agenda: new appointment drawer validates and schedules; reschedule dialog", async ({ page }, testInfo) => {
   await page.goto("/agenda");
   await page.waitForLoadState("networkidle");
   await page.getByRole("button", { name: /Agendar nueva cita/ }).click();
@@ -18,7 +19,8 @@ test("agenda: new appointment drawer validates and schedules; reschedule dialog"
   }
 });
 
-test("purchase order editor: suggestions and totals; supplier file tabs", async ({ page }) => {
+// Pantalla mock inaccesible hasta que la historia #62 / #64 la rehaga sobre el DS, la conecte a la API y la habilite; entonces se reactiva.
+test.skip("purchase order editor: suggestions and totals; supplier file tabs", async ({ page }) => {
   await page.goto("/compras/ordenes/nueva");
   await expect(page.getByTestId("po-total")).toHaveText("S/ 4,407.30");
   await page.getByRole("button", { name: "+ Agregar", exact: true }).first().click();
@@ -30,7 +32,8 @@ test("purchase order editor: suggestions and totals; supplier file tabs", async 
   await expect(page.getByText("F002-011820").filter({ visible: true }).first()).toBeVisible();
 });
 
-test("GRE detail: confirm delivery updates the timeline; incident dialog", async ({ page }) => {
+// Pantalla mock inaccesible hasta que la historia #61 la rehaga sobre el DS, la conecte a la API y la habilite; entonces se reactiva.
+test.skip("GRE detail: confirm delivery updates the timeline; incident dialog", async ({ page }) => {
   await page.goto("/ventas/guias/T001-000145");
   await page.waitForLoadState("networkidle");
   await page.getByRole("button", { name: "Reportar incidencia" }).click();
@@ -41,7 +44,8 @@ test("GRE detail: confirm delivery updates the timeline; incident dialog", async
   await expect(page.getByText("Confirmada por Dr. F. Zegarra · acta firmada")).toBeVisible();
 });
 
-test("invite collaborator validates email; new warehouse validates name", async ({ page }) => {
+// Pantalla mock inaccesible hasta que la historia #28 / #41 la rehaga sobre el DS, la conecte a la API y la habilite; entonces se reactiva.
+test.skip("invite collaborator validates email; new warehouse validates name", async ({ page }) => {
   await page.goto("/configuracion/usuarios");
   await page.waitForLoadState("networkidle");
   await page.getByRole("button", { name: /Invitar nuevo colaborador/ }).click();
@@ -58,7 +62,8 @@ test("invite collaborator validates email; new warehouse validates name", async 
   await expect(page.getByText("Ingresa el nombre")).toBeVisible();
 });
 
-test("restaurant tenant: navigation changes and the floor map/KDS work", async ({ page }, testInfo) => {
+// Pantalla mock inaccesible hasta que la historia #113 / #114 la rehaga sobre el DS, la conecte a la API y la habilite; entonces se reactiva.
+test.skip("restaurant tenant: navigation changes and the floor map/KDS work", async ({ page }, testInfo) => {
   await page.goto("/seleccionar-empresa");
   await page.getByRole("button", { name: /Cevichería El Muelle/ }).click();
   await page.getByRole("button", { name: /Continuar al panel principal/ }).click();
@@ -80,7 +85,8 @@ test("restaurant tenant: navigation changes and the floor map/KDS work", async (
   await page.getByRole("button", { name: /Continuar al panel principal/ }).click();
 });
 
-test("pet file: vaccine registration drawer and SOAP tab", async ({ page }) => {
+// Pantalla mock inaccesible hasta que la historia #116 la rehaga sobre el DS, la conecte a la API y la habilite; entonces se reactiva.
+test.skip("pet file: vaccine registration drawer and SOAP tab", async ({ page }) => {
   await page.goto("/mascotas/p1");
   await expect(page.getByText(/1 vacuna próxima a vencer/)).toBeVisible();
   await page.getByRole("button", { name: "Registrar vacuna" }).click();
@@ -90,7 +96,8 @@ test("pet file: vaccine registration drawer and SOAP tab", async ({ page }) => {
   await expect(page.getByText("Nueva consulta (SOAP)")).toBeVisible();
 });
 
-test("liquidation report totals and profile password strength", async ({ page }) => {
+// Pantalla mock inaccesible hasta que la historia #30 / #74 la rehaga sobre el DS, la conecte a la API y la habilite; entonces se reactiva.
+test.skip("liquidation report totals and profile password strength", async ({ page }) => {
   await page.goto("/reportes/liquidacion");
   await expect(page.getByTestId("kardex-total")).toHaveText("S/ 84,230.50");
   await page.goto("/perfil");
