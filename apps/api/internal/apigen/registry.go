@@ -9,6 +9,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/bacsystem/wanka/apps/api/internal/apigen/empresas"
 	facturacionelectronica "github.com/bacsystem/wanka/apps/api/internal/apigen/facturacion-electronica"
 	"github.com/bacsystem/wanka/apps/api/internal/apigen/identidad"
 	"github.com/bacsystem/wanka/apps/api/internal/apigen/ventas"
@@ -70,6 +71,7 @@ func convert[T generated](in []T) []Operation {
 // nombre del archivo de paths y su tag).
 func Modules() map[string][]Operation {
 	return map[string][]Operation{
+		"empresas":                convert(empresas.Operations),
 		"identidad":               convert(identidad.Operations),
 		"ventas":                  convert(ventas.Operations),
 		"facturacion-electronica": convert(facturacionelectronica.Operations),

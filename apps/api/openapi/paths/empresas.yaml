@@ -2,4 +2,88 @@ openapi: 3.1.0
 info:
   title: Wanka API - empresas
   version: 0.1.0-draft
-paths: {}
+paths:
+  /v1/document-series/{id}:
+    get:
+      tags: [empresas]
+      operationId: getDocumentSeries
+      x-module: empresas
+      x-permission: empresas.series:read
+      summary: Consulta el estado y correlativo de una serie de documentos
+      description: |
+        Devuelve el estado de la serie, su último número asignado, local, caja,
+        tipo de comprobante, si está activa y su estado de sincronización con el
+        proveedor (Khipu).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID de la serie de documentos
+          schema:
+            type: string
+            format: uuid
+        - $ref: '../components/headers.yaml#/components/parameters/RequestId'
+      responses:
+        '200':
+          description: Estado y numeración de la serie
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentSeries'
+        '401':
+          $ref: '../components/problem.yaml#/components/responses/Problem'
+        '403':
+          $ref: '../components/problem.yaml#/components/responses/Problem'
+        '404':
+          $ref: '../components/problem.yaml#/components/responses/Problem'
+        '429':
+          $ref: '../components/problem.yaml#/components/responses/Problem'
+        '503':
+          $ref: '../components/problem.yaml#/components/responses/Problem'
+components:
+  schemas:
+    DocumentSeries:
+      type: object
+      required:
+        - id
+        - siteId
+        - docType
+        - series
+        - lastNumber
+        - active
+        - providerStatus
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        siteId:
+          type: string
+          format: uuid
+        cashRegisterId:
+          type: [string, 'null']
+          format: uuid
+        docType:
+          type: string
+          description: Tipo de documento (01, 03, 07, 08, 09, PRO, etc.)
+        series:
+          type: string
+          description: Código de la serie (ej. F001, B001, PR01)
+        lastNumber:
+          type: integer
+          format: int64
+          description: Último número correlativo emitido en esta serie
+        active:
+          type: boolean
+          description: Si la serie está habilitada para numerar
+        providerStatus:
+          type: string
+          enum: [not_applicable, pending, synced, conflict]
+          description: Estado de sincronización de la serie con Khipu
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time

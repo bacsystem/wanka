@@ -68,6 +68,8 @@ paths:
   /v1/me/entitlements:
     $ref: 'paths/identidad.yaml#/paths/~1v1~1me~1entitlements'
   # --- empresas ---
+  /v1/document-series/{id}:
+    $ref: 'paths/empresas.yaml#/paths/~1v1~1document-series~1{id}'
   # --- catalogo ---
   # --- clientes ---
   # --- inventario ---

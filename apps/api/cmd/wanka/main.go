@@ -16,6 +16,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/bacsystem/wanka/apps/api/internal/empresas"
 	"github.com/bacsystem/wanka/apps/api/internal/identidad"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/audit"
 	"github.com/bacsystem/wanka/apps/api/internal/platform/auth"
@@ -320,6 +321,9 @@ func mountPlane(plane string, rt *httpx.Router, pool *db.Pool, w wiring) (sweepe
 	}
 	if err := identidad.Mount(routes, pool, w.identidad); err != nil {
 		return nil, nil, fmt.Errorf("mounting identidad: %w", err)
+	}
+	if err := empresas.Mount(routes, pool); err != nil {
+		return nil, nil, fmt.Errorf("mounting empresas: %w", err)
 	}
 	if w.mount != nil {
 		w.mount(routes)

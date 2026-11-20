@@ -38,6 +38,9 @@ components:
   # cablea cmd; domain, app y adapters son internos y los demás módulos no los importan.
   identidad: { in: internal/identidad }
   identidad_inner: { in: internal/identidad/** }
+  # Módulo de empresas (ADR 0002, épica #4): la fachada la cablea cmd; domain, app y adapters son internos.
+  empresas: { in: internal/empresas }
+  empresas_inner: { in: internal/empresas/** }
   main: { in: cmd/** }
   # Generador de la lista de contraseñas filtradas (se corre a mano, #238): reutiliza el formato de platform.
   tool_breachedgen: { in: scripts/breachedgen }
@@ -86,10 +89,16 @@ deps:
   identidad_inner:
     mayDependOn: [identidad_inner, apigen, platform, platform_db, platform_jobs]
     canUse: [pgx, xcrypto]
+  empresas:
+    mayDependOn: [empresas, empresas_inner, apigen, platform, platform_db, platform_jobs, platform_pg]
+    canUse: [pgx]
+  empresas_inner:
+    mayDependOn: [empresas_inner, apigen, platform, platform_db, platform_jobs]
+    canUse: [pgx]
   tool_breachedgen:
     mayDependOn: [platform]
   main:
-    mayDependOn: [apigen, identidad, identidad_inner, platform, platform_pg, platform_mailer_stub, platform_db, platform_jobs, migrations]
+    mayDependOn: [apigen, identidad, identidad_inner, empresas, empresas_inner, platform, platform_pg, platform_mailer_stub, platform_db, platform_jobs, migrations]
     canUse: [pgx]
 exclude:
   - testdata
