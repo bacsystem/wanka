@@ -34,7 +34,7 @@ pnpm workspace monorepo. Only app so far: `apps/web` (Next.js 16 App Router, Rea
 - Commits and PRs (agents' too) go through `/git-flow`, never a hand-run `gh pr create`.
 - Delivery and done: `docs/delivery-process.md`; working with Claude or Gemini and handing work over: `docs/ai-collaboration.md`. Story PRs from `main`, no version bump, a `CHANGELOG` `[Unreleased]` entry; one release PR per batch, tagged by `release-tag.yml`.
 - Every PR gets `/pr-review` posted as a PR comment (re-reviews too) and QA on its final SHA.
-- No merge or release without the owner's explicit approval.
+- No merge or release without the owner's explicit approval; while the owner has called a halt, no new work is opened.
 - State docs and the GitHub board stay current on every change (`delivery-process.md` «Tablero», skill `docs-sync`); status answers come from `gh`.
 - Frontend by wave (owner, 2026-11-19): `apps/web` is rebuilt as a new app on khipu-design-system; only what a wave finished end to end on the real API is reachable, through the enabled-features list in `config/navigation.ts` (menu, Ctrl+K and routes; the rest is 404, test-guarded; never commented-out code). New UI uses DS components only, no hardcoded styles (`[...]`, hex/rgb, palette colors, inline `style`); a missing component goes to the DS first. Detail: `docs/frontend-migration-khipu.md` §0.
 
