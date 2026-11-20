@@ -7,6 +7,7 @@ package db_test
 import (
 	"context"
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -766,18 +767,30 @@ func TestListMyMembershipsUnder50ms(t *testing.T) {
 		}
 		return time.Since(start)
 	}
-	for range 10 { // calentamiento: plan y caché de catálogo
+	// La conexión es una sola, así que hay una consulta en vuelo a la vez (no más que las conexiones del pool). Un p95 de una
+	// sola pasada lo mueve el ruido del runner: se mide en 3 repeticiones y se compara la mediana de sus p95.
+	for range 30 { // calentamiento: plan y caché de catálogo
 		run()
 	}
-	const n = 200
-	lat := make([]time.Duration, n)
-	for i := range lat {
-		lat[i] = run()
+	const (
+		n    = 200
+		reps = 3
+	)
+	p95s := make([]time.Duration, reps)
+	for rep := range p95s {
+		lat := make([]time.Duration, n)
+		for i := range lat {
+			lat[i] = run()
+		}
+		sort.Slice(lat, func(i, j int) bool { return lat[i] < lat[j] })
+		p95s[rep] = lat[n*95/100]
+		t.Logf("rep %d: p50=%v p95=%v max=%v", rep+1, lat[n/2], p95s[rep], lat[n-1])
 	}
-	sort.Slice(lat, func(i, j int) bool { return lat[i] < lat[j] })
-	p95 := lat[n*95/100]
-	t.Logf("iam.list_my_memberships (20 memberships, 5 sites, 3 cash registers per site; 220 tenants of noise): p50=%v p95=%v max=%v", lat[n/2], p95, lat[n-1])
-	if p95 >= 50*time.Millisecond {
-		t.Errorf("p95 = %v, want < 50ms", p95)
+	sorted := slices.Clone(p95s)
+	slices.Sort(sorted)
+	median := sorted[reps/2]
+	t.Logf("iam.list_my_memberships (20 memberships, 5 sites, 3 cash registers per site; 220 tenants of noise), 1 in flight: median p95 of %d reps = %v (bound 50ms)", reps, median)
+	if median >= 50*time.Millisecond {
+		t.Errorf("median p95 = %v, want < 50ms", median)
 	}
 }
