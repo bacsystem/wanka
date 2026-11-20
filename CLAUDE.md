@@ -34,7 +34,7 @@ pnpm workspace monorepo. Only app so far: `apps/web` (Next.js 16 App Router, Rea
 - Commits and PRs (agents' too) go through `/git-flow`, never a hand-run `gh pr create`.
 - Delivery and done: `docs/delivery-process.md`; working with Claude or Gemini and handing work over: `docs/ai-collaboration.md`. Story PRs from `main`, no version bump, a `CHANGELOG` `[Unreleased]` entry; one release PR per batch, tagged by `release-tag.yml`.
 - Every PR gets `/pr-review` posted as a PR comment (re-reviews too) and QA on its final SHA.
-- No merge or release without the owner's explicit approval.
+- No merge or release without the owner's explicit approval; no new work during an owner's halt.
 - State docs and the GitHub board stay current on every change (`delivery-process.md` «Tablero», skill `docs-sync`); status answers come from `gh`.
 - Frontend by wave (owner, 2026-11-19): `apps/web` is rebuilt as a new app on khipu-design-system; only what a wave finished end to end on the real API is reachable, through the enabled-features list in `config/navigation.ts` (menu, Ctrl+K and routes; the rest is 404, test-guarded; never commented-out code). New UI uses DS components only, no hardcoded styles (`[...]`, hex/rgb, palette colors, inline `style`); a missing component goes to the DS first. Detail: `docs/frontend-migration-khipu.md` §0.
 
@@ -115,7 +115,7 @@ The tokens, the Tailwind theme, the recipes and the appearance preferences come 
 `design/` is git-ignored: the Stitch exports referenced below live only on the local machine (re-export them from the Stitch projects if missing).
 
 - `docs/superpowers/specs/` — approved design specs (one per phase).
-- `prompt/ui-ux-stitch.md` — Stitch prompts and project ids; `prompt/stitch-flujos-faltantes.md` — prompts for the second batch. Generate with the Stitch MCP tool `generate_screen_from_text` (projectId `3747912429457694633`); HTML/PNG URLs are in `outputComponents[].design.screens[0]` (`list_screens` is capped/stale, `get_screen` by id works; the design-system JSON contains `on_error`, so don't grep responses for "error"). `design/stitch/screens/` — the 48 reference screens exported from the user's Stitch project (`index.json` maps file → screen id/title); `design/stitch/DESIGN.md` — design tokens. The Stitch HTML uses Material Symbols; the app uses Phosphor (see Icons).
+- `prompt/ui-ux-stitch.md` — Stitch prompts and project ids; `prompt/stitch-flujos-faltantes.md` — prompts for the second batch. How to generate with the Stitch MCP tool: `prompt/ui-ux-stitch.md`. `design/stitch/screens/` — the 48 reference screens exported from the user's Stitch project (`index.json` maps file → screen id/title); `design/stitch/DESIGN.md` — design tokens. The Stitch HTML uses Material Symbols; the app uses Phosphor (see Icons).
 - Mermaid diagrams (docs and `docs/architecture`): `.mmd` files validated before committing; never hand-edit diagrams managed by Mermaid Chart Sync (frontmatter `id:`). See `.github/instructions/mermaid.instructions.md`.
 
 ## Backend architecture (`docs/architecture`)
