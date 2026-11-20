@@ -135,16 +135,16 @@ func (e *env) setUser(id, assignments string) {
 }
 
 type userRow struct {
-	failed, lockouts, mfaLockouts int
-	windowStarted, lockedUntil    *time.Time
-	status                        string
+	failed, lockouts, mfaLockouts, streak int
+	windowStarted, lockedUntil            *time.Time
+	status                                string
 }
 
 func (e *env) user(id string) userRow {
 	e.t.Helper()
 	var r userRow
-	e.scan(`SELECT failed_logins, login_lockouts, mfa_lockouts, login_window_started_at, locked_until, status FROM iam.users WHERE id = $1::uuid`,
-		[]any{id}, &r.failed, &r.lockouts, &r.mfaLockouts, &r.windowStarted, &r.lockedUntil, &r.status)
+	e.scan(`SELECT failed_logins, login_lockouts, login_failure_streak, mfa_lockouts, login_window_started_at, locked_until, status FROM iam.users WHERE id = $1::uuid`,
+		[]any{id}, &r.failed, &r.lockouts, &r.streak, &r.mfaLockouts, &r.windowStarted, &r.lockedUntil, &r.status)
 	return r
 }
 

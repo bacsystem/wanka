@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -59,7 +60,7 @@ func TestLoginAuthenticated(t *testing.T) {
 	e := newEnv(t, envOpts{})
 	uid := e.addUser("ana@x.pe", goodPassword)
 	e.addMembership(uid, companySpec{name: "Clínica Sur", sites: 2})
-	e.setUser(uid, "failed_logins = 2, login_window_started_at = now(), login_lockouts = 3")
+	e.setUser(uid, "failed_logins = 2, login_failure_streak = 2, login_window_started_at = now(), login_lockouts = 3")
 
 	res := e.login("  Ana@X.PE ", goodPassword, func(r *http.Request) { r.Header.Set("User-Agent", "WankaBFF/1.0") })
 	if res.Code != 200 {
@@ -139,7 +140,7 @@ func TestLoginWithoutAnActiveMembershipIs403AndCreatesNoSession(t *testing.T) {
 			if membership != "" {
 				e.addMembership(uid, companySpec{membership: membership})
 			}
-			e.setUser(uid, "failed_logins = 3, login_window_started_at = now()")
+			e.setUser(uid, "failed_logins = 3, login_failure_streak = 3, login_window_started_at = now()")
 			res := e.login("ana@x.pe", goodPassword)
 			if res.Code != 403 || res.code(t) != "tenant_access_denied" {
 				t.Fatalf("status = %d: %s", res.Code, res.Body)
@@ -166,16 +167,16 @@ func TestEveryCaseThatWouldRevealTheAccountGivesTheSameResponse(t *testing.T) {
 	}
 	mk("wrong@x.pe", goodPassword, "")
 	mk("locked@x.pe", goodPassword, "locked_until = now() + interval '10 minutes'")
-	mk("closed@x.pe", goodPassword, "login_lockouts = 10")
+	mk("closed@x.pe", goodPassword, "login_failure_streak = 100")
 	mk("blocked@x.pe", goodPassword, "status = 'bloqueado'")
 	mk("nohash@x.pe", "", "")
 	mk("mfaclosed@x.pe", goodPassword, "mfa_lockouts = 3")
-	mk("exhausted@x.pe", goodPassword, "failed_logins = 5, login_window_started_at = now() - interval '1 minute'")
+	mk("exhausted@x.pe", goodPassword, "failed_logins = 5, login_failure_streak = 5, login_window_started_at = now() - interval '1 minute'")
 	cases := []struct{ name, email, pw string }{
 		{"wrong password", "wrong@x.pe", "nope"},
 		{"unknown email", "nobody@x.pe", goodPassword},
 		{"locked, right password", "locked@x.pe", goodPassword},
-		{"closed (10 lockouts), right password", "closed@x.pe", goodPassword},
+		{"closed (100 failures in a row), right password", "closed@x.pe", goodPassword},
 		{"blocked user, right password", "blocked@x.pe", goodPassword},
 		{"no password hash", "nohash@x.pe", goodPassword},
 		{"second step closed, right password", "mfaclosed@x.pe", goodPassword},
@@ -206,7 +207,7 @@ func TestEveryCaseThatWouldRevealTheAccountGivesTheSameResponse(t *testing.T) {
 func TestAccountsThatCannotTryAreNotCharged(t *testing.T) {
 	for name, set := range map[string]string{
 		"locked":       "locked_until = now() + interval '10 minutes'",
-		"closed":       "login_lockouts = 10",
+		"closed":       "login_failure_streak = 100",
 		"blocked user": "status = 'bloqueado'",
 		"no hash":      "password_hash = NULL",
 	} {
@@ -293,7 +294,7 @@ func TestFifthFailureLocksTheAccountFor15MinutesAndQueuesTheNotice(t *testing.T)
 func TestFourthFailureDoesNotLock(t *testing.T) {
 	e := newEnv(t, envOpts{})
 	uid := e.addUser("ana@x.pe", goodPassword)
-	e.setUser(uid, "failed_logins = 3, login_window_started_at = now()")
+	e.setUser(uid, "failed_logins = 3, login_failure_streak = 3, login_window_started_at = now()")
 	e.login("ana@x.pe", "nope")
 	if u := e.user(uid); u.failed != 4 || u.lockedUntil != nil || u.lockouts != 0 {
 		t.Fatalf("user = %+v, want 4 charged and no lock", u)
@@ -305,7 +306,7 @@ func TestCorrectPasswordReturnsTheCharge(t *testing.T) {
 	e := newEnv(t, envOpts{})
 	uid := e.addUser("ana@x.pe", goodPassword)
 	e.addMembership(uid, companySpec{})
-	e.setUser(uid, "failed_logins = 4, login_window_started_at = now(), login_lockouts = 3")
+	e.setUser(uid, "failed_logins = 4, login_failure_streak = 4, login_window_started_at = now(), login_lockouts = 3")
 	if res := e.login("ana@x.pe", goodPassword); res.Code != 200 {
 		t.Fatalf("status = %d: %s", res.Code, res.Body)
 	}
@@ -330,13 +331,13 @@ func TestWindowBoundaries(t *testing.T) {
 		wantFailed int
 		moved      bool // la ventana empezó de nuevo
 	}{
-		{"5 charged, window open, right password: no row, closed", "failed_logins = 5, login_window_started_at = now() - interval '14 minutes 55 seconds'", goodPassword, 401, 5, false},
-		{"5 charged, window open, wrong password: no row, not charged again", "failed_logins = 5, login_window_started_at = now() - interval '14 minutes 55 seconds'", "nope", 401, 5, false},
-		{"5 charged, window expired, right password: enters", "failed_logins = 5, login_window_started_at = now() - interval '15 minutes 5 seconds'", goodPassword, 200, 0, false},
-		{"5 charged, window expired, wrong password: a new window with 1", "failed_logins = 5, login_window_started_at = now() - interval '15 minutes 5 seconds'", "nope", 401, 1, true},
-		{"3 charged, window open, wrong password: 4 and the window does not move", "failed_logins = 3, login_window_started_at = now() - interval '14 minutes 55 seconds'", "nope", 401, 4, false},
-		{"3 charged, window expired, wrong password: back to 1", "failed_logins = 3, login_window_started_at = now() - interval '15 minutes 5 seconds'", "nope", 401, 1, true},
-		{"4 charged, window open, wrong password: the 5th, locks", "failed_logins = 4, login_window_started_at = now() - interval '14 minutes 55 seconds'", "nope", 401, 0, false},
+		{"5 charged, window open, right password: no row, closed", "failed_logins = 5, login_failure_streak = 5, login_window_started_at = now() - interval '14 minutes 55 seconds'", goodPassword, 401, 5, false},
+		{"5 charged, window open, wrong password: no row, not charged again", "failed_logins = 5, login_failure_streak = 5, login_window_started_at = now() - interval '14 minutes 55 seconds'", "nope", 401, 5, false},
+		{"5 charged, window expired, right password: enters", "failed_logins = 5, login_failure_streak = 5, login_window_started_at = now() - interval '15 minutes 5 seconds'", goodPassword, 200, 0, false},
+		{"5 charged, window expired, wrong password: a new window with 1", "failed_logins = 5, login_failure_streak = 5, login_window_started_at = now() - interval '15 minutes 5 seconds'", "nope", 401, 1, true},
+		{"3 charged, window open, wrong password: 4 and the window does not move", "failed_logins = 3, login_failure_streak = 3, login_window_started_at = now() - interval '14 minutes 55 seconds'", "nope", 401, 4, false},
+		{"3 charged, window expired, wrong password: back to 1", "failed_logins = 3, login_failure_streak = 3, login_window_started_at = now() - interval '15 minutes 5 seconds'", "nope", 401, 1, true},
+		{"4 charged, window open, wrong password: the 5th, locks", "failed_logins = 4, login_failure_streak = 4, login_window_started_at = now() - interval '14 minutes 55 seconds'", "nope", 401, 0, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			e := newEnv(t, envOpts{})
@@ -363,51 +364,125 @@ func TestWindowBoundaries(t *testing.T) {
 	}
 }
 
-// Techo absoluto: con 10 bloqueos el ingreso con contraseña queda cerrado, y 9 todavía no.
-func TestLockoutCeiling(t *testing.T) {
-	t.Run("the 10th lockout closes the account", func(t *testing.T) {
-		e := newEnv(t, envOpts{})
-		uid := e.addUser("ana@x.pe", goodPassword)
-		e.addMembership(uid, companySpec{})
-		e.setUser(uid, "login_lockouts = 9, failed_logins = 4, login_window_started_at = now()")
-		e.login("ana@x.pe", "nope")
-		u := e.user(uid)
-		if u.lockouts != 10 || u.lockedUntil == nil {
-			t.Fatalf("user = %+v, want the 10th lockout", u)
-		}
-		e.setUser(uid, "locked_until = NULL")
-		for _, pw := range []string{goodPassword, "nope"} {
-			if res := e.login("ana@x.pe", pw); res.Code != 401 {
-				t.Fatalf("closed account, password %q: status = %d", pw, res.Code)
+// Escalera del bloqueo (ADR 0014): listas escritas a mano, no la fórmula del código. Cada caso parte de una racha de
+// fallos seguidos, falla una vez y mira qué quedó.
+func TestFailureStreakLadder(t *testing.T) {
+	for _, tc := range []struct {
+		name       string
+		before     int           // racha antes del fallo
+		wantLocked time.Duration // 0 = no bloquea
+		wantCount  int           // login_lockouts esperado
+		closed     bool
+	}{
+		{"3 to 4: nothing", 3, 0, 0, false},
+		{"4 to 5: first lockout, 15 min", 4, 15 * time.Minute, 1, false},
+		{"9 to 10: second, 30 min", 9, 30 * time.Minute, 2, false},
+		{"14 to 15: third, 1 h", 14, time.Hour, 3, false},
+		{"19 to 20: fourth, 2 h", 19, 2 * time.Hour, 4, false},
+		{"24 to 25: fifth, 4 h", 24, 4 * time.Hour, 5, false},
+		{"29 to 30: sixth, 8 h", 29, 8 * time.Hour, 6, false},
+		{"34 to 35: seventh, 16 h", 34, 16 * time.Hour, 7, false},
+		{"39 to 40: eighth, 24 h (the cap)", 39, 24 * time.Hour, 8, false},
+		{"49 to 50: tenth, 24 h, counter at 10", 49, 24 * time.Hour, 10, false},
+		{"54 to 55: eleventh, 24 h, counter stays at 10", 54, 24 * time.Hour, 10, false},
+		{"94 to 95: nineteenth, 24 h", 94, 24 * time.Hour, 10, false},
+		{"97 to 98: nothing", 97, 0, 0, false},
+		{"98 to 99: nothing", 98, 0, 0, false},
+		{"99 to 100: closed, no lock time", 99, 0, 10, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			e := newEnv(t, envOpts{})
+			uid := e.addUser("ana@x.pe", goodPassword)
+			e.addMembership(uid, companySpec{})
+			e.setUser(uid, "login_failure_streak = "+strconv.Itoa(tc.before))
+			if res := e.login("ana@x.pe", "nope"); res.Code != 401 {
+				t.Fatalf("status = %d", res.Code)
 			}
+			u := e.user(uid)
+			if u.streak != tc.before+1 || u.failed != map[bool]int{true: 0, false: 1}[tc.wantLocked > 0 || tc.closed] {
+				t.Fatalf("user = %+v, want streak %d", u, tc.before+1)
+			}
+			if tc.wantLocked > 0 {
+				if u.lockedUntil == nil || absDur(time.Until(*u.lockedUntil)-tc.wantLocked) > 30*time.Second {
+					t.Fatalf("locked_until = %v, want about %v from now", u.lockedUntil, tc.wantLocked)
+				}
+			} else if u.lockedUntil != nil {
+				t.Fatalf("locked_until = %v, want none", u.lockedUntil)
+			}
+			if u.lockouts != tc.wantCount {
+				t.Fatalf("login_lockouts = %d, want %d", u.lockouts, tc.wantCount)
+			}
+			wantNotices := 0
+			if tc.wantLocked > 0 || tc.closed {
+				wantNotices = 1
+			}
+			if got := e.notices(); got != wantNotices {
+				t.Fatalf("%d notices queued, want %d", got, wantNotices)
+			}
+			if tc.closed {
+				var closed bool
+				e.scan(`SELECT (args->>'closed')::boolean FROM ops.river_job WHERE kind = 'identidad.login_lockout_notice'`, nil, &closed)
+				if !closed {
+					t.Fatal("the notice is not the closing one")
+				}
+			}
+		})
+	}
+}
+
+func absDur(d time.Duration) time.Duration {
+	if d < 0 {
+		return -d
+	}
+	return d
+}
+
+// Con la racha en 100 el ingreso con contraseña está cerrado: todo intento da el 401 genérico sin cobrar nada.
+func TestClosedAccountRejectsEveryAttemptWithoutCharging(t *testing.T) {
+	e := newEnv(t, envOpts{})
+	uid := e.addUser("ana@x.pe", goodPassword)
+	e.addMembership(uid, companySpec{})
+	e.setUser(uid, "login_failure_streak = 100, login_lockouts = 10")
+	for _, pw := range []string{goodPassword, "nope", goodPassword} {
+		if res := e.login("ana@x.pe", pw); res.Code != 401 || res.code(t) != "invalid_credentials" {
+			t.Fatalf("password %q: status = %d", pw, res.Code)
 		}
-		if e.countSessions(uid) != 0 {
-			t.Fatal("a closed account got a session")
-		}
-		if after := e.user(uid); after.lockouts != 10 || after.failed != 0 || after.lockedUntil != nil {
-			t.Fatalf("user = %+v: attempts on a closed account change nothing", after)
-		}
-	})
-	t.Run("9 lockouts still enter, and the correct password clears them", func(t *testing.T) {
-		e := newEnv(t, envOpts{})
-		uid := e.addUser("ana@x.pe", goodPassword)
-		e.addMembership(uid, companySpec{})
-		e.setUser(uid, "login_lockouts = 9")
-		if res := e.login("ana@x.pe", goodPassword); res.Code != 200 {
-			t.Fatalf("status = %d", res.Code)
-		}
-		if u := e.user(uid); u.lockouts != 0 {
-			t.Fatalf("lockouts = %d, want 0", u.lockouts)
-		}
-	})
-	t.Run("a 6th charge never exists: the 5th failure at the ceiling does not exceed the CHECK", func(t *testing.T) {
-		e := newEnv(t, envOpts{})
-		uid := e.addUser("ana@x.pe", goodPassword)
-		e.setUser(uid, "login_lockouts = 10, failed_logins = 4, login_window_started_at = now()")
-		if res := e.login("ana@x.pe", "nope"); res.Code != 401 {
-			t.Fatalf("status = %d, want 401 and not a 500 from the CHECK", res.Code)
-		}
-	})
+	}
+	if e.countSessions(uid) != 0 {
+		t.Fatal("a closed account got a session")
+	}
+	if u := e.user(uid); u.streak != 100 || u.failed != 0 || u.windowStarted != nil || e.notices() != 0 {
+		t.Fatalf("user = %+v, notices = %d: attempts on a closed account change nothing", u, e.notices())
+	}
+}
+
+// Una contraseña correcta en cualquier punto de la escalera deja todo en 0.
+func TestCorrectPasswordClearsTheWholeLadder(t *testing.T) {
+	for _, streak := range []int{1, 4, 5, 34, 39, 94, 99} {
+		t.Run("streak "+strconv.Itoa(streak), func(t *testing.T) {
+			e := newEnv(t, envOpts{})
+			uid := e.addUser("ana@x.pe", goodPassword)
+			e.addMembership(uid, companySpec{})
+			e.setUser(uid, "login_failure_streak = "+strconv.Itoa(streak)+", login_lockouts = 8, failed_logins = 2, login_window_started_at = now()")
+			if res := e.login("ana@x.pe", goodPassword); res.Code != 200 {
+				t.Fatalf("status = %d: %s", res.Code, res.Body)
+			}
+			if u := e.user(uid); u.streak != 0 || u.failed != 0 || u.lockouts != 0 || u.windowStarted != nil || u.lockedUntil != nil {
+				t.Fatalf("user = %+v, want everything at 0", u)
+			}
+		})
+	}
+}
+
+// La racha no se reinicia ni con la ventana ni con el bloqueo vencido: cuenta fallos con cualquier espaciado.
+func TestStreakSurvivesWindowAndLockExpiry(t *testing.T) {
+	e := newEnv(t, envOpts{})
+	uid := e.addUser("ana@x.pe", goodPassword)
+	e.setUser(uid, "login_failure_streak = 7, failed_logins = 2, login_window_started_at = now() - interval '20 minutes'")
+	e.login("ana@x.pe", "nope")
+	if u := e.user(uid); u.streak != 8 || u.failed != 1 {
+		t.Fatalf("user = %+v, want streak 8 and a new window with 1", u)
+	}
 }
 
 func TestSecondFactorBranches(t *testing.T) {
@@ -416,7 +491,7 @@ func TestSecondFactorBranches(t *testing.T) {
 		uid := e.addUser("ana@x.pe", goodPassword)
 		e.addMembership(uid, companySpec{})
 		e.confirmTOTP(uid)
-		e.setUser(uid, "failed_logins = 2, login_window_started_at = now()")
+		e.setUser(uid, "failed_logins = 2, login_failure_streak = 2, login_window_started_at = now()")
 		res := e.login("ana@x.pe", goodPassword)
 		var got identidad.LoginMfaRequired
 		strict(t, res.Body.Bytes(), &got)
@@ -445,7 +520,7 @@ func TestSecondFactorBranches(t *testing.T) {
 		e := newEnv(t, envOpts{})
 		uid := e.addUser("ana@x.pe", goodPassword)
 		e.addMembership(uid, companySpec{requiresMFA: true})
-		e.setUser(uid, "failed_logins = 2, login_window_started_at = now()")
+		e.setUser(uid, "failed_logins = 2, login_failure_streak = 2, login_window_started_at = now()")
 		res := e.login("ana@x.pe", goodPassword)
 		if res.Code != 503 || res.code(t) != "dependency_unavailable" || res.Header().Get("Retry-After") != "60" {
 			t.Fatalf("status = %d, Retry-After = %q: %s", res.Code, res.Header().Get("Retry-After"), res.Body)
@@ -462,7 +537,7 @@ func TestSecondFactorBranches(t *testing.T) {
 		uid := e.addUser("ana@x.pe", goodPassword)
 		e.addMembership(uid, companySpec{})
 		e.confirmTOTP(uid)
-		e.setUser(uid, "mfa_locked_until = now() + interval '10 minutes', failed_logins = 3, login_window_started_at = now()")
+		e.setUser(uid, "mfa_locked_until = now() + interval '10 minutes', failed_logins = 3, login_failure_streak = 3, login_window_started_at = now()")
 		res := e.login("ana@x.pe", goodPassword)
 		var ra int
 		_, _ = fmtSscan(res.Header().Get("Retry-After"), &ra)
@@ -484,7 +559,7 @@ func TestSecondFactorBranches(t *testing.T) {
 		e := newEnv(t, envOpts{})
 		uid := e.addUser("ana@x.pe", goodPassword)
 		e.addMembership(uid, companySpec{})
-		e.setUser(uid, "mfa_lockouts = 3, failed_logins = 3, login_window_started_at = now()")
+		e.setUser(uid, "mfa_lockouts = 3, failed_logins = 3, login_failure_streak = 3, login_window_started_at = now()")
 		if res := e.login("ana@x.pe", goodPassword); res.Code != 401 {
 			t.Fatalf("status = %d", res.Code)
 		}

@@ -19,18 +19,19 @@ var discard = slog.New(slog.NewTextHandler(io.Discard, nil))
 
 // fakeStore es un Store en memoria. inTx dice si hay una transacción abierta: el hash no puede correr con ella.
 type fakeStore struct {
-	mu       sync.Mutex
-	acct     app.Account
-	found    bool
-	state    app.UserState
-	mems     []app.Membership
-	totp     bool
-	charged  int
-	txs      int // transacciones abiertas: el cobro y cada InUserTx
-	cleared  int
-	locked   int
-	sessions []app.NewSession
-	inTx     atomic.Bool
+	mu           sync.Mutex
+	acct         app.Account
+	found        bool
+	state        app.UserState
+	mems         []app.Membership
+	totp         bool
+	charged      int
+	txs          int // transacciones abiertas: el cobro y cada InUserTx
+	cleared      int
+	locked       int
+	lockedStreak int
+	sessions     []app.NewSession
+	inTx         atomic.Bool
 }
 
 func (f *fakeStore) ChargeAttempt(context.Context, string) (app.Account, bool, error) {
@@ -50,7 +51,11 @@ func (f *fakeStore) InUserTx(_ context.Context, _ string, fn func(app.UserTx) er
 
 func (f *fakeStore) Lock(context.Context) (app.UserState, error) { return f.state, nil }
 func (f *fakeStore) ClearLoginCounters(context.Context) error    { f.cleared++; return nil }
-func (f *fakeStore) LockAccount(context.Context) (bool, error)   { f.locked++; return true, nil }
+func (f *fakeStore) LockAccount(_ context.Context, streak int) (bool, error) {
+	f.locked++
+	f.lockedStreak = streak
+	return true, nil
+}
 func (f *fakeStore) ActiveMemberships(context.Context) ([]app.Membership, error) {
 	return f.mems, nil
 }
@@ -200,7 +205,7 @@ func TestLoginStateChangedBetweenChargeAndResultClosesWithoutTouchingIt(t *testi
 	for name, edit := range map[string]func(*app.UserState){
 		"blocked user":         func(s *app.UserState) { s.Active = false },
 		"locked meanwhile":     func(s *app.UserState) { s.Locked = true },
-		"ceiling reached":      func(s *app.UserState) { s.LoginLockouts = 10 },
+		"closed meanwhile":     func(s *app.UserState) { s.FailureStreak = 100 },
 		"password changed":     func(s *app.UserState) { s.PasswordHash = "other" },
 		"password removed":     func(s *app.UserState) { s.PasswordHash = ""; s.Active = false },
 		"hash differs by case": func(s *app.UserState) { s.PasswordHash = "H" },
@@ -231,29 +236,35 @@ func TestLoginUnknownAccountHashesADummyAndNeverVerifies(t *testing.T) {
 	}
 }
 
-func TestLoginWrongPasswordLocksOnTheFifthChargedFailureOnly(t *testing.T) {
+func TestLoginWrongPasswordLocksOnlyOnEveryFifthStreakFailure(t *testing.T) {
 	for _, tc := range []struct {
 		name       string
+		streak     int // racha con este cobro incluido
 		edit       func(*app.UserState)
 		wantLocked int
 	}{
-		{"4th failure", func(s *app.UserState) { s.FailedLogins = 4 }, 0},
-		{"5th failure", func(s *app.UserState) { s.FailedLogins = 5 }, 1},
-		{"5th failure but already locked", func(s *app.UserState) { s.FailedLogins = 5; s.Locked = true }, 0},
-		{"5th failure at the ceiling", func(s *app.UserState) { s.FailedLogins = 5; s.LoginLockouts = 10 }, 0},
-		{"5th failure one below the ceiling", func(s *app.UserState) { s.FailedLogins = 5; s.LoginLockouts = 9 }, 1},
-		{"5th failure of a blocked user", func(s *app.UserState) { s.FailedLogins = 5; s.Active = false }, 0},
+		{"1st failure", 1, nil, 0},
+		{"4th failure", 4, nil, 0},
+		{"5th failure", 5, nil, 1},
+		{"6th failure", 6, nil, 0},
+		{"10th failure", 10, nil, 1},
+		{"99th failure", 99, nil, 0},
+		{"100th failure: closes", 100, nil, 1},
+		{"5th failure but already locked", 5, func(s *app.UserState) { s.Locked = true }, 0},
+		{"5th failure of a blocked user", 5, func(s *app.UserState) { s.Active = false }, 0},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			st := goodStore()
-			tc.edit(&st.state)
-			st.acct.FailedLogins = st.state.FailedLogins
+			st.acct.FailureStreak = tc.streak
+			if tc.edit != nil {
+				tc.edit(&st.state)
+			}
 			_, err := newSvc(st, &fakeHasher{store: st, ok: false}, nil).Login(context.Background(), req)
 			if !errors.Is(err, app.ErrInvalidCredentials) {
 				t.Fatalf("err = %v", err)
 			}
-			if st.locked != tc.wantLocked || st.cleared != 0 {
-				t.Fatalf("locked = %d, cleared = %d, want %d and 0", st.locked, st.cleared, tc.wantLocked)
+			if st.locked != tc.wantLocked || st.cleared != 0 || (tc.wantLocked == 1 && st.lockedStreak != tc.streak) {
+				t.Fatalf("locked = %d (streak %d), cleared = %d, want %d", st.locked, st.lockedStreak, st.cleared, tc.wantLocked)
 			}
 		})
 	}
@@ -282,10 +293,12 @@ func TestEveryPlain401OpensTheSameNumberOfTransactions(t *testing.T) {
 		txs  int
 	}{
 		{"unknown email, locked, closed, blocked or no hash (no account to charge)", func() *fakeStore { return &fakeStore{} }, false, 1},
-		{"wrong password, 1st failure", func() *fakeStore { st := goodStore(); st.acct.FailedLogins = 1; return st }, false, 1},
-		{"wrong password, 4th failure", func() *fakeStore { st := goodStore(); st.acct.FailedLogins = 4; return st }, false, 1},
-		{"unreadable stored hash", func() *fakeStore { st := goodStore(); st.acct.FailedLogins = 2; return st }, true, 1},
-		{"wrong password, 5th failure: the one that locks", func() *fakeStore { st := goodStore(); st.acct.FailedLogins = 5; st.state.FailedLogins = 5; return st }, false, 2},
+		{"wrong password, 1st failure", func() *fakeStore { st := goodStore(); st.acct.FailureStreak = 1; return st }, false, 1},
+		{"wrong password, 4th failure", func() *fakeStore { st := goodStore(); st.acct.FailureStreak = 4; return st }, false, 1},
+		{"unreadable stored hash", func() *fakeStore { st := goodStore(); st.acct.FailureStreak = 2; return st }, true, 1},
+		{"wrong password, 99th failure", func() *fakeStore { st := goodStore(); st.acct.FailureStreak = 99; return st }, false, 1},
+		{"wrong password, 100th failure: closes", func() *fakeStore { st := goodStore(); st.acct.FailureStreak = 100; return st }, false, 2},
+		{"wrong password, 5th failure: the one that locks", func() *fakeStore { st := goodStore(); st.acct.FailureStreak = 5; return st }, false, 2},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			st := tc.st()

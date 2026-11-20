@@ -343,6 +343,12 @@ SELECT test.expect_error($$INSERT INTO iam.mfa_enrollments (id, user_id, token_h
   '23514', 'email_code_hmac de 32 bytes');
 SELECT test.expect_error($$UPDATE iam.users SET mfa_failed_attempts = 5 WHERE id = 'eeeeeeee-0000-0000-0000-000000000002'$$, '23514', 'el 5o fallo bloquea, no se guarda');
 SELECT test.expect_error($$UPDATE iam.users SET mfa_lockouts = 4 WHERE id = 'eeeeeeee-0000-0000-0000-000000000002'$$, '23514', 'con 3 bloqueos el segundo paso ya esta cerrado');
+-- #24 (ADR 0014): la racha de fallos del login llega a 100 como mucho; wanka_app la escribe (UPDATE de iam.users) y el CHECK la acota.
+SELECT test.expect_error($$UPDATE iam.users SET login_failure_streak = 101 WHERE id = 'eeeeeeee-0000-0000-0000-000000000002'$$, '23514', 'la racha de fallos del login no pasa de 100');
+SELECT test.expect_error($$UPDATE iam.users SET login_failure_streak = -1 WHERE id = 'eeeeeeee-0000-0000-0000-000000000002'$$, '23514', 'la racha de fallos del login no es negativa');
+DO $$ BEGIN UPDATE iam.users SET login_failure_streak = 100 WHERE id = 'eeeeeeee-0000-0000-0000-000000000002';
+  PERFORM test.assert((SELECT login_failure_streak FROM iam.users WHERE id = 'eeeeeeee-0000-0000-0000-000000000002') = 100, 'wanka_app escribe la racha, hasta 100');
+  RAISE EXCEPTION 'rollback' USING ERRCODE = 'P0001'; EXCEPTION WHEN SQLSTATE 'P0001' THEN NULL; END $$;
 -- Trigger, INSERT: created_at lo fija el servidor. Un created_at futuro no hace pasar un TTL largo por el CHECK.
 SELECT test.expect_error($$INSERT INTO iam.mfa_enrollments (id, user_id, token_hash, email_code_hmac, created_at, expires_at)
   VALUES (gen_random_uuid(), 'eeeeeeee-0000-0000-0000-000000000002', sha256('t4'), sha256('h4'), now() + interval '30 days' - interval '5 minutes', now() + interval '30 days')$$,

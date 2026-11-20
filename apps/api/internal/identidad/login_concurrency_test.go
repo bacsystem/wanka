@@ -95,7 +95,7 @@ func TestConcurrentFailuresDoNotGiftAttempts(t *testing.T) {
 			e := newEnv(t, envOpts{})
 			uid := e.addUser("ana@x.pe", goodPassword)
 			if tc.charged > 0 {
-				e.setUser(uid, "failed_logins = "+string(rune('0'+tc.charged))+", login_window_started_at = now()")
+				e.setUser(uid, "failed_logins = "+string(rune('0'+tc.charged))+", login_failure_streak = "+string(rune('0'+tc.charged))+", login_window_started_at = now()")
 			}
 			h := &slowHasher{delay: 30 * time.Millisecond}
 			svc := e.service(t, h, app.NewGate(64, 128, 30*time.Second))

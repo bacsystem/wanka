@@ -42,20 +42,21 @@ UPDATE iam.users SET
   failed_logins = CASE WHEN login_window_started_at IS NULL OR login_window_started_at <= now() - make_interval(secs => $2)
                        THEN 1 ELSE failed_logins + 1 END,
   login_window_started_at = CASE WHEN login_window_started_at IS NULL OR login_window_started_at <= now() - make_interval(secs => $2)
-                                 THEN now() ELSE login_window_started_at END
+                                 THEN now() ELSE login_window_started_at END,
+  login_failure_streak = login_failure_streak + 1
 WHERE email = $1 AND status = 'activo' AND password_hash IS NOT NULL
   AND (locked_until IS NULL OR locked_until <= now())
-  AND login_lockouts < $4
+  AND login_failure_streak < $4
   AND (failed_logins < $3 OR login_window_started_at <= now() - make_interval(secs => $2))
-RETURNING id::text, password_hash, failed_logins`
+RETURNING id::text, password_hash, failed_logins, login_failure_streak`
 
 // ChargeAttempt implementa app.Store.
 func (s *Store) ChargeAttempt(ctx context.Context, email string) (app.Account, bool, error) {
 	var acct app.Account
 	found := false
 	err := s.pool.InNoTenantTx(ctx, db.NoTenantScope{}, func(tx pgx.Tx) error {
-		err := tx.QueryRow(ctx, chargeSQL, email, domain.Window.Seconds(), domain.MaxAttempts, domain.MaxLockouts).
-			Scan(&acct.ID, &acct.PasswordHash, &acct.FailedLogins)
+		err := tx.QueryRow(ctx, chargeSQL, email, domain.Window.Seconds(), domain.MaxAttempts, domain.MaxStreak).
+			Scan(&acct.ID, &acct.PasswordHash, &acct.FailedLogins, &acct.FailureStreak)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil
 		}
@@ -96,10 +97,10 @@ func (u *userTx) Lock(ctx context.Context) (app.UserState, error) {
 		isLocked    bool
 	)
 	err := u.tx.QueryRow(ctx, `
-		SELECT status, password_hash, failed_logins, login_lockouts, coalesce(locked_until > now(), false), mfa_lockouts,
+		SELECT status, password_hash, failed_logins, login_failure_streak, coalesce(locked_until > now(), false), mfa_lockouts,
 		       coalesce(ceil(extract(epoch FROM mfa_locked_until - now())), 0)::float8
 		  FROM iam.users WHERE id = $1::uuid FOR UPDATE`, u.id).
-		Scan(&status, &hash, &failed, &st.LoginLockouts, &isLocked, &mfaLockouts, &mfaFor)
+		Scan(&status, &hash, &failed, &st.FailureStreak, &isLocked, &mfaLockouts, &mfaFor)
 	if err != nil {
 		return app.UserState{}, fmt.Errorf("locking the user row: %w", err)
 	}
@@ -115,29 +116,38 @@ func (u *userTx) Lock(ctx context.Context) (app.UserState, error) {
 }
 
 func (u *userTx) ClearLoginCounters(ctx context.Context) error {
-	_, err := u.tx.Exec(ctx, `UPDATE iam.users SET failed_logins = 0, login_lockouts = 0, login_window_started_at = NULL WHERE id = $1::uuid`, u.id)
+	_, err := u.tx.Exec(ctx, `UPDATE iam.users SET failed_logins = 0, login_lockouts = 0, login_failure_streak = 0, login_window_started_at = NULL WHERE id = $1::uuid`, u.id)
 	if err != nil {
 		return fmt.Errorf("clearing the login counters: %w", err)
 	}
 	return nil
 }
 
-func (u *userTx) LockAccount(ctx context.Context) (bool, error) {
+func (u *userTx) LockAccount(ctx context.Context, streak int) (bool, error) {
+	lo := domain.LockoutFor(streak)
+	if lo.None {
+		return false, nil
+	}
+	// El cierre (racha 100) no fija locked_until: el cobro ya no cobra con la racha en 100. Los bloqueos sí.
 	var until pgtype.Timestamptz
 	err := u.tx.QueryRow(ctx, `
-		UPDATE iam.users SET locked_until = now() + make_interval(secs => $2), failed_logins = 0, login_lockouts = login_lockouts + 1
-		 WHERE id = $1::uuid AND status = 'activo' AND failed_logins = $3
-		   AND (locked_until IS NULL OR locked_until <= now()) AND login_lockouts < $4
-		RETURNING locked_until`,
-		u.id, domain.LockDuration.Seconds(), domain.MaxAttempts, domain.MaxLockouts).Scan(&until)
+		UPDATE iam.users SET failed_logins = 0, login_lockouts = $3,
+		       locked_until = CASE WHEN $5 THEN locked_until ELSE now() + make_interval(secs => $2) END
+		 WHERE id = $1::uuid AND status = 'activo' AND login_failure_streak >= $4
+		   AND (locked_until IS NULL OR locked_until <= now())
+		RETURNING coalesce(locked_until, 'epoch'::timestamptz)`,
+		u.id, lo.For.Seconds(), lo.Counted, streak, lo.Closed).Scan(&until)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, nil
 	}
 	if err != nil {
 		return false, fmt.Errorf("locking the account: %w", err)
 	}
-	// El aviso va en la misma transacción: si el bloqueo se revierte, no hay aviso.
-	args := app.LockoutNoticeArgs{UserID: u.id, LockedUntil: until.Time.UTC()}
+	// El aviso va en la misma transacción: si el bloqueo se revierte, no hay aviso. Único por usuario y fin del bloqueo.
+	args := app.LockoutNoticeArgs{UserID: u.id, LockedUntil: until.Time.UTC(), Closed: lo.Closed}
+	if lo.Closed {
+		args.LockedUntil = time.Time{}
+	}
 	if err := u.enq.InsertTx(ctx, u.tx, args, jobs.WithQueue(jobs.QueueNotifications), jobs.WithUnique()); err != nil {
 		return false, fmt.Errorf("enqueueing the lockout notice: %w", err)
 	}

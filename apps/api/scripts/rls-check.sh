@@ -100,6 +100,7 @@ for m in "naive_session_lookup|wanka_app" \
          "grant_app_delete_user_tokens|wanka_app" \
          "revoke_worker_user_token_columns|wanka_worker" \
          "revoke_worker_user_email|wanka_worker" \
+         "drop_login_failure_streak_check|wanka_app" \
          "grant_worker_select_user_password|wanka_worker" \
          "grant_worker_select_user_token_hash|wanka_worker" \
          "grant_worker_user_totp|wanka_worker" \

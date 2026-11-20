@@ -37,15 +37,19 @@ type Account struct {
 	PasswordHash string
 	// FailedLogins son los intentos cobrados en la ventana, incluido este. Con 5 y contraseña mala hay que bloquear.
 	FailedLogins int
+	// FailureStreak son los fallos seguidos con este cobro incluido (0 a 100); solo una contraseña correcta, el
+	// restablecimiento o el cambio de contraseña lo ponen en 0.
+	FailureStreak int
 }
 
 // UserState es el estado de iam.users leído con el candado de la fila. Los tiempos los calcula la base
 // con su reloj, no el proceso.
 type UserState struct {
-	Active        bool
-	PasswordHash  string
-	FailedLogins  int
-	LoginLockouts int
+	Active       bool
+	PasswordHash string
+	FailedLogins int
+	// FailureStreak: la racha de fallos seguidos; con MaxStreak el ingreso con contraseña está cerrado.
+	FailureStreak int
 	// Locked: locked_until está en el futuro.
 	Locked bool
 	// MFALockouts son los bloqueos del segundo paso; MFALockedFor es lo que falta del bloqueo vigente (0 si no hay).
@@ -97,9 +101,9 @@ type UserTx interface {
 	Lock(ctx context.Context) (UserState, error)
 	// ClearLoginCounters pone failed_logins y login_lockouts en 0: devuelve el cobro.
 	ClearLoginCounters(ctx context.Context) error
-	// LockAccount aplica el bloqueo del 5.º fallo (locked_until = +15 min, failed_logins = 0, login_lockouts + 1)
-	// y encola el aviso en la misma transacción. No hace nada y devuelve false si la fila ya no lo permite.
-	LockAccount(ctx context.Context) (bool, error)
+	// LockAccount aplica el bloqueo (o el cierre) que corresponde a la racha streak (domain.LockoutFor) y encola el
+	// aviso en la misma transacción. No hace nada y devuelve false si la fila ya no lo permite.
+	LockAccount(ctx context.Context, streak int) (bool, error)
 	ActiveMemberships(ctx context.Context) ([]Membership, error)
 	// HasConfirmedTOTP dice si el usuario tiene el segundo factor activo.
 	HasConfirmedTOTP(ctx context.Context) (bool, error)
@@ -234,7 +238,7 @@ func (s *Service) login(ctx context.Context, req Request) (Result, error) {
 	case !ok:
 		// Solo el 5.º fallo de la ventana abre una segunda transacción: la contraseña mala hace en la base lo
 		// mismo que el correo inexistente (una transacción), y el tiempo no distingue la cuenta.
-		if acct.FailedLogins >= domain.MaxAttempts {
+		if !domain.LockoutFor(acct.FailureStreak).None {
 			if err := s.registerFailure(ctx, acct); err != nil {
 				return Result{}, err
 			}
@@ -251,10 +255,10 @@ func (s *Service) registerFailure(ctx context.Context, acct Account) error {
 		if err != nil {
 			return err
 		}
-		if !st.Active || st.Locked || st.LoginLockouts >= domain.MaxLockouts || st.FailedLogins < domain.MaxAttempts {
+		if !st.Active || st.Locked {
 			return nil
 		}
-		_, err = tx.LockAccount(ctx)
+		_, err = tx.LockAccount(ctx, acct.FailureStreak)
 		return err
 	})
 	if err != nil {
@@ -289,7 +293,9 @@ func (s *Service) complete(ctx context.Context, acct Account, req Request) (Resu
 			return err
 		}
 		// Entre el cobro y aquí la cuenta pudo bloquearse, cerrarse o cambiar de contraseña: cierra, sin tocar nada.
-		if !st.Active || st.Locked || st.LoginLockouts >= domain.MaxLockouts || st.PasswordHash != acct.PasswordHash {
+		// Cerrada mientras tanto: la racha llegó al tope por otro intento, no por este cobro.
+		closedMeanwhile := st.FailureStreak >= domain.MaxStreak && acct.FailureStreak < domain.MaxStreak
+		if !st.Active || st.Locked || closedMeanwhile || st.PasswordHash != acct.PasswordHash {
 			decision = ErrInvalidCredentials
 			return nil
 		}

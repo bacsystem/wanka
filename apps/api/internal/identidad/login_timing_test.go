@@ -25,7 +25,7 @@ func TestEnumerationTimingIsOfTheSameOrder(t *testing.T) {
 	}
 	mk("wrong@x.pe", goodPassword, "")
 	mk("locked@x.pe", goodPassword, "locked_until = now() + interval '10 minutes'")
-	mk("closed@x.pe", goodPassword, "login_lockouts = 10")
+	mk("closed@x.pe", goodPassword, "login_failure_streak = 100")
 	mk("blocked@x.pe", goodPassword, "status = 'bloqueado'")
 	mk("nohash@x.pe", "", "")
 	cases := []struct{ name, email, pw string }{

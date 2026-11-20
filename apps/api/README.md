@@ -426,11 +426,12 @@ transacción con `iam.users FOR UPDATE`. El hash nunca corre dentro de una trans
 Contraseña mala, correo inexistente, cuenta bloqueada o cerrada, usuario bloqueado, sin
 `password_hash` y segundo paso cerrado dan el mismo `401 invalid_credentials`.
 
-- **Bloqueo**: el 5.º fallo de la ventana fija `locked_until = +15 min`, `failed_logins = 0`,
-  `login_lockouts + 1` y encola el job `identidad.login_lockout_notice` (cola `notifications`,
-  único por usuario y fin del bloqueo; solo `user_id` y `locked_until` en los argumentos) en la
-  misma transacción. Con `login_lockouts = 10` el ingreso con contraseña queda cerrado hasta
-  restablecerla. Una contraseña correcta devuelve el cobro (`failed_logins` y `login_lockouts` a 0).
+- **Bloqueo** (ADR 0014): `iam.users.login_failure_streak` cuenta todo fallo seguido, con cualquier espaciado; cada 5
+  hay un bloqueo de 15 min que se duplica hasta 24 h (`locked_until`, `login_lockouts = min(n, 10)`, `failed_logins = 0`) y se
+  encola el job `identidad.login_lockout_notice` (cola `notifications`, único por usuario y fin del bloqueo; solo `user_id`
+  y `locked_until` en los argumentos). Con 100 el ingreso con contraseña queda cerrado hasta restablecer o cambiar la
+  contraseña (#26, #30) y se encola el aviso de cierre. La ventana de 15 min y `failed_logins` solo acotan los intentos en
+  vuelo. Una contraseña correcta pone en 0 la racha, `failed_logins` y `login_lockouts`.
 - **Respuestas 200**: `authenticated` (acceso 15 min, refresh 30 días, `mfa_method = 'none'`, sin
   empresa), `mfa_required` (con TOTP confirmado; sesión a medio login con `challengeToken`, 5 min) y,
   para quien debe enrolar el segundo factor, `503 dependency_unavailable` con `Retry-After: 60` hasta #25.
