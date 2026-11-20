@@ -21,7 +21,7 @@ API_ENV = HTTP_ADDR=127.0.0.1:$(WANKA_API_PORT) \
   DATABASE_URL_WEBHOOKS=postgres://wanka_webhooks:$(WANKA_ROLE_PASSWORD)@$(PG_HOST)/wanka
 MIGRATOR_URL = postgres://wanka_migrator:$(WANKA_ROLE_PASSWORD)@$(PG_HOST)/wanka
 
-.PHONY: help env up down reset roles migrate seed api web test test-api rls-check lint logs _up _start-api _start-web _stop-procs
+.PHONY: help env up down reset roles migrate seed api web test test-api rls-check lint logs prune-volumes _up _start-api _start-web _stop-procs
 
 help: ## Lista los targets
 	@awk 'BEGIN{FS=":.*## "} /^[a-z-]+:.*## /{printf "  %-10s %s\n",$$1,$$2}' $(MAKEFILE_LIST)
@@ -109,6 +109,13 @@ rls-check: ## Comprobacion de RLS (Docker, contenedor propio)
 lint: ## eslint (web), gofmt y go vet (api)
 	pnpm lint
 	cd apps/api && test -z "$$(gofmt -l .)" && go vet ./...
+
+prune-volumes: ## Elimina volumenes Docker anonimos colgados (nunca los con nombre); CONFIRM=1 para ejecutar
+	@echo "volumenes anonimos colgados: $$(docker volume ls -qf dangling=true | grep -cE '^[0-9a-f]{64}$$' || true | tr -d ' ')"
+	@if [ "$$CONFIRM" = "1" ]; then \
+	  docker volume ls -qf dangling=true | grep -E '^[0-9a-f]{64}$$' | xargs -n1 docker volume rm >/dev/null 2>&1 || true; \
+	  echo "quedan: $$(docker volume ls -qf dangling=true | grep -cE '^[0-9a-f]{64}$$' || true | tr -d ' ')"; \
+	else echo "no se borro nada; corre CONFIRM=1 make prune-volumes"; fi
 
 logs: ## Sigue los logs de PostgreSQL, API y web
 	@mkdir -p $(STATE); touch $(STATE)/api.log $(STATE)/web.log

@@ -36,7 +36,12 @@ services:
     volumes:
       - ./apps/api/bootstrap:/bootstrap:ro
       - ./scripts/local-roles.sh:/local-roles.sh:ro
+    # La imagen declara VOLUME en el directorio de datos; tmpfs evita un volumen anónimo por corrida.
+    tmpfs:
+      - /var/lib/postgresql/data
     entrypoint: ["sh", "/local-roles.sh"]
 
 volumes:
+  # Nombre fijo (sin prefijo del proyecto): el único volumen de Wanka local.
   wanka-local-pgdata:
+    name: wanka-local-pgdata
