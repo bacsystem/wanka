@@ -145,6 +145,9 @@ for m in "naive_session_lookup|wanka_app" \
          "membership_guard_allows_reinvite|wanka_app" \
          "role_permissions_allows_system_role|wanka_app" \
          "role_guard_allows_system_id_change|wanka_app" \
+         "seed_admin_keeps_einvoicing|wanka_app" \
+         "seed_cajero_approves_cash|wanka_app" \
+         "seed_owner_loses_a_permission|wanka_app" \
          "view_security_definer|wanka_app" \
          "view_without_status_filter|wanka_app" \
          "view_without_user_filter|wanka_app"; do

@@ -47,6 +47,7 @@ const (
 	CatalogoCategoriesUpdate Code = "catalogo.categories:update"
 	CatalogoPricesRead       Code = "catalogo.prices:read"
 	CatalogoPricesUpdate     Code = "catalogo.prices:update"
+	CatalogoCostsRead        Code = "catalogo.costs:read"
 
 	// inventario
 	InventarioWarehousesRead         Code = "inventario.warehouses:read"
@@ -226,6 +227,7 @@ var all = [...]Code{
 	CatalogoCategoriesUpdate,
 	CatalogoPricesRead,
 	CatalogoPricesUpdate,
+	CatalogoCostsRead,
 	InventarioWarehousesRead,
 	InventarioWarehousesCreate,
 	InventarioWarehousesUpdate,

@@ -34,7 +34,8 @@ components:
   apigen: { in: internal/apigen/** }
   # Prueba de contrato del spec (openapi/contract_test.go): lee las tablas de los paquetes generados.
   openapi_contract: { in: openapi }
-  # Módulo de identidad (ADR 0002): la fachada es el paquete raíz; domain, app y adapters son internos.
+  # Módulo de identidad (ADR 0002): la fachada (paquete raíz: login, resolver de permisos, siembra de roles base) la
+  # cablea cmd; domain, app y adapters son internos y los demás módulos no los importan.
   identidad: { in: internal/identidad }
   identidad_inner: { in: internal/identidad/** }
   main: { in: cmd/** }

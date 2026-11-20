@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/netip"
@@ -34,17 +35,26 @@ type Authz struct {
 	Sites    []pgtype.UUID
 }
 
+// ErrMembershipLost lo devuelve un PermissionResolver cuando la membresía de la
+// sesión ya no da acceso: no existe, no es del usuario ni de la empresa de la
+// sesión, o no está activa (invitado, suspendido). Pasa cuando cambia entre la
+// búsqueda de la sesión y la resolución. El paso responde 403
+// tenant_access_denied sin revocar la sesión (ADR 0011); la siguiente petición
+// la desliga la búsqueda de sesión.
+var ErrMembershipLost = errors.New("membership no longer grants access")
+
 // PermissionResolver es el puerto de rol y permisos de una membresía. El
-// adaptador de PostgreSQL llega con identidad (#29); el paso se prueba con un doble.
+// adaptador de PostgreSQL es identidad.NewPermissionResolver (#233); el paso se prueba con un doble.
 type PermissionResolver interface {
 	// Resolve lee, para la membresía de s y con su Actor, la versión actual, el
-	// rol (requires_mfa), los permisos y las sedes. Los errores de la base se
-	// devuelven tipados (db.ErrOverloaded, db.ErrUnavailable...).
+	// rol (requires_mfa), los permisos y las sedes. Una membresía que ya no da
+	// acceso es ErrMembershipLost. Los errores de la base se devuelven tipados
+	// (db.ErrOverloaded, db.ErrUnavailable...).
 	Resolve(ctx context.Context, s Session) (Authz, error)
 }
 
-// DenyAllPermissions es el resolver que se cablea mientras no exista el de
-// identidad: ningún permiso y sin 2FA exigida. Cerrar es negar la petición, no
+// DenyAllPermissions es el resolver que niega todo; serve ya no lo cablea (usa
+// identidad.NewPermissionResolver) y quedó para las pruebas: ningún permiso y sin 2FA exigida. Cerrar es negar la petición, no
 // destruir estado: por eso no devuelve RequiresMFA, que revocaría sesiones.
 type DenyAllPermissions struct{}
 
@@ -249,17 +259,16 @@ func (r *Routes) memberAllowed(w http.ResponseWriter, hr *http.Request, s Sessio
 	}
 	ctx, cancel := context.WithTimeout(httpx.WithPhase(hr.Context(), httpx.PhaseAuthz), r.timeout)
 	defer cancel()
-	lr := hr.WithContext(ctx)
 	rec := httpx.Metrics(hr.Context())
 	az, cached, err := r.lookupAuthz(ctx, s, rec)
 	if err != nil {
-		r.authzFailed(w, hr, lr, err)
+		r.authzFailed(w, hr, err)
 		return siteScope{}, false
 	}
 	if !s.SessionAuthzVersion.Valid || s.SessionAuthzVersion.Int64 != az.Version {
 		bound, err := r.resolver.BindVersion(ctx, s.ID, s.MembershipID, az.Version)
 		if err != nil {
-			r.authzFailed(w, hr, lr, err)
+			r.authzFailed(w, hr, err)
 			return siteScope{}, false
 		}
 		if !bound {
@@ -323,7 +332,17 @@ func (r *Routes) deny(w http.ResponseWriter, hr *http.Request, s Session, patter
 
 // authzFailed responde cuando no se pudieron resolver los permisos: la petición
 // nunca pasa sin ellos.
-func (r *Routes) authzFailed(w http.ResponseWriter, hr, lr *http.Request, err error) {
+//
+// Responde con la petición hr y no con la del plazo propio de la resolución: ese
+// contexto ya venció cuando el plazo es lo que falló, y WriteDBError no escribe
+// nada con un contexto vencido (daría un 200 vacío).
+func (r *Routes) authzFailed(w http.ResponseWriter, hr *http.Request, err error) {
+	lr := hr.WithContext(httpx.WithPhase(hr.Context(), httpx.PhaseAuthz))
+	if errors.Is(err, ErrMembershipLost) {
+		r.outcome(hr, "tenant_access_denied")
+		httpx.WriteProblem(w, hr, "tenant_access_denied", "membership is no longer active")
+		return
+	}
 	r.outcome(hr, "error")
 	switch {
 	case httpx.WriteDBError(w, lr, err):
