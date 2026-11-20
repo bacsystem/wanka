@@ -27,6 +27,9 @@ type slowHasher struct {
 	open     atomic.Int64 // veces que se vio una transacción abierta durante un hash
 	block    chan struct{}
 	entered  chan struct{}
+	mu       sync.Mutex
+	trace    []bool        // en orden de llegada al hash: true si era la contraseña correcta
+	holdBad  chan struct{} // si no es nil, los hashes de contraseñas malas esperan aquí
 }
 
 func (h *slowHasher) check() {
@@ -52,6 +55,12 @@ func (h *slowHasher) check() {
 
 func (h *slowHasher) Verify(pw, enc string) (bool, error) {
 	h.verifies.Add(1)
+	h.mu.Lock()
+	h.trace = append(h.trace, pw == goodPassword)
+	h.mu.Unlock()
+	if h.holdBad != nil && pw != goodPassword {
+		<-h.holdBad
+	}
 	h.check()
 	return h.inner.Verify(pw, enc)
 }
@@ -131,8 +140,10 @@ func TestConcurrentFailuresDoNotGiftAttempts(t *testing.T) {
 	}
 }
 
-// Una contraseña correcta entre muchas malas, todas a la vez: nunca más de 5 verificaciones.
-func TestConcurrentMixWithTheRightPasswordStaysWithinFiveAttempts(t *testing.T) {
+// Una contraseña correcta entre muchas malas, todas a la vez. Un ingreso correcto devuelve el cobro por diseño (ADR 0004:
+// failed_logins y la racha vuelven a 0), así que el presupuesto de 5 se reinicia: como mucho 4 malas cobradas antes de su
+// devolución (la correcta ocupa el quinto cobro de la ventana) y 5 después, sea cual sea el orden. Sin ingreso correcto, 5.
+func TestConcurrentMixWithTheRightPasswordKeepsTheBudgetPerReset(t *testing.T) {
 	e := newEnv(t, envOpts{})
 	uid := e.addUser("ana@x.pe", goodPassword)
 	e.addMembership(uid, companySpec{})
@@ -154,11 +165,61 @@ func TestConcurrentMixWithTheRightPasswordStaysWithinFiveAttempts(t *testing.T) 
 		}()
 	}
 	wg.Wait()
-	if h.verifies.Load() > 5 {
-		t.Fatalf("%d passwords were verified, want at most 5", h.verifies.Load())
+	want := int64(5)
+	if ok.Load() == 1 {
+		want = 10 // 4 malas antes de la devolución, la correcta y 5 malas después
 	}
-	if ok.Load() > 1 {
-		t.Fatalf("%d logins succeeded with one correct password", ok.Load())
+	if got := h.verifies.Load(); got > want || ok.Load() > 1 {
+		t.Fatalf("%d passwords were verified (want at most %d) and %d logins succeeded; order (true = the correct one): %v", got, want, ok.Load(), h.trace)
+	}
+}
+
+// El reinicio, sin carreras: 4 malas cobradas y en vuelo, la correcta entra y devuelve el cobro, y las malas siguientes
+// vuelven a tener 5 intentos. Es el 10 que vio la CI (4 + 1 + 5), explicado: no hay un cobro de más, el ingreso legítimo
+// reinicia el presupuesto. Ni el tiempo ni el orden del planificador intervienen.
+func TestACorrectLoginRestartsTheBudgetOfTheBadOnes(t *testing.T) {
+	e := newEnv(t, envOpts{})
+	uid := e.addUser("ana@x.pe", goodPassword)
+	e.addMembership(uid, companySpec{})
+	h := &slowHasher{holdBad: make(chan struct{})}
+	svc := e.service(t, h, app.NewGate(64, 128, 60*time.Second))
+	waitTrace := func(n int) {
+		t.Helper()
+		deadline := time.Now().Add(60 * time.Second)
+		for {
+			h.mu.Lock()
+			got := len(h.trace)
+			h.mu.Unlock()
+			if got >= n {
+				return
+			}
+			if time.Now().After(deadline) {
+				t.Fatalf("only %d hashes started, want %d", got, n)
+			}
+			time.Sleep(time.Millisecond)
+		}
+	}
+	var wg sync.WaitGroup
+	bad := func(n int) {
+		for range n {
+			wg.Add(1)
+			go func() { defer wg.Done(); _, _ = svc.Login(context.Background(), req("ana@x.pe", "nope")) }()
+		}
+	}
+	bad(4)
+	waitTrace(4) // 4 cobradas, detenidas en el hash
+	if _, err := svc.Login(context.Background(), req("ana@x.pe", goodPassword)); err != nil {
+		t.Fatalf("the correct password: %v", err)
+	}
+	if u := e.user(uid); u.failed != 0 || u.streak != 0 {
+		t.Fatalf("user = %+v: the correct login returns the charge, the 4 in flight included", u)
+	}
+	bad(12)
+	waitTrace(4 + 1 + 5) // 5 más cobran; las otras 7 ya no consiguen fila y hashean un ficticio
+	close(h.holdBad)
+	wg.Wait()
+	if h.verifies.Load() != 10 || h.dummies.Load() != 7 {
+		t.Fatalf("verified %d and dummied %d, want 10 (4 + the correct one + 5) and 7", h.verifies.Load(), h.dummies.Load())
 	}
 }
 
