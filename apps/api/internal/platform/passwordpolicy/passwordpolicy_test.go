@@ -130,7 +130,8 @@ func TestParseRejectsCorruptFiles(t *testing.T) {
 		}},
 		{"count does not match the body", func() []byte { d := valid(t); d[8] = 4; return d }},
 		{"truncated by whole entries", func() []byte { d := valid(t); return d[:len(d)-8] }},
-		{"body altered, sha256 does not match", func() []byte { d := valid(t); d[headerSize] ^= 0xff; return d }},
+		// Cuerpo bien formado y ordenado (1, 5, 9) con un sha256 distinto: solo el chequeo del sha256 lo rechaza.
+		{"sorted body with a wrong sha256", func() []byte { d := valid(t); d[16] ^= 0xff; return d }},
 		{"not in ascending order", func() []byte { return unsorted }},
 		{"duplicate entry", func() []byte { return dup }},
 		{"zero entries", func() []byte {
@@ -165,7 +166,10 @@ func TestEncodeRejectsBadInput(t *testing.T) {
 }
 
 // TestLookupLatency mide la magnitud del criterio: el p95 de una consulta con la lista real cargada.
-func TestLookupLatency(t *testing.T) {
+func TestLookupLatencyUnder5ms(t *testing.T) {
+	if raceEnabled {
+		t.Skip("las cotas de tiempo corren sin -race (paso aparte de api.yml)")
+	}
 	p := newEmbedded(t)
 	const n = 20000
 	pws := make([]string, n)

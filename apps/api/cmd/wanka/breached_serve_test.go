@@ -31,13 +31,25 @@ func TestServeRefusesBadBreachedList(t *testing.T) {
 	}
 }
 
-// El cableado de producción usa el archivo embebido, que carga.
-func TestProductionUsesEmbeddedBreachedList(t *testing.T) {
+// El cableado de producción carga la lista embebida y deja la política en wiring: es el
+// objeto que serve pasa a mountPlane y del que tomarán las rutas de contraseña.
+func TestProductionWiringHoldsPasswordPolicy(t *testing.T) {
 	if defaultWiring.breachedList != nil {
 		t.Fatal("defaultWiring must not override the embedded breached list")
 	}
-	p, err := loadPasswordPolicy(defaultWiring.breachedList)
-	if err != nil || p.Len() == 0 {
-		t.Fatalf("embedded list: %v", err)
+	if defaultWiring.passwords != nil {
+		t.Fatal("defaultWiring must not carry a policy before serve loads it")
+	}
+	w, err := defaultWiring.withPasswords()
+	if err != nil || w.passwords == nil {
+		t.Fatalf("withPasswords: %v, policy %v", err, w.passwords)
+	}
+	if !errors.Is(w.passwords.Check("password123"), passwordpolicy.ErrBreached) || w.passwords.Check("PASSWORD123") != nil {
+		t.Fatal("the wired policy is not the embedded list")
+	}
+	bad := defaultWiring
+	bad.breachedList = []byte{}
+	if bad, err = bad.withPasswords(); !errors.Is(err, passwordpolicy.ErrCorrupt) || bad.passwords != nil {
+		t.Fatalf("a corrupt list must not wire a policy: %v", err)
 	}
 }
