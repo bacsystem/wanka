@@ -5,6 +5,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Changed
+- Status docs (`apps/api/README.md`, `docs/architecture/README.md`, `docs/modules/README.md`): wave 1 is in progress; identity (#3) shipped its DDL, permissions and login in v0.20.0, and companies (#4) has its sign-up contract (#256).
+
 ## [0.20.0] - 2026-11-20
 
 ### Added

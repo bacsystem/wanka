@@ -1,6 +1,6 @@
 # Arquitectura del backend de Wanka
 
-Estado: propuesto (2026-11-17). El kernel de la ola 0 ya está implementado en `apps/api` (épica #154, cerrada el 2026-11-19 con el release v0.19.0); los módulos de negocio empiezan en la ola 1. Hasta que cada módulo exista, `apps/web` sigue con datos mock en `apps/web/src/features/*/mocks`, que reflejan la forma de la API.
+Estado: propuesto (2026-11-17). El kernel de la ola 0 ya está implementado en `apps/api` (épica #154, cerrada el 2026-11-19 con el release v0.19.0); la ola 1 está en curso: identidad (#3) entró en el release v0.20.0 con el DDL, los permisos y el login, y empresas (#4) tiene su contrato de alta (#256). Hasta que cada módulo exista, `apps/web` sigue con datos mock en `apps/web/src/features/*/mocks`, que reflejan la forma de la API.
 
 Decisiones fijadas por el usuario, que este diseño no reabre:
 - Go + PostgreSQL.
