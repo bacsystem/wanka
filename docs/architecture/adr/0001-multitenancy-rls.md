@@ -312,3 +312,25 @@ Alinea este ADR con `migrations/20261120100000_iam_global_identity.sql` (#231) y
   - **Grants que da la historia de la purga** (en las migraciones reales `wanka_definer` no tiene ninguno de estos; sin ellos el trigger da `42501` al leer `org.tenants` y la purga no borra nada): `SELECT` sobre `org.tenants` (el trigger y la función leen `status` y `closed_at`), y `SELECT, DELETE` sobre `iam.role_permissions`, `iam.membership_sites`, `iam.memberships` e `iam.roles` (el `SELECT` lo exige el `WHERE` de cada `DELETE`), además de los de las demás tablas que borre. Orden de borrado por las FK: `iam.role_permissions` e `iam.membership_sites` antes que `iam.memberships`, y estas antes que `iam.roles`.
   - **`closed_at` inmutable.** La condición de los 5 años se apoya en `closed_at`, y hoy `wanka_platform` la puede escribir (`platform_rw`). Se fija: `closed_at` se pone una sola vez, al pasar a `cerrada`, y después no cambia ni vuelve a `NULL`. Lo impone un trigger `BEFORE UPDATE` de `org.tenants`, sin `SECURITY DEFINER` y con `42501` para todo rol que no sea superusuario. Lo agrega la historia de la purga o la de cierre de empresa, la que llegue primero, con su mutación en `rls-check`.
   - **Pruebas en `rls-check`.** Un caso de purga de una empresa cerrada hace más de 5 años, que pasa. Un caso con una empresa `activa`, y otro con una cerrada hace menos de 5 años, en los que el `DELETE` del definer del único dueño da `42501`. Y una mutación por cada trigger sin la condición.
+
+## Nota del 2026-11-20 (architect, alta por autoservicio de #31; decisiones del dueño en #4)
+
+La matriz de «Roles de base de datos y permisos» suma tres filas y una función `SECURITY DEFINER` a la lista. No hay política ni rol nuevos. Contrato en [`api/conventions.md`](../api/conventions.md) §3, «Alta por autoservicio»; tablas en [data-model §6](../data/data-model.md). Lo aplica #31, con sus casos y mutaciones en `rls-check`.
+
+| Objeto | `wanka_app` | `wanka_worker` | `wanka_definer` | `wanka_webhooks`, `wanka_platform` |
+|---|---|---|---|---|
+| `iam.signup_requests` (sin RLS: identidad global, sin `tenant_id`) | `SELECT`, `INSERT` y `UPDATE` **solo** de `consumed_at` y `tenant_id` (un trigger los hace irreversibles y fija `created_at`) | `DELETE` y `SELECT (id, expires_at)`, nunca el hash ni los datos | — | — |
+| `ops.signup_idempotency_keys` (sin RLS: clave global, sin `tenant_id`) | `SELECT` e `INSERT` (sin `UPDATE`: una respuesta guardada no cambia) | `DELETE` y `SELECT (key, created_at)` | — | — |
+| `org.tenants` (fila que ya existe) | además del `SELECT`, `INSERT (id, ruc, legal_name, trade_name, industry)`: `status` y `closed_at` quedan con su valor por defecto (`trial`, nulo), y `tenant_isolation` exige que `id` sea el tenant de la transacción | — | ver la función | — |
+
+**`platform_fn.start_self_service_trial(p_tenant uuid)`**
+- **Forma.** `SECURITY DEFINER`, dueño `wanka_definer`, `SET search_path = pg_catalog, pg_temp`, nombres cualificados, `EXECUTE` **solo** para `wanka_app` (`REVOKE ALL … FROM PUBLIC`). Se agrega a la lista de funciones definer de este ADR y a la lista blanca de la prueba de catálogo por su firma exacta.
+- **Qué hace.**
+  - Fija y restaura `app.tenant_id` con el patrón de «Funciones `SECURITY DEFINER`».
+  - Falla con `42501` si `p_tenant` no es el `app.current_tenant()` de quien llama, si la empresa no está en `trial`, si su `created_at` no es de esta misma transacción (`created_at = now()`) o si ya tiene una suscripción.
+  - Inserta en `platform.subscriptions` la suscripción `trial` del plan `prueba`: el plan lo fija la función por código y no es un argumento, así que `wanka_app` no puede elegirlo. `period_start` es hoy en Lima y `period_end`, 30 días después.
+  - Inserta el override `rubro.<industry>` en `platform.tenant_module_overrides`, con `industry` leído de `org.tenants`.
+  - Escribe su fila en `audit.events` con `actor_type = system` y `action = self_service_trial`.
+- **Por qué una función.** Un `INSERT` de `wanka_app` en `platform.subscriptions` le dejaría darse cualquier plan. Reusar `platform_fn.provision_tenant` (camino 5), que recibe el plan y crea todo, abriría más de lo necesario. Lo demás del alta lo hace `wanka_app` en `InTenantTx` con el tenant nuevo.
+- **Grants de `wanka_definer`.** `SELECT` de `org.tenants` y `platform.plans`, `SELECT` e `INSERT` de `platform.subscriptions` y `platform.tenant_module_overrides`, e `INSERT` de `audit.events`, que ya tiene. Nada más.
+- **Mutaciones de `rls-check`.** Una por cada guarda: sin `search_path`, con `EXECUTE` para `PUBLIC`, con un tenant ajeno, con una empresa ya suscrita, con una empresa creada en otra transacción y con el plan como argumento.

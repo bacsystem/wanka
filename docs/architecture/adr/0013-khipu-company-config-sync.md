@@ -117,3 +117,15 @@ La serie `T###` vive en `org.document_series` (local, anexo, sincronización, co
 - Tests de facturación con un doble de Khipu: adopción en el `409` (coincide) y conflicto (otro anexo, otro `ultimoNumero`); versión que avanza durante la llamada (no marca) un cambio confirmado mientras el doble bloquea el `PUT`, y otro confirmado después de que la corrida leyó `provider_sync_seq` y antes de que River la complete: los dos se envían sin esperar la conciliación; dos jobs del mismo tenant nunca llaman a Khipu a la vez (arrendamiento vencido a mitad: el viejo aborta); una reactivación rechazada deja la serie congelada en el acto; `last_number` editado durante `POST /v1/series` (no marca); adopción con Khipu en 0 y Wanka en 500; un cambio de anexo del local principal con una serie sincronizada (`409`); la conciliación con el doble fallando más de `MaxAttempts` veces (sigue programada); una GRE en vuelo con timeout (no congela); `PUT datos-fiscales` que conserva `cuentaDetracciones` y `padronTasaEspecialIgv`; conciliación con `ultimoNumero > last_number`, que congela; `activate` con `ruc`, `razonSocial` o `entorno` distintos, que rechaza.
 - Logo: 204 800 bytes pasa y 204 801 falla; una extensión `.png` con bytes de GIF falla; Khipu a 9 s responde `503` sin reintento.
 - Observabilidad: `einv_company_sync_total{result}`, la antigüedad de lo pendiente más viejo por tenant (alerta si supera 1 h tras la activación), `einv_series_conflicts_total` (alerta crítica en cada uno).
+
+## Nota del 2026-11-20 (architect, H15 frente al ADR 0001; revisión cruzada de la épica #4)
+
+Corrige un punto de §4 sin cambiar la decisión ([README §9](../README.md)).
+
+- **El problema.** §4 decía que `einv.series_reconcile`, cuando detecta datos pendientes, «**sube `provider_sync_seq`** en su transacción y encola `company_sync`». Pero ese job corre como `wanka_worker`, y la matriz del ADR 0001 (nota del 2026-11-19 y caso `K5` de `rls-check`) no le da `UPDATE` sobre `org.tenant_settings.provider_sync_seq`. Era una contradicción, que señaló la revisión previa de la épica #4.
+- **Corrección.**
+  - La conciliación **baja `einv.company_sync_state.synced_seq`**, que sí escribe `wanka_worker`, a `provider_sync_seq - 1` (nunca por debajo de 0), dentro de su transacción.
+  - Encola `einv.company_sync` con el `provider_sync_seq` vigente.
+  - Como `company_sync` termina sin llamar a Khipu solo con `synced_seq >= seq`, el reenvío ocurre.
+  - Ningún grant cambia: `wanka_worker` sigue sin escribir `provider_sync_seq`, que solo sube empresas cuando hay un cambio.
+- **Pruebas.** Lo prueba #47 o #33, la que implemente la conciliación: con `synced_seq = provider_sync_seq` y una serie pendiente, la corrida llama a Khipu, y el caso `K5` sigue en verde.

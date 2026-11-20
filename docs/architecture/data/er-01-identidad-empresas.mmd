@@ -13,6 +13,7 @@ erDiagram
   USERS ||--o{ USER_TOTP : protege
   USERS ||--o{ SESSIONS : abre
   USERS ||--o{ USER_TOKENS : recibe
+  SIGNUP_REQUESTS |o--o| TENANTS : crea_al_confirmar
   ROLE_TEMPLATES ||--o{ ROLES : origina
   USERS ||--o{ MFA_ENROLLMENTS : enrola
   SITES ||--o{ CASH_REGISTERS : tiene
@@ -145,6 +146,17 @@ erDiagram
     text new_email "solo email_change"
     timestamptz expires_at "15 min, 7 dias o 24 h segun purpose; indice para limpieza"
     timestamptz consumed_at "irreversible (trigger)"
+    timestamptz created_at "lo fija el servidor (trigger)"
+  }
+  SIGNUP_REQUESTS {
+    uuid id PK "iam.signup_requests SIN RLS: alta por autoservicio pendiente de confirmar (issue 31)"
+    text email "normalizado; hasta 3 vivas por correo, indice email+created_at"
+    bytea token_hash UK "sha256 del wk_su_ completo"
+    text password_hash "argon2id PHC; nunca en claro"
+    text ruc "y legal_name, trade_name, industry, full_name con los CHECK de destino"
+    timestamptz expires_at "24 h como maximo; indice para limpieza"
+    timestamptz consumed_at "irreversible (trigger)"
+    uuid tenant_id "empresa creada al confirmar, sin FK; repite el 201 de un reintento"
     timestamptz created_at "lo fija el servidor (trigger)"
   }
   ROLE_TEMPLATES {
