@@ -88,7 +88,7 @@ erDiagram
     timestamptz login_window_started_at "inicio de la ventana fija de 15 min; solo se mueve al vencer"
     smallint reset_mfa_failures "CHECK 0 a 10: codigos malos en password reset, acumulados; con 10 cerrado"
     timestamptz locked_until "15 min tras 5 fallos"
-    smallint login_lockouts "bloqueos seguidos sin un ingreso correcto; CHECK 0 a 10, con 10 cerrado hasta restablecer"
+    smallint login_lockouts "bloqueos seguidos sin un ingreso correcto; CHECK 0 a 10, se satura en 10; fija la duracion: 15 min por 2 a la n-1, tope 24 h (ADR 0014)"
     smallint mfa_failed_attempts "segundo paso: TOTP o emailCode malos, compartido con mfa/verify; CHECK 0 a 4, el 5o bloquea 15 min"
     timestamptz mfa_locked_until
     smallint mfa_lockouts "bloqueos desde el ultimo restablecimiento de contrasena, solo este lo pone a 0; CHECK 0 a 3, con 3 cerrado"
