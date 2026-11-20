@@ -377,6 +377,108 @@ UPDATE iam.mfa_enrollments SET email_sent_at = now() - interval '1 hour' WHERE i
 SELECT test.assert((SELECT email_sent_at = now() FROM iam.mfa_enrollments WHERE id = 'e0000000-0000-0000-0000-0000000000e2'),
                    'email_sent_at no se finge: lo fija el servidor en cada envio');
 ROLLBACK;
+\echo '== I1. iam.user_totp (#231): wanka_app lee, inserta y actualiza; una fila por usuario; sin DELETE ni TRUNCATE =='
+INSERT INTO iam.user_totp (user_id, secret_enc, recovery_codes_hash) VALUES ('eeeeeeee-0000-0000-0000-000000000002', '\x01', ARRAY['v1:aa','v1:bb']);
+UPDATE iam.user_totp SET confirmed_at = now(), last_used_step = 57000000, recovery_codes_hash = ARRAY['v1:bb'] WHERE user_id = 'eeeeeeee-0000-0000-0000-000000000002';
+SELECT test.assert((SELECT confirmed_at IS NOT NULL AND last_used_step = 57000000 AND recovery_codes_hash = ARRAY['v1:bb'] FROM iam.user_totp
+                     WHERE user_id = 'eeeeeeee-0000-0000-0000-000000000002'), 'wanka_app confirma el TOTP, avanza last_used_step y quita el codigo usado');
+SELECT test.expect_error($$INSERT INTO iam.user_totp (user_id, secret_enc) VALUES ('eeeeeeee-0000-0000-0000-000000000002', '\x02')$$, '23505', 'a lo sumo una fila TOTP por usuario');
+SELECT test.expect_error($$INSERT INTO iam.user_totp (user_id, secret_enc) VALUES (gen_random_uuid(), '\x02')$$, '23503', 'user_totp.user_id es FK a iam.users');
+SELECT test.expect_error($$DELETE FROM iam.user_totp$$, '42501', 'wanka_app no borra user_totp');
+SELECT test.expect_error($$TRUNCATE iam.user_totp$$, '42501', 'wanka_app no vacia user_totp');
+
+\echo '== I2. iam.user_tokens (#231): CHECK por proposito, trigger, UPDATE solo de consumed_at y consumo condicional =='
+-- u1: restablecimiento vivo; u2: invitacion viva; u3: cambio de correo vivo. Quedan guardados para la limpieza del worker (K1e).
+BEGIN;
+INSERT INTO iam.user_tokens (id, user_id, purpose, token_hash, expires_at) VALUES
+  ('70000000-0000-0000-0000-0000000000a1', 'eeeeeeee-0000-0000-0000-000000000002', 'password_reset', sha256('wk_pr_prueba'), now() + interval '15 minutes');
+INSERT INTO iam.user_tokens (id, user_id, purpose, token_hash, membership_id, expires_at) VALUES
+  ('70000000-0000-0000-0000-0000000000a2', 'eeeeeeee-0000-0000-0000-000000000002', 'invitation', sha256('wk_iv_prueba'),
+   '3e000000-0000-0000-0000-0000000000c1', now() + interval '7 days');
+INSERT INTO iam.user_tokens (id, user_id, purpose, token_hash, new_email, expires_at) VALUES
+  ('70000000-0000-0000-0000-0000000000a3', 'eeeeeeee-0000-0000-0000-000000000002', 'email_change', sha256('wk_ec_prueba'),
+   'nuevo@a.pe', now() + interval '24 hours');
+COMMIT;
+-- propositos y sus columnas
+SELECT test.expect_error($$INSERT INTO iam.user_tokens (id, user_id, purpose, token_hash, expires_at)
+  VALUES (gen_random_uuid(), 'eeeeeeee-0000-0000-0000-000000000002', 'otro', sha256('x1'), now() + interval '5 minutes')$$, '23514', 'purpose fuera de la lista');
+SELECT test.expect_error($$INSERT INTO iam.user_tokens (id, user_id, purpose, token_hash, expires_at)
+  VALUES (gen_random_uuid(), 'eeeeeeee-0000-0000-0000-000000000002', 'invitation', sha256('x2'), now() + interval '5 minutes')$$, '23514', 'invitation sin membership_id');
+SELECT test.expect_error($$INSERT INTO iam.user_tokens (id, user_id, purpose, token_hash, membership_id, expires_at)
+  VALUES (gen_random_uuid(), 'eeeeeeee-0000-0000-0000-000000000002', 'password_reset', sha256('x3'), gen_random_uuid(), now() + interval '5 minutes')$$,
+  '23514', 'membership_id solo en invitation');
+SELECT test.expect_error($$INSERT INTO iam.user_tokens (id, user_id, purpose, token_hash, expires_at)
+  VALUES (gen_random_uuid(), 'eeeeeeee-0000-0000-0000-000000000002', 'email_change', sha256('x4'), now() + interval '5 minutes')$$, '23514', 'email_change sin new_email');
+SELECT test.expect_error($$INSERT INTO iam.user_tokens (id, user_id, purpose, token_hash, new_email, expires_at)
+  VALUES (gen_random_uuid(), 'eeeeeeee-0000-0000-0000-000000000002', 'password_reset', sha256('x5'), 'a@a.pe', now() + interval '5 minutes')$$,
+  '23514', 'new_email solo en email_change');
+SELECT test.expect_error($$INSERT INTO iam.user_tokens (id, user_id, purpose, token_hash, new_email, expires_at)
+  VALUES (gen_random_uuid(), 'eeeeeeee-0000-0000-0000-000000000002', 'email_change', sha256('x6'), 'Nuevo@A.pe', now() + interval '5 minutes')$$,
+  '23514', 'new_email con mayusculas');
+-- vigencia maxima por proposito: el borde pasa y el siguiente falla
+SELECT test.expect_error($$INSERT INTO iam.user_tokens (id, user_id, purpose, token_hash, expires_at)
+  VALUES (gen_random_uuid(), 'eeeeeeee-0000-0000-0000-000000000002', 'password_reset', sha256('x7'), now() + interval '16 minutes')$$, '23514', 'password_reset de mas de 15 min');
+SELECT test.expect_error($$INSERT INTO iam.user_tokens (id, user_id, purpose, token_hash, membership_id, expires_at)
+  VALUES (gen_random_uuid(), 'eeeeeeee-0000-0000-0000-000000000002', 'invitation', sha256('x8'), gen_random_uuid(), now() + interval '169 hours')$$, '23514', 'invitation de mas de 7 dias');
+SELECT test.expect_error($$INSERT INTO iam.user_tokens (id, user_id, purpose, token_hash, new_email, expires_at)
+  VALUES (gen_random_uuid(), 'eeeeeeee-0000-0000-0000-000000000002', 'email_change', sha256('x9'), 'a@a.pe', now() + interval '25 hours')$$, '23514', 'email_change de mas de 24 h');
+SELECT test.expect_error($$INSERT INTO iam.user_tokens (id, user_id, purpose, token_hash, expires_at)
+  VALUES (gen_random_uuid(), 'eeeeeeee-0000-0000-0000-000000000002', 'password_reset', sha256('xa'), now())$$, '23514', 'token ya vencido al nacer');
+SELECT test.expect_error($$INSERT INTO iam.user_tokens (id, user_id, purpose, token_hash, expires_at)
+  VALUES (gen_random_uuid(), 'eeeeeeee-0000-0000-0000-000000000002', 'password_reset', '\x00', now() + interval '5 minutes')$$, '23514', 'token_hash de 32 bytes');
+SELECT test.expect_error($$INSERT INTO iam.user_tokens (id, user_id, purpose, token_hash, expires_at)
+  VALUES (gen_random_uuid(), 'eeeeeeee-0000-0000-0000-000000000002', 'password_reset', sha256('wk_pr_prueba'), now() + interval '5 minutes')$$, '23505', 'token_hash unico');
+-- el borde exacto pasa
+BEGIN;
+INSERT INTO iam.user_tokens (id, user_id, purpose, token_hash, expires_at) VALUES
+  (gen_random_uuid(), 'eeeeeeee-0000-0000-0000-000000000002', 'password_reset', sha256('b1'), now() + interval '15 minutes'),
+  (gen_random_uuid(), 'eeeeeeee-0000-0000-0000-000000000002', 'password_reset', sha256('b2'), now() + interval '1 microsecond');
+INSERT INTO iam.user_tokens (id, user_id, purpose, token_hash, membership_id, expires_at) VALUES
+  (gen_random_uuid(), 'eeeeeeee-0000-0000-0000-000000000002', 'invitation', sha256('b3'), gen_random_uuid(), now() + interval '168 hours');
+ROLLBACK;
+-- trigger, INSERT: created_at lo fija el servidor y consumed_at nace NULL
+SELECT test.expect_error($$INSERT INTO iam.user_tokens (id, user_id, purpose, token_hash, created_at, expires_at)
+  VALUES (gen_random_uuid(), 'eeeeeeee-0000-0000-0000-000000000002', 'password_reset', sha256('xb'), now() + interval '30 days' - interval '5 minutes', now() + interval '30 days')$$,
+  '23514', 'un created_at futuro no deja un token vigente semanas');
+BEGIN;
+INSERT INTO iam.user_tokens (id, user_id, purpose, token_hash, created_at, consumed_at, expires_at)
+  VALUES ('70000000-0000-0000-0000-0000000000a4', 'eeeeeeee-0000-0000-0000-000000000002', 'password_reset', sha256('xc'),
+          now() - interval '1 day', now(), now() + interval '5 minutes');
+SELECT test.assert((SELECT created_at = now() AND consumed_at IS NULL FROM iam.user_tokens WHERE id = '70000000-0000-0000-0000-0000000000a4'),
+                   'el INSERT fija created_at y deja consumed_at en NULL');
+ROLLBACK;
+-- grants: solo consumed_at se actualiza; ni DELETE ni TRUNCATE
+SELECT test.assert(NOT has_column_privilege('wanka_app', 'iam.user_tokens', c, 'UPDATE'), 'wanka_app sin UPDATE en iam.user_tokens.' || c)
+  FROM unnest(ARRAY['id','user_id','purpose','token_hash','membership_id','new_email','expires_at','created_at']) AS c;
+SELECT test.assert(has_column_privilege('wanka_app', 'iam.user_tokens', 'consumed_at', 'UPDATE'), 'wanka_app actualiza consumed_at');
+SELECT test.expect_error($$UPDATE iam.user_tokens SET expires_at = expires_at + interval '1 hour'$$, '42501', 'wanka_app no alarga un token');
+SELECT test.expect_error($$UPDATE iam.user_tokens SET token_hash = sha256('otro')$$, '42501', 'wanka_app no cambia token_hash');
+SELECT test.expect_error($$UPDATE iam.user_tokens SET user_id = 'eeeeeeee-0000-0000-0000-000000000001'$$, '42501', 'wanka_app no pasa el token a otro usuario');
+SELECT test.expect_error($$UPDATE iam.user_tokens SET created_at = now() + interval '1 day'$$, '42501', 'wanka_app no mueve created_at');
+SELECT test.expect_error($$DELETE FROM iam.user_tokens$$, '42501', 'wanka_app no borra tokens');
+SELECT test.expect_error($$TRUNCATE iam.user_tokens$$, '42501', 'wanka_app no vacia tokens');
+-- consumo condicional: dos consumos del mismo token dejan pasar a uno; el instante lo fija el servidor
+BEGIN;
+DO $$ DECLARE n int; BEGIN
+  UPDATE iam.user_tokens SET consumed_at = now() + interval '1 hour'
+   WHERE token_hash = sha256('wk_pr_prueba') AND purpose = 'password_reset' AND consumed_at IS NULL AND expires_at > now();
+  GET DIAGNOSTICS n = ROW_COUNT;
+  PERFORM test.assert(n = 1, 'el primer consumo condicional pasa');
+  UPDATE iam.user_tokens SET consumed_at = now()
+   WHERE token_hash = sha256('wk_pr_prueba') AND purpose = 'password_reset' AND consumed_at IS NULL AND expires_at > now();
+  GET DIAGNOSTICS n = ROW_COUNT;
+  PERFORM test.assert(n = 0, 'el segundo consumo condicional del mismo token no pasa');
+END $$;
+SELECT test.assert((SELECT consumed_at = now() FROM iam.user_tokens WHERE id = '70000000-0000-0000-0000-0000000000a1'), 'consumed_at lo fija el servidor');
+ROLLBACK;
+-- trigger, UPDATE: un token consumido (en otra transaccion) no se reabre y consumir otra vez conserva el instante viejo
+UPDATE iam.user_tokens SET consumed_at = now() WHERE id = '70000000-0000-0000-0000-0000000000a3';
+SELECT test.expect_error($$UPDATE iam.user_tokens SET consumed_at = NULL WHERE id = '70000000-0000-0000-0000-0000000000a3'$$, '42501', 'un token consumido no se reabre');
+BEGIN;
+UPDATE iam.user_tokens SET consumed_at = now() + interval '1 hour' WHERE id = '70000000-0000-0000-0000-0000000000a3';
+SELECT test.assert((SELECT consumed_at < now() FROM iam.user_tokens WHERE id = '70000000-0000-0000-0000-0000000000a3'),
+                   'consumir otra vez conserva el instante viejo');
+ROLLBACK;
 \echo '== A12. (wanka_app) org.document_series, org.sites y org.tenant_settings: numera y edita, pero no marca la sincronizacion con Khipu (ADR 0013) =='
 BEGIN;
 SELECT set_config('app.tenant_id','aaaaaaaa-0000-0000-0000-000000000001', true);

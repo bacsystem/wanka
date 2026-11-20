@@ -96,6 +96,22 @@ for m in "naive_session_lookup|wanka_app" \
          "drop_audit_impersonator_check|wanka_app" \
          "ensure_partitions_to_public|wanka_app" \
          "ensure_partitions_no_search_path|wanka_worker" \
+         "grant_app_update_all_user_tokens|wanka_app" \
+         "grant_app_delete_user_tokens|wanka_app" \
+         "revoke_worker_user_token_columns|wanka_worker" \
+         "grant_worker_select_user_token_hash|wanka_worker" \
+         "grant_worker_user_totp|wanka_worker" \
+         "grant_app_delete_user_totp|wanka_app" \
+         "grant_webhooks_user_tokens|wanka_webhooks" \
+         "grant_platform_user_tokens|wanka_platform" \
+         "drop_user_token_guard_trigger|wanka_app" \
+         "user_token_guard_no_server_created_at|wanka_app" \
+         "user_token_guard_allows_reopen|wanka_app" \
+         "user_token_guard_moves_consumed_at|wanka_app" \
+         "user_token_guard_trusts_consumed_at|wanka_app" \
+         "drop_user_tokens_ttl_check|wanka_app" \
+         "drop_user_tokens_membership_check|wanka_app" \
+         "drop_user_tokens_new_email_check|wanka_app" \
          "grant_app_partition_select|wanka_app"; do
   name="${m%%|*}" step="${m#*|}"
   echo "== MUTATION=${name}: debe fallar en «${step}» =="
