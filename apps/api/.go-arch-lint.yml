@@ -38,6 +38,8 @@ components:
   # Solo cmd la cablea; los demás módulos la importan por su paquete raíz, nunca por internal/identidad/**.
   identidad: { in: internal/identidad }
   main: { in: cmd/** }
+  # Generador de la lista de contraseñas filtradas (se corre a mano, #238): reutiliza el formato de platform.
+  tool_breachedgen: { in: scripts/breachedgen }
   migrations: { in: migrations }
   bootstrap: { in: bootstrap }
 vendors:
@@ -78,6 +80,8 @@ deps:
     # identidad: sus pruebas externas (paquete identidad_test) importan la fachada.
     mayDependOn: [identidad, platform, platform_db]
     canUse: [pgx]
+  tool_breachedgen:
+    mayDependOn: [platform]
   main:
     mayDependOn: [apigen, identidad, platform, platform_pg, platform_mailer_stub, platform_db, platform_jobs, migrations]
     canUse: [pgx]
