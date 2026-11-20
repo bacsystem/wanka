@@ -37,3 +37,12 @@ Desactivar un módulo **no borra datos**: sus endpoints responden 403 y sus jobs
 - Buenas: rubros nuevos sin tocar el core; planes y flags operables desde la consola sin desplegar; pruebas por módulo.
 - Malas: todos los módulos viven en el binario (tamaño y superficie); hay que mantener coherentes `x-module` y `x-permission` en todas las rutas (prueba automática).
 - Qué haría cambiar la decisión: un rubro con requisitos regulatorios propios (p. ej. historia clínica con exigencias de residencia o cifrado distintas) podría justificar aislarlo.
+
+## Nota del 2026-11-20 (architect, decisión del dueño en #4: prueba vencida en solo lectura)
+
+La empresa que se registra sola (#31) arranca con una suscripción `trial` del plan `prueba`: los módulos `core` más el de su rubro por override, por 30 días: `period_end = period_start + 29`, que es el último día con escritura, inclusive ([data-model §6](../data/data-model.md); la crea `platform_fn.start_self_service_trial`, ADR 0001, nota del 2026-11-20).
+
+- **Al vencer** (`status = 'trial'` y `period_end` anterior a hoy en Lima, es decir, desde el día 31), la empresa queda **en solo lectura**, igual que una empresa cerrada. El paso de entitlements marca `readOnly`, rechaza todo método distinto de `GET` y `HEAD` con `403 tenant_read_only` (`api/conventions.md` §4) y sigue leyendo los módulos de su plan y sus overrides.
+- **No es una suscripción inactiva:** no responde `402` y deja ver los datos. Lo que se pierde es solo escribir.
+- **Los jobs** del tenant con la prueba vencida siguen la regla de la empresa cerrada. Una historia de cobros del SaaS decidirá qué pasa después: pagar, o pasar a `morosa` o `cancelada`.
+- **Quién lo aplica:** #31, que crea las pruebas. Es un cambio chico en `internal/platform/entitlements` (leer `period_end` de la suscripción viva) y en el paso de empresa cerrada de `auth`, con su test: el último día (`period_end` = hoy), que escribe; una prueba creada hace 30 días (`period_end` = ayer), que da `403` en un `POST` y `200` en un `GET`; y vencida con override.
