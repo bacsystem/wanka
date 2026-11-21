@@ -3,6 +3,388 @@ info:
   title: Wanka API - empresas
   version: 0.1.0-draft
 paths:
+  /v1/sites:
+    get:
+      tags: [empresas]
+      operationId: listSites
+      x-module: empresas
+      x-permission: empresas.sites:read
+      summary: Lista los locales de la empresa
+      description: Devuelve todos los locales o sedes de la empresa autenticada.
+      parameters:
+        - name: active
+          in: query
+          required: false
+          description: Filtrar por locales activos o inactivos
+          schema:
+            type: boolean
+        - $ref: '../components/headers.yaml#/components/parameters/RequestId'
+      responses:
+        '200':
+          description: Lista de locales
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Site'
+        '401':
+          $ref: '../components/problem.yaml#/components/responses/Problem'
+        '403':
+          $ref: '../components/problem.yaml#/components/responses/Problem'
+        '503':
+          $ref: '../components/problem.yaml#/components/responses/Problem'
+    post:
+      tags: [empresas]
+      operationId: createSite
+      x-module: empresas
+      x-permission: empresas.sites:create
+      summary: Crea un nuevo local
+      description: |
+        Crea una sede o local en la empresa. El anexo SUNAT es opcional (4 dígitos);
+        si se incluye, se registra en Khipu en segundo plano si la facturación está activa.
+      parameters:
+        - $ref: '../components/headers.yaml#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSiteRequest'
+      responses:
+        '201':
+          description: Local creado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Site'
+        '400':
+          $ref: '../components/problem.yaml#/components/responses/Problem'
+        '401':
+          $ref: '../components/problem.yaml#/components/responses/Problem'
+        '403':
+          $ref: '../components/problem.yaml#/components/responses/Problem'
+        '409':
+          $ref: '../components/problem.yaml#/components/responses/Problem'
+        '422':
+          $ref: '../components/problem.yaml#/components/responses/Problem'
+        '503':
+          $ref: '../components/problem.yaml#/components/responses/Problem'
+
+  /v1/sites/{id}:
+    get:
+      tags: [empresas]
+      operationId: getSite
+      x-module: empresas
+      x-permission: empresas.sites:read
+      summary: Consulta un local por ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID del local
+          schema:
+            type: string
+            format: uuid
+        - $ref: '../components/headers.yaml#/components/parameters/RequestId'
+      responses:
+        '200':
+          description: Datos del local
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Site'
+        '401':
+          $ref: '../components/problem.yaml#/components/responses/Problem'
+        '403':
+          $ref: '../components/problem.yaml#/components/responses/Problem'
+        '404':
+          $ref: '../components/problem.yaml#/components/responses/Problem'
+        '503':
+          $ref: '../components/problem.yaml#/components/responses/Problem'
+    patch:
+      tags: [empresas]
+      operationId: updateSite
+      x-module: empresas
+      x-permission: empresas.sites:update
+      summary: Actualiza un local
+      description: |
+        Edita nombre, dirección, anexo SUNAT o estado activo de un local.
+        Si se desactiva (active: false), se inactivan en cascada sus cajas y series en Wanka.
+        El anexo SUNAT no puede modificarse si el local tiene series sincronizadas con Khipu.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID del local
+          schema:
+            type: string
+            format: uuid
+        - $ref: '../components/headers.yaml#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSiteRequest'
+      responses:
+        '200':
+          description: Local actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Site'
+        '400':
+          $ref: '../components/problem.yaml#/components/responses/Problem'
+        '401':
+          $ref: '../components/problem.yaml#/components/responses/Problem'
+        '403':
+          $ref: '../components/problem.yaml#/components/responses/Problem'
+        '404':
+          $ref: '../components/problem.yaml#/components/responses/Problem'
+        '409':
+          $ref: '../components/problem.yaml#/components/responses/Problem'
+        '422':
+          $ref: '../components/problem.yaml#/components/responses/Problem'
+        '503':
+          $ref: '../components/problem.yaml#/components/responses/Problem'
+
+  /v1/cash-registers:
+    get:
+      tags: [empresas]
+      operationId: listCashRegisters
+      x-module: empresas
+      x-permission: empresas.sites:read
+      summary: Lista las cajas registradoras de la empresa
+      parameters:
+        - name: siteId
+          in: query
+          required: false
+          description: Filtrar por local
+          schema:
+            type: string
+            format: uuid
+        - name: active
+          in: query
+          required: false
+          description: Filtrar por activas o inactivas
+          schema:
+            type: boolean
+        - $ref: '../components/headers.yaml#/components/parameters/RequestId'
+      responses:
+        '200':
+          description: Lista de cajas
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CashRegister'
+        '401':
+          $ref: '../components/problem.yaml#/components/responses/Problem'
+        '403':
+          $ref: '../components/problem.yaml#/components/responses/Problem'
+        '503':
+          $ref: '../components/problem.yaml#/components/responses/Problem'
+    post:
+      tags: [empresas]
+      operationId: createCashRegister
+      x-module: empresas
+      x-permission: empresas.sites:update
+      summary: Crea una caja registradora en un local
+      parameters:
+        - $ref: '../components/headers.yaml#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCashRegisterRequest'
+      responses:
+        '201':
+          description: Caja creada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CashRegister'
+        '400':
+          $ref: '../components/problem.yaml#/components/responses/Problem'
+        '401':
+          $ref: '../components/problem.yaml#/components/responses/Problem'
+        '403':
+          $ref: '../components/problem.yaml#/components/responses/Problem'
+        '404':
+          $ref: '../components/problem.yaml#/components/responses/Problem'
+        '409':
+          $ref: '../components/problem.yaml#/components/responses/Problem'
+        '422':
+          $ref: '../components/problem.yaml#/components/responses/Problem'
+        '503':
+          $ref: '../components/problem.yaml#/components/responses/Problem'
+
+  /v1/cash-registers/{id}:
+    get:
+      tags: [empresas]
+      operationId: getCashRegister
+      x-module: empresas
+      x-permission: empresas.sites:read
+      summary: Consulta una caja registradora por ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID de la caja registradora
+          schema:
+            type: string
+            format: uuid
+        - $ref: '../components/headers.yaml#/components/parameters/RequestId'
+      responses:
+        '200':
+          description: Datos de la caja
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CashRegister'
+        '401':
+          $ref: '../components/problem.yaml#/components/responses/Problem'
+        '403':
+          $ref: '../components/problem.yaml#/components/responses/Problem'
+        '404':
+          $ref: '../components/problem.yaml#/components/responses/Problem'
+        '503':
+          $ref: '../components/problem.yaml#/components/responses/Problem'
+    patch:
+      tags: [empresas]
+      operationId: updateCashRegister
+      x-module: empresas
+      x-permission: empresas.sites:update
+      summary: Actualiza una caja registradora
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID de la caja registradora
+          schema:
+            type: string
+            format: uuid
+        - $ref: '../components/headers.yaml#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCashRegisterRequest'
+      responses:
+        '200':
+          description: Caja actualizada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CashRegister'
+        '400':
+          $ref: '../components/problem.yaml#/components/responses/Problem'
+        '401':
+          $ref: '../components/problem.yaml#/components/responses/Problem'
+        '403':
+          $ref: '../components/problem.yaml#/components/responses/Problem'
+        '404':
+          $ref: '../components/problem.yaml#/components/responses/Problem'
+        '409':
+          $ref: '../components/problem.yaml#/components/responses/Problem'
+        '422':
+          $ref: '../components/problem.yaml#/components/responses/Problem'
+        '503':
+          $ref: '../components/problem.yaml#/components/responses/Problem'
+
+  /v1/document-series:
+    get:
+      tags: [empresas]
+      operationId: listDocumentSeries
+      x-module: empresas
+      x-permission: empresas.series:read
+      summary: Lista series de documentos
+      parameters:
+        - name: siteId
+          in: query
+          required: false
+          description: Filtrar por local
+          schema:
+            type: string
+            format: uuid
+        - name: cashRegisterId
+          in: query
+          required: false
+          description: Filtrar por caja
+          schema:
+            type: string
+            format: uuid
+        - name: docType
+          in: query
+          required: false
+          description: Filtrar por tipo de comprobante
+          schema:
+            type: string
+        - name: active
+          in: query
+          required: false
+          description: Filtrar por activas o inactivas
+          schema:
+            type: boolean
+        - $ref: '../components/headers.yaml#/components/parameters/RequestId'
+      responses:
+        '200':
+          description: Lista de series
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DocumentSeries'
+        '401':
+          $ref: '../components/problem.yaml#/components/responses/Problem'
+        '403':
+          $ref: '../components/problem.yaml#/components/responses/Problem'
+        '503':
+          $ref: '../components/problem.yaml#/components/responses/Problem'
+    post:
+      tags: [empresas]
+      operationId: createDocumentSeries
+      x-module: empresas
+      x-permission: empresas.series:create
+      summary: Crea una nueva serie de documentos
+      description: |
+        Crea una serie de comprobantes CPE o internos asignada a un local y opcionalmente a una caja.
+        Las series de CPE exigen que el local tenga anexo SUNAT registrado.
+      parameters:
+        - $ref: '../components/headers.yaml#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDocumentSeriesRequest'
+      responses:
+        '201':
+          description: Serie creada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentSeries'
+        '400':
+          $ref: '../components/problem.yaml#/components/responses/Problem'
+        '401':
+          $ref: '../components/problem.yaml#/components/responses/Problem'
+        '403':
+          $ref: '../components/problem.yaml#/components/responses/Problem'
+        '404':
+          $ref: '../components/problem.yaml#/components/responses/Problem'
+        '409':
+          $ref: '../components/problem.yaml#/components/responses/Problem'
+        '422':
+          $ref: '../components/problem.yaml#/components/responses/Problem'
+        '503':
+          $ref: '../components/problem.yaml#/components/responses/Problem'
+
   /v1/document-series/{id}:
     get:
       tags: [empresas]
@@ -40,8 +422,190 @@ paths:
           $ref: '../components/problem.yaml#/components/responses/Problem'
         '503':
           $ref: '../components/problem.yaml#/components/responses/Problem'
+    patch:
+      tags: [empresas]
+      operationId: updateDocumentSeries
+      x-module: empresas
+      x-permission: empresas.series:update
+      summary: Actualiza una serie de documentos
+      description: |
+        Edita el estado activo, la caja asignada o el último correlativo.
+        El correlativo inicial solo puede editarse mientras la serie está en estado pending.
+        Reactivar una serie que Khipu tenga con correlativo mayor o en otro anexo congela la serie en conflicto.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID de la serie de documentos
+          schema:
+            type: string
+            format: uuid
+        - $ref: '../components/headers.yaml#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateDocumentSeriesRequest'
+      responses:
+        '200':
+          description: Serie actualizada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentSeries'
+        '400':
+          $ref: '../components/problem.yaml#/components/responses/Problem'
+        '401':
+          $ref: '../components/problem.yaml#/components/responses/Problem'
+        '403':
+          $ref: '../components/problem.yaml#/components/responses/Problem'
+        '404':
+          $ref: '../components/problem.yaml#/components/responses/Problem'
+        '409':
+          $ref: '../components/problem.yaml#/components/responses/Problem'
+        '422':
+          $ref: '../components/problem.yaml#/components/responses/Problem'
+        '503':
+          $ref: '../components/problem.yaml#/components/responses/Problem'
+
 components:
   schemas:
+    Site:
+      type: object
+      required:
+        - id
+        - code
+        - name
+        - active
+        - version
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+          description: Código del local en la empresa
+        name:
+          type: string
+          description: Nombre o descripción del local
+        sunatAnnex:
+          type: [string, 'null']
+          description: Código de 4 dígitos del anexo SUNAT (0000 para domicilio fiscal)
+        address:
+          type: [string, 'null']
+          description: Dirección física del local
+        active:
+          type: boolean
+          description: Si el local está activo
+        version:
+          type: integer
+          format: int64
+          description: Versión de control de concurrencia y sincronización
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateSiteRequest:
+      type: object
+      required:
+        - code
+        - name
+      properties:
+        code:
+          type: string
+          minLength: 1
+          maxLength: 20
+          description: Código identificador del local
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: Nombre descriptivo del local
+        sunatAnnex:
+          type: [string, 'null']
+          pattern: '^[0-9]{4}$'
+          description: Código de anexo SUNAT (4 dígitos)
+        address:
+          type: [string, 'null']
+          minLength: 1
+          maxLength: 300
+          description: Dirección física
+
+    UpdateSiteRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        address:
+          type: [string, 'null']
+          minLength: 1
+          maxLength: 300
+        sunatAnnex:
+          type: [string, 'null']
+          pattern: '^[0-9]{4}$'
+        active:
+          type: boolean
+
+    CashRegister:
+      type: object
+      required:
+        - id
+        - siteId
+        - code
+        - active
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        siteId:
+          type: string
+          format: uuid
+        code:
+          type: string
+          description: Código identificador de la caja en el local
+        active:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateCashRegisterRequest:
+      type: object
+      required:
+        - siteId
+        - code
+      properties:
+        siteId:
+          type: string
+          format: uuid
+        code:
+          type: string
+          minLength: 1
+          maxLength: 20
+
+    UpdateCashRegisterRequest:
+      type: object
+      properties:
+        code:
+          type: string
+          minLength: 1
+          maxLength: 20
+        active:
+          type: boolean
+
     DocumentSeries:
       type: object
       required:
@@ -87,3 +651,42 @@ components:
         updatedAt:
           type: string
           format: date-time
+
+    CreateDocumentSeriesRequest:
+      type: object
+      required:
+        - siteId
+        - docType
+        - series
+      properties:
+        siteId:
+          type: string
+          format: uuid
+        cashRegisterId:
+          type: [string, 'null']
+          format: uuid
+        docType:
+          type: string
+          enum: ['01', '03', '07', '08', '09', 'PRO', 'OC', 'Z', 'OT']
+        series:
+          type: string
+          description: Código de 4 caracteres para CPE o 2-10 caracteres para internos
+        initialNumber:
+          type: integer
+          format: int64
+          minimum: 0
+          default: 0
+          description: Número inicial emitido (0 si la serie inicia desde cero)
+
+    UpdateDocumentSeriesRequest:
+      type: object
+      properties:
+        active:
+          type: boolean
+        cashRegisterId:
+          type: [string, 'null']
+          format: uuid
+        lastNumber:
+          type: integer
+          format: int64
+          minimum: 0

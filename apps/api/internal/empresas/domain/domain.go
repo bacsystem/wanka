@@ -1,7 +1,9 @@
 package domain
 
 import (
+	"context"
 	"errors"
+	"regexp"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
@@ -28,12 +30,12 @@ const (
 	ProviderStatusConflict      = "conflict"
 )
 
-// Errores tipados del dominio de numeración correlativa (#47).
+// Errores tipados del dominio de empresas y numeración correlativa (#33, #47).
 var (
-	// ErrSeriesNotFound indica que la serie solicitada no existe para la caja/tipo o ID especificado.
+	// ErrSeriesNotFound indica que la serie solicitada no existe.
 	ErrSeriesNotFound = errors.New("series not found")
 
-	// ErrSeriesInactive indica que la serie existe pero no está habilitada (active = false).
+	// ErrSeriesInactive indica que la serie existe pero no está habilitada.
 	ErrSeriesInactive = errors.New("series is inactive")
 
 	// ErrSeriesNotSynced indica que una serie CPE aún no ha completado la sincronización inicial con Khipu.
@@ -47,7 +49,96 @@ var (
 
 	// ErrSeriesAlreadyFrozen indica que la serie ya se encontraba congelada.
 	ErrSeriesAlreadyFrozen = errors.New("series is already frozen")
+
+	// ErrSiteNotFound indica que el local o sede no existe.
+	ErrSiteNotFound = errors.New("site not found")
+
+	// ErrCashRegisterNotFound indica que la caja registradora no existe.
+	ErrCashRegisterNotFound = errors.New("cash register not found")
+
+	// ErrDuplicateCode indica que el código ya se encuentra registrado en la empresa.
+	ErrDuplicateCode = errors.New("code already in use")
+
+	// ErrDuplicateAnnex indica que el anexo SUNAT ya se encuentra asignado a otro local de la empresa.
+	ErrDuplicateAnnex = errors.New("sunat annex already in use")
+
+	// ErrDuplicateSeries indica que la serie ya existe para ese tipo en la empresa.
+	ErrDuplicateSeries = errors.New("series already in use")
+
+	// ErrAnnexImmutableWithSyncedSeries indica que no se puede cambiar el anexo de un local con series sincronizadas.
+	ErrAnnexImmutableWithSyncedSeries = errors.New("cannot change sunat annex of site with synced series")
+
+	// ErrCPERequiresSunatAnnex indica que un comprobante electrónico exige un local con anexo SUNAT.
+	ErrCPERequiresSunatAnnex = errors.New("cpe series requires site with sunat annex")
+
+	// ErrSiteInactive indica que el local está inactivo.
+	ErrSiteInactive = errors.New("site is inactive")
+
+	// ErrCashRegisterInactive indica que la caja está inactiva.
+	ErrCashRegisterInactive = errors.New("cash register is inactive")
+
+	// ErrCashRegisterSiteMismatch indica que la caja registradora pertenece a otro local.
+	ErrCashRegisterSiteMismatch = errors.New("cash register belongs to another site")
+
+	// ErrLastNumberImmutableWhenSynced indica que el correlativo no puede modificarse una vez sincronizado o en conflicto.
+	ErrLastNumberImmutableWhenSynced = errors.New("last number cannot be changed when synced or in conflict")
+
+	// ErrSiteImmutableWhenSynced indica que el local no puede modificarse si la serie ya está sincronizada con Khipu.
+	ErrSiteImmutableWhenSynced = errors.New("site cannot be changed when series is synced")
+
+	// ErrInvalidCode indica que el código no cumple con el formato permitido.
+	ErrInvalidCode = errors.New("invalid code format")
+
+	// ErrInvalidSeriesFormat indica que el código de serie no cumple el formato reglamentario para su tipo.
+	ErrInvalidSeriesFormat = errors.New("invalid series format for document type")
+
+	// ErrInvalidAnnexFormat indica que el código de anexo SUNAT no tiene el formato de 4 dígitos.
+	ErrInvalidAnnexFormat = errors.New("invalid sunat annex format")
+
+	// ErrPlanLimitReached indica que se ha alcanzado el límite permitido de sedes para el plan contratado.
+	ErrPlanLimitReached = errors.New("plan limit reached")
 )
+
+var (
+	reFactura    = regexp.MustCompile(`^F[A-Z0-9]{3}$`)
+	reBoleta     = regexp.MustCompile(`^B[A-Z0-9]{3}$`)
+	reNotas      = regexp.MustCompile(`^[FB][A-Z0-9]{3}$`)
+	reGuia       = regexp.MustCompile(`^T[A-Z0-9]{3}$`)
+	reInterno    = regexp.MustCompile(`^[A-Z0-9]{2,10}$`)
+	reAnexoSunat = regexp.MustCompile(`^[0-9]{4}$`)
+)
+
+// ValidateSeriesFormat valida el formato del código de la serie según su tipo de documento.
+func ValidateSeriesFormat(docType, series string) error {
+	var valid bool
+	switch docType {
+	case DocTypeFactura:
+		valid = reFactura.MatchString(series)
+	case DocTypeBoleta:
+		valid = reBoleta.MatchString(series)
+	case DocTypeNotaCredito, DocTypeNotaDebito:
+		valid = reNotas.MatchString(series)
+	case DocTypeGuiaRemision:
+		valid = reGuia.MatchString(series)
+	default:
+		valid = reInterno.MatchString(series)
+	}
+	if !valid {
+		return ErrInvalidSeriesFormat
+	}
+	return nil
+}
+
+// ValidateSunatAnnex valida que el anexo SUNAT esté formado por exactamente 4 dígitos.
+func ValidateSunatAnnex(annex *string) error {
+	if annex == nil || *annex == "" {
+		return nil
+	}
+	if !reAnexoSunat.MatchString(*annex) {
+		return ErrInvalidAnnexFormat
+	}
+	return nil
+}
 
 // IsCPEDocType determina si el tipo de comprobante está sujeto a emisión electrónica SUNAT.
 func IsCPEDocType(docType string) bool {
@@ -71,6 +162,32 @@ func ComputeProviderStatus(docType string, syncedAt, conflictAt *time.Time) stri
 		return ProviderStatusSynced
 	}
 	return ProviderStatusPending
+}
+
+// Site representa una sede o local de la empresa en org.sites.
+type Site struct {
+	ID                    pgtype.UUID
+	TenantID              pgtype.UUID
+	Code                  string
+	Name                  string
+	SunatAnnex            *string
+	Address               *string
+	Active                bool
+	Version               int64
+	ProviderSyncedVersion *int64
+	CreatedAt             time.Time
+	UpdatedAt             time.Time
+}
+
+// CashRegister modela una caja registradora en org.cash_registers.
+type CashRegister struct {
+	ID        pgtype.UUID
+	TenantID  pgtype.UUID
+	SiteID    pgtype.UUID
+	Code      string
+	Active    bool
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 // AssignedNumber representa un número correlativo asignado de forma consecutiva e inmutable.
@@ -98,7 +215,7 @@ type DocumentSeries struct {
 	ProviderStatus     string
 }
 
-// RemoteSeries representa la información de numeración y anexo reportada por Khipu durante la conciliación.
+// RemoteSeries representa la información de numeración y anexo reportada por Khipu.
 type RemoteSeries struct {
 	DocType      string
 	Series       string
@@ -111,4 +228,9 @@ type ReconcileReport struct {
 	Processed   int
 	FrozenCount int
 	Alerts      []string
+}
+
+// ProviderClient define el cliente para consultar el estado de series en Khipu durante la reactivación.
+type ProviderClient interface {
+	GetSeries(ctx context.Context, tenantID pgtype.UUID) ([]RemoteSeries, error)
 }

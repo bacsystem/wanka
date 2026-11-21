@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -17,6 +18,45 @@ import (
 	"github.com/oapi-codegen/runtime"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
+
+// Defines values for CreateDocumentSeriesRequestDocType.
+const (
+	CreateDocumentSeriesRequestDocTypeN01 CreateDocumentSeriesRequestDocType = "01"
+	CreateDocumentSeriesRequestDocTypeN03 CreateDocumentSeriesRequestDocType = "03"
+	CreateDocumentSeriesRequestDocTypeN07 CreateDocumentSeriesRequestDocType = "07"
+	CreateDocumentSeriesRequestDocTypeN08 CreateDocumentSeriesRequestDocType = "08"
+	CreateDocumentSeriesRequestDocTypeN09 CreateDocumentSeriesRequestDocType = "09"
+	CreateDocumentSeriesRequestDocTypeOC  CreateDocumentSeriesRequestDocType = "OC"
+	CreateDocumentSeriesRequestDocTypeOT  CreateDocumentSeriesRequestDocType = "OT"
+	CreateDocumentSeriesRequestDocTypePRO CreateDocumentSeriesRequestDocType = "PRO"
+	CreateDocumentSeriesRequestDocTypeZ   CreateDocumentSeriesRequestDocType = "Z"
+)
+
+// Valid indicates whether the value is a known member of the CreateDocumentSeriesRequestDocType enum.
+func (e CreateDocumentSeriesRequestDocType) Valid() bool {
+	switch e {
+	case CreateDocumentSeriesRequestDocTypeN01:
+		return true
+	case CreateDocumentSeriesRequestDocTypeN03:
+		return true
+	case CreateDocumentSeriesRequestDocTypeN07:
+		return true
+	case CreateDocumentSeriesRequestDocTypeN08:
+		return true
+	case CreateDocumentSeriesRequestDocTypeN09:
+		return true
+	case CreateDocumentSeriesRequestDocTypeOC:
+		return true
+	case CreateDocumentSeriesRequestDocTypeOT:
+		return true
+	case CreateDocumentSeriesRequestDocTypePRO:
+		return true
+	case CreateDocumentSeriesRequestDocTypeZ:
+		return true
+	default:
+		return false
+	}
+}
 
 // Defines values for DocumentSeriesProviderStatus.
 const (
@@ -40,6 +80,55 @@ func (e DocumentSeriesProviderStatus) Valid() bool {
 	default:
 		return false
 	}
+}
+
+// CashRegister defines model for CashRegister.
+type CashRegister struct {
+	Active bool `json:"active"`
+
+	// Code Código identificador de la caja en el local
+	Code      string             `json:"code"`
+	CreatedAt time.Time          `json:"createdAt"`
+	Id        openapi_types.UUID `json:"id"`
+	SiteId    openapi_types.UUID `json:"siteId"`
+	UpdatedAt time.Time          `json:"updatedAt"`
+}
+
+// CreateCashRegisterRequest defines model for CreateCashRegisterRequest.
+type CreateCashRegisterRequest struct {
+	Code   string             `json:"code"`
+	SiteId openapi_types.UUID `json:"siteId"`
+}
+
+// CreateDocumentSeriesRequest defines model for CreateDocumentSeriesRequest.
+type CreateDocumentSeriesRequest struct {
+	CashRegisterId *openapi_types.UUID                `json:"cashRegisterId,omitempty"`
+	DocType        CreateDocumentSeriesRequestDocType `json:"docType"`
+
+	// InitialNumber Número inicial emitido (0 si la serie inicia desde cero)
+	InitialNumber *int64 `json:"initialNumber,omitempty"`
+
+	// Series Código de 4 caracteres para CPE o 2-10 caracteres para internos
+	Series string             `json:"series"`
+	SiteId openapi_types.UUID `json:"siteId"`
+}
+
+// CreateDocumentSeriesRequestDocType defines model for CreateDocumentSeriesRequest.DocType.
+type CreateDocumentSeriesRequestDocType string
+
+// CreateSiteRequest defines model for CreateSiteRequest.
+type CreateSiteRequest struct {
+	// Address Dirección física
+	Address *string `json:"address,omitempty"`
+
+	// Code Código identificador del local
+	Code string `json:"code"`
+
+	// Name Nombre descriptivo del local
+	Name string `json:"name"`
+
+	// SunatAnnex Código de anexo SUNAT (4 dígitos)
+	SunatAnnex *string `json:"sunatAnnex,omitempty"`
 }
 
 // DocumentSeries defines model for DocumentSeries.
@@ -68,11 +157,161 @@ type DocumentSeries struct {
 // DocumentSeriesProviderStatus Estado de sincronización de la serie con Khipu
 type DocumentSeriesProviderStatus string
 
+// Site defines model for Site.
+type Site struct {
+	// Active Si el local está activo
+	Active bool `json:"active"`
+
+	// Address Dirección física del local
+	Address *string `json:"address,omitempty"`
+
+	// Code Código del local en la empresa
+	Code      string             `json:"code"`
+	CreatedAt time.Time          `json:"createdAt"`
+	Id        openapi_types.UUID `json:"id"`
+
+	// Name Nombre o descripción del local
+	Name string `json:"name"`
+
+	// SunatAnnex Código de 4 dígitos del anexo SUNAT (0000 para domicilio fiscal)
+	SunatAnnex *string   `json:"sunatAnnex,omitempty"`
+	UpdatedAt  time.Time `json:"updatedAt"`
+
+	// Version Versión de control de concurrencia y sincronización
+	Version int64 `json:"version"`
+}
+
+// UpdateCashRegisterRequest defines model for UpdateCashRegisterRequest.
+type UpdateCashRegisterRequest struct {
+	Active *bool   `json:"active,omitempty"`
+	Code   *string `json:"code,omitempty"`
+}
+
+// UpdateDocumentSeriesRequest defines model for UpdateDocumentSeriesRequest.
+type UpdateDocumentSeriesRequest struct {
+	Active         *bool               `json:"active,omitempty"`
+	CashRegisterId *openapi_types.UUID `json:"cashRegisterId,omitempty"`
+	LastNumber     *int64              `json:"lastNumber,omitempty"`
+}
+
+// UpdateSiteRequest defines model for UpdateSiteRequest.
+type UpdateSiteRequest struct {
+	Active     *bool   `json:"active,omitempty"`
+	Address    *string `json:"address,omitempty"`
+	Name       *string `json:"name,omitempty"`
+	SunatAnnex *string `json:"sunatAnnex,omitempty"`
+}
+
+// ListCashRegistersParams defines parameters for ListCashRegisters.
+type ListCashRegistersParams struct {
+	// SiteId Filtrar por local
+	SiteId *openapi_types.UUID `form:"siteId,omitempty" json:"siteId,omitempty"`
+
+	// Active Filtrar por activas o inactivas
+	Active *bool `form:"active,omitempty" json:"active,omitempty"`
+
+	// XRequestId Se conserva si cumple el patrón; si falta o no lo cumple, la API lo reemplaza por uno propio y nunca responde 400 por esta cabecera (conventions.md §3).
+	XRequestId *externalRef0.RequestId `json:"X-Request-Id,omitempty"`
+}
+
+// CreateCashRegisterParams defines parameters for CreateCashRegister.
+type CreateCashRegisterParams struct {
+	// XRequestId Se conserva si cumple el patrón; si falta o no lo cumple, la API lo reemplaza por uno propio y nunca responde 400 por esta cabecera (conventions.md §3).
+	XRequestId *externalRef0.RequestId `json:"X-Request-Id,omitempty"`
+}
+
+// GetCashRegisterParams defines parameters for GetCashRegister.
+type GetCashRegisterParams struct {
+	// XRequestId Se conserva si cumple el patrón; si falta o no lo cumple, la API lo reemplaza por uno propio y nunca responde 400 por esta cabecera (conventions.md §3).
+	XRequestId *externalRef0.RequestId `json:"X-Request-Id,omitempty"`
+}
+
+// UpdateCashRegisterParams defines parameters for UpdateCashRegister.
+type UpdateCashRegisterParams struct {
+	// XRequestId Se conserva si cumple el patrón; si falta o no lo cumple, la API lo reemplaza por uno propio y nunca responde 400 por esta cabecera (conventions.md §3).
+	XRequestId *externalRef0.RequestId `json:"X-Request-Id,omitempty"`
+}
+
+// ListDocumentSeriesParams defines parameters for ListDocumentSeries.
+type ListDocumentSeriesParams struct {
+	// SiteId Filtrar por local
+	SiteId *openapi_types.UUID `form:"siteId,omitempty" json:"siteId,omitempty"`
+
+	// CashRegisterId Filtrar por caja
+	CashRegisterId *openapi_types.UUID `form:"cashRegisterId,omitempty" json:"cashRegisterId,omitempty"`
+
+	// DocType Filtrar por tipo de comprobante
+	DocType *string `form:"docType,omitempty" json:"docType,omitempty"`
+
+	// Active Filtrar por activas o inactivas
+	Active *bool `form:"active,omitempty" json:"active,omitempty"`
+
+	// XRequestId Se conserva si cumple el patrón; si falta o no lo cumple, la API lo reemplaza por uno propio y nunca responde 400 por esta cabecera (conventions.md §3).
+	XRequestId *externalRef0.RequestId `json:"X-Request-Id,omitempty"`
+}
+
+// CreateDocumentSeriesParams defines parameters for CreateDocumentSeries.
+type CreateDocumentSeriesParams struct {
+	// XRequestId Se conserva si cumple el patrón; si falta o no lo cumple, la API lo reemplaza por uno propio y nunca responde 400 por esta cabecera (conventions.md §3).
+	XRequestId *externalRef0.RequestId `json:"X-Request-Id,omitempty"`
+}
+
 // GetDocumentSeriesParams defines parameters for GetDocumentSeries.
 type GetDocumentSeriesParams struct {
 	// XRequestId Se conserva si cumple el patrón; si falta o no lo cumple, la API lo reemplaza por uno propio y nunca responde 400 por esta cabecera (conventions.md §3).
 	XRequestId *externalRef0.RequestId `json:"X-Request-Id,omitempty"`
 }
+
+// UpdateDocumentSeriesParams defines parameters for UpdateDocumentSeries.
+type UpdateDocumentSeriesParams struct {
+	// XRequestId Se conserva si cumple el patrón; si falta o no lo cumple, la API lo reemplaza por uno propio y nunca responde 400 por esta cabecera (conventions.md §3).
+	XRequestId *externalRef0.RequestId `json:"X-Request-Id,omitempty"`
+}
+
+// ListSitesParams defines parameters for ListSites.
+type ListSitesParams struct {
+	// Active Filtrar por locales activos o inactivos
+	Active *bool `form:"active,omitempty" json:"active,omitempty"`
+
+	// XRequestId Se conserva si cumple el patrón; si falta o no lo cumple, la API lo reemplaza por uno propio y nunca responde 400 por esta cabecera (conventions.md §3).
+	XRequestId *externalRef0.RequestId `json:"X-Request-Id,omitempty"`
+}
+
+// CreateSiteParams defines parameters for CreateSite.
+type CreateSiteParams struct {
+	// XRequestId Se conserva si cumple el patrón; si falta o no lo cumple, la API lo reemplaza por uno propio y nunca responde 400 por esta cabecera (conventions.md §3).
+	XRequestId *externalRef0.RequestId `json:"X-Request-Id,omitempty"`
+}
+
+// GetSiteParams defines parameters for GetSite.
+type GetSiteParams struct {
+	// XRequestId Se conserva si cumple el patrón; si falta o no lo cumple, la API lo reemplaza por uno propio y nunca responde 400 por esta cabecera (conventions.md §3).
+	XRequestId *externalRef0.RequestId `json:"X-Request-Id,omitempty"`
+}
+
+// UpdateSiteParams defines parameters for UpdateSite.
+type UpdateSiteParams struct {
+	// XRequestId Se conserva si cumple el patrón; si falta o no lo cumple, la API lo reemplaza por uno propio y nunca responde 400 por esta cabecera (conventions.md §3).
+	XRequestId *externalRef0.RequestId `json:"X-Request-Id,omitempty"`
+}
+
+// CreateCashRegisterJSONRequestBody defines body for CreateCashRegister for application/json ContentType.
+type CreateCashRegisterJSONRequestBody = CreateCashRegisterRequest
+
+// UpdateCashRegisterJSONRequestBody defines body for UpdateCashRegister for application/json ContentType.
+type UpdateCashRegisterJSONRequestBody = UpdateCashRegisterRequest
+
+// CreateDocumentSeriesJSONRequestBody defines body for CreateDocumentSeries for application/json ContentType.
+type CreateDocumentSeriesJSONRequestBody = CreateDocumentSeriesRequest
+
+// UpdateDocumentSeriesJSONRequestBody defines body for UpdateDocumentSeries for application/json ContentType.
+type UpdateDocumentSeriesJSONRequestBody = UpdateDocumentSeriesRequest
+
+// CreateSiteJSONRequestBody defines body for CreateSite for application/json ContentType.
+type CreateSiteJSONRequestBody = CreateSiteRequest
+
+// UpdateSiteJSONRequestBody defines body for UpdateSite for application/json ContentType.
+type UpdateSiteJSONRequestBody = UpdateSiteRequest
 
 // OperationMeta es lo que el spec declara de una operación, para la prueba de contrato.
 type OperationMeta struct {
@@ -88,9 +327,86 @@ type OperationMeta struct {
 // Operations son las operaciones del archivo de paths de este paquete.
 var Operations = []OperationMeta{
 	{
+		Method: "GET", Path: "/v1/cash-registers", ID: "listCashRegisters",
+		Tags:             []string{"empresas"},
+		Ext:              map[string]any{"x-module": "empresas", "x-permission": "empresas.sites:read"},
+		SecurityDeclared: false,
+		Security:         []string{},
+	},
+	{
+		Method: "POST", Path: "/v1/cash-registers", ID: "createCashRegister",
+		Tags:             []string{"empresas"},
+		Ext:              map[string]any{"x-module": "empresas", "x-permission": "empresas.sites:update"},
+		SecurityDeclared: false,
+		Security:         []string{},
+	},
+	{
+		Method: "GET", Path: "/v1/cash-registers/{id}", ID: "getCashRegister",
+		Tags:             []string{"empresas"},
+		Ext:              map[string]any{"x-module": "empresas", "x-permission": "empresas.sites:read"},
+		SecurityDeclared: false,
+		Security:         []string{},
+	},
+	{
+		Method: "PATCH", Path: "/v1/cash-registers/{id}", ID: "updateCashRegister",
+		Tags:             []string{"empresas"},
+		Ext:              map[string]any{"x-module": "empresas", "x-permission": "empresas.sites:update"},
+		SecurityDeclared: false,
+		Security:         []string{},
+	},
+	{
+		Method: "GET", Path: "/v1/document-series", ID: "listDocumentSeries",
+		Tags:             []string{"empresas"},
+		Ext:              map[string]any{"x-module": "empresas", "x-permission": "empresas.series:read"},
+		SecurityDeclared: false,
+		Security:         []string{},
+	},
+	{
+		Method: "POST", Path: "/v1/document-series", ID: "createDocumentSeries",
+		Tags:             []string{"empresas"},
+		Ext:              map[string]any{"x-module": "empresas", "x-permission": "empresas.series:create"},
+		SecurityDeclared: false,
+		Security:         []string{},
+	},
+	{
 		Method: "GET", Path: "/v1/document-series/{id}", ID: "getDocumentSeries",
 		Tags:             []string{"empresas"},
 		Ext:              map[string]any{"x-module": "empresas", "x-permission": "empresas.series:read"},
+		SecurityDeclared: false,
+		Security:         []string{},
+	},
+	{
+		Method: "PATCH", Path: "/v1/document-series/{id}", ID: "updateDocumentSeries",
+		Tags:             []string{"empresas"},
+		Ext:              map[string]any{"x-module": "empresas", "x-permission": "empresas.series:update"},
+		SecurityDeclared: false,
+		Security:         []string{},
+	},
+	{
+		Method: "GET", Path: "/v1/sites", ID: "listSites",
+		Tags:             []string{"empresas"},
+		Ext:              map[string]any{"x-module": "empresas", "x-permission": "empresas.sites:read"},
+		SecurityDeclared: false,
+		Security:         []string{},
+	},
+	{
+		Method: "POST", Path: "/v1/sites", ID: "createSite",
+		Tags:             []string{"empresas"},
+		Ext:              map[string]any{"x-module": "empresas", "x-permission": "empresas.sites:create"},
+		SecurityDeclared: false,
+		Security:         []string{},
+	},
+	{
+		Method: "GET", Path: "/v1/sites/{id}", ID: "getSite",
+		Tags:             []string{"empresas"},
+		Ext:              map[string]any{"x-module": "empresas", "x-permission": "empresas.sites:read"},
+		SecurityDeclared: false,
+		Security:         []string{},
+	},
+	{
+		Method: "PATCH", Path: "/v1/sites/{id}", ID: "updateSite",
+		Tags:             []string{"empresas"},
+		Ext:              map[string]any{"x-module": "empresas", "x-permission": "empresas.sites:update"},
 		SecurityDeclared: false,
 		Security:         []string{},
 	},
@@ -98,9 +414,42 @@ var Operations = []OperationMeta{
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// ListCashRegisters Lista las cajas registradoras de la empresa
+	// (GET /v1/cash-registers)
+	ListCashRegisters(w http.ResponseWriter, r *http.Request, params ListCashRegistersParams)
+	// CreateCashRegister Crea una caja registradora en un local
+	// (POST /v1/cash-registers)
+	CreateCashRegister(w http.ResponseWriter, r *http.Request, params CreateCashRegisterParams)
+	// GetCashRegister Consulta una caja registradora por ID
+	// (GET /v1/cash-registers/{id})
+	GetCashRegister(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params GetCashRegisterParams)
+	// UpdateCashRegister Actualiza una caja registradora
+	// (PATCH /v1/cash-registers/{id})
+	UpdateCashRegister(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params UpdateCashRegisterParams)
+	// ListDocumentSeries Lista series de documentos
+	// (GET /v1/document-series)
+	ListDocumentSeries(w http.ResponseWriter, r *http.Request, params ListDocumentSeriesParams)
+	// CreateDocumentSeries Crea una nueva serie de documentos
+	// (POST /v1/document-series)
+	CreateDocumentSeries(w http.ResponseWriter, r *http.Request, params CreateDocumentSeriesParams)
 	// GetDocumentSeries Consulta el estado y correlativo de una serie de documentos
 	// (GET /v1/document-series/{id})
 	GetDocumentSeries(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params GetDocumentSeriesParams)
+	// UpdateDocumentSeries Actualiza una serie de documentos
+	// (PATCH /v1/document-series/{id})
+	UpdateDocumentSeries(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params UpdateDocumentSeriesParams)
+	// ListSites Lista los locales de la empresa
+	// (GET /v1/sites)
+	ListSites(w http.ResponseWriter, r *http.Request, params ListSitesParams)
+	// CreateSite Crea un nuevo local
+	// (POST /v1/sites)
+	CreateSite(w http.ResponseWriter, r *http.Request, params CreateSiteParams)
+	// GetSite Consulta un local por ID
+	// (GET /v1/sites/{id})
+	GetSite(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params GetSiteParams)
+	// UpdateSite Actualiza un local
+	// (PATCH /v1/sites/{id})
+	UpdateSite(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params UpdateSiteParams)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -111,6 +460,348 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// ListCashRegisters operation middleware
+func (siw *ServerInterfaceWrapper) ListCashRegisters(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListCashRegistersParams
+
+	// ------------- Optional query parameter "siteId" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "siteId", r.URL.Query(), &params.SiteId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "siteId"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "siteId", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "active" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "active", r.URL.Query(), &params.Active, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "active"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "active", Err: err})
+		}
+		return
+	}
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "X-Request-Id" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("X-Request-Id")]; found {
+		var XRequestId externalRef0.RequestId
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "X-Request-Id", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "X-Request-Id", valueList[0], &XRequestId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "X-Request-Id", Err: err})
+			return
+		}
+
+		params.XRequestId = &XRequestId
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListCashRegisters(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateCashRegister operation middleware
+func (siw *ServerInterfaceWrapper) CreateCashRegister(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params CreateCashRegisterParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "X-Request-Id" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("X-Request-Id")]; found {
+		var XRequestId externalRef0.RequestId
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "X-Request-Id", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "X-Request-Id", valueList[0], &XRequestId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "X-Request-Id", Err: err})
+			return
+		}
+
+		params.XRequestId = &XRequestId
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateCashRegister(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetCashRegister operation middleware
+func (siw *ServerInterfaceWrapper) GetCashRegister(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetCashRegisterParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "X-Request-Id" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("X-Request-Id")]; found {
+		var XRequestId externalRef0.RequestId
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "X-Request-Id", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "X-Request-Id", valueList[0], &XRequestId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "X-Request-Id", Err: err})
+			return
+		}
+
+		params.XRequestId = &XRequestId
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetCashRegister(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateCashRegister operation middleware
+func (siw *ServerInterfaceWrapper) UpdateCashRegister(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params UpdateCashRegisterParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "X-Request-Id" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("X-Request-Id")]; found {
+		var XRequestId externalRef0.RequestId
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "X-Request-Id", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "X-Request-Id", valueList[0], &XRequestId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "X-Request-Id", Err: err})
+			return
+		}
+
+		params.XRequestId = &XRequestId
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateCashRegister(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListDocumentSeries operation middleware
+func (siw *ServerInterfaceWrapper) ListDocumentSeries(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListDocumentSeriesParams
+
+	// ------------- Optional query parameter "siteId" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "siteId", r.URL.Query(), &params.SiteId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "siteId"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "siteId", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cashRegisterId" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cashRegisterId", r.URL.Query(), &params.CashRegisterId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cashRegisterId"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cashRegisterId", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "docType" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "docType", r.URL.Query(), &params.DocType, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "docType"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "docType", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "active" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "active", r.URL.Query(), &params.Active, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "active"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "active", Err: err})
+		}
+		return
+	}
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "X-Request-Id" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("X-Request-Id")]; found {
+		var XRequestId externalRef0.RequestId
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "X-Request-Id", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "X-Request-Id", valueList[0], &XRequestId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "X-Request-Id", Err: err})
+			return
+		}
+
+		params.XRequestId = &XRequestId
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListDocumentSeries(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateDocumentSeries operation middleware
+func (siw *ServerInterfaceWrapper) CreateDocumentSeries(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params CreateDocumentSeriesParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "X-Request-Id" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("X-Request-Id")]; found {
+		var XRequestId externalRef0.RequestId
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "X-Request-Id", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "X-Request-Id", valueList[0], &XRequestId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "X-Request-Id", Err: err})
+			return
+		}
+
+		params.XRequestId = &XRequestId
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateDocumentSeries(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
 
 // GetDocumentSeries operation middleware
 func (siw *ServerInterfaceWrapper) GetDocumentSeries(w http.ResponseWriter, r *http.Request) {
@@ -153,6 +844,251 @@ func (siw *ServerInterfaceWrapper) GetDocumentSeries(w http.ResponseWriter, r *h
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetDocumentSeries(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateDocumentSeries operation middleware
+func (siw *ServerInterfaceWrapper) UpdateDocumentSeries(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params UpdateDocumentSeriesParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "X-Request-Id" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("X-Request-Id")]; found {
+		var XRequestId externalRef0.RequestId
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "X-Request-Id", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "X-Request-Id", valueList[0], &XRequestId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "X-Request-Id", Err: err})
+			return
+		}
+
+		params.XRequestId = &XRequestId
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateDocumentSeries(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListSites operation middleware
+func (siw *ServerInterfaceWrapper) ListSites(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListSitesParams
+
+	// ------------- Optional query parameter "active" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "active", r.URL.Query(), &params.Active, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "active"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "active", Err: err})
+		}
+		return
+	}
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "X-Request-Id" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("X-Request-Id")]; found {
+		var XRequestId externalRef0.RequestId
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "X-Request-Id", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "X-Request-Id", valueList[0], &XRequestId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "X-Request-Id", Err: err})
+			return
+		}
+
+		params.XRequestId = &XRequestId
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListSites(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateSite operation middleware
+func (siw *ServerInterfaceWrapper) CreateSite(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params CreateSiteParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "X-Request-Id" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("X-Request-Id")]; found {
+		var XRequestId externalRef0.RequestId
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "X-Request-Id", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "X-Request-Id", valueList[0], &XRequestId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "X-Request-Id", Err: err})
+			return
+		}
+
+		params.XRequestId = &XRequestId
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateSite(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetSite operation middleware
+func (siw *ServerInterfaceWrapper) GetSite(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetSiteParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "X-Request-Id" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("X-Request-Id")]; found {
+		var XRequestId externalRef0.RequestId
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "X-Request-Id", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "X-Request-Id", valueList[0], &XRequestId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "X-Request-Id", Err: err})
+			return
+		}
+
+		params.XRequestId = &XRequestId
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetSite(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateSite operation middleware
+func (siw *ServerInterfaceWrapper) UpdateSite(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", r.PathValue("id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params UpdateSiteParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "X-Request-Id" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("X-Request-Id")]; found {
+		var XRequestId externalRef0.RequestId
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "X-Request-Id", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "X-Request-Id", valueList[0], &XRequestId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "X-Request-Id", Err: err})
+			return
+		}
+
+		params.XRequestId = &XRequestId
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateSite(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -282,9 +1218,603 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 		ErrorHandlerFunc:   options.ErrorHandlerFunc,
 	}
 
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/sites", wrapper.ListSites)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/v1/sites", wrapper.CreateSite)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/sites/{id}", wrapper.GetSite)
+	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/v1/sites/{id}", wrapper.UpdateSite)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/cash-registers", wrapper.ListCashRegisters)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/v1/cash-registers", wrapper.CreateCashRegister)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/cash-registers/{id}", wrapper.GetCashRegister)
+	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/v1/cash-registers/{id}", wrapper.UpdateCashRegister)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/document-series", wrapper.ListDocumentSeries)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/v1/document-series", wrapper.CreateDocumentSeries)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/document-series/{id}", wrapper.GetDocumentSeries)
+	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/v1/document-series/{id}", wrapper.UpdateDocumentSeries)
 
 	return m
+}
+
+type ListCashRegistersRequestObject struct {
+	Params ListCashRegistersParams
+}
+
+type ListCashRegistersResponseObject interface {
+	VisitListCashRegistersResponse(w http.ResponseWriter) error
+}
+
+type ListCashRegisters200JSONResponse []CashRegister
+
+func (response ListCashRegisters200JSONResponse) VisitListCashRegistersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListCashRegisters401ApplicationProblemPlusJSONResponse struct {
+	externalRef0.ProblemApplicationProblemPlusJSONResponse
+}
+
+func (response ListCashRegisters401ApplicationProblemPlusJSONResponse) VisitListCashRegistersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListCashRegisters403ApplicationProblemPlusJSONResponse externalRef0.Problem
+
+func (response ListCashRegisters403ApplicationProblemPlusJSONResponse) VisitListCashRegistersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListCashRegisters503ApplicationProblemPlusJSONResponse externalRef0.Problem
+
+func (response ListCashRegisters503ApplicationProblemPlusJSONResponse) VisitListCashRegistersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateCashRegisterRequestObject struct {
+	Params CreateCashRegisterParams
+	Body   *CreateCashRegisterJSONRequestBody
+}
+
+type CreateCashRegisterResponseObject interface {
+	VisitCreateCashRegisterResponse(w http.ResponseWriter) error
+}
+
+type CreateCashRegister201JSONResponse CashRegister
+
+func (response CreateCashRegister201JSONResponse) VisitCreateCashRegisterResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateCashRegister400ApplicationProblemPlusJSONResponse struct {
+	externalRef0.ProblemApplicationProblemPlusJSONResponse
+}
+
+func (response CreateCashRegister400ApplicationProblemPlusJSONResponse) VisitCreateCashRegisterResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateCashRegister401ApplicationProblemPlusJSONResponse externalRef0.Problem
+
+func (response CreateCashRegister401ApplicationProblemPlusJSONResponse) VisitCreateCashRegisterResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateCashRegister403ApplicationProblemPlusJSONResponse externalRef0.Problem
+
+func (response CreateCashRegister403ApplicationProblemPlusJSONResponse) VisitCreateCashRegisterResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateCashRegister404ApplicationProblemPlusJSONResponse externalRef0.Problem
+
+func (response CreateCashRegister404ApplicationProblemPlusJSONResponse) VisitCreateCashRegisterResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateCashRegister409ApplicationProblemPlusJSONResponse externalRef0.Problem
+
+func (response CreateCashRegister409ApplicationProblemPlusJSONResponse) VisitCreateCashRegisterResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateCashRegister422ApplicationProblemPlusJSONResponse externalRef0.Problem
+
+func (response CreateCashRegister422ApplicationProblemPlusJSONResponse) VisitCreateCashRegisterResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateCashRegister503ApplicationProblemPlusJSONResponse externalRef0.Problem
+
+func (response CreateCashRegister503ApplicationProblemPlusJSONResponse) VisitCreateCashRegisterResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCashRegisterRequestObject struct {
+	Id     openapi_types.UUID `json:"id"`
+	Params GetCashRegisterParams
+}
+
+type GetCashRegisterResponseObject interface {
+	VisitGetCashRegisterResponse(w http.ResponseWriter) error
+}
+
+type GetCashRegister200JSONResponse CashRegister
+
+func (response GetCashRegister200JSONResponse) VisitGetCashRegisterResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCashRegister401ApplicationProblemPlusJSONResponse struct {
+	externalRef0.ProblemApplicationProblemPlusJSONResponse
+}
+
+func (response GetCashRegister401ApplicationProblemPlusJSONResponse) VisitGetCashRegisterResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCashRegister403ApplicationProblemPlusJSONResponse externalRef0.Problem
+
+func (response GetCashRegister403ApplicationProblemPlusJSONResponse) VisitGetCashRegisterResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCashRegister404ApplicationProblemPlusJSONResponse externalRef0.Problem
+
+func (response GetCashRegister404ApplicationProblemPlusJSONResponse) VisitGetCashRegisterResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetCashRegister503ApplicationProblemPlusJSONResponse externalRef0.Problem
+
+func (response GetCashRegister503ApplicationProblemPlusJSONResponse) VisitGetCashRegisterResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateCashRegisterRequestObject struct {
+	Id     openapi_types.UUID `json:"id"`
+	Params UpdateCashRegisterParams
+	Body   *UpdateCashRegisterJSONRequestBody
+}
+
+type UpdateCashRegisterResponseObject interface {
+	VisitUpdateCashRegisterResponse(w http.ResponseWriter) error
+}
+
+type UpdateCashRegister200JSONResponse CashRegister
+
+func (response UpdateCashRegister200JSONResponse) VisitUpdateCashRegisterResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateCashRegister400ApplicationProblemPlusJSONResponse struct {
+	externalRef0.ProblemApplicationProblemPlusJSONResponse
+}
+
+func (response UpdateCashRegister400ApplicationProblemPlusJSONResponse) VisitUpdateCashRegisterResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateCashRegister401ApplicationProblemPlusJSONResponse externalRef0.Problem
+
+func (response UpdateCashRegister401ApplicationProblemPlusJSONResponse) VisitUpdateCashRegisterResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateCashRegister403ApplicationProblemPlusJSONResponse externalRef0.Problem
+
+func (response UpdateCashRegister403ApplicationProblemPlusJSONResponse) VisitUpdateCashRegisterResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateCashRegister404ApplicationProblemPlusJSONResponse externalRef0.Problem
+
+func (response UpdateCashRegister404ApplicationProblemPlusJSONResponse) VisitUpdateCashRegisterResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateCashRegister409ApplicationProblemPlusJSONResponse externalRef0.Problem
+
+func (response UpdateCashRegister409ApplicationProblemPlusJSONResponse) VisitUpdateCashRegisterResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateCashRegister422ApplicationProblemPlusJSONResponse externalRef0.Problem
+
+func (response UpdateCashRegister422ApplicationProblemPlusJSONResponse) VisitUpdateCashRegisterResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateCashRegister503ApplicationProblemPlusJSONResponse externalRef0.Problem
+
+func (response UpdateCashRegister503ApplicationProblemPlusJSONResponse) VisitUpdateCashRegisterResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListDocumentSeriesRequestObject struct {
+	Params ListDocumentSeriesParams
+}
+
+type ListDocumentSeriesResponseObject interface {
+	VisitListDocumentSeriesResponse(w http.ResponseWriter) error
+}
+
+type ListDocumentSeries200JSONResponse []DocumentSeries
+
+func (response ListDocumentSeries200JSONResponse) VisitListDocumentSeriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListDocumentSeries401ApplicationProblemPlusJSONResponse struct {
+	externalRef0.ProblemApplicationProblemPlusJSONResponse
+}
+
+func (response ListDocumentSeries401ApplicationProblemPlusJSONResponse) VisitListDocumentSeriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListDocumentSeries403ApplicationProblemPlusJSONResponse externalRef0.Problem
+
+func (response ListDocumentSeries403ApplicationProblemPlusJSONResponse) VisitListDocumentSeriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListDocumentSeries503ApplicationProblemPlusJSONResponse externalRef0.Problem
+
+func (response ListDocumentSeries503ApplicationProblemPlusJSONResponse) VisitListDocumentSeriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateDocumentSeriesRequestObject struct {
+	Params CreateDocumentSeriesParams
+	Body   *CreateDocumentSeriesJSONRequestBody
+}
+
+type CreateDocumentSeriesResponseObject interface {
+	VisitCreateDocumentSeriesResponse(w http.ResponseWriter) error
+}
+
+type CreateDocumentSeries201JSONResponse DocumentSeries
+
+func (response CreateDocumentSeries201JSONResponse) VisitCreateDocumentSeriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateDocumentSeries400ApplicationProblemPlusJSONResponse struct {
+	externalRef0.ProblemApplicationProblemPlusJSONResponse
+}
+
+func (response CreateDocumentSeries400ApplicationProblemPlusJSONResponse) VisitCreateDocumentSeriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateDocumentSeries401ApplicationProblemPlusJSONResponse externalRef0.Problem
+
+func (response CreateDocumentSeries401ApplicationProblemPlusJSONResponse) VisitCreateDocumentSeriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateDocumentSeries403ApplicationProblemPlusJSONResponse externalRef0.Problem
+
+func (response CreateDocumentSeries403ApplicationProblemPlusJSONResponse) VisitCreateDocumentSeriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateDocumentSeries404ApplicationProblemPlusJSONResponse externalRef0.Problem
+
+func (response CreateDocumentSeries404ApplicationProblemPlusJSONResponse) VisitCreateDocumentSeriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateDocumentSeries409ApplicationProblemPlusJSONResponse externalRef0.Problem
+
+func (response CreateDocumentSeries409ApplicationProblemPlusJSONResponse) VisitCreateDocumentSeriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateDocumentSeries422ApplicationProblemPlusJSONResponse externalRef0.Problem
+
+func (response CreateDocumentSeries422ApplicationProblemPlusJSONResponse) VisitCreateDocumentSeriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateDocumentSeries503ApplicationProblemPlusJSONResponse externalRef0.Problem
+
+func (response CreateDocumentSeries503ApplicationProblemPlusJSONResponse) VisitCreateDocumentSeriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
 }
 
 type GetDocumentSeriesRequestObject struct {
@@ -382,11 +1912,548 @@ func (response GetDocumentSeries503ApplicationProblemPlusJSONResponse) VisitGetD
 	return err
 }
 
+type UpdateDocumentSeriesRequestObject struct {
+	Id     openapi_types.UUID `json:"id"`
+	Params UpdateDocumentSeriesParams
+	Body   *UpdateDocumentSeriesJSONRequestBody
+}
+
+type UpdateDocumentSeriesResponseObject interface {
+	VisitUpdateDocumentSeriesResponse(w http.ResponseWriter) error
+}
+
+type UpdateDocumentSeries200JSONResponse DocumentSeries
+
+func (response UpdateDocumentSeries200JSONResponse) VisitUpdateDocumentSeriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateDocumentSeries400ApplicationProblemPlusJSONResponse struct {
+	externalRef0.ProblemApplicationProblemPlusJSONResponse
+}
+
+func (response UpdateDocumentSeries400ApplicationProblemPlusJSONResponse) VisitUpdateDocumentSeriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateDocumentSeries401ApplicationProblemPlusJSONResponse externalRef0.Problem
+
+func (response UpdateDocumentSeries401ApplicationProblemPlusJSONResponse) VisitUpdateDocumentSeriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateDocumentSeries403ApplicationProblemPlusJSONResponse externalRef0.Problem
+
+func (response UpdateDocumentSeries403ApplicationProblemPlusJSONResponse) VisitUpdateDocumentSeriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateDocumentSeries404ApplicationProblemPlusJSONResponse externalRef0.Problem
+
+func (response UpdateDocumentSeries404ApplicationProblemPlusJSONResponse) VisitUpdateDocumentSeriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateDocumentSeries409ApplicationProblemPlusJSONResponse externalRef0.Problem
+
+func (response UpdateDocumentSeries409ApplicationProblemPlusJSONResponse) VisitUpdateDocumentSeriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateDocumentSeries422ApplicationProblemPlusJSONResponse externalRef0.Problem
+
+func (response UpdateDocumentSeries422ApplicationProblemPlusJSONResponse) VisitUpdateDocumentSeriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateDocumentSeries503ApplicationProblemPlusJSONResponse externalRef0.Problem
+
+func (response UpdateDocumentSeries503ApplicationProblemPlusJSONResponse) VisitUpdateDocumentSeriesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListSitesRequestObject struct {
+	Params ListSitesParams
+}
+
+type ListSitesResponseObject interface {
+	VisitListSitesResponse(w http.ResponseWriter) error
+}
+
+type ListSites200JSONResponse []Site
+
+func (response ListSites200JSONResponse) VisitListSitesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListSites401ApplicationProblemPlusJSONResponse struct {
+	externalRef0.ProblemApplicationProblemPlusJSONResponse
+}
+
+func (response ListSites401ApplicationProblemPlusJSONResponse) VisitListSitesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListSites403ApplicationProblemPlusJSONResponse externalRef0.Problem
+
+func (response ListSites403ApplicationProblemPlusJSONResponse) VisitListSitesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListSites503ApplicationProblemPlusJSONResponse externalRef0.Problem
+
+func (response ListSites503ApplicationProblemPlusJSONResponse) VisitListSitesResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateSiteRequestObject struct {
+	Params CreateSiteParams
+	Body   *CreateSiteJSONRequestBody
+}
+
+type CreateSiteResponseObject interface {
+	VisitCreateSiteResponse(w http.ResponseWriter) error
+}
+
+type CreateSite201JSONResponse Site
+
+func (response CreateSite201JSONResponse) VisitCreateSiteResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateSite400ApplicationProblemPlusJSONResponse struct {
+	externalRef0.ProblemApplicationProblemPlusJSONResponse
+}
+
+func (response CreateSite400ApplicationProblemPlusJSONResponse) VisitCreateSiteResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateSite401ApplicationProblemPlusJSONResponse externalRef0.Problem
+
+func (response CreateSite401ApplicationProblemPlusJSONResponse) VisitCreateSiteResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateSite403ApplicationProblemPlusJSONResponse externalRef0.Problem
+
+func (response CreateSite403ApplicationProblemPlusJSONResponse) VisitCreateSiteResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateSite409ApplicationProblemPlusJSONResponse externalRef0.Problem
+
+func (response CreateSite409ApplicationProblemPlusJSONResponse) VisitCreateSiteResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateSite422ApplicationProblemPlusJSONResponse externalRef0.Problem
+
+func (response CreateSite422ApplicationProblemPlusJSONResponse) VisitCreateSiteResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateSite503ApplicationProblemPlusJSONResponse externalRef0.Problem
+
+func (response CreateSite503ApplicationProblemPlusJSONResponse) VisitCreateSiteResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSiteRequestObject struct {
+	Id     openapi_types.UUID `json:"id"`
+	Params GetSiteParams
+}
+
+type GetSiteResponseObject interface {
+	VisitGetSiteResponse(w http.ResponseWriter) error
+}
+
+type GetSite200JSONResponse Site
+
+func (response GetSite200JSONResponse) VisitGetSiteResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSite401ApplicationProblemPlusJSONResponse struct {
+	externalRef0.ProblemApplicationProblemPlusJSONResponse
+}
+
+func (response GetSite401ApplicationProblemPlusJSONResponse) VisitGetSiteResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSite403ApplicationProblemPlusJSONResponse externalRef0.Problem
+
+func (response GetSite403ApplicationProblemPlusJSONResponse) VisitGetSiteResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSite404ApplicationProblemPlusJSONResponse externalRef0.Problem
+
+func (response GetSite404ApplicationProblemPlusJSONResponse) VisitGetSiteResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetSite503ApplicationProblemPlusJSONResponse externalRef0.Problem
+
+func (response GetSite503ApplicationProblemPlusJSONResponse) VisitGetSiteResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateSiteRequestObject struct {
+	Id     openapi_types.UUID `json:"id"`
+	Params UpdateSiteParams
+	Body   *UpdateSiteJSONRequestBody
+}
+
+type UpdateSiteResponseObject interface {
+	VisitUpdateSiteResponse(w http.ResponseWriter) error
+}
+
+type UpdateSite200JSONResponse Site
+
+func (response UpdateSite200JSONResponse) VisitUpdateSiteResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateSite400ApplicationProblemPlusJSONResponse struct {
+	externalRef0.ProblemApplicationProblemPlusJSONResponse
+}
+
+func (response UpdateSite400ApplicationProblemPlusJSONResponse) VisitUpdateSiteResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateSite401ApplicationProblemPlusJSONResponse externalRef0.Problem
+
+func (response UpdateSite401ApplicationProblemPlusJSONResponse) VisitUpdateSiteResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateSite403ApplicationProblemPlusJSONResponse externalRef0.Problem
+
+func (response UpdateSite403ApplicationProblemPlusJSONResponse) VisitUpdateSiteResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateSite404ApplicationProblemPlusJSONResponse externalRef0.Problem
+
+func (response UpdateSite404ApplicationProblemPlusJSONResponse) VisitUpdateSiteResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateSite409ApplicationProblemPlusJSONResponse externalRef0.Problem
+
+func (response UpdateSite409ApplicationProblemPlusJSONResponse) VisitUpdateSiteResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateSite422ApplicationProblemPlusJSONResponse externalRef0.Problem
+
+func (response UpdateSite422ApplicationProblemPlusJSONResponse) VisitUpdateSiteResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateSite503ApplicationProblemPlusJSONResponse externalRef0.Problem
+
+func (response UpdateSite503ApplicationProblemPlusJSONResponse) VisitUpdateSiteResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/problem+json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
+	// ListCashRegisters Lista las cajas registradoras de la empresa
+	// (GET /v1/cash-registers)
+	ListCashRegisters(ctx context.Context, request ListCashRegistersRequestObject) (ListCashRegistersResponseObject, error)
+	// CreateCashRegister Crea una caja registradora en un local
+	// (POST /v1/cash-registers)
+	CreateCashRegister(ctx context.Context, request CreateCashRegisterRequestObject) (CreateCashRegisterResponseObject, error)
+	// GetCashRegister Consulta una caja registradora por ID
+	// (GET /v1/cash-registers/{id})
+	GetCashRegister(ctx context.Context, request GetCashRegisterRequestObject) (GetCashRegisterResponseObject, error)
+	// UpdateCashRegister Actualiza una caja registradora
+	// (PATCH /v1/cash-registers/{id})
+	UpdateCashRegister(ctx context.Context, request UpdateCashRegisterRequestObject) (UpdateCashRegisterResponseObject, error)
+	// ListDocumentSeries Lista series de documentos
+	// (GET /v1/document-series)
+	ListDocumentSeries(ctx context.Context, request ListDocumentSeriesRequestObject) (ListDocumentSeriesResponseObject, error)
+	// CreateDocumentSeries Crea una nueva serie de documentos
+	// (POST /v1/document-series)
+	CreateDocumentSeries(ctx context.Context, request CreateDocumentSeriesRequestObject) (CreateDocumentSeriesResponseObject, error)
 	// GetDocumentSeries Consulta el estado y correlativo de una serie de documentos
 	// (GET /v1/document-series/{id})
 	GetDocumentSeries(ctx context.Context, request GetDocumentSeriesRequestObject) (GetDocumentSeriesResponseObject, error)
+	// UpdateDocumentSeries Actualiza una serie de documentos
+	// (PATCH /v1/document-series/{id})
+	UpdateDocumentSeries(ctx context.Context, request UpdateDocumentSeriesRequestObject) (UpdateDocumentSeriesResponseObject, error)
+	// ListSites Lista los locales de la empresa
+	// (GET /v1/sites)
+	ListSites(ctx context.Context, request ListSitesRequestObject) (ListSitesResponseObject, error)
+	// CreateSite Crea un nuevo local
+	// (POST /v1/sites)
+	CreateSite(ctx context.Context, request CreateSiteRequestObject) (CreateSiteResponseObject, error)
+	// GetSite Consulta un local por ID
+	// (GET /v1/sites/{id})
+	GetSite(ctx context.Context, request GetSiteRequestObject) (GetSiteResponseObject, error)
+	// UpdateSite Actualiza un local
+	// (PATCH /v1/sites/{id})
+	UpdateSite(ctx context.Context, request UpdateSiteRequestObject) (UpdateSiteResponseObject, error)
 }
 
 type StrictHandlerFunc func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error)
@@ -428,6 +2495,185 @@ type strictHandler struct {
 	options     StrictHTTPServerOptions
 }
 
+// ListCashRegisters operation middleware
+func (sh *strictHandler) ListCashRegisters(w http.ResponseWriter, r *http.Request, params ListCashRegistersParams) {
+	var request ListCashRegistersRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListCashRegisters(ctx, request.(ListCashRegistersRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListCashRegisters")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListCashRegistersResponseObject); ok {
+		if err := validResponse.VisitListCashRegistersResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateCashRegister operation middleware
+func (sh *strictHandler) CreateCashRegister(w http.ResponseWriter, r *http.Request, params CreateCashRegisterParams) {
+	var request CreateCashRegisterRequestObject
+
+	request.Params = params
+
+	var body CreateCashRegisterJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateCashRegister(ctx, request.(CreateCashRegisterRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateCashRegister")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateCashRegisterResponseObject); ok {
+		if err := validResponse.VisitCreateCashRegisterResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetCashRegister operation middleware
+func (sh *strictHandler) GetCashRegister(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params GetCashRegisterParams) {
+	var request GetCashRegisterRequestObject
+
+	request.Id = id
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetCashRegister(ctx, request.(GetCashRegisterRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetCashRegister")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetCashRegisterResponseObject); ok {
+		if err := validResponse.VisitGetCashRegisterResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateCashRegister operation middleware
+func (sh *strictHandler) UpdateCashRegister(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params UpdateCashRegisterParams) {
+	var request UpdateCashRegisterRequestObject
+
+	request.Id = id
+	request.Params = params
+
+	var body UpdateCashRegisterJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateCashRegister(ctx, request.(UpdateCashRegisterRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateCashRegister")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateCashRegisterResponseObject); ok {
+		if err := validResponse.VisitUpdateCashRegisterResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListDocumentSeries operation middleware
+func (sh *strictHandler) ListDocumentSeries(w http.ResponseWriter, r *http.Request, params ListDocumentSeriesParams) {
+	var request ListDocumentSeriesRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListDocumentSeries(ctx, request.(ListDocumentSeriesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListDocumentSeries")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListDocumentSeriesResponseObject); ok {
+		if err := validResponse.VisitListDocumentSeriesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateDocumentSeries operation middleware
+func (sh *strictHandler) CreateDocumentSeries(w http.ResponseWriter, r *http.Request, params CreateDocumentSeriesParams) {
+	var request CreateDocumentSeriesRequestObject
+
+	request.Params = params
+
+	var body CreateDocumentSeriesJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateDocumentSeries(ctx, request.(CreateDocumentSeriesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateDocumentSeries")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateDocumentSeriesResponseObject); ok {
+		if err := validResponse.VisitCreateDocumentSeriesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // GetDocumentSeries operation middleware
 func (sh *strictHandler) GetDocumentSeries(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params GetDocumentSeriesParams) {
 	var request GetDocumentSeriesRequestObject
@@ -448,6 +2694,160 @@ func (sh *strictHandler) GetDocumentSeries(w http.ResponseWriter, r *http.Reques
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetDocumentSeriesResponseObject); ok {
 		if err := validResponse.VisitGetDocumentSeriesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateDocumentSeries operation middleware
+func (sh *strictHandler) UpdateDocumentSeries(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params UpdateDocumentSeriesParams) {
+	var request UpdateDocumentSeriesRequestObject
+
+	request.Id = id
+	request.Params = params
+
+	var body UpdateDocumentSeriesJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateDocumentSeries(ctx, request.(UpdateDocumentSeriesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateDocumentSeries")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateDocumentSeriesResponseObject); ok {
+		if err := validResponse.VisitUpdateDocumentSeriesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListSites operation middleware
+func (sh *strictHandler) ListSites(w http.ResponseWriter, r *http.Request, params ListSitesParams) {
+	var request ListSitesRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListSites(ctx, request.(ListSitesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListSites")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListSitesResponseObject); ok {
+		if err := validResponse.VisitListSitesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateSite operation middleware
+func (sh *strictHandler) CreateSite(w http.ResponseWriter, r *http.Request, params CreateSiteParams) {
+	var request CreateSiteRequestObject
+
+	request.Params = params
+
+	var body CreateSiteJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateSite(ctx, request.(CreateSiteRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateSite")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateSiteResponseObject); ok {
+		if err := validResponse.VisitCreateSiteResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetSite operation middleware
+func (sh *strictHandler) GetSite(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params GetSiteParams) {
+	var request GetSiteRequestObject
+
+	request.Id = id
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetSite(ctx, request.(GetSiteRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetSite")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetSiteResponseObject); ok {
+		if err := validResponse.VisitGetSiteResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateSite operation middleware
+func (sh *strictHandler) UpdateSite(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params UpdateSiteParams) {
+	var request UpdateSiteRequestObject
+
+	request.Id = id
+	request.Params = params
+
+	var body UpdateSiteJSONRequestBody
+	if err := runtime.BindJSONBody(r, &body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateSite(ctx, request.(UpdateSiteRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateSite")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateSiteResponseObject); ok {
+		if err := validResponse.VisitUpdateSiteResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

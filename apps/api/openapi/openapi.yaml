@@ -68,6 +68,16 @@ paths:
   /v1/me/entitlements:
     $ref: 'paths/identidad.yaml#/paths/~1v1~1me~1entitlements'
   # --- empresas ---
+  /v1/sites:
+    $ref: 'paths/empresas.yaml#/paths/~1v1~1sites'
+  /v1/sites/{id}:
+    $ref: 'paths/empresas.yaml#/paths/~1v1~1sites~1{id}'
+  /v1/cash-registers:
+    $ref: 'paths/empresas.yaml#/paths/~1v1~1cash-registers'
+  /v1/cash-registers/{id}:
+    $ref: 'paths/empresas.yaml#/paths/~1v1~1cash-registers~1{id}'
+  /v1/document-series:
+    $ref: 'paths/empresas.yaml#/paths/~1v1~1document-series'
   /v1/document-series/{id}:
     $ref: 'paths/empresas.yaml#/paths/~1v1~1document-series~1{id}'
   # --- catalogo ---
